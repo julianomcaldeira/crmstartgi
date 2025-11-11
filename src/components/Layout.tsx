@@ -85,6 +85,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: BarChart3, label: "Metas", path: "/metas" },
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
+    { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];
 
   if (!user) {
