@@ -1,1 +1,4 @@
 project_id = "eifsbqqrimniclsssoru"
+
+[functions.buscar-cnpj]
+verify_jwt = false

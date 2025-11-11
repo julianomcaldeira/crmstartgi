@@ -23,8 +23,13 @@ export type Database = {
           created_at: string | null
           created_by: string
           email: string | null
+          foundation_date: string | null
           id: string
+          legal_nature: string | null
           phone: string | null
+          registration_status: string | null
+          segment: string | null
+          share_capital: number | null
           state: string | null
           trade_name: string | null
           updated_at: string | null
@@ -38,8 +43,13 @@ export type Database = {
           created_at?: string | null
           created_by: string
           email?: string | null
+          foundation_date?: string | null
           id?: string
+          legal_nature?: string | null
           phone?: string | null
+          registration_status?: string | null
+          segment?: string | null
+          share_capital?: number | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string | null
@@ -53,8 +63,13 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           email?: string | null
+          foundation_date?: string | null
           id?: string
+          legal_nature?: string | null
           phone?: string | null
+          registration_status?: string | null
+          segment?: string | null
+          share_capital?: number | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string | null
@@ -63,6 +78,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "clients_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string
+          email: string | null
+          id: string
+          is_primary: boolean | null
+          mobile: string | null
+          name: string
+          phone: string | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          mobile?: string | null
+          name: string
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean | null
+          mobile?: string | null
+          name?: string
+          phone?: string | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
