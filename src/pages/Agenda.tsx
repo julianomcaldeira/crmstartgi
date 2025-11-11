@@ -22,7 +22,7 @@ const Agenda = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    client_id: "",
+    client_id: "none",
     due_date: "",
     priority: "medium",
   });
@@ -129,7 +129,7 @@ const Agenda = () => {
     setFormData({
       title: "",
       description: "",
-      client_id: "",
+      client_id: "none",
       due_date: "",
       priority: "medium",
     });
@@ -204,14 +204,14 @@ const Agenda = () => {
               <div className="space-y-2">
                 <Label htmlFor="client">Cliente</Label>
                 <Select
-                  value={formData.client_id}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                  value={formData.client_id || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value === "none" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum cliente</SelectItem>
+                    <SelectItem value="none">Nenhum cliente</SelectItem>
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.trade_name || client.company_name}

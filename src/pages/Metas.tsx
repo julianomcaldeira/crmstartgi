@@ -29,7 +29,7 @@ const Metas = () => {
     current_value: "0",
     start_date: "",
     end_date: "",
-    assigned_to: "",
+    assigned_to: "none",
   });
 
   useEffect(() => {
@@ -180,7 +180,7 @@ const Metas = () => {
       current_value: goal.current_value.toString(),
       start_date: goal.start_date,
       end_date: goal.end_date,
-      assigned_to: goal.assigned_to || "",
+      assigned_to: goal.assigned_to || "none",
     });
     setDialogOpen(true);
   };
@@ -195,7 +195,7 @@ const Metas = () => {
       current_value: "0",
       start_date: "",
       end_date: "",
-      assigned_to: "",
+      assigned_to: "none",
     });
   };
 
@@ -355,14 +355,14 @@ const Metas = () => {
                 <div className="space-y-2">
                   <Label htmlFor="assigned_to">Atribuir a</Label>
                   <Select
-                    value={formData.assigned_to}
-                    onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
+                    value={formData.assigned_to || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, assigned_to: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um usuário (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhum usuário específico</SelectItem>
+                      <SelectItem value="none">Nenhum usuário específico</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name} ({user.email})
