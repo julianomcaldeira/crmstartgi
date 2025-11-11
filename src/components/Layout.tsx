@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -82,6 +83,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Users, label: "Clientes", path: "/clientes" },
     { icon: Target, label: "Oportunidades", path: "/oportunidades" },
     { icon: CheckSquare, label: "Tarefas", path: "/tarefas" },
+    { icon: Calendar, label: "Agenda", path: "/agenda" },
     { icon: BarChart3, label: "Metas", path: "/metas" },
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),

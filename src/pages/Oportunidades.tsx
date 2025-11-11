@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List } from "lucide-react";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -17,6 +17,7 @@ const Oportunidades = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -137,13 +138,35 @@ const Oportunidades = () => {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-primary">
-              <Plus size={20} />
-              Nova Oportunidade
+        <div className="flex gap-2">
+          <div className="flex border rounded-lg overflow-hidden">
+            <Button
+              variant={viewMode === "kanban" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("kanban")}
+              className="rounded-none"
+            >
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Kanban
             </Button>
-          </DialogTrigger>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="rounded-none"
+            >
+              <List className="h-4 w-4 mr-2" />
+              Lista
+            </Button>
+          </div>
+
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2 shadow-primary">
+                <Plus size={20} />
+                Nova Oportunidade
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl">Nova Oportunidade</DialogTitle>
@@ -272,6 +295,7 @@ const Oportunidades = () => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {loading ? (
@@ -284,7 +308,7 @@ const Oportunidades = () => {
             Crie sua primeira oportunidade para começar a gerenciar seu pipeline
           </p>
         </Card>
-      ) : (
+      ) : viewMode === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           {stages.map((stage) => {
             const stageOpps = getOpportunitiesByStage(stage.key);
@@ -340,6 +364,61 @@ const Oportunidades = () => {
                   ))}
                 </div>
               </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {opportunities.map((opp) => {
+            const stage = stages.find((s) => s.key === opp.status);
+            return (
+              <Card key={opp.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle className="mb-2">{opp.title}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {opp.client?.trade_name || opp.client?.company_name}
+                      </p>
+                    </div>
+                    <Badge className={stage?.color}>
+                      {stage?.label}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Valor</p>
+                      <p className="font-semibold text-primary">
+                        {formatCurrency(opp.value)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Probabilidade</p>
+                      <p className="font-semibold">{opp.probability}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Responsável</p>
+                      <p className="text-sm">{opp.assigned?.full_name || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Data Prevista</p>
+                      <p className="text-sm">
+                        {opp.expected_close_date 
+                          ? new Date(opp.expected_close_date).toLocaleDateString("pt-BR")
+                          : "-"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  {opp.description && (
+                    <p className="text-sm text-muted-foreground mt-4 line-clamp-2">
+                      {opp.description}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             );
           })}
         </div>
