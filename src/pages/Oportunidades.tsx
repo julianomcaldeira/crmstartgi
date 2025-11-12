@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,11 @@ const Oportunidades = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  
+  // Filters
+  const [searchClient, setSearchClient] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -129,8 +134,23 @@ const Oportunidades = () => {
     setExpectedCloseDate("");
   };
 
+  const getFilteredOpportunities = () => {
+    return opportunities.filter((opp) => {
+      const matchesClient = searchClient === "" || 
+        opp.client?.company_name?.toLowerCase().includes(searchClient.toLowerCase()) ||
+        opp.client?.trade_name?.toLowerCase().includes(searchClient.toLowerCase());
+      
+      const oppDate = new Date(opp.created_at);
+      const matchesStartDate = !startDate || oppDate >= new Date(startDate);
+      const matchesEndDate = !endDate || oppDate <= new Date(endDate);
+      
+      return matchesClient && matchesStartDate && matchesEndDate;
+    });
+  };
+
   const getOpportunitiesByStage = (stageKey: string) => {
-    return opportunities.filter((opp) => opp.status === stageKey);
+    const filtered = getFilteredOpportunities();
+    return filtered.filter((opp) => opp.status === stageKey);
   };
 
   const formatCurrency = (value: number) => {
@@ -357,6 +377,42 @@ const Oportunidades = () => {
         </div>
       </div>
 
+      <Card className="shadow-lg">
+        <CardHeader className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Buscar cliente..."
+                value={searchClient}
+                onChange={(e) => setSearchClient(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="relative">
+              <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                type="date"
+                placeholder="Data inicial"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="relative">
+              <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                type="date"
+                placeholder="Data final"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
       {loading ? (
         <p className="text-center text-muted-foreground">Carregando...</p>
       ) : opportunities.length === 0 ? (
@@ -497,7 +553,7 @@ const Oportunidades = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {opportunities.map((opp) => {
+          {getFilteredOpportunities().map((opp) => {
             const stage = stages.find((s) => s.key === opp.status);
             const nextStage = getNextStage(opp.status);
             const previousStage = getPreviousStage(opp.status);

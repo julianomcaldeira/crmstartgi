@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -21,6 +21,11 @@ const Tarefas = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Filters
+  const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -223,9 +228,18 @@ const Tarefas = () => {
   };
 
   const filteredTasks = tasks.filter((task) => {
-    if (filter === "pending") return task.status !== "completed";
-    if (filter === "completed") return task.status === "completed";
-    return true;
+    const matchesStatus = 
+      filter === "all" ? true :
+      filter === "pending" ? task.status !== "completed" :
+      task.status === "completed";
+    
+    const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
+    
+    const taskDate = task.due_date ? new Date(task.due_date) : null;
+    const matchesStartDate = !startDate || !taskDate || taskDate >= new Date(startDate);
+    const matchesEndDate = !endDate || !taskDate || taskDate <= new Date(endDate);
+    
+    return matchesStatus && matchesClient && matchesStartDate && matchesEndDate;
   });
 
   return (
@@ -383,28 +397,72 @@ const Tarefas = () => {
         </Dialog>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-          size="sm"
-        >
-          Todas
-        </Button>
-        <Button
-          variant={filter === "pending" ? "default" : "outline"}
-          onClick={() => setFilter("pending")}
-          size="sm"
-        >
-          Pendentes
-        </Button>
-        <Button
-          variant={filter === "completed" ? "default" : "outline"}
-          onClick={() => setFilter("completed")}
-          size="sm"
-        >
-          Concluídas
-        </Button>
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+            size="sm"
+          >
+            Todas
+          </Button>
+          <Button
+            variant={filter === "pending" ? "default" : "outline"}
+            onClick={() => setFilter("pending")}
+            size="sm"
+          >
+            Pendentes
+          </Button>
+          <Button
+            variant={filter === "completed" ? "default" : "outline"}
+            onClick={() => setFilter("completed")}
+            size="sm"
+          >
+            Concluídas
+          </Button>
+        </div>
+
+        <Card className="shadow-lg">
+          <CardHeader className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-2">
+                <Building2 size={16} className="text-muted-foreground" />
+                <select
+                  value={selectedClient}
+                  onChange={(e) => setSelectedClient(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="all">Todos os clientes</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.trade_name || client.company_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="relative">
+                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input
+                  type="date"
+                  placeholder="Data inicial"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="relative">
+                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                <Input
+                  type="date"
+                  placeholder="Data final"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
       </div>
 
       <div className="space-y-3">

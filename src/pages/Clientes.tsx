@@ -19,8 +19,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Clientes = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
+  const [sellers, setSellers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   
@@ -45,7 +47,22 @@ const Clientes = () => {
 
   useEffect(() => {
     fetchClients();
+    fetchSellers();
   }, []);
+
+  const fetchSellers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .order("full_name");
+      
+      if (error) throw error;
+      setSellers(data || []);
+    } catch (error) {
+      console.error("Error fetching sellers:", error);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -189,11 +206,15 @@ const Clientes = () => {
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
 
-  const filteredClients = clients.filter((client) =>
-    client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.cnpj.includes(searchTerm) ||
-    (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredClients = clients.filter((client) => {
+    const matchesSearch = client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.cnpj.includes(searchTerm) ||
+      (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
+    
+    return matchesSearch && matchesSeller;
+  });
 
   return (
     <div className="space-y-6">
@@ -456,7 +477,7 @@ const Clientes = () => {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader>
+        <CardHeader className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
             <Input
@@ -465,6 +486,21 @@ const Clientes = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
+          </div>
+          <div className="flex items-center gap-2">
+            <User size={16} className="text-muted-foreground" />
+            <select
+              value={selectedSeller}
+              onChange={(e) => setSelectedSeller(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              <option value="all">Todos os vendedores</option>
+              {sellers.map((seller) => (
+                <option key={seller.id} value={seller.id}>
+                  {seller.full_name}
+                </option>
+              ))}
+            </select>
           </div>
         </CardHeader>
       </Card>
