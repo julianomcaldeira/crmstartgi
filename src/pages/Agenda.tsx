@@ -22,6 +22,7 @@ const Agenda = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "overdue">("all");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -146,7 +147,20 @@ const Agenda = () => {
   const getTasksForDay = (day: Date) => {
     return tasks.filter((task) => {
       const taskDate = startOfDay(parseISO(task.due_date));
-      return isSameDay(taskDate, day);
+      const matchesDay = isSameDay(taskDate, day);
+      
+      if (!matchesDay) return false;
+      
+      // Apply status filter
+      if (statusFilter === "completed") {
+        return task.status === "completed";
+      } else if (statusFilter === "pending") {
+        return task.status === "pending" && !isPast(new Date(task.due_date));
+      } else if (statusFilter === "overdue") {
+        return task.status !== "completed" && isPast(new Date(task.due_date));
+      }
+      
+      return true; // "all" filter
     });
   };
 
@@ -303,7 +317,7 @@ const Agenda = () => {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
@@ -330,6 +344,44 @@ const Agenda = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+          
+          {/* Status Filter */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={statusFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("all")}
+            >
+              Todas
+            </Button>
+            <Button
+              variant={statusFilter === "pending" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("pending")}
+              className="gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              No Prazo
+            </Button>
+            <Button
+              variant={statusFilter === "overdue" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("overdue")}
+              className="gap-2"
+            >
+              <AlertCircle className="h-4 w-4" />
+              Atrasadas
+            </Button>
+            <Button
+              variant={statusFilter === "completed" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setStatusFilter("completed")}
+              className="gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Concluídas
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
