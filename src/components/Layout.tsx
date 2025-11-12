@@ -112,10 +112,10 @@ const Layout = ({ children }: LayoutProps) => {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between p-6 border-b border-sidebar-border bg-background">
-            <img src={logo} alt="StartGi" className="h-16 w-auto object-contain" />
+          <div className="flex items-center justify-center p-6 border-b border-sidebar-border bg-primary">
+            <img src={logo} alt="StartGi" className="h-20 w-auto object-contain" />
             <button
-              className="lg:hidden text-foreground"
+              className="lg:hidden text-foreground absolute right-4"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={24} />
@@ -173,10 +173,10 @@ const Layout = ({ children }: LayoutProps) => {
       {/* Main Content */}
       <div className="lg:ml-64">
         {/* Top Bar (Mobile) */}
-        <header className="lg:hidden sticky top-0 z-30 bg-background border-b border-border px-4 py-4 flex items-center justify-between">
+        <header className="lg:hidden sticky top-0 z-30 bg-primary border-b border-border px-4 py-4 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-foreground"
+            className="text-primary-foreground"
           >
             <Menu size={24} />
           </button>
