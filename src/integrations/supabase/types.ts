@@ -136,6 +136,66 @@ export type Database = {
           },
         ]
       }
+      cnpj_cache: {
+        Row: {
+          address: string | null
+          cached_at: string | null
+          city: string | null
+          cnpj: string
+          company_name: string | null
+          created_at: string | null
+          email: string | null
+          foundation_date: string | null
+          id: string
+          legal_nature: string | null
+          phone: string | null
+          registration_status: string | null
+          segment: string | null
+          share_capital: number | null
+          state: string | null
+          trade_name: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          cached_at?: string | null
+          city?: string | null
+          cnpj: string
+          company_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          foundation_date?: string | null
+          id?: string
+          legal_nature?: string | null
+          phone?: string | null
+          registration_status?: string | null
+          segment?: string | null
+          share_capital?: number | null
+          state?: string | null
+          trade_name?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          cached_at?: string | null
+          city?: string | null
+          cnpj?: string
+          company_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          foundation_date?: string | null
+          id?: string
+          legal_nature?: string | null
+          phone?: string | null
+          registration_status?: string | null
+          segment?: string | null
+          share_capital?: number | null
+          state?: string | null
+          trade_name?: string | null
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           client_id: string
