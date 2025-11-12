@@ -32,6 +32,10 @@ import {
   Crown,
   Award,
   BarChart3,
+  Package,
+  Plus,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +50,17 @@ const Admin = () => {
   const [newUserRole, setNewUserRole] = useState("vendedor");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
+  
+  // Products state
+  const [products, setProducts] = useState<any[]>([]);
+  const [productDialogOpen, setProductDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [productForm, setProductForm] = useState({
+    name: "",
+    implementation_fee: "",
+    monthly_fee: "",
+  });
+  const [savingProduct, setSavingProduct] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -69,6 +84,7 @@ const Admin = () => {
         setIsAdmin(true);
         await fetchUsers();
         await fetchStats();
+        await fetchProducts();
       } else {
         toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
         setIsAdmin(false);
@@ -155,6 +171,20 @@ const Admin = () => {
     }
   };
 
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      toast.error("Erro ao carregar produtos");
+      return;
+    }
+
+    setProducts(data || []);
+  };
+
   const handleCreateUser = async () => {
     if (!newUserEmail || !newUserPassword || !newUserName) {
       toast.error("Preencha todos os campos obrigatórios");
@@ -200,6 +230,82 @@ const Admin = () => {
     } finally {
       setCreatingUser(false);
     }
+  };
+
+  const handleProductSubmit = async () => {
+    if (!productForm.name || !productForm.implementation_fee || !productForm.monthly_fee) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    setSavingProduct(true);
+    try {
+      if (editingProduct) {
+        const { error } = await supabase
+          .from("products")
+          .update({
+            name: productForm.name,
+            implementation_fee: parseFloat(productForm.implementation_fee),
+            monthly_fee: parseFloat(productForm.monthly_fee),
+          })
+          .eq("id", editingProduct.id);
+
+        if (error) throw error;
+        toast.success("Produto atualizado com sucesso!");
+      } else {
+        const { error } = await supabase
+          .from("products")
+          .insert({
+            name: productForm.name,
+            implementation_fee: parseFloat(productForm.implementation_fee),
+            monthly_fee: parseFloat(productForm.monthly_fee),
+          });
+
+        if (error) throw error;
+        toast.success("Produto criado com sucesso!");
+      }
+
+      setProductDialogOpen(false);
+      setEditingProduct(null);
+      setProductForm({ name: "", implementation_fee: "", monthly_fee: "" });
+      fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao salvar produto: " + error.message);
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Produto excluído com sucesso!");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao excluir produto: " + error.message);
+    }
+  };
+
+  const openProductDialog = (product?: any) => {
+    if (product) {
+      setEditingProduct(product);
+      setProductForm({
+        name: product.name,
+        implementation_fee: product.implementation_fee.toString(),
+        monthly_fee: product.monthly_fee.toString(),
+      });
+    } else {
+      setEditingProduct(null);
+      setProductForm({ name: "", implementation_fee: "", monthly_fee: "" });
+    }
+    setProductDialogOpen(true);
   };
 
   const getRoleBadge = (role: string) => {
@@ -324,8 +430,9 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
+          <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="metrics">Métricas da Equipe</TabsTrigger>
         </TabsList>
 
@@ -462,6 +569,157 @@ const Admin = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="products" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Produtos StartGi</h2>
+              <Button
+                onClick={() => openProductDialog()}
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Produto
+              </Button>
+            </div>
+
+            <Dialog open={productDialogOpen} onOpenChange={setProductDialogOpen}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingProduct ? "Editar Produto" : "Novo Produto"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="productName">Nome do Produto *</Label>
+                    <Input
+                      id="productName"
+                      placeholder="Ex: Sistema de Gestão"
+                      value={productForm.name}
+                      onChange={(e) =>
+                        setProductForm({ ...productForm, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="implementationFee">Valor de Implantação (R$) *</Label>
+                    <Input
+                      id="implementationFee"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={productForm.implementation_fee}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          implementation_fee: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="monthlyFee">Valor da Mensalidade (R$) *</Label>
+                    <Input
+                      id="monthlyFee"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={productForm.monthly_fee}
+                      onChange={(e) =>
+                        setProductForm({ ...productForm, monthly_fee: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setProductDialogOpen(false)}
+                    disabled={savingProduct}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleProductSubmit}
+                    disabled={savingProduct}
+                    className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                  >
+                    {savingProduct ? "Salvando..." : editingProduct ? "Atualizar" : "Criar"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <div className="space-y-3">
+              {products.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Package className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum produto cadastrado</p>
+                  <p className="text-sm mt-2">Clique em "Novo Produto" para começar</p>
+                </div>
+              ) : (
+                products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="p-4 bg-gradient-to-r from-card to-primary/5 rounded-lg border border-border hover:border-primary/30 transition-all"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="p-3 rounded-lg bg-primary/10">
+                          <Package className="h-6 w-6 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground text-lg mb-2">
+                            {product.name}
+                          </h3>
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <div className="bg-muted/50 px-3 py-1.5 rounded-md">
+                              <span className="text-muted-foreground">Implantação: </span>
+                              <span className="font-semibold text-foreground">
+                                R$ {Number(product.implementation_fee).toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>
+                            <div className="bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
+                              <span className="text-muted-foreground">Mensalidade: </span>
+                              <span className="font-semibold text-primary">
+                                R$ {Number(product.monthly_fee).toLocaleString("pt-BR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openProductDialog(product)}
+                          className="hover:bg-primary/10 hover:text-primary"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </Card>
         </TabsContent>
