@@ -121,12 +121,12 @@ const Configuracoes = () => {
       if (!user) return;
 
       const { data, error } = await supabase
-        .from('zoho_oauth_tokens')
+        .from('zoho_oauth_tokens' as any)
         .select('zoho_account_email')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle() as any;
 
-      if (data) {
+      if (data && !error) {
         setZohoConnected(true);
         setZohoEmail(data.zoho_account_email);
       }
@@ -168,7 +168,7 @@ const Configuracoes = () => {
       if (!user) return;
 
       const { error } = await supabase
-        .from('zoho_oauth_tokens')
+        .from('zoho_oauth_tokens' as any)
         .delete()
         .eq('user_id', user.id);
 
