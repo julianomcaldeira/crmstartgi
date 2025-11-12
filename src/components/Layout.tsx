@@ -168,12 +168,12 @@ const Layout = ({ children }: LayoutProps) => {
               </p>
             </div>
             <Button
-              variant="destructive"
-              className="w-full justify-center gap-2 font-semibold"
+              variant="outline"
+              className="w-full justify-center gap-2 bg-black text-white hover:bg-black/90 hover:text-white border-black"
               onClick={handleLogout}
             >
-              <LogOut size={18} />
-              Sair do Sistema
+              <LogOut size={16} />
+              Sair
             </Button>
           </div>
         </div>
