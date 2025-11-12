@@ -142,23 +142,18 @@ const Configuracoes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
-      const ZOHO_CLIENT_ID = '1000.FISW345E8E6C6TZDS2I2QM2R7B2HEY';
-      const REDIRECT_URI = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zoho-auth-callback`;
-      const SCOPE = 'ZohoMail.messages.READ,ZohoMail.accounts.READ';
+      // Call edge function to get auth URL with proper credentials
+      const { data, error } = await supabase.functions.invoke('zoho-auth-start', {
+        body: { userId: user.id }
+      });
 
-      const authUrl = `https://accounts.zoho.com/oauth/v2/auth?` +
-        `scope=${encodeURIComponent(SCOPE)}` +
-        `&client_id=${ZOHO_CLIENT_ID}` +
-        `&response_type=code` +
-        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
-        `&state=${user.id}` +
-        `&access_type=offline` +
-        `&prompt=consent`;
+      if (error) throw error;
+      if (!data?.authUrl) throw new Error('Failed to get authorization URL');
 
-      window.location.href = authUrl;
+      window.location.href = data.authUrl;
     } catch (error: any) {
       console.error('Error connecting Zoho:', error);
-      toast.error('Erro ao conectar com Zoho Mail');
+      toast.error('Erro ao conectar com Zoho Mail: ' + (error.message || 'Tente novamente'));
       setConnectingZoho(false);
     }
   };
