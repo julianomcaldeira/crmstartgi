@@ -474,6 +474,30 @@ const ClienteDetalhes = () => {
                 </p>
               </div>
             </div>
+
+            <div className="flex items-start gap-3">
+              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Porte da Empresa</p>
+                <p className="font-medium text-foreground">{client.company_size || "-"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Região</p>
+                <p className="font-medium text-foreground">{client.region || "-"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Target className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-sm text-muted-foreground">Concorrentes</p>
+                <p className="font-medium text-foreground">{client.competitors || "-"}</p>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

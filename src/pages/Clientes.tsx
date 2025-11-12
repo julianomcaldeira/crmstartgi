@@ -42,6 +42,9 @@ const Clientes = () => {
   const [segment, setSegment] = useState("");
   const [shareCapital, setShareCapital] = useState("");
   const [legalNature, setLegalNature] = useState("");
+  const [companySize, setCompanySize] = useState("");
+  const [region, setRegion] = useState("");
+  const [competitors, setCompetitors] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
 
@@ -178,6 +181,9 @@ const Clientes = () => {
           segment,
           share_capital: shareCapital ? parseFloat(shareCapital) : null,
           legal_nature: legalNature,
+          company_size: companySize,
+          region: region,
+          competitors: competitors,
           created_by: user.id,
         })
         .select()
@@ -239,6 +245,9 @@ const Clientes = () => {
     setSegment("");
     setShareCapital("");
     setLegalNature("");
+    setCompanySize("");
+    setRegion("");
+    setCompetitors("");
     setSelectedFeiras([]);
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
@@ -366,6 +375,45 @@ const Clientes = () => {
                       id="legalNature"
                       value={legalNature}
                       onChange={(e) => setLegalNature(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="companySize">Porte da Empresa</Label>
+                      <select
+                        id="companySize"
+                        value={companySize}
+                        onChange={(e) => setCompanySize(e.target.value)}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      >
+                        <option value="">Selecione...</option>
+                        <option value="MEI">MEI</option>
+                        <option value="ME">Microempresa (ME)</option>
+                        <option value="EPP">Pequeno Porte (EPP)</option>
+                        <option value="medio">Médio Porte</option>
+                        <option value="grande">Grande Porte</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="region">Região</Label>
+                      <Input
+                        id="region"
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        placeholder="Ex: Sudeste, Sul, etc."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="competitors">Concorrentes</Label>
+                    <Input
+                      id="competitors"
+                      value={competitors}
+                      onChange={(e) => setCompetitors(e.target.value)}
+                      placeholder="Liste os principais concorrentes"
                     />
                   </div>
 
