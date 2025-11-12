@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2 } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -51,7 +51,11 @@ const Clientes = () => {
     try {
       const { data, error } = await supabase
         .from("clients")
-        .select("*, contacts(*)")
+        .select(`
+          *,
+          contacts(*),
+          created_by_profile:profiles!clients_created_by_fkey(full_name, email)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -465,80 +469,103 @@ const Clientes = () => {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="space-y-3">
         {loading ? (
-          <p className="col-span-full text-center text-muted-foreground">Carregando...</p>
+          <p className="text-center text-muted-foreground">Carregando...</p>
         ) : filteredClients.length === 0 ? (
-          <Card className="col-span-full p-12 text-center">
+          <Card className="p-12 text-center">
             <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
             <p className="text-muted-foreground">Nenhum cliente encontrado</p>
           </Card>
         ) : (
           filteredClients.map((client) => (
-            <Card key={client.id} className="hover:shadow-xl transition-all duration-300 border-l-4 border-l-primary">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg flex items-start gap-2">
-                  <Building2 className="text-primary mt-1 flex-shrink-0" size={20} />
-                  <div className="flex-1">
-                    {client.company_name}
-                    {client.trade_name && (
-                      <p className="text-sm font-normal text-muted-foreground mt-1">
-                        {client.trade_name}
+            <Card 
+              key={client.id} 
+              className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
+              onClick={() => navigate(`/clientes/${client.id}`)}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-6">
+                  {/* Main Client Info */}
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <Building2 className="text-primary" size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xl font-bold text-foreground mb-1 truncate">
+                        {client.trade_name || client.company_name}
+                      </h3>
+                      {client.trade_name && (
+                        <p className="text-sm text-muted-foreground mb-2 truncate">
+                          {client.company_name}
+                        </p>
+                      )}
+                      
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-muted-foreground">CNPJ:</span>
+                          <span className="text-foreground">{client.cnpj}</span>
+                        </div>
+                        
+                        {client.segment && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-muted-foreground">Segmento:</span>
+                            <span className="text-foreground">{client.segment}</span>
+                          </div>
+                        )}
+
+                        {(client.city || client.state) && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <MapPin size={16} />
+                            <span>{[client.city, client.state].filter(Boolean).join(", ")}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm mt-3">
+                        {client.email && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Mail size={16} />
+                            <span className="truncate">{client.email}</span>
+                          </div>
+                        )}
+
+                        {client.phone && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Phone size={16} />
+                            <span>{client.phone}</span>
+                          </div>
+                        )}
+
+                        {client.contacts && client.contacts.length > 0 && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <User size={16} />
+                            <span>{client.contacts.length} contato(s)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Seller Info - Highlighted */}
+                  {client.created_by_profile && (
+                    <div className="flex-shrink-0 px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="text-primary" size={16} />
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Vendedor Responsável
+                        </span>
+                      </div>
+                      <p className="font-semibold text-primary text-lg">
+                        {client.created_by_profile.full_name}
                       </p>
-                    )}
-                  </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium text-muted-foreground">CNPJ:</span>
-                  <span>{client.cnpj}</span>
-                </div>
-                
-                {client.segment && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium text-muted-foreground">Segmento:</span>
-                    <span>{client.segment}</span>
-                  </div>
-                )}
-
-                {client.email && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Mail size={16} />
-                    <span className="truncate">{client.email}</span>
-                  </div>
-                )}
-
-                {client.phone && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Phone size={16} />
-                    <span>{client.phone}</span>
-                  </div>
-                )}
-
-                {(client.city || client.state) && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin size={16} />
-                    <span>{[client.city, client.state].filter(Boolean).join(", ")}</span>
-                  </div>
-                )}
-
-                {client.contacts && client.contacts.length > 0 && (
-                  <div className="pt-2 border-t">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">
-                      {client.contacts.length} contato(s)
-                    </p>
-                  </div>
-                )}
-
-                <div className="pt-3 border-t mt-3">
-                  <Button
-                    className="w-full"
-                    variant="default"
-                    onClick={() => navigate(`/clientes/${client.id}`)}
-                  >
-                    Ver Detalhes
-                  </Button>
+                      {client.created_by_profile.email && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">
+                          {client.created_by_profile.email}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
