@@ -84,7 +84,7 @@ const Agenda = () => {
         {
           title: formData.title,
           description: formData.description,
-          client_id: formData.client_id || null,
+          client_id: formData.client_id === "none" ? null : formData.client_id,
           due_date: formData.due_date,
           priority: formData.priority as "low" | "medium" | "high",
           status: "pending",
