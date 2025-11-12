@@ -9,7 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft } from "lucide-react";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -132,6 +138,39 @@ const Oportunidades = () => {
       style: "currency",
       currency: "BRL",
     }).format(value || 0);
+  };
+
+  const updateOpportunityStatus = async (oppId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("opportunities")
+        .update({ status: newStatus as any })
+        .eq("id", oppId);
+
+      if (error) throw error;
+
+      toast.success("Fase atualizada com sucesso!");
+      fetchData();
+    } catch (error) {
+      console.error("Error updating opportunity:", error);
+      toast.error("Erro ao atualizar fase");
+    }
+  };
+
+  const getNextStage = (currentStage: string) => {
+    const currentIndex = stages.findIndex(s => s.key === currentStage);
+    if (currentIndex < stages.length - 1) {
+      return stages[currentIndex + 1];
+    }
+    return null;
+  };
+
+  const getPreviousStage = (currentStage: string) => {
+    const currentIndex = stages.findIndex(s => s.key === currentStage);
+    if (currentIndex > 0) {
+      return stages[currentIndex - 1];
+    }
+    return null;
   };
 
   return (
@@ -352,50 +391,105 @@ const Oportunidades = () => {
                 </Card>
 
                 <div className="space-y-3">
-                  {stageOpps.map((opp) => (
-                    <Card
-                      key={opp.id}
-                      className="hover:shadow-lg transition-all duration-300 cursor-pointer border-l-4 border-l-primary"
-                    >
-                      <CardHeader className="p-3 pb-2">
-                        <CardTitle className="text-sm line-clamp-2">{opp.title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-0 space-y-2">
-                        <p className="text-xs text-muted-foreground line-clamp-1">
-                          {opp.client?.trade_name || opp.client?.company_name}
-                        </p>
-                        {opp.product && (
-                          <div className="flex items-center gap-2">
-                            {opp.product.logo_url ? (
-                              <img
-                                src={opp.product.logo_url}
-                                alt={opp.product.name}
-                                className="h-6 w-6 object-contain bg-white rounded p-0.5"
-                              />
-                            ) : null}
-                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
-                              {opp.product.name}
-                            </Badge>
+                  {stageOpps.map((opp) => {
+                    const nextStage = getNextStage(opp.status);
+                    const previousStage = getPreviousStage(opp.status);
+                    
+                    return (
+                      <Card
+                        key={opp.id}
+                        className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group"
+                      >
+                        <CardHeader className="p-3 pb-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <CardTitle className="text-sm line-clamp-2 flex-1">{opp.title}</CardTitle>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <ChevronRight size={14} />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-background z-50">
+                                {stages
+                                  .filter(s => s.key !== opp.status)
+                                  .map(stage => (
+                                    <DropdownMenuItem
+                                      key={stage.key}
+                                      onClick={() => updateOpportunityStatus(opp.id, stage.key)}
+                                    >
+                                      Mover para {stage.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        )}
-                        {opp.value && (
-                          <p className="text-sm font-semibold text-primary">
-                            {formatCurrency(opp.value)}
+                        </CardHeader>
+                        <CardContent className="p-3 pt-0 space-y-2">
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {opp.client?.trade_name || opp.client?.company_name}
                           </p>
-                        )}
-                        <div className="flex items-center justify-between gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {opp.probability}%
-                          </Badge>
-                          {opp.assigned && (
-                            <p className="text-xs text-muted-foreground truncate">
-                              {opp.assigned.full_name}
+                          {opp.product && (
+                            <div className="flex items-center gap-2">
+                              {opp.product.logo_url ? (
+                                <img
+                                  src={opp.product.logo_url}
+                                  alt={opp.product.name}
+                                  className="h-6 w-6 object-contain bg-white rounded p-0.5"
+                                />
+                              ) : null}
+                              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                                {opp.product.name}
+                              </Badge>
+                            </div>
+                          )}
+                          {opp.value && (
+                            <p className="text-sm font-semibold text-primary">
+                              {formatCurrency(opp.value)}
                             </p>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {opp.probability}%
+                            </Badge>
+                            {opp.assigned && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {opp.assigned.full_name}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 pt-2 border-t opacity-0 group-hover:opacity-100 transition-opacity">
+                            {previousStage && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => updateOpportunityStatus(opp.id, previousStage.key)}
+                              >
+                                <ChevronLeft size={12} className="mr-1" />
+                                {previousStage.label}
+                              </Button>
+                            )}
+                            {nextStage && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => updateOpportunityStatus(opp.id, nextStage.key)}
+                              >
+                                {nextStage.label}
+                                <ChevronRight size={12} className="ml-1" />
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -405,19 +499,40 @@ const Oportunidades = () => {
         <div className="space-y-4">
           {opportunities.map((opp) => {
             const stage = stages.find((s) => s.key === opp.status);
+            const nextStage = getNextStage(opp.status);
+            const previousStage = getPreviousStage(opp.status);
+            
             return (
               <Card key={opp.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <CardTitle className="mb-2">{opp.title}</CardTitle>
                       <p className="text-sm text-muted-foreground">
                         {opp.client?.trade_name || opp.client?.company_name}
                       </p>
                     </div>
-                    <Badge className={stage?.color}>
-                      {stage?.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Badge className={`${stage?.color} cursor-pointer hover:opacity-80`}>
+                            {stage?.label}
+                          </Badge>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-background z-50">
+                          {stages
+                            .filter(s => s.key !== opp.status)
+                            .map(stage => (
+                              <DropdownMenuItem
+                                key={stage.key}
+                                onClick={() => updateOpportunityStatus(opp.id, stage.key)}
+                              >
+                                Mover para {stage.label}
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -468,6 +583,29 @@ const Oportunidades = () => {
                       {opp.description}
                     </p>
                   )}
+                  
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                    {previousStage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateOpportunityStatus(opp.id, previousStage.key)}
+                      >
+                        <ChevronLeft size={16} className="mr-1" />
+                        Voltar para {previousStage.label}
+                      </Button>
+                    )}
+                    {nextStage && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => updateOpportunityStatus(opp.id, nextStage.key)}
+                      >
+                        Avançar para {nextStage.label}
+                        <ChevronRight size={16} className="ml-1" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
