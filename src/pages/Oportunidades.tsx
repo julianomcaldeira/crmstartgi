@@ -351,7 +351,13 @@ const Oportunidades = () => {
       
       for (const file of files) {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}_${file.name}`;
+        // Sanitize filename to remove special characters and spaces
+        const sanitizedName = file.name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+          .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars with underscore
+          .replace(/_{2,}/g, '_'); // Replace multiple underscores with single
+        const fileName = `${user.id}/${Date.now()}_${sanitizedName}`;
         
         // Upload to storage
         const { error: uploadError } = await supabase.storage
