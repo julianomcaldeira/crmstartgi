@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,7 +27,8 @@ import {
   TrendingUp,
   Plus,
   Edit,
-  Check
+  Check,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -42,6 +44,8 @@ const ClienteDetalhes = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [oppDialogOpen, setOppDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -70,7 +74,25 @@ const ClienteDetalhes = () => {
 
   useEffect(() => {
     fetchClientDetails();
+    checkAdminRole();
   }, [id]);
+
+  const checkAdminRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setIsAdmin(roleData?.role === "admin");
+    } catch (error) {
+      console.error("Error checking admin role:", error);
+    }
+  };
 
   const fetchClientDetails = async () => {
     try {
@@ -301,6 +323,23 @@ const ClienteDetalhes = () => {
     }
   };
 
+  const handleDeleteClient = async () => {
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Cliente e todo seu histórico foram excluídos com sucesso!");
+      navigate("/clientes");
+    } catch (error: any) {
+      console.error("Error deleting client:", error);
+      toast.error("Erro ao excluir cliente: " + (error.message || "Erro desconhecido"));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: any = {
       lead: { label: "Lead", variant: "secondary" },
@@ -352,6 +391,16 @@ const ClienteDetalhes = () => {
           <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
+        {isAdmin && (
+          <Button 
+            variant="destructive" 
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Excluir Cliente
+          </Button>
+        )}
       </div>
 
       {/* Client Info Card */}
@@ -929,6 +978,33 @@ const ClienteDetalhes = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza que deseja excluir este cliente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isto irá permanentemente excluir o cliente
+              <strong> {client?.company_name}</strong> e todo o seu histórico, incluindo:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Todos os contatos associados</li>
+                <li>Todas as oportunidades e seus anexos</li>
+                <li>Todas as tarefas relacionadas</li>
+                <li>Todo o histórico de atividades</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteClient}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
