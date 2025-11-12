@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2, Upload, User, Mail, Link as LinkIcon, Unlink } from "lucide-react";
+import { Loader2, Upload, User } from "lucide-react";
 import { PhoneInput } from "@/components/ui/masked-input";
 
 const Configuracoes = () => {
@@ -19,21 +19,8 @@ const Configuracoes = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [zohoConnected, setZohoConnected] = useState(false);
-  const [zohoEmail, setZohoEmail] = useState("");
-  const [connectingZoho, setConnectingZoho] = useState(false);
-
   useEffect(() => {
     fetchProfile();
-    checkZohoConnection();
-    
-    // Check for OAuth success callback
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('zoho') === 'success') {
-      toast.success('Conta Zoho Mail conectada com sucesso!');
-      checkZohoConnection();
-      window.history.replaceState({}, '', '/configuracoes');
-    }
   }, []);
 
   const fetchProfile = async () => {
@@ -397,81 +384,6 @@ const Configuracoes = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Integração Zoho Mail
-          </CardTitle>
-          <CardDescription>
-            Conecte sua conta Zoho Mail para criar tarefas automaticamente quando enviar emails
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
-            <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              ℹ️ Como funciona a integração:
-            </p>
-            <ol className="list-decimal list-inside space-y-1 text-blue-800 dark:text-blue-200">
-              <li>Ao clicar em "Conectar", você será redirecionado para o Zoho</li>
-              <li>Faça login com seu email e senha do Zoho Mail</li>
-              <li>Autorize o acesso do CRM à sua conta</li>
-              <li>Pronto! Seus emails enviados virarão tarefas automaticamente</li>
-            </ol>
-            <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
-              Nota: Se aparecer erro de "Cliente inválido", entre em contato com o administrador do sistema.
-            </p>
-          </div>
-          {zohoConnected ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
-                <LinkIcon className="h-5 w-5 text-primary" />
-                <div className="flex-1">
-                  <p className="font-medium text-foreground">Conectado</p>
-                  <p className="text-sm text-muted-foreground">{zohoEmail}</p>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Seus emails enviados pelo Zoho Mail serão automaticamente registrados como tarefas concluídas no sistema.
-              </p>
-              <Button 
-                variant="destructive" 
-                onClick={handleDisconnectZoho}
-              >
-                <Unlink className="mr-2 h-4 w-4" />
-                Desconectar Zoho Mail
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Conecte sua conta Zoho Mail para sincronizar automaticamente seus emails enviados como tarefas no CRM.
-              </p>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li>Emails enviados viram tarefas automaticamente</li>
-                <li>Sincronização em tempo real</li>
-                <li>Histórico completo de comunicações</li>
-              </ul>
-              <Button 
-                onClick={handleConnectZoho} 
-                disabled={connectingZoho}
-              >
-                {connectingZoho ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Conectando...
-                  </>
-                ) : (
-                  <>
-                    <LinkIcon className="mr-2 h-4 w-4" />
-                    Conectar com Zoho Mail
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
