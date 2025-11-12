@@ -19,28 +19,26 @@ import NotFound from "./pages/NotFound";
 
 const App = () => {
   return (
-    <>
+    <BrowserRouter>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/" element={<Layout><Dashboard /></Layout>} />
-          <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
-          <Route path="/clientes/:id" element={<Layout><ClienteDetalhes /></Layout>} />
-          <Route path="/oportunidades" element={<Layout><Oportunidades /></Layout>} />
-          <Route path="/tarefas" element={<Layout><Tarefas /></Layout>} />
-          <Route path="/metas" element={<Layout><Metas /></Layout>} />
-          <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
-          <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
-          <Route path="/admin" element={<Layout><Admin /></Layout>} />
-          <Route path="/performance" element={<Layout><PerformanceVendedores /></Layout>} />
-          <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
-          <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </>
+      <Routes>
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/" element={<Layout><Dashboard /></Layout>} />
+        <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
+        <Route path="/clientes/:id" element={<Layout><ClienteDetalhes /></Layout>} />
+        <Route path="/oportunidades" element={<Layout><Oportunidades /></Layout>} />
+        <Route path="/tarefas" element={<Layout><Tarefas /></Layout>} />
+        <Route path="/metas" element={<Layout><Metas /></Layout>} />
+        <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
+        <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
+        <Route path="/admin" element={<Layout><Admin /></Layout>} />
+        <Route path="/performance" element={<Layout><PerformanceVendedores /></Layout>} />
+        <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
+        <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
