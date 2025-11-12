@@ -41,6 +41,8 @@ const Clientes = () => {
   const [segment, setSegment] = useState("");
   const [shareCapital, setShareCapital] = useState("");
   const [legalNature, setLegalNature] = useState("");
+  const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
+  const [feiras, setFeiras] = useState<any[]>([]);
 
   // Contacts
   const [contacts, setContacts] = useState<any[]>([{
@@ -50,7 +52,22 @@ const Clientes = () => {
   useEffect(() => {
     fetchClients();
     fetchSellers();
+    fetchFeiras();
   }, []);
+
+  const fetchFeiras = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("feiras")
+        .select("id, name, start_date, city")
+        .order("start_date", { ascending: false });
+      
+      if (error) throw error;
+      setFeiras(data || []);
+    } catch (error) {
+      console.error("Error fetching feiras:", error);
+    }
+  };
 
   const fetchSellers = async () => {
     try {
@@ -182,6 +199,21 @@ const Clientes = () => {
         if (contactsError) throw contactsError;
       }
 
+      // Insert client-feira relationships
+      if (selectedFeiras.length > 0) {
+        const clientFeirasData = selectedFeiras.map(feiraId => ({
+          client_id: clientData.id,
+          feira_id: feiraId,
+          created_by: user.id,
+        }));
+
+        const { error: feirasError } = await supabase
+          .from("client_feiras")
+          .insert(clientFeirasData);
+
+        if (feirasError) throw feirasError;
+      }
+
       toast.success("Cliente cadastrado com sucesso!");
       setDialogOpen(false);
       resetForm();
@@ -205,6 +237,7 @@ const Clientes = () => {
     setSegment("");
     setShareCapital("");
     setLegalNature("");
+    setSelectedFeiras([]);
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
 
@@ -254,9 +287,10 @@ const Clientes = () => {
             </DialogHeader>
             <form onSubmit={handleCreateClient}>
               <Tabs defaultValue="empresa" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="empresa">Dados da Empresa</TabsTrigger>
                   <TabsTrigger value="contatos">Contatos</TabsTrigger>
+                  <TabsTrigger value="feiras">Feiras</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="empresa" className="space-y-4 mt-4">
@@ -471,6 +505,81 @@ const Clientes = () => {
                     <Plus size={16} className="mr-2" />
                     Adicionar Contato
                   </Button>
+                </TabsContent>
+
+                <TabsContent value="feiras" className="space-y-4 mt-4">
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Selecione as feiras que este cliente participou ou irá participar
+                    </p>
+                    
+                    {feiras.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhuma feira cadastrada no sistema
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto p-1">
+                        {feiras.map((feira) => (
+                          <Card
+                            key={feira.id}
+                            className={`p-4 cursor-pointer transition-all ${
+                              selectedFeiras.includes(feira.id)
+                                ? "border-primary bg-primary/5"
+                                : "hover:border-primary/50"
+                            }`}
+                            onClick={() => {
+                              setSelectedFeiras(prev =>
+                                prev.includes(feira.id)
+                                  ? prev.filter(id => id !== feira.id)
+                                  : [...prev, feira.id]
+                              );
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <h4 className="font-medium text-foreground">{feira.name}</h4>
+                                {feira.city && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {feira.city}
+                                  </p>
+                                )}
+                                {feira.start_date && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {new Date(feira.start_date).toLocaleDateString('pt-BR')}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex-shrink-0">
+                                {selectedFeiras.includes(feira.id) && (
+                                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+                                    <svg
+                                      className="h-4 w-4 text-primary-foreground"
+                                      fill="none"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {selectedFeiras.length > 0 && (
+                      <div className="pt-4 border-t">
+                        <p className="text-sm font-medium text-foreground">
+                          {selectedFeiras.length} feira(s) selecionada(s)
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
               </Tabs>
 

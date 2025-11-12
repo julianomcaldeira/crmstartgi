@@ -359,12 +359,12 @@ const Feiras = () => {
                   <Label htmlFor="website">Website</Label>
                   <Input
                     id="website"
-                    type="url"
+                    type="text"
                     value={formData.website}
                     onChange={(e) =>
                       setFormData({ ...formData, website: e.target.value })
                     }
-                    placeholder="https://exemplo.com"
+                    placeholder="Ex: www.exemplo.com ou https://exemplo.com"
                   />
                 </div>
 
