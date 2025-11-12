@@ -185,16 +185,48 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Main Content */}
       <div className="lg:ml-64">
-        {/* Top Bar (Mobile) */}
-        <header className="lg:hidden sticky top-0 z-30 bg-sidebar border-b border-sidebar-border px-4 py-4 flex items-center justify-between">
+        {/* Top Bar */}
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-sidebar-foreground"
+            className="text-foreground lg:hidden"
           >
             <Menu size={24} />
           </button>
-          <img src={logo} alt="StartGi" className="h-10 w-auto object-contain" />
-          <div className="w-6" />
+          <div className="lg:hidden">
+            <img src={logo} alt="StartGi" className="h-10 w-auto object-contain" />
+          </div>
+          
+          {/* User Profile */}
+          <div className="ml-auto flex items-center gap-3 group">
+            <div className="hidden sm:block text-right">
+              <p className="text-sm font-medium text-foreground">
+                {userProfile?.full_name || "Usuário"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {userProfile?.user_roles?.[0]?.role === "admin" ? "Administrador" : 
+                 userProfile?.user_roles?.[0]?.role === "gestor" ? "Gestor" : "Vendedor"}
+              </p>
+            </div>
+            <div className="relative">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary-light p-0.5 ring-2 ring-primary/20 group-hover:ring-primary/40 transition-all">
+                {userProfile?.avatar_url ? (
+                  <img
+                    src={userProfile.avatar_url}
+                    alt={userProfile?.full_name}
+                    className="h-full w-full rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
+                    <span className="text-lg font-semibold text-primary">
+                      {userProfile?.full_name?.charAt(0).toUpperCase() || "U"}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background"></div>
+            </div>
+          </div>
         </header>
 
         {/* Page Content */}
