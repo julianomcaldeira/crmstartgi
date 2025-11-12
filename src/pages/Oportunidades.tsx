@@ -54,7 +54,7 @@ const Oportunidades = () => {
             *,
             client:clients(company_name, trade_name),
             assigned:profiles!opportunities_assigned_to_fkey(full_name),
-            product:products(name, description)
+            product:products(name, description, logo_url)
           `)
           .order("created_at", { ascending: false }),
         supabase.from("clients").select("id, company_name, trade_name"),
@@ -369,9 +369,18 @@ const Oportunidades = () => {
                           {opp.client?.trade_name || opp.client?.company_name}
                         </p>
                         {opp.product && (
-                          <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
-                            {opp.product.name}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {opp.product.logo_url ? (
+                              <img
+                                src={opp.product.logo_url}
+                                alt={opp.product.name}
+                                className="h-6 w-6 object-contain bg-white rounded p-0.5"
+                              />
+                            ) : null}
+                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                              {opp.product.name}
+                            </Badge>
+                          </div>
                         )}
                         {opp.value && (
                           <p className="text-sm font-semibold text-primary">
@@ -419,9 +428,20 @@ const Oportunidades = () => {
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Produto</p>
-                      <p className="text-sm font-medium">
-                        {opp.product?.name || "-"}
-                      </p>
+                      {opp.product ? (
+                        <div className="flex items-center gap-2">
+                          {opp.product.logo_url && (
+                            <img
+                              src={opp.product.logo_url}
+                              alt={opp.product.name}
+                              className="h-6 w-6 object-contain bg-white rounded p-0.5"
+                            />
+                          )}
+                          <p className="text-sm font-medium">{opp.product.name}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium">-</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Valor</p>

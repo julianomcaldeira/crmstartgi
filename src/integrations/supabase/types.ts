@@ -286,6 +286,7 @@ export type Database = {
           description: string | null
           id: string
           implementation_fee: number
+          logo_url: string | null
           monthly_fee: number
           name: string
           updated_at: string | null
@@ -296,6 +297,7 @@ export type Database = {
           description?: string | null
           id?: string
           implementation_fee?: number
+          logo_url?: string | null
           monthly_fee?: number
           name: string
           updated_at?: string | null
@@ -306,6 +308,7 @@ export type Database = {
           description?: string | null
           id?: string
           implementation_fee?: number
+          logo_url?: string | null
           monthly_fee?: number
           name?: string
           updated_at?: string | null

@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Calendar,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -77,6 +78,7 @@ const Layout = ({ children }: LayoutProps) => {
   };
 
   const isAdmin = userProfile?.user_roles?.[0]?.role === 'admin';
+  const isGestor = userProfile?.user_roles?.[0]?.role === 'gestor';
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -86,6 +88,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Calendar, label: "Agenda", path: "/agenda" },
     { icon: BarChart3, label: "Metas", path: "/metas" },
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
+    ...((isAdmin || isGestor) ? [{ icon: TrendingUp, label: "Performance", path: "/performance" }] : []),
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];

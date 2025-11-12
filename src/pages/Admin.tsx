@@ -36,6 +36,8 @@ import {
   Plus,
   Edit,
   Trash2,
+  Upload,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -61,6 +63,7 @@ const Admin = () => {
     description: "",
   });
   const [savingProduct, setSavingProduct] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -273,6 +276,39 @@ const Admin = () => {
       toast.error("Erro ao salvar produto: " + error.message);
     } finally {
       setSavingProduct(false);
+    }
+  };
+
+  const handleLogoUpload = async (productId: string, file: File) => {
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${productId}-${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("product-logos")
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("product-logos")
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ logo_url: publicUrl })
+        .eq("id", productId);
+
+      if (updateError) throw updateError;
+
+      toast.success("Logo atualizada com sucesso!");
+      fetchProducts();
+    } catch (error: any) {
+      toast.error("Erro ao fazer upload da logo: " + error.message);
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -652,20 +688,57 @@ const Admin = () => {
                     key={product.id}
                     className="p-4 bg-gradient-to-r from-card to-primary/5 rounded-lg border border-border hover:border-primary/30 transition-all"
                   >
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-4 flex-1">
-                        <div className="p-3 rounded-lg bg-primary/10">
-                          <Package className="h-6 w-6 text-primary" />
-                        </div>
+                        {product.logo_url ? (
+                          <img
+                            src={product.logo_url}
+                            alt={product.name}
+                            className="h-16 w-16 object-contain rounded-lg bg-white p-2"
+                          />
+                        ) : (
+                          <div className="p-3 rounded-lg bg-primary/10 h-16 w-16 flex items-center justify-center">
+                            <Package className="h-8 w-8 text-primary" />
+                          </div>
+                        )}
                         <div className="flex-1">
                           <h3 className="font-semibold text-foreground text-lg mb-2">
                             {product.name}
                           </h3>
                           {product.description && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                               {product.description}
                             </p>
                           )}
+                          <div className="flex items-center gap-2">
+                            <label
+                              htmlFor={`logo-upload-${product.id}`}
+                              className="cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded-md transition-colors border border-primary/20"
+                            >
+                              {uploadingLogo ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                                  Enviando...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="h-3 w-3" />
+                                  {product.logo_url ? "Alterar Logo" : "Adicionar Logo"}
+                                </>
+                              )}
+                            </label>
+                            <input
+                              id={`logo-upload-${product.id}`}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleLogoUpload(product.id, file);
+                              }}
+                              disabled={uploadingLogo}
+                            />
+                          </div>
                         </div>
                       </div>
                       <div className="flex gap-2">
