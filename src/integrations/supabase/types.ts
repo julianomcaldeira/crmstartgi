@@ -394,6 +394,27 @@ export type Database = {
           },
         ]
       }
+      loss_reasons: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       opportunities: {
         Row: {
           assigned_to: string
@@ -405,6 +426,7 @@ export type Database = {
           expected_close_date: string | null
           id: string
           implementation_value: number | null
+          loss_reason_id: string | null
           monthly_value: number | null
           probability: number | null
           product_id: string | null
@@ -423,6 +445,7 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           implementation_value?: number | null
+          loss_reason_id?: string | null
           monthly_value?: number | null
           probability?: number | null
           product_id?: string | null
@@ -441,6 +464,7 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           implementation_value?: number | null
+          loss_reason_id?: string | null
           monthly_value?: number | null
           probability?: number | null
           product_id?: string | null
@@ -469,6 +493,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_loss_reason_id_fkey"
+            columns: ["loss_reason_id"]
+            isOneToOne: false
+            referencedRelation: "loss_reasons"
             referencedColumns: ["id"]
           },
           {

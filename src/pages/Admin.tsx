@@ -39,6 +39,7 @@ import {
   Upload,
   Image as ImageIcon,
   Download,
+  X,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -66,6 +67,15 @@ const Admin = () => {
   const [savingProduct, setSavingProduct] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   
+  // Loss reasons state
+  const [lossReasons, setLossReasons] = useState<any[]>([]);
+  const [lossReasonDialogOpen, setLossReasonDialogOpen] = useState(false);
+  const [editingLossReason, setEditingLossReason] = useState<any>(null);
+  const [lossReasonForm, setLossReasonForm] = useState({
+    reason: "",
+  });
+  const [savingLossReason, setSavingLossReason] = useState(false);
+  
   // Export state
   const [exportingData, setExportingData] = useState(false);
 
@@ -92,6 +102,7 @@ const Admin = () => {
         await fetchUsers();
         await fetchStats();
         await fetchProducts();
+        await fetchLossReasons();
       } else {
         toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
         setIsAdmin(false);
@@ -347,6 +358,95 @@ const Admin = () => {
     setProductDialogOpen(true);
   };
 
+  // Loss Reasons functions
+  const fetchLossReasons = async () => {
+    const { data, error } = await supabase
+      .from("loss_reasons")
+      .select("*")
+      .order("reason", { ascending: true });
+
+    if (error) {
+      toast.error("Erro ao carregar motivos de perda");
+      return;
+    }
+
+    setLossReasons(data || []);
+  };
+
+  const handleLossReasonSubmit = async () => {
+    if (!lossReasonForm.reason.trim()) {
+      toast.error("Preencha o motivo de perda");
+      return;
+    }
+
+    setSavingLossReason(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      if (editingLossReason) {
+        const { error } = await supabase
+          .from("loss_reasons")
+          .update({
+            reason: lossReasonForm.reason.trim(),
+          })
+          .eq("id", editingLossReason.id);
+
+        if (error) throw error;
+        toast.success("Motivo atualizado com sucesso!");
+      } else {
+        const { error } = await supabase
+          .from("loss_reasons")
+          .insert({
+            reason: lossReasonForm.reason.trim(),
+            created_by: user.id,
+          });
+
+        if (error) throw error;
+        toast.success("Motivo criado com sucesso!");
+      }
+
+      setLossReasonDialogOpen(false);
+      setEditingLossReason(null);
+      setLossReasonForm({ reason: "" });
+      fetchLossReasons();
+    } catch (error: any) {
+      toast.error("Erro ao salvar motivo: " + error.message);
+    } finally {
+      setSavingLossReason(false);
+    }
+  };
+
+  const handleDeleteLossReason = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este motivo de perda?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("loss_reasons")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Motivo excluído com sucesso!");
+      fetchLossReasons();
+    } catch (error: any) {
+      toast.error("Erro ao excluir motivo: " + error.message);
+    }
+  };
+
+  const openLossReasonDialog = (reason?: any) => {
+    if (reason) {
+      setEditingLossReason(reason);
+      setLossReasonForm({
+        reason: reason.reason,
+      });
+    } else {
+      setEditingLossReason(null);
+      setLossReasonForm({ reason: "" });
+    }
+    setLossReasonDialogOpen(true);
+  };
+
   const handleExportDatabase = async () => {
     setExportingData(true);
     try {
@@ -555,9 +655,10 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
           <TabsTrigger value="feiras">Feiras</TabsTrigger>
           <TabsTrigger value="metrics">Métricas da Equipe</TabsTrigger>
           <TabsTrigger value="export">Exportar Base</TabsTrigger>
@@ -847,6 +948,116 @@ const Admin = () => {
                           size="icon"
                           onClick={() => handleDeleteProduct(product.id)}
                           className="hover:bg-destructive/10 hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="loss-reasons" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-foreground">Motivos de Perda</h2>
+              <Button
+                onClick={() => openLossReasonDialog()}
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Motivo
+              </Button>
+            </div>
+
+            <Dialog open={lossReasonDialogOpen} onOpenChange={setLossReasonDialogOpen}>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingLossReason ? "Editar Motivo de Perda" : "Novo Motivo de Perda"}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="lossReasonName">Motivo *</Label>
+                    <Input
+                      id="lossReasonName"
+                      placeholder="Ex: Preço muito alto"
+                      value={lossReasonForm.reason}
+                      onChange={(e) =>
+                        setLossReasonForm({ reason: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setLossReasonDialogOpen(false)}
+                    disabled={savingLossReason}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleLossReasonSubmit}
+                    disabled={savingLossReason}
+                    className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                  >
+                    {savingLossReason
+                      ? "Salvando..."
+                      : editingLossReason
+                      ? "Atualizar"
+                      : "Criar"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <div className="space-y-3">
+              {lossReasons.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Target className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum motivo de perda cadastrado</p>
+                  <p className="text-sm mt-2">Clique em "Novo Motivo" para começar</p>
+                </div>
+              ) : (
+                lossReasons.map((reason) => (
+                  <div
+                    key={reason.id}
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/30 transition-all"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="p-3 rounded-lg bg-destructive/10 h-12 w-12 flex items-center justify-center">
+                          <X className="h-6 w-6 text-destructive" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground text-lg">
+                            {reason.reason}
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Criado em {new Date(reason.created_at).toLocaleDateString("pt-BR")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openLossReasonDialog(reason)}
+                          title="Editar motivo"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteLossReason(reason.id)}
+                          className="text-destructive hover:text-destructive"
+                          title="Excluir motivo"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

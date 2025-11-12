@@ -1,972 +1,225 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit } from "lucide-react";
-import { toast } from "sonner";
-import { ClientEditDialog } from "@/components/ClientEditDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Separator } from "@/components/ui/separator";
 
 const Clientes = () => {
   const navigate = useNavigate();
-  const [clients, setClients] = useState<any[]>([]);
-  const [sellers, setSellers] = useState<any[]>([]);
+  const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedSeller, setSelectedSeller] = useState<string>("all");
-  const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
-  const [selectedCompanySize, setSelectedCompanySize] = useState<string>("all");
-  const [selectedRegion, setSelectedRegion] = useState<string>("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [loadingCnpj, setLoadingCnpj] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<any>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userRoles, setUserRoles] = useState<string[]>([]);
-  
-  // Client form fields
-  const [cnpj, setCnpj] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [tradeName, setTradeName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [zipCode, setZipCode] = useState("");
-  const [segment, setSegment] = useState("");
-  const [shareCapital, setShareCapital] = useState("");
-  const [legalNature, setLegalNature] = useState("");
-  const [companySize, setCompanySize] = useState("");
-  const [region, setRegion] = useState("");
-  const [competitors, setCompetitors] = useState("");
-  const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
-  const [feiras, setFeiras] = useState<any[]>([]);
-
-  // Contacts
-  const [contacts, setContacts] = useState<any[]>([{
-    name: "", role: "", email: "", phone: "", mobile: "", is_primary: true
-  }]);
 
   useEffect(() => {
-    fetchClients();
-    fetchSellers();
-    fetchFeiras();
-    fetchCurrentUser();
+    fetchClientes();
   }, []);
 
-  const fetchCurrentUser = async () => {
+  const fetchClientes = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      setCurrentUserId(user.id);
-      
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-      
-      if (rolesError) throw rolesError;
-      setUserRoles(rolesData?.map(r => r.role) || []);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-    }
-  };
-
-  const fetchFeiras = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("feiras")
-        .select("id, name, start_date, city")
-        .order("start_date", { ascending: false });
-      
-      if (error) throw error;
-      setFeiras(data || []);
-    } catch (error) {
-      console.error("Error fetching feiras:", error);
-    }
-  };
-
-  const fetchSellers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .order("full_name");
-      
-      if (error) throw error;
-      setSellers(data || []);
-    } catch (error) {
-      console.error("Error fetching sellers:", error);
-    }
-  };
-
-  const fetchClients = async () => {
-    try {
+      // Buscar clientes que têm pelo menos uma oportunidade ganha
       const { data, error } = await supabase
         .from("clients")
         .select(`
           *,
-          contacts(*),
-          created_by_profile:profiles!clients_created_by_fkey(full_name, email),
-          client_feiras(feira_id)
+          opportunities!inner(id, status, value, created_at),
+          profiles:created_by(full_name, email)
         `)
-        .order("created_at", { ascending: false });
+        .eq("opportunities.status", "won")
+        .order("company_name");
 
       if (error) throw error;
-      setClients(data || []);
+
+      // Agrupar por cliente único e calcular resumo
+      const clientesUnicos = data?.reduce((acc: any[], client) => {
+        const existingClient = acc.find((c) => c.id === client.id);
+        
+        if (!existingClient) {
+          // Filtrar todas as oportunidades ganhas deste cliente
+          const clientOpportunities = data.filter((c) => c.id === client.id);
+          
+          const totalValue = clientOpportunities.reduce(
+            (sum, c) => sum + (Number(c.opportunities[0]?.value) || 0),
+            0
+          );
+
+          const sortedOpps = clientOpportunities.sort(
+            (a, b) =>
+              new Date(a.opportunities[0]?.created_at).getTime() -
+              new Date(b.opportunities[0]?.created_at).getTime()
+          );
+
+          acc.push({
+            ...client,
+            wonOpportunitiesCount: clientOpportunities.length,
+            totalValue,
+            firstWonDate: sortedOpps[0]?.opportunities[0]?.created_at,
+          });
+        }
+        
+        return acc;
+      }, []);
+
+      setClientes(clientesUnicos || []);
     } catch (error) {
-      console.error("Error fetching clients:", error);
-      toast.error("Erro ao carregar clientes");
+      console.error("Error fetching clientes:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCnpjBlur = async () => {
-    const cleanedCnpj = cnpj.replace(/\D/g, ''); // Remove máscara
-    if (cleanedCnpj.length < 14) return;
-    
-    setLoadingCnpj(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("buscar-cnpj", {
-        body: { cnpj: cleanedCnpj }
-      });
-
-      if (error) throw error;
-
-      if (data) {
-        setCompanyName(data.company_name || "");
-        setTradeName(data.trade_name || "");
-        setEmail(data.email || "");
-        setPhone(data.phone || "");
-        setAddress(data.address || "");
-        setCity(data.city || "");
-        setState(data.state || "");
-        setZipCode(data.zip_code || "");
-        setSegment(data.segment || "");
-        setShareCapital(data.share_capital?.toString() || "");
-        setLegalNature(data.legal_nature || "");
-        
-        toast.success("Dados da empresa carregados!");
-      }
-    } catch (error: any) {
-      console.error("Error fetching CNPJ:", error);
-      toast.error(error.message || "Erro ao buscar CNPJ");
-    } finally {
-      setLoadingCnpj(false);
-    }
-  };
-
-  const addContact = () => {
-    setContacts([...contacts, { name: "", role: "", email: "", phone: "", mobile: "", is_primary: false }]);
-  };
-
-  const updateContact = (index: number, field: string, value: any) => {
-    const newContacts = [...contacts];
-    newContacts[index] = { ...newContacts[index], [field]: value };
-    setContacts(newContacts);
-  };
-
-  const removeContact = (index: number) => {
-    if (contacts.length > 1) {
-      setContacts(contacts.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleCreateClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: clientData, error: clientError } = await supabase
-        .from("clients")
-        .insert({
-          cnpj: cnpj.replace(/\D/g, ""),
-          company_name: companyName,
-          trade_name: tradeName,
-          email,
-          phone,
-          address,
-          city,
-          state,
-          zip_code: zipCode,
-          segment,
-          share_capital: shareCapital ? parseFloat(shareCapital) : null,
-          legal_nature: legalNature,
-          company_size: companySize,
-          region: region,
-          competitors: competitors,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (clientError) throw clientError;
-
-      // Insert contacts
-      const validContacts = contacts.filter(c => c.name.trim());
-      if (validContacts.length > 0) {
-        const contactsData = validContacts.map(contact => ({
-          ...contact,
-          client_id: clientData.id,
-          created_by: user.id,
-        }));
-
-        const { error: contactsError } = await supabase
-          .from("contacts")
-          .insert(contactsData);
-
-        if (contactsError) throw contactsError;
-      }
-
-      // Insert client-feira relationships
-      if (selectedFeiras.length > 0) {
-        const clientFeirasData = selectedFeiras.map(feiraId => ({
-          client_id: clientData.id,
-          feira_id: feiraId,
-          created_by: user.id,
-        }));
-
-        const { error: feirasError } = await (supabase as any)
-          .from("client_feiras")
-          .insert(clientFeirasData);
-
-        if (feirasError) throw feirasError;
-      }
-
-      toast.success("Cliente cadastrado com sucesso!");
-      setDialogOpen(false);
-      resetForm();
-      fetchClients();
-    } catch (error: any) {
-      console.error("Error creating client:", error);
-      toast.error(error.message || "Erro ao cadastrar cliente");
-    }
-  };
-
-  const resetForm = () => {
-    setCnpj("");
-    setCompanyName("");
-    setTradeName("");
-    setEmail("");
-    setPhone("");
-    setAddress("");
-    setCity("");
-    setState("");
-    setZipCode("");
-    setSegment("");
-    setShareCapital("");
-    setLegalNature("");
-    setCompanySize("");
-    setRegion("");
-    setCompetitors("");
-    setSelectedFeiras([]);
-    setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
-  };
-
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch = client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.cnpj.includes(searchTerm) ||
-      (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
-    
-    const matchesFeira = selectedFeiraFilter === "all" || 
-      (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
-    
-    const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
-    
-    const matchesRegion = selectedRegion === "all" || 
-      (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
-    
-    return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedClients = filteredClients.slice(startIndex, endIndex);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion]);
-
-  const canEditClient = (client: any) => {
-    if (!currentUserId) return false;
-    const isOwner = client.created_by === currentUserId;
-    const isAdminOrGestor = userRoles.includes('admin') || userRoles.includes('gestor');
-    return isOwner || isAdminOrGestor;
-  };
-
-  const handleEditClient = (e: React.MouseEvent, client: any) => {
-    e.stopPropagation();
-    setSelectedClient(client);
-    setEditDialogOpen(true);
-  };
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
-            Clientes
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie sua base de clientes
-          </p>
-        </div>
-        
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-primary">
-              <Plus size={20} />
-              Novo Cliente
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-2xl">Cadastrar Novo Cliente</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateClient}>
-              <Tabs defaultValue="empresa" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="empresa">Dados da Empresa</TabsTrigger>
-                  <TabsTrigger value="contatos">Contatos</TabsTrigger>
-                  <TabsTrigger value="feiras">Feiras</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="empresa" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
-                    <div className="relative">
-                      <CNPJInput
-                        id="cnpj"
-                        value={cnpj}
-                        onValueChange={(value) => {
-                          setCnpj(value);
-                          if (value.replace(/\D/g, '').length === 14) {
-                            handleCnpjBlur();
-                          }
-                        }}
-                        placeholder="00.000.000/0000-00"
-                        disabled={loadingCnpj}
-                      />
-                      {loadingCnpj && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary" size={20} />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Razão Social *</Label>
-                      <Input
-                        id="companyName"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tradeName">Nome Fantasia</Label>
-                      <Input
-                        id="tradeName"
-                        value={tradeName}
-                        onChange={(e) => setTradeName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="segment">Segmento</Label>
-                      <Input
-                        id="segment"
-                        value={segment}
-                        onChange={(e) => setSegment(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shareCapital">Capital Social</Label>
-                      <CurrencyInput
-                        id="shareCapital"
-                        value={shareCapital}
-                        onValueChange={(value) => setShareCapital(value)}
-                        placeholder="R$ 0,00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="legalNature">Natureza Jurídica</Label>
-                    <Input
-                      id="legalNature"
-                      value={legalNature}
-                      onChange={(e) => setLegalNature(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companySize">Porte da Empresa</Label>
-                      <select
-                        id="companySize"
-                        value={companySize}
-                        onChange={(e) => setCompanySize(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="MEI">MEI</option>
-                        <option value="ME">Microempresa (ME)</option>
-                        <option value="EPP">Pequeno Porte (EPP)</option>
-                        <option value="medio">Médio Porte</option>
-                        <option value="grande">Grande Porte</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="region">Região</Label>
-                      <Input
-                        id="region"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="Ex: Sudeste, Sul, etc."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="competitors">Concorrentes</Label>
-                    <Input
-                      id="competitors"
-                      value={competitors}
-                      onChange={(e) => setCompetitors(e.target.value)}
-                      placeholder="Liste os principais concorrentes"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefone</Label>
-                      <PhoneInput
-                        id="phone"
-                        value={phone}
-                        onValueChange={(value) => setPhone(value)}
-                        placeholder="(00) 00000-0000"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Endereço</Label>
-                    <Input
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Cidade</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="state">Estado</Label>
-                      <Input
-                        id="state"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        maxLength={2}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="zipCode">CEP</Label>
-                      <CEPInput
-                        id="zipCode"
-                        value={zipCode}
-                        onValueChange={(value) => setZipCode(value)}
-                        placeholder="00000-000"
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="contatos" className="space-y-4 mt-4">
-                  {contacts.map((contact, index) => (
-                    <Card key={index}>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm">
-                            Contato {index + 1}
-                            {contact.is_primary && <span className="text-primary ml-2">(Principal)</span>}
-                          </CardTitle>
-                          {contacts.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => removeContact(index)}
-                            >
-                              Remover
-                            </Button>
-                          )}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Nome *</Label>
-                            <Input
-                              value={contact.name}
-                              onChange={(e) => updateContact(index, "name", e.target.value)}
-                              required
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Cargo</Label>
-                            <Input
-                              value={contact.role}
-                              onChange={(e) => updateContact(index, "role", e.target.value)}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Email</Label>
-                            <Input
-                              type="email"
-                              value={contact.email}
-                              onChange={(e) => updateContact(index, "email", e.target.value)}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Telefone</Label>
-                            <PhoneInput
-                              value={contact.phone || ""}
-                              onValueChange={(value) => updateContact(index, "phone", value)}
-                              placeholder="(00) 00000-0000"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label>Celular</Label>
-                            <PhoneInput
-                              value={contact.mobile || ""}
-                              onValueChange={(value) => updateContact(index, "mobile", value)}
-                              placeholder="(00) 00000-0000"
-                            />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addContact}
-                    className="w-full"
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Adicionar Contato
-                  </Button>
-                </TabsContent>
-
-                <TabsContent value="feiras" className="space-y-4 mt-4">
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Selecione as feiras que este cliente participou ou irá participar
-                    </p>
-                    
-                    {feiras.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        Nenhuma feira cadastrada no sistema
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto p-1">
-                        {feiras.map((feira) => (
-                          <Card
-                            key={feira.id}
-                            className={`p-4 cursor-pointer transition-all ${
-                              selectedFeiras.includes(feira.id)
-                                ? "border-primary bg-primary/5"
-                                : "hover:border-primary/50"
-                            }`}
-                            onClick={() => {
-                              setSelectedFeiras(prev =>
-                                prev.includes(feira.id)
-                                  ? prev.filter(id => id !== feira.id)
-                                  : [...prev, feira.id]
-                              );
-                            }}
-                          >
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <h4 className="font-medium text-foreground">{feira.name}</h4>
-                                {feira.city && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {feira.city}
-                                  </p>
-                                )}
-                                {feira.start_date && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    {new Date(feira.start_date).toLocaleDateString('pt-BR')}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex-shrink-0">
-                                {selectedFeiras.includes(feira.id) && (
-                                  <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
-                                    <svg
-                                      className="h-4 w-4 text-primary-foreground"
-                                      fill="none"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth="2"
-                                      viewBox="0 0 24 24"
-                                      stroke="currentColor"
-                                    >
-                                      <path d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {selectedFeiras.length > 0 && (
-                      <div className="pt-4 border-t">
-                        <p className="text-sm font-medium text-foreground">
-                          {selectedFeiras.length} feira(s) selecionada(s)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-
-              <div className="flex justify-end gap-2 pt-6 border-t mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Cadastrar Cliente</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
+        <p className="text-muted-foreground">
+          Empresas com oportunidades ganhas - Total de {clientes.length} cliente
+          {clientes.length !== 1 ? "s" : ""}
+        </p>
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
-              <Input
-                placeholder="Buscar por nome ou CNPJ..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative w-full sm:w-64">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedSeller}
-                onChange={(e) => setSelectedSeller(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todos os vendedores</option>
-                {sellers.map((seller) => (
-                  <option key={seller.id} value={seller.id}>
-                    {seller.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedFeiraFilter}
-                onChange={(e) => setSelectedFeiraFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todas as feiras</option>
-                {feiras.map((feira) => (
-                  <option key={feira.id} value={feira.id}>
-                    {feira.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <div className="relative w-full sm:w-64">
-              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedCompanySize}
-                onChange={(e) => setSelectedCompanySize(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todos os portes</option>
-                <option value="MEI">MEI</option>
-                <option value="ME">Microempresa (ME)</option>
-                <option value="EPP">Pequeno Porte (EPP)</option>
-                <option value="medio">Médio Porte</option>
-                <option value="grande">Grande Porte</option>
-              </select>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <Input
-                placeholder="Filtrar por região..."
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Results Counter */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <div className="px-4 py-2 bg-primary/10 rounded-lg">
-            <p className="text-sm font-medium text-foreground">
-              <span className="text-2xl font-bold text-primary">{filteredClients.length}</span>
-              <span className="ml-2 text-muted-foreground">
-                {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
-              </span>
-            </p>
-          </div>
-          {(searchTerm || selectedSeller !== "all" || selectedFeiraFilter !== "all" || selectedCompanySize !== "all" || selectedRegion) && (
-            <p className="text-xs text-muted-foreground">
-              (de {clients.length} {clients.length === 1 ? 'cliente total' : 'clientes totais'})
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {loading ? (
-          <p className="text-center text-muted-foreground">Carregando...</p>
-        ) : filteredClients.length === 0 ? (
-          <Card className="p-12 text-center">
+      {loading ? (
+        <p className="text-center text-muted-foreground">Carregando...</p>
+      ) : clientes.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
             <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
-            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
-          </Card>
-        ) : (
-          <>
-            {paginatedClients.map((client) => (
-            <Card 
-              key={client.id} 
-              className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
-              onClick={() => navigate(`/clientes/${client.id}`)}
+            <p className="text-muted-foreground">
+              Nenhum cliente cadastrado ainda. Clientes aparecem aqui quando uma oportunidade
+              é marcada como Ganha.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {clientes.map((cliente) => (
+            <Card
+              key={cliente.id}
+              className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/prospects/${cliente.id}`)}
             >
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between gap-6">
-                  {/* Main Client Info */}
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Building2 className="text-primary" size={24} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-xl font-bold text-foreground mb-1 truncate">
-                        {client.trade_name || client.company_name}
-                      </h3>
-                      {client.trade_name && (
-                        <p className="text-sm text-muted-foreground mb-2 truncate">
-                          {client.company_name}
-                        </p>
-                      )}
-                      
-                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-muted-foreground">CNPJ:</span>
-                          <span className="text-foreground">{client.cnpj}</span>
-                        </div>
-                        
-                        {client.segment && (
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-muted-foreground">Segmento:</span>
-                            <span className="text-foreground">{client.segment}</span>
-                          </div>
-                        )}
-
-                        {(client.city || client.state) && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin size={16} />
-                            <span>{[client.city, client.state].filter(Boolean).join(", ")}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm mt-3">
-                        {client.email && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Mail size={16} />
-                            <span className="truncate">{client.email}</span>
-                          </div>
-                        )}
-
-                        {client.phone && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Phone size={16} />
-                            <span>{client.phone}</span>
-                          </div>
-                        )}
-
-                        {client.contacts && client.contacts.length > 0 && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <User size={16} />
-                            <span>{client.contacts.length} contato(s)</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seller Info and Edit Button */}
-                  <div className="flex items-start gap-3 flex-shrink-0">
-                    {client.created_by_profile && (
-                      <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
-                        <div className="flex items-center gap-2 mb-1">
-                          <User className="text-primary" size={16} />
-                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            Vendedor Responsável
-                          </span>
-                        </div>
-                        <p className="font-semibold text-primary text-lg">
-                          {client.created_by_profile.full_name}
-                        </p>
-                        {client.created_by_profile.email && (
-                          <p className="text-xs text-muted-foreground mt-1 truncate">
-                            {client.created_by_profile.email}
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Building2 className="h-6 w-6 text-green-600" />
+                      <div>
+                        <CardTitle className="text-xl">
+                          {cliente.trade_name || cliente.company_name}
+                        </CardTitle>
+                        {cliente.trade_name && (
+                          <p className="text-sm text-muted-foreground">
+                            {cliente.company_name}
                           </p>
                         )}
                       </div>
-                    )}
+                    </div>
                     
-                    {canEditClient(client) && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => handleEditClient(e, client)}
-                        className="h-10 w-10"
-                      >
-                        <Edit size={18} />
-                      </Button>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      <Badge variant="default" className="bg-green-600">
+                        Cliente Ativo
+                      </Badge>
+                      <Badge variant="outline">
+                        {cliente.wonOpportunitiesCount} oportunidade
+                        {cliente.wonOpportunitiesCount !== 1 ? "s" : ""} ganha
+                        {cliente.wonOpportunitiesCount !== 1 ? "s" : ""}
+                      </Badge>
+                      <Badge variant="secondary">
+                        {new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(cliente.totalValue)}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        {[cliente.city, cliente.state].filter(Boolean).join(" - ") ||
+                          "Não informado"}
+                      </span>
+                    </div>
+
+                    {cliente.phone && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{cliente.phone}</span>
+                      </div>
+                    )}
+
+                    {cliente.email && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{cliente.email}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {cliente.segment && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Segmento: </span>
+                        <span className="font-medium">{cliente.segment}</span>
+                      </div>
+                    )}
+
+                    {cliente.company_size && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Porte: </span>
+                        <span className="font-medium">{cliente.company_size}</span>
+                      </div>
+                    )}
+
+                    {cliente.firstWonDate && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Cliente desde: </span>
+                        <span className="font-medium">
+                          {new Date(cliente.firstWonDate).toLocaleDateString("pt-BR")}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            ))}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <Card className="mt-6">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClients.length)} de {filteredClients.length} clientes
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        <ChevronLeft size={16} />
-                        Anterior
-                      </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="min-w-[40px]"
-                          >
-                            {page}
-                          </Button>
-                        ))}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                      >
-                        Próxima
-                        <ChevronRight size={16} />
-                      </Button>
+                <Separator />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Responsável:</span>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 rounded-lg border border-green-200 dark:border-green-800">
+                      <span className="font-medium">
+                        {cliente.profiles?.full_name || "Não atribuído"}
+                      </span>
+                      {cliente.profiles?.email && (
+                        <span className="text-xs">({cliente.profiles.email})</span>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
 
-      {selectedClient && (
-        <ClientEditDialog
-          client={selectedClient}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onSuccess={fetchClients}
-        />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/prospects/${cliente.id}`);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Ver Detalhes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );

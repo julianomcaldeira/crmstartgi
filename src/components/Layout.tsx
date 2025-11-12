@@ -86,8 +86,9 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-    { icon: Users, label: "Clientes", path: "/clientes" },
+    { icon: Users, label: "Prospects", path: "/prospects" },
     { icon: Target, label: "Oportunidades", path: "/oportunidades" },
+    { icon: Users, label: "Clientes", path: "/clientes" },
     { icon: CheckSquare, label: "Tarefas", path: "/tarefas" },
     { icon: Calendar, label: "Agenda", path: "/agenda" },
     { icon: BarChart3, label: "Metas", path: "/metas" },

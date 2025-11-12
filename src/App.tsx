@@ -3,8 +3,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Prospects from "./pages/Prospects";
+import ProspectDetalhes from "./pages/ProspectDetalhes";
 import Clientes from "./pages/Clientes";
-import ClienteDetalhes from "./pages/ClienteDetalhes";
 import Oportunidades from "./pages/Oportunidades";
 import Tarefas from "./pages/Tarefas";
 import Metas from "./pages/Metas";
@@ -26,9 +27,10 @@ const App = () => {
       <Routes>
         <Route path="/auth" element={<Auth />} />
         <Route path="/" element={<Layout><Dashboard /></Layout>} />
-        <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
-        <Route path="/clientes/:id" element={<Layout><ClienteDetalhes /></Layout>} />
+        <Route path="/prospects" element={<Layout><Prospects /></Layout>} />
+        <Route path="/prospects/:id" element={<Layout><ProspectDetalhes /></Layout>} />
         <Route path="/oportunidades" element={<Layout><Oportunidades /></Layout>} />
+        <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
         <Route path="/tarefas" element={<Layout><Tarefas /></Layout>} />
         <Route path="/metas" element={<Layout><Metas /></Layout>} />
         <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />

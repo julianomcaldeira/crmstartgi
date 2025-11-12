@@ -21,6 +21,7 @@ import { OpportunityEditDialog } from "@/components/OpportunityEditDialog";
 import { OpportunityActivityLog } from "@/components/OpportunityActivityLog";
 import { ProposalViewer } from "@/components/ProposalViewer";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
+import { LossReasonDialog } from "@/components/LossReasonDialog";
 import { DroppableColumn } from "@/components/DroppableColumn";
 import { DraggableCard } from "@/components/DraggableCard";
 import {
@@ -53,6 +54,9 @@ const Oportunidades = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [lossReasonDialogOpen, setLossReasonDialogOpen] = useState(false);
+  const [selectedLossReason, setSelectedLossReason] = useState<string>("");
+  const [pendingStatus, setPendingStatus] = useState<string>("");
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -461,6 +465,13 @@ const Oportunidades = () => {
   const handleUpdateOpportunity = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Check if status is being changed to "lost"
+    if (status === "lost" && editingOpportunity.status !== "lost" && !selectedLossReason) {
+      setPendingStatus("lost");
+      setLossReasonDialogOpen(true);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -473,21 +484,28 @@ const Oportunidades = () => {
         .single();
 
       // Update opportunity
+      const updateData: any = {
+        client_id: clientId,
+        product_id: productId || null,
+        implementation_value: implementationValue ? parseFloat(implementationValue) : null,
+        monthly_value: monthlyValue ? parseFloat(monthlyValue) : null,
+        value: (implementationValue || monthlyValue) ? 
+          (parseFloat(implementationValue || "0") + parseFloat(monthlyValue || "0")) : null,
+        probability: parseInt(probability),
+        status: status as any,
+        assigned_to: assignedTo,
+        expected_close_date: expectedCloseDate || null,
+        business_type: businessType as any,
+      };
+
+      // Add loss_reason_id if status is "lost"
+      if (status === "lost") {
+        updateData.loss_reason_id = selectedLossReason || null;
+      }
+
       const { error } = await supabase
         .from("opportunities")
-        .update({
-          client_id: clientId,
-          product_id: productId || null,
-          implementation_value: implementationValue ? parseFloat(implementationValue) : null,
-          monthly_value: monthlyValue ? parseFloat(monthlyValue) : null,
-          value: (implementationValue || monthlyValue) ? 
-            (parseFloat(implementationValue || "0") + parseFloat(monthlyValue || "0")) : null,
-          probability: parseInt(probability),
-          status: status as any,
-          assigned_to: assignedTo,
-          expected_close_date: expectedCloseDate || null,
-          business_type: businessType as any,
-        })
+        .update(updateData)
         .eq("id", editingOpportunity.id);
 
       if (error) throw error;
@@ -533,11 +551,21 @@ const Oportunidades = () => {
 
       toast.success("Oportunidade atualizada!");
       setEditDialogOpen(false);
+      setSelectedLossReason("");
       fetchData();
     } catch (error: any) {
       console.error("Error updating opportunity:", error);
       toast.error(error.message || "Erro ao atualizar oportunidade");
     }
+  };
+
+  const handleLossReasonSelected = (reasonId: string) => {
+    setSelectedLossReason(reasonId);
+    setLossReasonDialogOpen(false);
+    
+    // Now submit the form with the loss reason
+    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+    handleUpdateOpportunity(fakeEvent);
   };
 
   return (
@@ -1199,6 +1227,12 @@ const Oportunidades = () => {
         onDownloadAttachment={handleDownloadAttachment}
         onDeleteAttachment={handleDeleteAttachment}
         uploadingFiles={uploadingFiles}
+      />
+
+      <LossReasonDialog
+        open={lossReasonDialogOpen}
+        onOpenChange={setLossReasonDialogOpen}
+        onReasonSelected={handleLossReasonSelected}
       />
 
       {showActivityLog && selectedOpportunityForLog && (
