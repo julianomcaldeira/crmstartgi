@@ -995,10 +995,6 @@ const Oportunidades = () => {
       })}
     </div>
   </DndContext>
-              </div>
-            );
-          })}
-        </div>
       ) : (
         <div className="space-y-4">
           {getFilteredOpportunities().map((opp) => {

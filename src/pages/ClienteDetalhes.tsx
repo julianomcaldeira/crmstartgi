@@ -103,11 +103,18 @@ const ClienteDetalhes = () => {
       setOpportunities(opportunitiesData || []);
 
       // Fetch tasks
-      const { data: tasksData } = await supabase
+      const { data: tasksData, error: tasksError } = await supabase
         .from("tasks")
-        .select("*, profiles(full_name)")
+        .select(`
+          *,
+          assigned_user:profiles!tasks_assigned_to_fkey(full_name)
+        `)
         .eq("client_id", id)
         .order("created_at", { ascending: false });
+      
+      if (tasksError) {
+        console.error("Error fetching tasks:", tasksError);
+      }
       setTasks(tasksData || []);
 
       // Fetch users for assignment
@@ -767,7 +774,7 @@ const ClienteDetalhes = () => {
                         )}
                       </div>
                       <span className="text-muted-foreground">
-                        {task.profiles?.full_name || "Não atribuído"}
+                        {task.assigned_user?.full_name || "Não atribuído"}
                       </span>
                     </div>
                   </div>
