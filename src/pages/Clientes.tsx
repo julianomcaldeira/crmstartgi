@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -25,6 +25,8 @@ const Clientes = () => {
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -215,6 +217,17 @@ const Clientes = () => {
     
     return matchesSearch && matchesSeller;
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedClients = filteredClients.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedSeller]);
 
   return (
     <div className="space-y-6">
@@ -514,7 +527,8 @@ const Clientes = () => {
             <p className="text-muted-foreground">Nenhum cliente encontrado</p>
           </Card>
         ) : (
-          filteredClients.map((client) => (
+          <>
+            {paginatedClients.map((client) => (
             <Card 
               key={client.id} 
               className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
@@ -605,7 +619,54 @@ const Clientes = () => {
                 </div>
               </CardContent>
             </Card>
-          ))
+            ))}
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <Card className="mt-6">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClients.length)} de {filteredClients.length} clientes
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft size={16} />
+                        Anterior
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="min-w-[40px]"
+                          >
+                            {page}
+                          </Button>
+                        ))}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Próxima
+                        <ChevronRight size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </div>

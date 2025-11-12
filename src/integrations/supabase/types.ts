@@ -205,6 +205,7 @@ export type Database = {
       opportunities: {
         Row: {
           assigned_to: string
+          business_type: Database["public"]["Enums"]["business_type"] | null
           client_id: string
           created_at: string | null
           created_by: string
@@ -222,6 +223,7 @@ export type Database = {
         }
         Insert: {
           assigned_to: string
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           client_id: string
           created_at?: string | null
           created_by: string
@@ -239,6 +241,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string
+          business_type?: Database["public"]["Enums"]["business_type"] | null
           client_id?: string
           created_at?: string | null
           created_by?: string
@@ -569,6 +572,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "vendedor" | "gestor"
+      business_type: "cliente_novo" | "venda_na_base"
       goal_type: "revenue" | "annualized_sales" | "tasks" | "activities"
       opportunity_status:
         | "lead"
@@ -716,6 +720,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "vendedor", "gestor"],
+      business_type: ["cliente_novo", "venda_na_base"],
       goal_type: ["revenue", "annualized_sales", "tasks", "activities"],
       opportunity_status: [
         "lead",

@@ -13,6 +13,7 @@ import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Admin from "./pages/Admin";
 import PerformanceVendedores from "./pages/PerformanceVendedores";
+import MetricasEquipe from "./pages/MetricasEquipe";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -34,6 +35,7 @@ const App = () => {
           <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
           <Route path="/admin" element={<Layout><Admin /></Layout>} />
           <Route path="/performance" element={<Layout><PerformanceVendedores /></Layout>} />
+          <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
           <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>

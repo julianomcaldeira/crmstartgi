@@ -52,6 +52,7 @@ const Oportunidades = () => {
   const [status, setStatus] = useState("lead");
   const [assignedTo, setAssignedTo] = useState("");
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
+  const [businessType, setBusinessType] = useState("cliente_novo");
 
   const stages = [
     { key: "lead", label: "Lead", color: "bg-muted text-muted-foreground" },
@@ -121,6 +122,7 @@ const Oportunidades = () => {
         assigned_to: assignedTo || user.id,
         expected_close_date: expectedCloseDate || null,
         created_by: user.id,
+        business_type: businessType as any,
       }]);
 
       if (error) throw error;
@@ -144,6 +146,7 @@ const Oportunidades = () => {
     setStatus("lead");
     setAssignedTo("");
     setExpectedCloseDate("");
+    setBusinessType("cliente_novo");
   };
 
   const getFilteredOpportunities = () => {
@@ -237,6 +240,7 @@ const Oportunidades = () => {
     setStatus(opp.status);
     setAssignedTo(opp.assigned_to);
     setExpectedCloseDate(opp.expected_close_date || "");
+    setBusinessType(opp.business_type || "cliente_novo");
     
     // Fetch attachments
     fetchAttachments(opp.id);
@@ -422,6 +426,7 @@ const Oportunidades = () => {
           status: status as any,
           assigned_to: assignedTo,
           expected_close_date: expectedCloseDate || null,
+          business_type: businessType as any,
         })
         .eq("id", editingOpportunity.id);
 
@@ -613,6 +618,19 @@ const Oportunidades = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessType">Tipo de Negócio</Label>
+                <Select value={businessType} onValueChange={setBusinessType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                    <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1011,6 +1029,8 @@ const Oportunidades = () => {
         setAssignedTo={setAssignedTo}
         expectedCloseDate={expectedCloseDate}
         setExpectedCloseDate={setExpectedCloseDate}
+        businessType={businessType}
+        setBusinessType={setBusinessType}
         attachments={attachments}
         onFileUpload={handleFileUpload}
         onDownloadAttachment={handleDownloadAttachment}

@@ -32,6 +32,8 @@ interface OpportunityEditDialogProps {
   setAssignedTo: (value: string) => void;
   expectedCloseDate: string;
   setExpectedCloseDate: (value: string) => void;
+  businessType: string;
+  setBusinessType: (value: string) => void;
   // Attachments
   attachments: any[];
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -64,6 +66,8 @@ export function OpportunityEditDialog({
   setAssignedTo,
   expectedCloseDate,
   setExpectedCloseDate,
+  businessType,
+  setBusinessType,
   attachments,
   onFileUpload,
   onDownloadAttachment,
@@ -187,6 +191,19 @@ export function OpportunityEditDialog({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-businessType">Tipo de Negócio</Label>
+                <Select value={businessType} onValueChange={setBusinessType}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                    <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
