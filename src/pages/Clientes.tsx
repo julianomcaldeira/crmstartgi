@@ -207,7 +207,7 @@ const Clientes = () => {
           created_by: user.id,
         }));
 
-        const { error: feirasError } = await supabase
+        const { error: feirasError } = await (supabase as any)
           .from("client_feiras")
           .insert(clientFeirasData);
 
