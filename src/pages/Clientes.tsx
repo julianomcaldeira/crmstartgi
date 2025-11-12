@@ -23,6 +23,7 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
+  const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,7 +91,8 @@ const Clientes = () => {
         .select(`
           *,
           contacts(*),
-          created_by_profile:profiles!clients_created_by_fkey(full_name, email)
+          created_by_profile:profiles!clients_created_by_fkey(full_name, email),
+          client_feiras(feira_id)
         `)
         .order("created_at", { ascending: false });
 
@@ -248,7 +250,10 @@ const Clientes = () => {
     
     const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
     
-    return matchesSearch && matchesSeller;
+    const matchesFeira = selectedFeiraFilter === "all" || 
+      (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
+    
+    return matchesSearch && matchesSeller && matchesFeira;
   });
 
   // Pagination
@@ -260,7 +265,7 @@ const Clientes = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter]);
 
   return (
     <div className="space-y-6">
@@ -621,6 +626,21 @@ const Clientes = () => {
                 {sellers.map((seller) => (
                   <option key={seller.id} value={seller.id}>
                     {seller.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <select
+                value={selectedFeiraFilter}
+                onChange={(e) => setSelectedFeiraFilter(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todas as feiras</option>
+                {feiras.map((feira) => (
+                  <option key={feira.id} value={feira.id}>
+                    {feira.name}
                   </option>
                 ))}
               </select>

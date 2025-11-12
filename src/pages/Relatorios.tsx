@@ -12,7 +12,8 @@ import {
   Clock,
   DollarSign,
   Package,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
+  MapPin
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,9 @@ const Relatorios = () => {
   // Sellers Performance
   const [sellersPerformance, setSellersPerformance] = useState<any[]>([]);
 
+  // Feiras Data
+  const [feirasReport, setFeirasReport] = useState<any[]>([]);
+
   useEffect(() => {
     fetchAllReports();
   }, [startDate, endDate]);
@@ -58,6 +62,7 @@ const Relatorios = () => {
         fetchTasksMetrics(),
         fetchProductsRanking(),
         fetchSellersPerformance(),
+        fetchFeirasReport(),
       ]);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -248,6 +253,45 @@ const Relatorios = () => {
     }
   };
 
+  const fetchFeirasReport = async () => {
+    try {
+      const { data: feirasData } = await supabase
+        .from("feiras")
+        .select("*")
+        .order("start_date", { ascending: false });
+
+      const feirasWithClients = await Promise.all(
+        (feirasData || []).map(async (feira) => {
+          const { data: clientFeirasData } = await (supabase as any)
+            .from("client_feiras")
+            .select(`
+              *,
+              client:clients(
+                id,
+                company_name,
+                trade_name,
+                created_at,
+                created_by_profile:profiles!clients_created_by_fkey(full_name)
+              )
+            `)
+            .eq("feira_id", feira.id)
+            .gte("created_at", startDate)
+            .lte("created_at", endDate);
+
+          return {
+            ...feira,
+            clients: clientFeirasData || [],
+            clientsCount: clientFeirasData?.length || 0,
+          };
+        })
+      );
+
+      setFeirasReport(feirasWithClients.filter(f => f.clientsCount > 0));
+    } catch (error) {
+      console.error("Error fetching feiras report:", error);
+    }
+  };
+
   const getTaskTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       ligacao: "Ligação",
@@ -324,10 +368,11 @@ const Relatorios = () => {
       </Card>
 
       <Tabs defaultValue="sales" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="sales">Vendas</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="team">Equipe</TabsTrigger>
+          <TabsTrigger value="feiras">Feiras</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="space-y-6">
@@ -563,6 +608,79 @@ const Relatorios = () => {
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="feiras" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-primary" />
+                Leads Captados por Feira
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {feirasReport.length === 0 ? (
+                <div className="text-center py-12">
+                  <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
+                  <p className="text-muted-foreground">Nenhum lead captado em feiras no período</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {feirasReport.map((feira) => (
+                    <Card key={feira.id} className="border-l-4 border-l-primary">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="text-lg">{feira.name}</CardTitle>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              {feira.city && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-4 w-4" />
+                                  {feira.city}{feira.state && ` - ${feira.state}`}
+                                </span>
+                              )}
+                              {feira.start_date && (
+                                <span className="flex items-center gap-1">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  {new Date(feira.start_date).toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">{feira.clientsCount}</div>
+                            <p className="text-xs text-muted-foreground">Leads captados</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {feira.clients.map((clientFeira: any) => (
+                            <div 
+                              key={clientFeira.id}
+                              className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                            >
+                              <div>
+                                <p className="font-medium text-foreground">
+                                  {clientFeira.client?.trade_name || clientFeira.client?.company_name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Cadastrado em {new Date(clientFeira.created_at).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Por: {clientFeira.client?.created_by_profile?.full_name}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
