@@ -776,6 +776,25 @@ const Clientes = () => {
         </CardHeader>
       </Card>
 
+      {/* Results Counter */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <div className="px-4 py-2 bg-primary/10 rounded-lg">
+            <p className="text-sm font-medium text-foreground">
+              <span className="text-2xl font-bold text-primary">{filteredClients.length}</span>
+              <span className="ml-2 text-muted-foreground">
+                {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+              </span>
+            </p>
+          </div>
+          {(searchTerm || selectedSeller !== "all" || selectedFeiraFilter !== "all" || selectedCompanySize !== "all" || selectedRegion) && (
+            <p className="text-xs text-muted-foreground">
+              (de {clients.length} {clients.length === 1 ? 'cliente total' : 'clientes totais'})
+            </p>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-3">
         {loading ? (
           <p className="text-center text-muted-foreground">Carregando...</p>
