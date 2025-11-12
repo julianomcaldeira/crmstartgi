@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SalesProcessEditor } from "@/components/SalesProcessEditor";
 import { 
   UserSearch, 
   CheckCircle, 
@@ -10,13 +13,33 @@ import {
   Trophy,
   ArrowRight,
   Clock,
-  Target
+  Target,
+  Settings
 } from "lucide-react";
 
 const ProcessoVendas = () => {
   const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
+  const [editorOpen, setEditorOpen] = useState(false);
 
-  const salesSteps = [
+  useEffect(() => {
+    fetchUserRole();
+  }, []);
+
+  const fetchUserRole = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    setUserRole(roleData?.role || "vendedor");
+  };
+
+  const [salesSteps, setSalesSteps] = useState([
     {
       id: 1,
       title: "Prospecção",
@@ -143,7 +166,12 @@ const ProcessoVendas = () => {
       ],
       duration: "Contínuo"
     }
-  ];
+  ]);
+
+  const handleSaveSteps = (newSteps: typeof salesSteps) => {
+    setSalesSteps(newSteps);
+    // Aqui você poderia salvar no banco de dados se necessário
+  };
 
   const bestPractices = [
     {
@@ -166,11 +194,20 @@ const ProcessoVendas = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground mb-2">Processo de Vendas</h1>
-        <p className="text-sm text-muted-foreground">
-          Guia completo do ciclo de vendas da StartGi
-        </p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Processo de Vendas</h1>
+          <p className="text-sm text-muted-foreground">
+            Guia completo do ciclo de vendas da StartGi
+          </p>
+        </div>
+        
+        {(userRole === "admin" || userRole === "gestor") && (
+          <Button onClick={() => setEditorOpen(true)} className="gap-2">
+            <Settings className="h-4 w-4" />
+            Configurar Processo
+          </Button>
+        )}
       </div>
 
       {/* Timeline Visual */}
@@ -312,6 +349,14 @@ const ProcessoVendas = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Editor Dialog */}
+      <SalesProcessEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        steps={salesSteps}
+        onSave={handleSaveSteps}
+      />
     </div>
   );
 };

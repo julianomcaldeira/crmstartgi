@@ -18,7 +18,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const Clientes = () => {
+const Prospects = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
   const [sellers, setSellers] = useState<any[]>([]);
@@ -131,7 +131,7 @@ const Clientes = () => {
       setClients(data || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
-      toast.error("Erro ao carregar clientes");
+      toast.error("Erro ao carregar prospects");
     } finally {
       setLoading(false);
     }
@@ -251,13 +251,13 @@ const Clientes = () => {
         if (feirasError) throw feirasError;
       }
 
-      toast.success("Cliente cadastrado com sucesso!");
+      toast.success("Prospect cadastrado com sucesso!");
       setDialogOpen(false);
       resetForm();
       fetchClients();
     } catch (error: any) {
       console.error("Error creating client:", error);
-      toast.error(error.message || "Erro ao cadastrar cliente");
+      toast.error(error.message || "Erro ao cadastrar prospect");
     }
   };
 
@@ -328,10 +328,10 @@ const Clientes = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
-            Clientes
+            Prospects
           </h1>
           <p className="text-muted-foreground">
-            Gerencie sua base de clientes
+            Gerencie sua base de prospects
           </p>
         </div>
         
@@ -339,12 +339,12 @@ const Clientes = () => {
           <DialogTrigger asChild>
             <Button className="gap-2 shadow-primary">
               <Plus size={20} />
-              Novo Cliente
+              Novo Prospect
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Cadastrar Novo Cliente</DialogTitle>
+              <DialogTitle className="text-2xl">Cadastrar Novo Prospect</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateClient}>
               <Tabs defaultValue="empresa" className="w-full">
@@ -616,7 +616,7 @@ const Clientes = () => {
                 <TabsContent value="feiras" className="space-y-4 mt-4">
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                      Selecione as feiras que este cliente participou ou irá participar
+                      Selecione as feiras que este prospect participou ou irá participar
                     </p>
                     
                     {feiras.length === 0 ? (
@@ -697,7 +697,7 @@ const Clientes = () => {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Cadastrar Cliente</Button>
+                <Button type="submit">Cadastrar Prospect</Button>
               </div>
             </form>
           </DialogContent>
@@ -783,13 +783,13 @@ const Clientes = () => {
             <p className="text-sm font-medium text-foreground">
               <span className="text-2xl font-bold text-primary">{filteredClients.length}</span>
               <span className="ml-2 text-muted-foreground">
-                {filteredClients.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}
+                {filteredClients.length === 1 ? 'prospect encontrado' : 'prospects encontrados'}
               </span>
             </p>
           </div>
           {(searchTerm || selectedSeller !== "all" || selectedFeiraFilter !== "all" || selectedCompanySize !== "all" || selectedRegion) && (
             <p className="text-xs text-muted-foreground">
-              (de {clients.length} {clients.length === 1 ? 'cliente total' : 'clientes totais'})
+              (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
           )}
         </div>
@@ -801,7 +801,7 @@ const Clientes = () => {
         ) : filteredClients.length === 0 ? (
           <Card className="p-12 text-center">
             <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
-            <p className="text-muted-foreground">Nenhum cliente encontrado</p>
+            <p className="text-muted-foreground">Nenhum prospect encontrado</p>
           </Card>
         ) : (
           <>
@@ -809,7 +809,7 @@ const Clientes = () => {
             <Card 
               key={client.id} 
               className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
-              onClick={() => navigate(`/clientes/${client.id}`)}
+              onClick={() => navigate(`/prospects/${client.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-6">
@@ -917,7 +917,7 @@ const Clientes = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">
-                      Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClients.length)} de {filteredClients.length} clientes
+                      Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClients.length)} de {filteredClients.length} prospects
                     </p>
                     <div className="flex items-center gap-2">
                       <Button
@@ -972,4 +972,4 @@ const Clientes = () => {
   );
 };
 
-export default Clientes;
+export default Prospects;
