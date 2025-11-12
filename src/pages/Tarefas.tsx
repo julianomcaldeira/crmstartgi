@@ -28,7 +28,6 @@ const Tarefas = () => {
   const [endDate, setEndDate] = useState("");
 
   // Form state
-  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
@@ -127,6 +126,19 @@ const Tarefas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Generate title from task type
+      const taskTypeLabels: Record<string, string> = {
+        ligacao: "Ligação",
+        email: "E-mail",
+        whatsapp: "WhatsApp",
+        visita_presencial: "Visita Presencial",
+        reuniao_online: "Reunião Online",
+        visita_feira: "Visita a Feira",
+        visita_evento: "Visita a Evento"
+      };
+      
+      const title = taskTypeLabels[taskType] || "Tarefa";
+
       const { error } = await supabase.from("tasks").insert([{
         title,
         description,
@@ -152,7 +164,6 @@ const Tarefas = () => {
   };
 
   const resetForm = () => {
-    setTitle("");
     setDescription("");
     setDueDate("");
     setPriority("medium");
@@ -266,17 +277,6 @@ const Tarefas = () => {
               <DialogTitle className="text-2xl">Nova Tarefa</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Título *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  placeholder="Ex: Ligar para cliente"
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea

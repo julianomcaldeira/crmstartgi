@@ -13,6 +13,9 @@ import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, AlertCi
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isPast, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskViewDialog from "@/components/TaskViewDialog";
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DraggableCard } from "@/components/DraggableCard";
+import { DroppableColumn } from "@/components/DroppableColumn";
 
 const Agenda = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -24,12 +27,20 @@ const Agenda = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "overdue">("all");
   const [formData, setFormData] = useState({
-    title: "",
     description: "",
     client_id: "none",
     due_date: "",
     priority: "medium",
+    task_type: "ligacao",
   });
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchTasks();
@@ -84,13 +95,27 @@ const Agenda = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Generate title from task type
+      const taskTypeLabels: Record<string, string> = {
+        ligacao: "Ligação",
+        email: "E-mail",
+        whatsapp: "WhatsApp",
+        visita_presencial: "Visita Presencial",
+        reuniao_online: "Reunião Online",
+        visita_feira: "Visita a Feira",
+        visita_evento: "Visita a Evento"
+      };
+      
+      const title = taskTypeLabels[formData.task_type] || "Tarefa";
+
       const { error } = await supabase.from("tasks").insert([
         {
-          title: formData.title,
+          title,
           description: formData.description,
           client_id: formData.client_id === "none" ? null : formData.client_id,
           due_date: formData.due_date,
           priority: formData.priority as "low" | "medium" | "high",
+          task_type: formData.task_type as any,
           status: "pending",
           assigned_to: user.id,
           created_by: user.id,
@@ -131,12 +156,56 @@ const Agenda = () => {
 
   const resetForm = () => {
     setFormData({
-      title: "",
       description: "",
       client_id: "none",
       due_date: "",
       priority: "medium",
+      task_type: "ligacao",
     });
+  };
+  
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    try {
+      // Extract task ID and new date from drag event
+      const taskId = active.id as string;
+      const newDateStr = over.id as string;
+      
+      // Find the task being moved
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      
+      // Parse the old due date to get the time component
+      const oldDueDate = parseISO(task.due_date);
+      const newDate = parseISO(newDateStr);
+      
+      // Combine new date with old time
+      const newDueDate = new Date(
+        newDate.getFullYear(),
+        newDate.getMonth(),
+        newDate.getDate(),
+        oldDueDate.getHours(),
+        oldDueDate.getMinutes(),
+        oldDueDate.getSeconds()
+      );
+      
+      // Update task in database
+      const { error } = await supabase
+        .from("tasks")
+        .update({ due_date: newDueDate.toISOString() })
+        .eq("id", taskId);
+      
+      if (error) throw error;
+      
+      toast.success("Tarefa movida com sucesso!");
+      fetchTasks();
+    } catch (error) {
+      console.error("Error moving task:", error);
+      toast.error("Erro ao mover tarefa");
+    }
   };
 
   const getWeekDays = () => {
@@ -238,13 +307,24 @@ const Agenda = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Título *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Ex: Reunião com cliente"
-                />
+                <Label htmlFor="task_type">Tipo de Tarefa *</Label>
+                <Select
+                  value={formData.task_type}
+                  onValueChange={(value) => setFormData({ ...formData, task_type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ligacao">Ligação</SelectItem>
+                    <SelectItem value="email">E-mail</SelectItem>
+                    <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                    <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                    <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                    <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                    <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
@@ -388,94 +468,101 @@ const Agenda = () => {
           {loading ? (
             <p className="text-center text-muted-foreground py-8">Carregando...</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-              {weekDays.map((day) => {
-                const dayTasks = getTasksForDay(day);
-                const isToday = isSameDay(day, new Date());
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+                {weekDays.map((day) => {
+                  const dayTasks = getTasksForDay(day);
+                  const isToday = isSameDay(day, new Date());
 
-                return (
-                  <div
-                    key={day.toISOString()}
-                    className={`border rounded-lg p-3 min-h-[200px] ${
-                      isToday ? "border-primary bg-primary/5" : "border-border"
-                    }`}
-                  >
-                    <div className="text-center mb-3">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        {format(day, "EEE", { locale: ptBR })}
-                      </p>
-                      <p className={`text-2xl font-bold ${
-                        isToday ? "text-primary" : "text-foreground"
-                      }`}>
-                        {format(day, "dd")}
-                      </p>
-                    </div>
+                  return (
+                    <DroppableColumn key={day.toISOString()} id={day.toISOString()}>
+                      <div
+                        className={`border rounded-lg p-3 min-h-[200px] ${
+                          isToday ? "border-primary bg-primary/5" : "border-border"
+                        }`}
+                      >
+                        <div className="text-center mb-3">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            {format(day, "EEE", { locale: ptBR })}
+                          </p>
+                          <p className={`text-2xl font-bold ${
+                            isToday ? "text-primary" : "text-foreground"
+                          }`}>
+                            {format(day, "dd")}
+                          </p>
+                        </div>
 
-                    <div className="space-y-2">
-                      {dayTasks.map((task) => (
-                        <Card
-                          key={task.id}
-                          className={`p-2 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${getTaskStatusColor(task)}`}
-                          onClick={() => {
-                            setSelectedTask(task);
-                            setViewDialogOpen(true);
-                          }}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex items-start gap-2 flex-1">
-                                {getTaskStatusIcon(task)}
-                                <p className={`text-sm font-medium line-clamp-2 ${
-                                  task.status === "completed" ? "line-through text-muted-foreground" : ""
-                                }`}>
-                                  {task.title}
-                                </p>
-                              </div>
-                              {task.status !== "completed" && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6 flex-shrink-0"
-                                  onClick={() => handleCompleteTask(task.id)}
-                                >
-                                  <CheckCircle2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground pl-6">
-                              {format(parseISO(task.due_date), "HH:mm")}
-                              {isPast(new Date(task.due_date)) && task.status !== "completed" && (
-                                <span className="text-destructive font-semibold ml-1">(Atrasada)</span>
-                              )}
-                            </div>
-                            {task.clients && (
-                              <p className="text-xs text-muted-foreground line-clamp-1 pl-6">
-                                {task.clients.trade_name || task.clients.company_name}
-                              </p>
-                            )}
-                            <div className="pl-6">
-                              <Badge
-                                variant={getPriorityColor(task.priority)}
-                                className="text-xs"
+                        <div className="space-y-2">
+                          {dayTasks.map((task) => (
+                            <DraggableCard key={task.id} id={task.id}>
+                              <Card
+                                className={`p-2 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${getTaskStatusColor(task)}`}
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setViewDialogOpen(true);
+                                }}
                               >
-                                {task.priority === "high" && "Alta"}
-                                {task.priority === "medium" && "Média"}
-                                {task.priority === "low" && "Baixa"}
-                              </Badge>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
-                      {dayTasks.length === 0 && (
-                        <p className="text-xs text-center text-muted-foreground py-4">
-                          Sem atividades
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-start gap-2 flex-1">
+                                      {getTaskStatusIcon(task)}
+                                      <p className={`text-sm font-medium line-clamp-2 ${
+                                        task.status === "completed" ? "line-through text-muted-foreground" : ""
+                                      }`}>
+                                        {task.title}
+                                      </p>
+                                    </div>
+                                    {task.status !== "completed" && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 flex-shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCompleteTask(task.id);
+                                        }}
+                                      >
+                                        <CheckCircle2 className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground pl-6">
+                                    {format(parseISO(task.due_date), "HH:mm")}
+                                    {isPast(new Date(task.due_date)) && task.status !== "completed" && (
+                                      <span className="text-destructive font-semibold ml-1">(Atrasada)</span>
+                                    )}
+                                  </div>
+                                  {task.clients && (
+                                    <p className="text-xs text-muted-foreground line-clamp-1 pl-6">
+                                      {task.clients.trade_name || task.clients.company_name}
+                                    </p>
+                                  )}
+                                  <div className="pl-6">
+                                    <Badge
+                                      variant={getPriorityColor(task.priority)}
+                                      className="text-xs"
+                                    >
+                                      {task.priority === "high" && "Alta"}
+                                      {task.priority === "medium" && "Média"}
+                                      {task.priority === "low" && "Baixa"}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </Card>
+                            </DraggableCard>
+                          ))}
+                          {dayTasks.length === 0 && (
+                            <p className="text-xs text-center text-muted-foreground py-4">
+                              Sem atividades
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </DroppableColumn>
+                  );
+                })}
+              </div>
+            </DndContext>
           )}
         </CardContent>
       </Card>
