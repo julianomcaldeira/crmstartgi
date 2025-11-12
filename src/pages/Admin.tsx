@@ -42,8 +42,10 @@ const Admin = () => {
   const [stats, setStats] = useState<any>({});
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserName, setNewUserName] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newUserRole, setNewUserRole] = useState("vendedor");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -153,12 +155,67 @@ const Admin = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserName) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setCreatingUser(true);
+    try {
+      // Create user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newUserEmail,
+        password: newUserPassword,
+        options: {
+          data: {
+            full_name: newUserName,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+
+      if (authData.user) {
+        // Update role if not vendedor (default)
+        if (newUserRole !== "vendedor") {
+          const { error: roleError } = await supabase
+            .from("user_roles")
+            .update({ role: newUserRole as any })
+            .eq("user_id", authData.user.id);
+
+          if (roleError) throw roleError;
+        }
+
+        toast.success("Usuário criado com sucesso!");
+        setDialogOpen(false);
+        setNewUserEmail("");
+        setNewUserName("");
+        setNewUserPassword("");
+        setNewUserRole("vendedor");
+        fetchUsers();
+      }
+    } catch (error: any) {
+      toast.error("Erro ao criar usuário: " + error.message);
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     if (role === "admin") {
       return (
         <Badge className="bg-primary/10 text-primary border-primary/20">
           <Crown className="h-3 w-3 mr-1" />
           Admin
+        </Badge>
+      );
+    }
+    if (role === "gestor") {
+      return (
+        <Badge className="bg-info/10 text-info border-info/20">
+          <ShieldCheck className="h-3 w-3 mr-1" />
+          Gestor
         </Badge>
       );
     }
@@ -276,6 +333,84 @@ const Admin = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-foreground">Usuários do Sistema</h2>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-primary hover:bg-primary-dark text-primary-foreground">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Criar Novo Usuário
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Usuário</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userName">Nome Completo *</Label>
+                      <Input
+                        id="userName"
+                        placeholder="João Silva"
+                        value={newUserName}
+                        onChange={(e) => setNewUserName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userEmail">Email *</Label>
+                      <Input
+                        id="userEmail"
+                        type="email"
+                        placeholder="joao@exemplo.com"
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userPassword">Senha *</Label>
+                      <Input
+                        id="userPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userRole">Perfil de Acesso *</Label>
+                      <Select value={newUserRole} onValueChange={setNewUserRole}>
+                        <SelectTrigger id="userRole">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="vendedor">Vendedor</SelectItem>
+                          <SelectItem value="gestor">Gestor</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-sm text-muted-foreground">
+                        Vendedor: visualiza tudo, edita apenas suas contas<br />
+                        Gestor: visualiza e edita qualquer informação<br />
+                        Admin: acesso total ao sistema
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                      disabled={creatingUser}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreateUser}
+                      disabled={creatingUser}
+                      className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                    >
+                      {creatingUser ? "Criando..." : "Criar Usuário"}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="space-y-4">
@@ -319,6 +454,7 @@ const Admin = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="vendedor">Vendedor</SelectItem>
+                          <SelectItem value="gestor">Gestor</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
