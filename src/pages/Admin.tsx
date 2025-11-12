@@ -37,6 +37,7 @@ import {
   Edit,
   Trash2,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 const Admin = () => {
@@ -57,8 +58,7 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [productForm, setProductForm] = useState({
     name: "",
-    implementation_fee: "",
-    monthly_fee: "",
+    description: "",
   });
   const [savingProduct, setSavingProduct] = useState(false);
 
@@ -233,8 +233,8 @@ const Admin = () => {
   };
 
   const handleProductSubmit = async () => {
-    if (!productForm.name || !productForm.implementation_fee || !productForm.monthly_fee) {
-      toast.error("Preencha todos os campos");
+    if (!productForm.name) {
+      toast.error("Preencha o nome do produto");
       return;
     }
 
@@ -245,8 +245,7 @@ const Admin = () => {
           .from("products")
           .update({
             name: productForm.name,
-            implementation_fee: parseFloat(productForm.implementation_fee),
-            monthly_fee: parseFloat(productForm.monthly_fee),
+            description: productForm.description,
           })
           .eq("id", editingProduct.id);
 
@@ -257,8 +256,9 @@ const Admin = () => {
           .from("products")
           .insert({
             name: productForm.name,
-            implementation_fee: parseFloat(productForm.implementation_fee),
-            monthly_fee: parseFloat(productForm.monthly_fee),
+            description: productForm.description,
+            implementation_fee: 0,
+            monthly_fee: 0,
           });
 
         if (error) throw error;
@@ -267,7 +267,7 @@ const Admin = () => {
 
       setProductDialogOpen(false);
       setEditingProduct(null);
-      setProductForm({ name: "", implementation_fee: "", monthly_fee: "" });
+      setProductForm({ name: "", description: "" });
       fetchProducts();
     } catch (error: any) {
       toast.error("Erro ao salvar produto: " + error.message);
@@ -298,12 +298,11 @@ const Admin = () => {
       setEditingProduct(product);
       setProductForm({
         name: product.name,
-        implementation_fee: product.implementation_fee.toString(),
-        monthly_fee: product.monthly_fee.toString(),
+        description: product.description || "",
       });
     } else {
       setEditingProduct(null);
-      setProductForm({ name: "", implementation_fee: "", monthly_fee: "" });
+      setProductForm({ name: "", description: "" });
     }
     setProductDialogOpen(true);
   };
@@ -606,32 +605,18 @@ const Admin = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="implementationFee">Valor de Implantação (R$) *</Label>
-                    <Input
-                      id="implementationFee"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={productForm.implementation_fee}
+                    <Label htmlFor="productDescription">Descrição</Label>
+                    <Textarea
+                      id="productDescription"
+                      placeholder="Descreva as características do produto..."
+                      value={productForm.description}
                       onChange={(e) =>
                         setProductForm({
                           ...productForm,
-                          implementation_fee: e.target.value,
+                          description: e.target.value,
                         })
                       }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="monthlyFee">Valor da Mensalidade (R$) *</Label>
-                    <Input
-                      id="monthlyFee"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={productForm.monthly_fee}
-                      onChange={(e) =>
-                        setProductForm({ ...productForm, monthly_fee: e.target.value })
-                      }
+                      rows={4}
                     />
                   </div>
                 </div>
@@ -676,26 +661,11 @@ const Admin = () => {
                           <h3 className="font-semibold text-foreground text-lg mb-2">
                             {product.name}
                           </h3>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div className="bg-muted/50 px-3 py-1.5 rounded-md">
-                              <span className="text-muted-foreground">Implantação: </span>
-                              <span className="font-semibold text-foreground">
-                                R$ {Number(product.implementation_fee).toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            </div>
-                            <div className="bg-primary/10 px-3 py-1.5 rounded-md border border-primary/20">
-                              <span className="text-muted-foreground">Mensalidade: </span>
-                              <span className="font-semibold text-primary">
-                                R$ {Number(product.monthly_fee).toLocaleString("pt-BR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            </div>
-                          </div>
+                          {product.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {product.description}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex gap-2">

@@ -54,12 +54,12 @@ const Oportunidades = () => {
             *,
             client:clients(company_name, trade_name),
             assigned:profiles!opportunities_assigned_to_fkey(full_name),
-            product:products(name, monthly_fee, implementation_fee)
+            product:products(name, description)
           `)
           .order("created_at", { ascending: false }),
         supabase.from("clients").select("id, company_name, trade_name"),
         supabase.from("profiles").select("id, full_name"),
-        supabase.from("products").select("id, name, monthly_fee, implementation_fee").eq("active", true).order("name", { ascending: true }),
+        supabase.from("products").select("id, name, description").eq("active", true).order("name", { ascending: true }),
       ]);
 
       if (oppsResponse.error) throw oppsResponse.error;
@@ -246,12 +246,6 @@ const Oportunidades = () => {
                   onChange={(e) => setValue(e.target.value)}
                   placeholder="0,00"
                 />
-                {productId && products.find(p => p.id === productId) && (
-                  <p className="text-xs text-muted-foreground">
-                    Sugestão: R$ {Number(products.find(p => p.id === productId)?.implementation_fee || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} 
-                    {" + R$ "}{Number(products.find(p => p.id === productId)?.monthly_fee || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/mês
-                  </p>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
