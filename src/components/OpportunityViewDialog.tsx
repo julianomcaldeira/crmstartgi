@@ -1,9 +1,13 @@
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface OpportunityViewDialogProps {
   opportunity: any;
@@ -12,7 +16,144 @@ interface OpportunityViewDialogProps {
 }
 
 const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityViewDialogProps) => {
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+
+  useEffect(() => {
+    if (open && opportunity?.id) {
+      fetchAttachments();
+    }
+  }, [open, opportunity?.id]);
+
   if (!opportunity) return null;
+
+  const fetchAttachments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("opportunity_attachments")
+        .select("*")
+        .eq("opportunity_id", opportunity.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setAttachments(data || []);
+    } catch (error) {
+      console.error("Error fetching attachments:", error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    setUploadingFiles(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const files = Array.from(e.target.files);
+      
+      for (const file of files) {
+        const fileName = `${user.id}/${Date.now()}_${file.name}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from("opportunity-attachments")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { error: dbError } = await supabase
+          .from("opportunity_attachments")
+          .insert({
+            opportunity_id: opportunity.id,
+            file_name: file.name,
+            file_path: fileName,
+            file_size: file.size,
+            file_type: file.type,
+            uploaded_by: user.id,
+          });
+
+        if (dbError) throw dbError;
+
+        await supabase.from("opportunity_activities").insert({
+          opportunity_id: opportunity.id,
+          activity_type: "attachment_added",
+          description: `Arquivo anexado: ${file.name}`,
+          created_by: user.id,
+        });
+      }
+
+      toast.success("Arquivos enviados com sucesso!");
+      fetchAttachments();
+    } catch (error: any) {
+      console.error("Error uploading files:", error);
+      toast.error(error.message || "Erro ao enviar arquivos");
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleDownload = async (attachment: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("opportunity-attachments")
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error downloading file:", error);
+      toast.error("Erro ao baixar arquivo");
+    }
+  };
+
+  const handleDeleteAttachment = async (attachment: any) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error: storageError } = await supabase.storage
+        .from("opportunity-attachments")
+        .remove([attachment.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from("opportunity_attachments")
+        .delete()
+        .eq("id", attachment.id);
+
+      if (dbError) throw dbError;
+
+      await supabase.from("opportunity_activities").insert({
+        opportunity_id: opportunity.id,
+        activity_type: "attachment_removed",
+        description: `Arquivo removido: ${attachment.file_name}`,
+        created_by: user.id,
+      });
+
+      toast.success("Arquivo removido!");
+      fetchAttachments();
+    } catch (error: any) {
+      console.error("Error deleting attachment:", error);
+      toast.error("Erro ao remover arquivo");
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
 
   const getStatusLabel = (status: string) => {
     const statuses: any = {
@@ -187,6 +328,80 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
               </p>
             </div>
           )}
+
+          <Separator />
+
+          {/* Attachments Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Paperclip className="h-4 w-4" />
+                Anexos ({attachments.length})
+              </div>
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploadingFiles}
+                  asChild
+                >
+                  <span>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingFiles ? "Enviando..." : "Adicionar"}
+                  </span>
+                </Button>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {attachments.length > 0 && (
+              <div className="space-y-2 pl-6">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatFileSize(attachment.file_size)} • {format(parseISO(attachment.created_at), "dd/MM/yyyy HH:mm")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload(attachment)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteAttachment(attachment)}
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

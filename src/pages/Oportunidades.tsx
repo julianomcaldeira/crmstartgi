@@ -19,6 +19,7 @@ import {
 import { OpportunityEditDialog } from "@/components/OpportunityEditDialog";
 import { OpportunityActivityLog } from "@/components/OpportunityActivityLog";
 import { ProposalViewer } from "@/components/ProposalViewer";
+import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -37,6 +38,8 @@ const Oportunidades = () => {
   const [showProposal, setShowProposal] = useState(false);
   const [proposalHtml, setProposalHtml] = useState("");
   const [proposalTitle, setProposalTitle] = useState("");
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
   
   // Filters
   const [searchClient, setSearchClient] = useState("");
@@ -754,7 +757,11 @@ const Oportunidades = () => {
                     return (
                       <Card
                         key={opp.id}
-                        className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group"
+                        className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group cursor-pointer"
+                        onClick={() => {
+                          setSelectedOpportunity(opp);
+                          setViewDialogOpen(true);
+                        }}
                       >
                         <CardHeader className="p-3 pb-2">
                           <div className="flex items-start justify-between gap-2">
@@ -764,7 +771,10 @@ const Oportunidades = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleEditOpportunity(opp)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditOpportunity(opp);
+                                }}
                               >
                                 <Edit size={14} />
                               </Button>
@@ -774,6 +784,7 @@ const Oportunidades = () => {
                                     variant="ghost" 
                                     size="sm" 
                                     className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
                                     <ChevronRight size={14} />
                                   </Button>
@@ -784,7 +795,10 @@ const Oportunidades = () => {
                                     .map(stage => (
                                       <DropdownMenuItem
                                         key={stage.key}
-                                        onClick={() => updateOpportunityStatus(opp.id, stage.key)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateOpportunityStatus(opp.id, stage.key);
+                                        }}
                                       >
                                         Mover para {stage.label}
                                       </DropdownMenuItem>
@@ -834,7 +848,10 @@ const Oportunidades = () => {
                                 variant="outline"
                                 size="sm"
                                 className="flex-1 h-7 text-xs"
-                                onClick={() => updateOpportunityStatus(opp.id, previousStage.key)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateOpportunityStatus(opp.id, previousStage.key);
+                                }}
                               >
                                 <ChevronLeft size={12} className="mr-1" />
                                 {previousStage.label}
@@ -845,7 +862,10 @@ const Oportunidades = () => {
                                 variant="default"
                                 size="sm"
                                 className="flex-1 h-7 text-xs"
-                                onClick={() => updateOpportunityStatus(opp.id, nextStage.key)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateOpportunityStatus(opp.id, nextStage.key);
+                                }}
                               >
                                 {nextStage.label}
                                 <ChevronRight size={12} className="ml-1" />
@@ -869,7 +889,14 @@ const Oportunidades = () => {
             const previousStage = getPreviousStage(opp.status);
             
             return (
-              <Card key={opp.id} className="hover:shadow-md transition-shadow">
+              <Card 
+                key={opp.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  setSelectedOpportunity(opp);
+                  setViewDialogOpen(true);
+                }}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -882,7 +909,10 @@ const Oportunidades = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEditOpportunity(opp)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditOpportunity(opp);
+                        }}
                       >
                         <Edit size={16} className="mr-1" />
                         Editar
@@ -890,14 +920,20 @@ const Oportunidades = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleGenerateProposal(opp)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateProposal(opp);
+                        }}
                       >
                         <FileText size={16} className="mr-1" />
                         Proposta
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Badge className={`${stage?.color} cursor-pointer hover:opacity-80`}>
+                          <Badge 
+                            className={`${stage?.color} cursor-pointer hover:opacity-80`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {stage?.label}
                           </Badge>
                         </DropdownMenuTrigger>
@@ -907,7 +943,10 @@ const Oportunidades = () => {
                             .map(stage => (
                               <DropdownMenuItem
                                 key={stage.key}
-                                onClick={() => updateOpportunityStatus(opp.id, stage.key)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  updateOpportunityStatus(opp.id, stage.key);
+                                }}
                               >
                                 Mover para {stage.label}
                               </DropdownMenuItem>
@@ -970,7 +1009,8 @@ const Oportunidades = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         setSelectedOpportunityForLog(opp.id);
                         setShowActivityLog(true);
                       }}
@@ -981,7 +1021,10 @@ const Oportunidades = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => updateOpportunityStatus(opp.id, previousStage.key)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateOpportunityStatus(opp.id, previousStage.key);
+                        }}
                       >
                         <ChevronLeft size={16} className="mr-1" />
                         Voltar para {previousStage.label}
@@ -991,7 +1034,10 @@ const Oportunidades = () => {
                       <Button
                         variant="default"
                         size="sm"
-                        onClick={() => updateOpportunityStatus(opp.id, nextStage.key)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateOpportunityStatus(opp.id, nextStage.key);
+                        }}
                       >
                         Avançar para {nextStage.label}
                         <ChevronRight size={16} className="ml-1" />
@@ -1051,6 +1097,12 @@ const Oportunidades = () => {
         onOpenChange={setShowProposal}
         proposalHtml={proposalHtml}
         opportunityTitle={proposalTitle}
+      />
+
+      <OpportunityViewDialog
+        opportunity={selectedOpportunity}
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
       />
     </div>
   );
