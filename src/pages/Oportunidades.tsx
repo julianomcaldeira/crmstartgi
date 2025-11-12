@@ -9,13 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { OpportunityEditDialog } from "@/components/OpportunityEditDialog";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -24,6 +25,10 @@ const Oportunidades = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingOpportunity, setEditingOpportunity] = useState<any>(null);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
   
   // Filters
@@ -191,6 +196,161 @@ const Oportunidades = () => {
       return stages[currentIndex - 1];
     }
     return null;
+  };
+
+  const handleEditOpportunity = async (opp: any) => {
+    setEditingOpportunity(opp);
+    setClientId(opp.client_id);
+    setProductId(opp.product_id || "");
+    setImplementationValue(opp.implementation_value?.toString() || "");
+    setMonthlyValue(opp.monthly_value?.toString() || "");
+    setProbability(opp.probability?.toString() || "50");
+    setStatus(opp.status);
+    setAssignedTo(opp.assigned_to);
+    setExpectedCloseDate(opp.expected_close_date || "");
+    
+    // Fetch attachments
+    fetchAttachments(opp.id);
+    setEditDialogOpen(true);
+  };
+
+  const fetchAttachments = async (opportunityId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("opportunity_attachments")
+        .select("*")
+        .eq("opportunity_id", opportunityId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setAttachments(data || []);
+    } catch (error) {
+      console.error("Error fetching attachments:", error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !editingOpportunity) return;
+
+    setUploadingFiles(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const files = Array.from(e.target.files);
+      
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}_${file.name}`;
+        
+        // Upload to storage
+        const { error: uploadError } = await supabase.storage
+          .from("opportunity-attachments")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Save to database
+        const { error: dbError } = await supabase
+          .from("opportunity_attachments")
+          .insert({
+            opportunity_id: editingOpportunity.id,
+            file_name: file.name,
+            file_path: fileName,
+            file_size: file.size,
+            file_type: file.type,
+            uploaded_by: user.id,
+          });
+
+        if (dbError) throw dbError;
+      }
+
+      toast.success("Arquivos enviados com sucesso!");
+      fetchAttachments(editingOpportunity.id);
+    } catch (error: any) {
+      console.error("Error uploading files:", error);
+      toast.error(error.message || "Erro ao enviar arquivos");
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachment: any) => {
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from("opportunity-attachments")
+        .remove([attachment.file_path]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from("opportunity_attachments")
+        .delete()
+        .eq("id", attachment.id);
+
+      if (dbError) throw dbError;
+
+      toast.success("Arquivo removido!");
+      fetchAttachments(editingOpportunity.id);
+    } catch (error: any) {
+      console.error("Error deleting attachment:", error);
+      toast.error("Erro ao remover arquivo");
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("opportunity-attachments")
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.file_name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error("Error downloading file:", error);
+      toast.error("Erro ao baixar arquivo");
+    }
+  };
+
+  const handleUpdateOpportunity = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const { error } = await supabase
+        .from("opportunities")
+        .update({
+          client_id: clientId,
+          product_id: productId || null,
+          implementation_value: implementationValue ? parseFloat(implementationValue) : null,
+          monthly_value: monthlyValue ? parseFloat(monthlyValue) : null,
+          value: (implementationValue || monthlyValue) ? 
+            (parseFloat(implementationValue || "0") + parseFloat(monthlyValue || "0")) : null,
+          probability: parseInt(probability),
+          status: status as any,
+          assigned_to: assignedTo,
+          expected_close_date: expectedCloseDate || null,
+        })
+        .eq("id", editingOpportunity.id);
+
+      if (error) throw error;
+
+      toast.success("Oportunidade atualizada!");
+      setEditDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error updating opportunity:", error);
+      toast.error(error.message || "Erro ao atualizar oportunidade");
+    }
   };
 
   return (
@@ -459,29 +619,39 @@ const Oportunidades = () => {
                         <CardHeader className="p-3 pb-2">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-sm line-clamp-2 flex-1">{opp.title}</CardTitle>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <ChevronRight size={14} />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-background z-50">
-                                {stages
-                                  .filter(s => s.key !== opp.status)
-                                  .map(stage => (
-                                    <DropdownMenuItem
-                                      key={stage.key}
-                                      onClick={() => updateOpportunityStatus(opp.id, stage.key)}
-                                    >
-                                      Mover para {stage.label}
-                                    </DropdownMenuItem>
-                                  ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleEditOpportunity(opp)}
+                              >
+                                <Edit size={14} />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <ChevronRight size={14} />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-background z-50">
+                                  {stages
+                                    .filter(s => s.key !== opp.status)
+                                    .map(stage => (
+                                      <DropdownMenuItem
+                                        key={stage.key}
+                                        onClick={() => updateOpportunityStatus(opp.id, stage.key)}
+                                      >
+                                        Mover para {stage.label}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         </CardHeader>
                         <CardContent className="p-3 pt-0 space-y-2">
@@ -569,6 +739,14 @@ const Oportunidades = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditOpportunity(opp)}
+                      >
+                        <Edit size={16} className="mr-1" />
+                        Editar
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Badge className={`${stage?.color} cursor-pointer hover:opacity-80`}>
@@ -668,6 +846,37 @@ const Oportunidades = () => {
           })}
         </div>
       )}
+
+      <OpportunityEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSubmit={handleUpdateOpportunity}
+        clients={clients}
+        products={products}
+        users={users}
+        stages={stages}
+        clientId={clientId}
+        setClientId={setClientId}
+        productId={productId}
+        setProductId={setProductId}
+        implementationValue={implementationValue}
+        setImplementationValue={setImplementationValue}
+        monthlyValue={monthlyValue}
+        setMonthlyValue={setMonthlyValue}
+        probability={probability}
+        setProbability={setProbability}
+        status={status}
+        setStatus={setStatus}
+        assignedTo={assignedTo}
+        setAssignedTo={setAssignedTo}
+        expectedCloseDate={expectedCloseDate}
+        setExpectedCloseDate={setExpectedCloseDate}
+        attachments={attachments}
+        onFileUpload={handleFileUpload}
+        onDownloadAttachment={handleDownloadAttachment}
+        onDeleteAttachment={handleDeleteAttachment}
+        uploadingFiles={uploadingFiles}
+      />
     </div>
   );
 };

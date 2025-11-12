@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2 } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay } from "date-fns";
+import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isPast, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Agenda = () => {
@@ -154,6 +154,44 @@ const Agenda = () => {
       case "low": return "secondary";
       default: return "default";
     }
+  };
+
+  const getTaskStatusColor = (task: any) => {
+    if (task.status === "completed") {
+      return "border-l-success bg-success/5";
+    }
+    
+    const taskDate = new Date(task.due_date);
+    const now = new Date();
+    
+    if (isPast(taskDate) && task.status !== "completed") {
+      return "border-l-destructive bg-destructive/10";
+    }
+    
+    const hoursUntilDue = (taskDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
+      return "border-l-warning bg-warning/10";
+    }
+    
+    return "border-l-primary bg-background";
+  };
+
+  const getTaskStatusIcon = (task: any) => {
+    if (task.status === "completed") {
+      return <CheckCircle2 className="h-4 w-4 text-success" />;
+    }
+    
+    const taskDate = new Date(task.due_date);
+    if (isPast(taskDate)) {
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
+    }
+    
+    const hoursUntilDue = (taskDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
+      return <AlertCircle className="h-4 w-4 text-warning" />;
+    }
+    
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
   };
 
   const weekDays = getWeekDays();
@@ -322,13 +360,18 @@ const Agenda = () => {
                       {dayTasks.map((task) => (
                         <Card
                           key={task.id}
-                          className="p-2 hover:shadow-md transition-shadow cursor-pointer"
+                          className={`p-2 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${getTaskStatusColor(task)}`}
                         >
                           <div className="space-y-1">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="text-sm font-medium line-clamp-2">
-                                {task.title}
-                              </p>
+                              <div className="flex items-start gap-2 flex-1">
+                                {getTaskStatusIcon(task)}
+                                <p className={`text-sm font-medium line-clamp-2 ${
+                                  task.status === "completed" ? "line-through text-muted-foreground" : ""
+                                }`}>
+                                  {task.title}
+                                </p>
+                              </div>
                               {task.status !== "completed" && (
                                 <Button
                                   variant="ghost"
@@ -340,23 +383,27 @@ const Agenda = () => {
                                 </Button>
                               )}
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground pl-6">
                               {format(parseISO(task.due_date), "HH:mm")}
+                              {isPast(new Date(task.due_date)) && task.status !== "completed" && (
+                                <span className="text-destructive font-semibold ml-1">(Atrasada)</span>
+                              )}
                             </div>
                             {task.clients && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">
+                              <p className="text-xs text-muted-foreground line-clamp-1 pl-6">
                                 {task.clients.trade_name || task.clients.company_name}
                               </p>
                             )}
-                            <Badge
-                              variant={getPriorityColor(task.priority)}
-                              className="text-xs"
-                            >
-                              {task.priority === "high" && "Alta"}
-                              {task.priority === "medium" && "Média"}
-                              {task.priority === "low" && "Baixa"}
-                            </Badge>
+                            <div className="pl-6">
+                              <Badge
+                                variant={getPriorityColor(task.priority)}
+                                className="text-xs"
+                              >
+                                {task.priority === "high" && "Alta"}
+                                {task.priority === "medium" && "Média"}
+                                {task.priority === "low" && "Baixa"}
+                              </Badge>
+                            </div>
                           </div>
                         </Card>
                       ))}
