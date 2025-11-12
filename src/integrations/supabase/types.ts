@@ -339,11 +339,11 @@ export type Database = {
           assigned_to: string | null
           created_at: string | null
           created_by: string
-          current_value: number | null
           description: string | null
           end_date: string
           goal_type: Database["public"]["Enums"]["goal_type"]
           id: string
+          period: string
           start_date: string
           target_value: number
           title: string
@@ -353,11 +353,11 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string | null
           created_by: string
-          current_value?: number | null
           description?: string | null
           end_date: string
           goal_type: Database["public"]["Enums"]["goal_type"]
           id?: string
+          period?: string
           start_date: string
           target_value: number
           title: string
@@ -367,11 +367,11 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string | null
           created_by?: string
-          current_value?: number | null
           description?: string | null
           end_date?: string
           goal_type?: Database["public"]["Enums"]["goal_type"]
           id?: string
+          period?: string
           start_date?: string
           target_value?: number
           title?: string

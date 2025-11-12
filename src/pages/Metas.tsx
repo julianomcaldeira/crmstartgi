@@ -27,7 +27,7 @@ const Metas = () => {
     description: "",
     goal_type: "revenue",
     target_value: "",
-    current_value: "0",
+    period: "mensal",
     start_date: "",
     end_date: "",
     assigned_to: "none",
@@ -120,7 +120,7 @@ const Metas = () => {
         description: formData.description,
         goal_type: formData.goal_type as "revenue" | "annualized_sales" | "tasks" | "activities",
         target_value: parseFloat(formData.target_value),
-        current_value: parseFloat(formData.current_value),
+        period: formData.period,
         start_date: formData.start_date,
         end_date: formData.end_date,
         assigned_to: formData.assigned_to || null,
@@ -178,7 +178,7 @@ const Metas = () => {
       description: goal.description || "",
       goal_type: goal.goal_type,
       target_value: goal.target_value.toString(),
-      current_value: goal.current_value.toString(),
+      period: goal.period || "mensal",
       start_date: goal.start_date,
       end_date: goal.end_date,
       assigned_to: goal.assigned_to || "none",
@@ -193,7 +193,7 @@ const Metas = () => {
       description: "",
       goal_type: "revenue",
       target_value: "",
-      current_value: "0",
+      period: "mensal",
       start_date: "",
       end_date: "",
       assigned_to: "none",
@@ -230,15 +230,13 @@ const Metas = () => {
     return value.toString();
   };
 
-  const getProgressPercentage = (current: number, target: number) => {
-    return Math.min((current / target) * 100, 100);
-  };
-
-  const getProgressColor = (percentage: number) => {
-    if (percentage >= 100) return "bg-success";
-    if (percentage >= 75) return "bg-primary";
-    if (percentage >= 50) return "bg-warning";
-    return "bg-destructive";
+  const getPeriodLabel = (period: string) => {
+    switch (period) {
+      case "mensal": return "Mensal";
+      case "semestral": return "Semestral";
+      case "anual": return "Anual";
+      default: return period;
+    }
   };
 
   return (
@@ -330,23 +328,20 @@ const Metas = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="current_value">Valor Atual</Label>
-                    {(formData.goal_type === "revenue" || formData.goal_type === "annualized_sales") ? (
-                      <CurrencyInput
-                        id="current_value"
-                        value={formData.current_value}
-                        onValueChange={(value) => setFormData({ ...formData, current_value: value })}
-                        placeholder="R$ 0,00"
-                      />
-                    ) : (
-                      <Input
-                        id="current_value"
-                        type="number"
-                        value={formData.current_value}
-                        onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
-                        placeholder="Ex: 25"
-                      />
-                    )}
+                    <Label htmlFor="period">Período *</Label>
+                    <Select
+                      value={formData.period}
+                      onValueChange={(value) => setFormData({ ...formData, period: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="mensal">Mensal</SelectItem>
+                        <SelectItem value="semestral">Semestral</SelectItem>
+                        <SelectItem value="anual">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -420,10 +415,6 @@ const Metas = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {goals.map((goal) => {
             const Icon = getGoalIcon(goal.goal_type);
-            const progress = getProgressPercentage(
-              Number(goal.current_value),
-              Number(goal.target_value)
-            );
 
             return (
               <Card key={goal.id} className="hover:shadow-md transition-shadow">
@@ -440,6 +431,9 @@ const Metas = () => {
                         <div className="flex flex-wrap gap-2">
                           <Badge variant="outline">
                             {getGoalTypeLabel(goal.goal_type)}
+                          </Badge>
+                          <Badge variant="secondary">
+                            {getPeriodLabel(goal.period)}
                           </Badge>
                           {goal.profiles && (
                             <Badge variant="secondary">
@@ -478,24 +472,21 @@ const Metas = () => {
 
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium">Progresso</span>
-                      <span className="text-muted-foreground">
-                        {formatValue(goal.current_value, goal.goal_type)} /{" "}
+                      <span className="font-medium">Meta</span>
+                      <span className="text-lg font-bold text-primary">
                         {formatValue(goal.target_value, goal.goal_type)}
                       </span>
                     </div>
-                    <Progress
-                      value={progress}
-                      className="h-2"
-                    />
-                    <p className="text-xs text-right text-muted-foreground">
-                      {progress.toFixed(1)}% concluído
-                    </p>
                   </div>
 
-                  <div className="flex justify-between text-sm text-muted-foreground pt-2 border-t">
-                    <span>Início: {new Date(goal.start_date).toLocaleDateString("pt-BR")}</span>
-                    <span>Fim: {new Date(goal.end_date).toLocaleDateString("pt-BR")}</span>
+                  <div className="pt-2 border-t border-border">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Período</span>
+                      <span className="font-medium">
+                        {new Date(goal.start_date).toLocaleDateString("pt-BR")} -{" "}
+                        {new Date(goal.end_date).toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
