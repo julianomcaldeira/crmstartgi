@@ -408,6 +408,20 @@ const Configuracoes = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+            <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+              ℹ️ Como funciona a integração:
+            </p>
+            <ol className="list-decimal list-inside space-y-1 text-blue-800 dark:text-blue-200">
+              <li>Ao clicar em "Conectar", você será redirecionado para o Zoho</li>
+              <li>Faça login com seu email e senha do Zoho Mail</li>
+              <li>Autorize o acesso do CRM à sua conta</li>
+              <li>Pronto! Seus emails enviados virarão tarefas automaticamente</li>
+            </ol>
+            <p className="mt-2 text-xs text-blue-700 dark:text-blue-300">
+              Nota: Se aparecer erro de "Cliente inválido", entre em contato com o administrador do sistema.
+            </p>
+          </div>
           {zohoConnected ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
