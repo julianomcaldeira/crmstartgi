@@ -5,6 +5,8 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Prospects from "./pages/Prospects";
 import ProspectDetalhes from "./pages/ProspectDetalhes";
+import BaseConhecimento from "./pages/BaseConhecimento";
+import ProcessoVendas from "./pages/ProcessoVendas";
 import Clientes from "./pages/Clientes";
 import Oportunidades from "./pages/Oportunidades";
 import Tarefas from "./pages/Tarefas";
@@ -35,6 +37,8 @@ const App = () => {
         <Route path="/metas" element={<Layout><Metas /></Layout>} />
         <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
         <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
+        <Route path="/base-conhecimento" element={<Layout><BaseConhecimento /></Layout>} />
+        <Route path="/processo-vendas" element={<Layout><ProcessoVendas /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
         <Route path="/feiras" element={<Layout><Feiras /></Layout>} />
         <Route path="/performance" element={<Layout><PerformanceVendedores /></Layout>} />

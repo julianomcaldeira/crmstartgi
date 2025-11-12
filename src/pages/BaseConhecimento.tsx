@@ -72,7 +72,7 @@ const BaseConhecimento = () => {
       return;
     }
 
-    setItems(data || []);
+    setItems((data || []) as KnowledgeItem[]);
   };
 
   const filterItems = () => {
