@@ -56,7 +56,6 @@ const ClienteDetalhes = () => {
   const [editTaskDialogOpen, setEditTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [taskFormData, setTaskFormData] = useState({
-    title: "",
     description: "",
     task_type: "ligacao",
     due_date: "",
@@ -181,14 +180,27 @@ const ClienteDetalhes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      if (!taskFormData.title || !taskFormData.due_date) {
-        toast.error("Preencha os campos obrigatórios");
+      if (!taskFormData.due_date) {
+        toast.error("Preencha a data de vencimento");
         return;
       }
 
+      // Generate title from task type
+      const taskTypeLabels: Record<string, string> = {
+        ligacao: "Ligação",
+        email: "E-mail",
+        whatsapp: "WhatsApp",
+        visita_presencial: "Visita Presencial",
+        reuniao_online: "Reunião Online",
+        visita_feira: "Visita a Feira",
+        visita_evento: "Visita a Evento"
+      };
+      
+      const title = taskTypeLabels[taskFormData.task_type] || "Tarefa";
+
       const { error } = await supabase.from("tasks").insert([
         {
-          title: taskFormData.title,
+          title,
           description: taskFormData.description,
           client_id: id,
           task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
@@ -249,7 +261,6 @@ const ClienteDetalhes = () => {
 
   const resetTaskForm = () => {
     setTaskFormData({
-      title: "",
       description: "",
       task_type: "ligacao",
       due_date: "",
@@ -273,7 +284,6 @@ const ClienteDetalhes = () => {
   const handleEditTask = (task: any) => {
     setEditingTask(task);
     setTaskFormData({
-      title: task.title,
       description: task.description || "",
       task_type: task.task_type,
       due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "",
@@ -284,15 +294,28 @@ const ClienteDetalhes = () => {
 
   const handleUpdateTask = async () => {
     try {
-      if (!taskFormData.title || !taskFormData.due_date) {
-        toast.error("Preencha os campos obrigatórios");
+      if (!taskFormData.due_date) {
+        toast.error("Preencha a data de vencimento");
         return;
       }
+
+      // Generate title from task type
+      const taskTypeLabels: Record<string, string> = {
+        ligacao: "Ligação",
+        email: "E-mail",
+        whatsapp: "WhatsApp",
+        visita_presencial: "Visita Presencial",
+        reuniao_online: "Reunião Online",
+        visita_feira: "Visita a Feira",
+        visita_evento: "Visita a Evento"
+      };
+      
+      const title = taskTypeLabels[taskFormData.task_type] || "Tarefa";
 
       const { error } = await supabase
         .from("tasks")
         .update({
-          title: taskFormData.title,
+          title,
           description: taskFormData.description,
           task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
           due_date: taskFormData.due_date,
@@ -803,26 +826,7 @@ const ClienteDetalhes = () => {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="title">Título *</Label>
-                      <Input
-                        id="title"
-                        value={taskFormData.title}
-                        onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
-                        placeholder="Ex: Reunião com cliente"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Descrição</Label>
-                      <Textarea
-                        id="description"
-                        value={taskFormData.description}
-                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                        placeholder="Detalhes da tarefa..."
-                        rows={3}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="task_type">Tipo de Tarefa</Label>
+                      <Label htmlFor="task_type">Tipo de Tarefa *</Label>
                       <Select
                         value={taskFormData.task_type}
                         onValueChange={(value) => setTaskFormData({ ...taskFormData, task_type: value })}
@@ -840,6 +844,16 @@ const ClienteDetalhes = () => {
                           <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
+                        value={taskFormData.description}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                        placeholder="Detalhes da tarefa..."
+                        rows={3}
+                      />
                     </div>
                     <div className="grid gap-4 grid-cols-2">
                       <div className="space-y-2">
@@ -971,26 +985,7 @@ const ClienteDetalhes = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title">Título *</Label>
-              <Input
-                id="edit-title"
-                value={taskFormData.title}
-                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
-                placeholder="Ex: Reunião com cliente"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Descrição</Label>
-              <Textarea
-                id="edit-description"
-                value={taskFormData.description}
-                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                placeholder="Detalhes da tarefa..."
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-task_type">Tipo de Tarefa</Label>
+              <Label htmlFor="edit-task_type">Tipo de Tarefa *</Label>
               <Select
                 value={taskFormData.task_type}
                 onValueChange={(value) => setTaskFormData({ ...taskFormData, task_type: value })}
@@ -1008,6 +1003,16 @@ const ClienteDetalhes = () => {
                   <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Descrição</Label>
+              <Textarea
+                id="edit-description"
+                value={taskFormData.description}
+                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                placeholder="Detalhes da tarefa..."
+                rows={3}
+              />
             </div>
             <div className="grid gap-4 grid-cols-2">
               <div className="space-y-2">
