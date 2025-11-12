@@ -158,8 +158,8 @@ const Layout = ({ children }: LayoutProps) => {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="p-4 border-t border-sidebar-border">
-            <div className="mb-3 px-4 py-2 bg-sidebar-accent rounded-lg">
+          <div className="p-4 border-t border-sidebar-border space-y-3">
+            <div className="px-4 py-2 bg-sidebar-accent rounded-lg">
               <p className="text-sm font-medium text-sidebar-foreground">
                 {userProfile?.full_name || "Usuário"}
               </p>
@@ -168,12 +168,12 @@ const Layout = ({ children }: LayoutProps) => {
               </p>
             </div>
             <Button
-              variant="ghost"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+              variant="destructive"
+              className="w-full justify-center gap-2 font-semibold"
               onClick={handleLogout}
             >
-              <LogOut size={20} className="mr-3" />
-              Sair
+              <LogOut size={18} />
+              Sair do Sistema
             </Button>
           </div>
         </div>
