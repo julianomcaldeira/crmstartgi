@@ -367,6 +367,7 @@ export type Database = {
           opportunity_id: string | null
           priority: Database["public"]["Enums"]["priority_level"] | null
           status: Database["public"]["Enums"]["task_status"] | null
+          task_type: Database["public"]["Enums"]["task_type"] | null
           title: string
           updated_at: string | null
         }
@@ -385,6 +386,7 @@ export type Database = {
           opportunity_id?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           status?: Database["public"]["Enums"]["task_status"] | null
+          task_type?: Database["public"]["Enums"]["task_type"] | null
           title: string
           updated_at?: string | null
         }
@@ -403,6 +405,7 @@ export type Database = {
           opportunity_id?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           status?: Database["public"]["Enums"]["task_status"] | null
+          task_type?: Database["public"]["Enums"]["task_type"] | null
           title?: string
           updated_at?: string | null
         }
@@ -492,6 +495,14 @@ export type Database = {
         | "lost"
       priority_level: "low" | "medium" | "high"
       task_status: "pending" | "in_progress" | "completed" | "cancelled"
+      task_type:
+        | "ligacao"
+        | "email"
+        | "whatsapp"
+        | "visita_presencial"
+        | "reuniao_online"
+        | "visita_feira"
+        | "visita_evento"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -632,6 +643,15 @@ export const Constants = {
       ],
       priority_level: ["low", "medium", "high"],
       task_status: ["pending", "in_progress", "completed", "cancelled"],
+      task_type: [
+        "ligacao",
+        "email",
+        "whatsapp",
+        "visita_presencial",
+        "reuniao_online",
+        "visita_feira",
+        "visita_evento",
+      ],
     },
   },
 } as const

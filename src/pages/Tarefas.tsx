@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInHours, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const Tarefas = () => {
@@ -27,13 +27,56 @@ const Tarefas = () => {
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("medium");
+  const [taskType, setTaskType] = useState("ligacao");
   const [clientId, setClientId] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
 
   useEffect(() => {
     fetchData();
+    checkUpcomingTasks();
+    
+    // Check for upcoming tasks every 5 minutes
+    const interval = setInterval(checkUpcomingTasks, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
+
+  const checkUpcomingTasks = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: upcomingTasks } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("assigned_to", user.id)
+        .eq("status", "pending")
+        .not("due_date", "is", null);
+
+      if (!upcomingTasks) return;
+
+      const now = new Date();
+      upcomingTasks.forEach((task) => {
+        const dueDate = new Date(task.due_date);
+        const hoursUntilDue = differenceInHours(dueDate, now);
+        
+        // Notify if task is due within 24 hours and not overdue
+        if (hoursUntilDue > 0 && hoursUntilDue <= 24) {
+          toast.warning(`Tarefa vencendo em breve: ${task.title}`, {
+            description: `Vence em ${hoursUntilDue}h`,
+            duration: 10000,
+          });
+        } else if (isPast(dueDate)) {
+          toast.error(`Tarefa atrasada: ${task.title}`, {
+            description: "Esta tarefa já passou do prazo!",
+            duration: 10000,
+          });
+        }
+      });
+    } catch (error) {
+      console.error("Error checking upcoming tasks:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -84,6 +127,7 @@ const Tarefas = () => {
         description,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         priority: priority as any,
+        task_type: taskType as any,
         client_id: clientId || null,
         opportunity_id: opportunityId || null,
         assigned_to: assignedTo || user.id,
@@ -107,6 +151,7 @@ const Tarefas = () => {
     setDescription("");
     setDueDate("");
     setPriority("medium");
+    setTaskType("ligacao");
     setClientId("");
     setOpportunityId("");
     setAssignedTo("");
@@ -148,6 +193,32 @@ const Tarefas = () => {
       case "medium": return "Média";
       case "low": return "Baixa";
       default: return priority;
+    }
+  };
+
+  const getTaskTypeIcon = (type: string) => {
+    switch (type) {
+      case "ligacao": return <Phone size={16} />;
+      case "email": return <Mail size={16} />;
+      case "whatsapp": return <MessageCircle size={16} />;
+      case "visita_presencial": return <MapPin size={16} />;
+      case "reuniao_online": return <Video size={16} />;
+      case "visita_feira": return <Briefcase size={16} />;
+      case "visita_evento": return <Users size={16} />;
+      default: return <Circle size={16} />;
+    }
+  };
+
+  const getTaskTypeLabel = (type: string) => {
+    switch (type) {
+      case "ligacao": return "Ligação";
+      case "email": return "E-mail";
+      case "whatsapp": return "WhatsApp";
+      case "visita_presencial": return "Visita Presencial";
+      case "reuniao_online": return "Reunião Online";
+      case "visita_feira": return "Visita a Feira";
+      case "visita_evento": return "Visita a Evento";
+      default: return type;
     }
   };
 
@@ -203,7 +274,25 @@ const Tarefas = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="taskType">Tipo de Tarefa *</Label>
+                  <Select value={taskType} onValueChange={setTaskType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="ligacao">Ligação</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                      <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                      <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                      <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="dueDate">Data de Vencimento</Label>
                   <Input
@@ -220,7 +309,7 @@ const Tarefas = () => {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       <SelectItem value="low">Baixa</SelectItem>
                       <SelectItem value="medium">Média</SelectItem>
                       <SelectItem value="high">Alta</SelectItem>
@@ -373,22 +462,39 @@ const Tarefas = () => {
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {task.task_type && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      {getTaskTypeIcon(task.task_type)}
+                      {getTaskTypeLabel(task.task_type)}
+                    </Badge>
+                  )}
                   {task.due_date && (
-                    <div className="flex items-center gap-1">
+                    <div className={`flex items-center gap-1 ${
+                      isPast(new Date(task.due_date)) && task.status !== "completed"
+                        ? "text-destructive font-semibold"
+                        : "text-muted-foreground"
+                    }`}>
                       <Calendar size={16} />
                       {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", {
                         locale: ptBR,
                       })}
+                      {isPast(new Date(task.due_date)) && task.status !== "completed" && (
+                        <span className="text-xs">(Atrasada)</span>
+                      )}
                     </div>
                   )}
-                  {task.client && (
-                    <span>Cliente: {task.client.company_name}</span>
-                  )}
-                  {task.opportunity && (
-                    <span>Oportunidade: {task.opportunity.title}</span>
-                  )}
                 </div>
+                {(task.client || task.opportunity) && (
+                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
+                    {task.client && (
+                      <span>Cliente: {task.client.company_name}</span>
+                    )}
+                    {task.opportunity && (
+                      <span>Oportunidade: {task.opportunity.title}</span>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))
