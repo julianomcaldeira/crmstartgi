@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2, Upload, User } from "lucide-react";
+import { Loader2, Upload, User, Mail, Link as LinkIcon, Unlink } from "lucide-react";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
@@ -18,9 +18,21 @@ const Configuracoes = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [zohoConnected, setZohoConnected] = useState(false);
+  const [zohoEmail, setZohoEmail] = useState("");
+  const [connectingZoho, setConnectingZoho] = useState(false);
 
   useEffect(() => {
     fetchProfile();
+    checkZohoConnection();
+    
+    // Check for OAuth success callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('zoho') === 'success') {
+      toast.success('Conta Zoho Mail conectada com sucesso!');
+      checkZohoConnection();
+      window.history.replaceState({}, '', '/configuracoes');
+    }
   }, []);
 
   const fetchProfile = async () => {
@@ -100,6 +112,74 @@ const Configuracoes = () => {
       toast.error("Erro ao alterar senha");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkZohoConnection = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('zoho_oauth_tokens')
+        .select('zoho_account_email')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setZohoConnected(true);
+        setZohoEmail(data.zoho_account_email);
+      }
+    } catch (error) {
+      console.error('Error checking Zoho connection:', error);
+    }
+  };
+
+  const handleConnectZoho = async () => {
+    setConnectingZoho(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const ZOHO_CLIENT_ID = '1000.FISW345E8E6C6TZDS2I2QM2R7B2HEY';
+      const REDIRECT_URI = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/zoho-auth-callback`;
+      const SCOPE = 'ZohoMail.messages.READ,ZohoMail.accounts.READ';
+
+      const authUrl = `https://accounts.zoho.com/oauth/v2/auth?` +
+        `scope=${encodeURIComponent(SCOPE)}` +
+        `&client_id=${ZOHO_CLIENT_ID}` +
+        `&response_type=code` +
+        `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+        `&state=${user.id}` +
+        `&access_type=offline` +
+        `&prompt=consent`;
+
+      window.location.href = authUrl;
+    } catch (error: any) {
+      console.error('Error connecting Zoho:', error);
+      toast.error('Erro ao conectar com Zoho Mail');
+      setConnectingZoho(false);
+    }
+  };
+
+  const handleDisconnectZoho = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('zoho_oauth_tokens')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setZohoConnected(false);
+      setZohoEmail('');
+      toast.success('Conta Zoho Mail desconectada');
+    } catch (error) {
+      console.error('Error disconnecting Zoho:', error);
+      toast.error('Erro ao desconectar Zoho Mail');
     }
   };
 
@@ -318,6 +398,68 @@ const Configuracoes = () => {
               "Alterar Senha"
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Integração Zoho Mail
+          </CardTitle>
+          <CardDescription>
+            Conecte sua conta Zoho Mail para criar tarefas automaticamente quando enviar emails
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {zohoConnected ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 p-4 bg-primary/10 rounded-lg">
+                <LinkIcon className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-foreground">Conectado</p>
+                  <p className="text-sm text-muted-foreground">{zohoEmail}</p>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Seus emails enviados pelo Zoho Mail serão automaticamente registrados como tarefas concluídas no sistema.
+              </p>
+              <Button 
+                variant="destructive" 
+                onClick={handleDisconnectZoho}
+              >
+                <Unlink className="mr-2 h-4 w-4" />
+                Desconectar Zoho Mail
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Conecte sua conta Zoho Mail para sincronizar automaticamente seus emails enviados como tarefas no CRM.
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                <li>Emails enviados viram tarefas automaticamente</li>
+                <li>Sincronização em tempo real</li>
+                <li>Histórico completo de comunicações</li>
+              </ul>
+              <Button 
+                onClick={handleConnectZoho} 
+                disabled={connectingZoho}
+              >
+                {connectingZoho ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon className="mr-2 h-4 w-4" />
+                    Conectar com Zoho Mail
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
