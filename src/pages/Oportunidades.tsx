@@ -21,11 +21,10 @@ const Oportunidades = () => {
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
 
   // Form state
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [clientId, setClientId] = useState("");
   const [productId, setProductId] = useState("");
-  const [value, setValue] = useState("");
+  const [implementationValue, setImplementationValue] = useState("");
+  const [monthlyValue, setMonthlyValue] = useState("");
   const [probability, setProbability] = useState("50");
   const [status, setStatus] = useState("lead");
   const [assignedTo, setAssignedTo] = useState("");
@@ -87,11 +86,13 @@ const Oportunidades = () => {
       if (!user) throw new Error("Usuário não autenticado");
 
       const { error } = await supabase.from("opportunities").insert([{
-        title,
-        description,
+        title: `Oportunidade - ${clients.find(c => c.id === clientId)?.trade_name || clients.find(c => c.id === clientId)?.company_name || 'Cliente'}`,
         client_id: clientId,
         product_id: productId || null,
-        value: value ? parseFloat(value) : null,
+        implementation_value: implementationValue ? parseFloat(implementationValue) : null,
+        monthly_value: monthlyValue ? parseFloat(monthlyValue) : null,
+        value: (implementationValue || monthlyValue) ? 
+          (parseFloat(implementationValue || "0") + parseFloat(monthlyValue || "0")) : null,
         probability: parseInt(probability),
         status: status as any,
         assigned_to: assignedTo || user.id,
@@ -112,11 +113,10 @@ const Oportunidades = () => {
   };
 
   const resetForm = () => {
-    setTitle("");
-    setDescription("");
     setClientId("");
     setProductId("");
-    setValue("");
+    setImplementationValue("");
+    setMonthlyValue("");
     setProbability("50");
     setStatus("lead");
     setAssignedTo("");
@@ -180,28 +180,6 @@ const Oportunidades = () => {
               <DialogTitle className="text-2xl">Nova Oportunidade</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Título *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  placeholder="Ex: Venda de sistema para Empresa X"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detalhes da oportunidade..."
-                  rows={3}
-                />
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente *</Label>
@@ -236,16 +214,30 @@ const Oportunidades = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="value">Valor (R$)</Label>
-                <Input
-                  id="value"
-                  type="number"
-                  step="0.01"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  placeholder="0,00"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="implementationValue">Valor de Implantação (R$)</Label>
+                  <Input
+                    id="implementationValue"
+                    type="number"
+                    step="0.01"
+                    value={implementationValue}
+                    onChange={(e) => setImplementationValue(e.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyValue">Valor Mensal (R$)</Label>
+                  <Input
+                    id="monthlyValue"
+                    type="number"
+                    step="0.01"
+                    value={monthlyValue}
+                    onChange={(e) => setMonthlyValue(e.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -266,15 +258,19 @@ const Oportunidades = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="probability">Probabilidade (%)</Label>
-                  <Input
-                    id="probability"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={probability}
-                    onChange={(e) => setProbability(e.target.value)}
-                  />
+                  <Label htmlFor="probability">Probabilidade</Label>
+                  <Select value={probability} onValueChange={setProbability}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10%</SelectItem>
+                      <SelectItem value="25">25%</SelectItem>
+                      <SelectItem value="50">50%</SelectItem>
+                      <SelectItem value="80">80%</SelectItem>
+                      <SelectItem value="90">90%</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

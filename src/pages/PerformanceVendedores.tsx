@@ -7,11 +7,62 @@ import { toast } from "sonner";
 
 const PerformanceVendedores = () => {
   const [sellers, setSellers] = useState<any[]>([]);
+  const [productRanking, setProductRanking] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchSellerPerformance();
+    fetchProductRanking();
   }, []);
+
+  const fetchProductRanking = async () => {
+    try {
+      const { data: oppsData, error } = await supabase
+        .from("opportunities")
+        .select(`
+          product_id,
+          status,
+          value,
+          implementation_value,
+          monthly_value,
+          product:products(name, logo_url)
+        `)
+        .eq("status", "won")
+        .not("product_id", "is", null);
+
+      if (error) throw error;
+
+      // Group by product and calculate totals
+      const productMap = new Map();
+      oppsData?.forEach((opp) => {
+        if (!opp.product_id || !opp.product) return;
+        
+        const existing = productMap.get(opp.product_id) || {
+          productId: opp.product_id,
+          productName: opp.product.name,
+          logoUrl: opp.product.logo_url,
+          quantity: 0,
+          totalValue: 0,
+          implementationValue: 0,
+          monthlyValue: 0,
+        };
+
+        existing.quantity += 1;
+        existing.totalValue += Number(opp.value) || 0;
+        existing.implementationValue += Number(opp.implementation_value) || 0;
+        existing.monthlyValue += Number(opp.monthly_value) || 0;
+
+        productMap.set(opp.product_id, existing);
+      });
+
+      const ranking = Array.from(productMap.values())
+        .sort((a, b) => b.totalValue - a.totalValue);
+      
+      setProductRanking(ranking);
+    } catch (error) {
+      console.error("Error fetching product ranking:", error);
+    }
+  };
 
   const fetchSellerPerformance = async () => {
     try {
@@ -110,6 +161,64 @@ const PerformanceVendedores = () => {
           Acompanhe o desempenho de cada membro da equipe
         </p>
       </div>
+
+      {productRanking.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5 text-primary" />
+              Ranking de Produtos Mais Vendidos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {productRanking.map((product, index) => (
+                <div 
+                  key={product.productId}
+                  className="flex items-center justify-between p-4 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold ${
+                      index === 0 ? "bg-yellow-500/20 text-yellow-700" :
+                      index === 1 ? "bg-gray-400/20 text-gray-700" :
+                      index === 2 ? "bg-amber-700/20 text-amber-800" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {index + 1}
+                    </div>
+                    {product.logoUrl && (
+                      <img 
+                        src={product.logoUrl} 
+                        alt={product.productName}
+                        className="h-8 w-8 object-contain bg-white rounded p-1"
+                      />
+                    )}
+                    <div>
+                      <p className="font-semibold">{product.productName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {product.quantity} venda{product.quantity !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">
+                      {formatCurrency(product.totalValue)}
+                    </p>
+                    <div className="flex gap-2 text-xs text-muted-foreground">
+                      {product.implementationValue > 0 && (
+                        <span>Impl: {formatCurrency(product.implementationValue)}</span>
+                      )}
+                      {product.monthlyValue > 0 && (
+                        <span>Mensal: {formatCurrency(product.monthlyValue)}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
         {sellers.map((seller, index) => (

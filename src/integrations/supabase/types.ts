@@ -211,6 +211,8 @@ export type Database = {
           description: string | null
           expected_close_date: string | null
           id: string
+          implementation_value: number | null
+          monthly_value: number | null
           probability: number | null
           product_id: string | null
           status: Database["public"]["Enums"]["opportunity_status"] | null
@@ -226,6 +228,8 @@ export type Database = {
           description?: string | null
           expected_close_date?: string | null
           id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
           probability?: number | null
           product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
@@ -241,6 +245,8 @@ export type Database = {
           description?: string | null
           expected_close_date?: string | null
           id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
           probability?: number | null
           product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
