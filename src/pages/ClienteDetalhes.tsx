@@ -24,7 +24,9 @@ import {
   Clock,
   User,
   TrendingUp,
-  Plus
+  Plus,
+  Edit,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -46,6 +48,8 @@ const ClienteDetalhes = () => {
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
   const [taskViewDialogOpen, setTaskViewDialogOpen] = useState(false);
   const [oppViewDialogOpen, setOppViewDialogOpen] = useState(false);
+  const [editTaskDialogOpen, setEditTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<any>(null);
   const [taskFormData, setTaskFormData] = useState({
     title: "",
     description: "",
@@ -231,6 +235,70 @@ const ClienteDetalhes = () => {
       expected_close_date: "",
       business_type: "cliente_novo",
     });
+  };
+
+  const handleEditTask = (task: any) => {
+    setEditingTask(task);
+    setTaskFormData({
+      title: task.title,
+      description: task.description || "",
+      task_type: task.task_type,
+      due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "",
+      priority: task.priority,
+    });
+    setEditTaskDialogOpen(true);
+  };
+
+  const handleUpdateTask = async () => {
+    try {
+      if (!taskFormData.title || !taskFormData.due_date) {
+        toast.error("Preencha os campos obrigatórios");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          title: taskFormData.title,
+          description: taskFormData.description,
+          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          due_date: taskFormData.due_date,
+          priority: taskFormData.priority as "low" | "medium" | "high",
+        })
+        .eq("id", editingTask.id);
+
+      if (error) throw error;
+
+      toast.success("Tarefa atualizada com sucesso!");
+      setEditTaskDialogOpen(false);
+      resetTaskForm();
+      setEditingTask(null);
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Erro ao atualizar tarefa");
+    }
+  };
+
+  const handleCompleteTask = async (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      toast.success("Tarefa concluída!");
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error completing task:", error);
+      toast.error("Erro ao concluir tarefa");
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -750,18 +818,45 @@ const ClienteDetalhes = () => {
                 {tasks.map((task) => (
                   <div 
                     key={task.id} 
-                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setSelectedTask(task);
-                      setTaskViewDialogOpen(true);
-                    }}
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => {
+                          setSelectedTask(task);
+                          setTaskViewDialogOpen(true);
+                        }}
+                      >
                         <h4 className="font-medium text-foreground">{task.title}</h4>
                         <p className="text-sm text-muted-foreground">{task.description}</p>
                       </div>
-                      {getStatusBadge(task.status)}
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(task.status)}
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTask(task);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {task.status !== "completed" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-success hover:text-success"
+                              onClick={(e) => handleCompleteTask(task.id, e)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex items-center justify-between text-sm">
@@ -796,6 +891,97 @@ const ClienteDetalhes = () => {
         open={oppViewDialogOpen}
         onOpenChange={setOppViewDialogOpen}
       />
+
+      <Dialog open={editTaskDialogOpen} onOpenChange={setEditTaskDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Tarefa</DialogTitle>
+            <DialogDescription>
+              Atualize as informações da tarefa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Título *</Label>
+              <Input
+                id="edit-title"
+                value={taskFormData.title}
+                onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
+                placeholder="Ex: Reunião com cliente"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Descrição</Label>
+              <Textarea
+                id="edit-description"
+                value={taskFormData.description}
+                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                placeholder="Detalhes da tarefa..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-task_type">Tipo de Tarefa</Label>
+              <Select
+                value={taskFormData.task_type}
+                onValueChange={(value) => setTaskFormData({ ...taskFormData, task_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ligacao">Ligação</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                  <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                  <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                  <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-4 grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-due_date">Data e Hora *</Label>
+                <Input
+                  id="edit-due_date"
+                  type="datetime-local"
+                  value={taskFormData.due_date}
+                  onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-priority">Prioridade</Label>
+                <Select
+                  value={taskFormData.priority}
+                  onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => {
+                setEditTaskDialogOpen(false);
+                resetTaskForm();
+                setEditingTask(null);
+              }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdateTask}>
+                Salvar Alterações
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
