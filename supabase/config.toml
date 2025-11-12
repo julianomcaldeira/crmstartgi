@@ -2,12 +2,3 @@ project_id = "eifsbqqrimniclsssoru"
 
 [functions.buscar-cnpj]
 verify_jwt = false
-
-[functions.zoho-auth-callback]
-verify_jwt = false
-
-[functions.zoho-webhook]
-verify_jwt = false
-
-[functions.sync-zoho-emails]
-verify_jwt = false

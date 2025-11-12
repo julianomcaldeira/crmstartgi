@@ -103,69 +103,6 @@ const Configuracoes = () => {
     }
   };
 
-  const checkZohoConnection = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('zoho_oauth_tokens' as any)
-        .select('zoho_account_email')
-        .eq('user_id', user.id)
-        .maybeSingle() as any;
-
-      if (data && !error) {
-        setZohoConnected(true);
-        setZohoEmail(data.zoho_account_email);
-      }
-    } catch (error) {
-      console.error('Error checking Zoho connection:', error);
-    }
-  };
-
-  const handleConnectZoho = async () => {
-    setConnectingZoho(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
-      // Call edge function to get auth URL with proper credentials
-      const { data, error } = await supabase.functions.invoke('zoho-auth-start', {
-        body: { userId: user.id }
-      });
-
-      if (error) throw error;
-      if (!data?.authUrl) throw new Error('Failed to get authorization URL');
-
-      window.location.href = data.authUrl;
-    } catch (error: any) {
-      console.error('Error connecting Zoho:', error);
-      toast.error('Erro ao conectar com Zoho Mail: ' + (error.message || 'Tente novamente'));
-      setConnectingZoho(false);
-    }
-  };
-
-  const handleDisconnectZoho = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { error } = await supabase
-        .from('zoho_oauth_tokens' as any)
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setZohoConnected(false);
-      setZohoEmail('');
-      toast.success('Conta Zoho Mail desconectada');
-    } catch (error) {
-      console.error('Error disconnecting Zoho:', error);
-      toast.error('Erro ao desconectar Zoho Mail');
-    }
-  };
-
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;

@@ -14,12 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_feiras: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string
+          feira_id: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by: string
+          feira_id: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string
+          feira_id?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_feiras_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_feiras_feira_id_fkey"
+            columns: ["feira_id"]
+            isOneToOne: false
+            referencedRelation: "feiras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
           city: string | null
           cnpj: string
           company_name: string
+          company_size: string | null
+          competitors: string | null
           created_at: string | null
           created_by: string
           email: string | null
@@ -27,6 +71,7 @@ export type Database = {
           id: string
           legal_nature: string | null
           phone: string | null
+          region: string | null
           registration_status: string | null
           segment: string | null
           share_capital: number | null
@@ -40,6 +85,8 @@ export type Database = {
           city?: string | null
           cnpj: string
           company_name: string
+          company_size?: string | null
+          competitors?: string | null
           created_at?: string | null
           created_by: string
           email?: string | null
@@ -47,6 +94,7 @@ export type Database = {
           id?: string
           legal_nature?: string | null
           phone?: string | null
+          region?: string | null
           registration_status?: string | null
           segment?: string | null
           share_capital?: number | null
@@ -60,6 +108,8 @@ export type Database = {
           city?: string | null
           cnpj?: string
           company_name?: string
+          company_size?: string | null
+          competitors?: string | null
           created_at?: string | null
           created_by?: string
           email?: string | null
@@ -67,6 +117,7 @@ export type Database = {
           id?: string
           legal_nature?: string | null
           phone?: string | null
+          region?: string | null
           registration_status?: string | null
           segment?: string | null
           share_capital?: number | null
