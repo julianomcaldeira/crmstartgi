@@ -142,6 +142,54 @@ export type Database = {
           },
         ]
       }
+      feiras: {
+        Row: {
+          city: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string | null
+          id: string
+          location: string | null
+          name: string
+          start_date: string | null
+          state: string | null
+          status: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          city?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          start_date?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          city?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          start_date?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           assigned_to: string | null

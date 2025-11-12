@@ -465,9 +465,10 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
+          <TabsTrigger value="feiras">Feiras</TabsTrigger>
           <TabsTrigger value="metrics">Métricas da Equipe</TabsTrigger>
         </TabsList>
 
@@ -763,6 +764,17 @@ const Admin = () => {
                   </div>
                 ))
               )}
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="feiras" className="space-y-4">
+          <Card className="p-6">
+            <div className="text-center py-12 text-muted-foreground">
+              <p className="mb-4">O módulo de Feiras foi movido para uma página dedicada.</p>
+              <Button onClick={() => window.location.href = "/feiras"}>
+                Ir para Gestão de Feiras
+              </Button>
             </div>
           </Card>
         </TabsContent>

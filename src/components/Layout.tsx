@@ -15,6 +15,7 @@ import {
   Calendar,
   TrendingUp,
   UsersRound,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
     ...((isAdmin || isGestor) ? [{ icon: TrendingUp, label: "Performance", path: "/performance" }] : []),
     ...((isAdmin || isGestor) ? [{ icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" }] : []),
+    ...((isAdmin || isGestor) ? [{ icon: Building2, label: "Feiras", path: "/feiras" }] : []),
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];

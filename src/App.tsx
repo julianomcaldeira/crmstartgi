@@ -12,6 +12,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Admin from "./pages/Admin";
+import Feiras from "./pages/Feiras";
 import PerformanceVendedores from "./pages/PerformanceVendedores";
 import MetricasEquipe from "./pages/MetricasEquipe";
 import Layout from "./components/Layout";
@@ -33,6 +34,7 @@ const App = () => {
         <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
         <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
+        <Route path="/feiras" element={<Layout><Feiras /></Layout>} />
         <Route path="/performance" element={<Layout><PerformanceVendedores /></Layout>} />
         <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />

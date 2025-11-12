@@ -344,7 +344,7 @@ const ClienteDetalhes = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate("/clientes")}>
           <ArrowLeft />
         </Button>
@@ -352,59 +352,6 @@ const ClienteDetalhes = () => {
           <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-primary/10">
-              <Target className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Oportunidades</p>
-              <p className="text-2xl font-bold text-foreground">{opportunities.length}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-success/10">
-              <DollarSign className="h-6 w-6 text-success" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Valor Total</p>
-              <p className="text-2xl font-bold text-foreground">
-                R$ {totalOpportunityValue.toLocaleString('pt-BR')}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-info/10">
-              <CheckCircle2 className="h-6 w-6 text-info" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Fechados</p>
-              <p className="text-2xl font-bold text-foreground">{closedOpportunities}</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 bg-gradient-to-br from-card to-muted/20 border-border">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-lg bg-warning/10">
-              <Clock className="h-6 w-6 text-warning" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Tarefas Pendentes</p>
-              <p className="text-2xl font-bold text-foreground">{pendingTasks}</p>
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Client Info Card */}
