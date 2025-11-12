@@ -404,6 +404,7 @@ export type Database = {
           title: string
           type: string
           updated_at: string | null
+          updated_by: string | null
           url: string | null
         }
         Insert: {
@@ -415,6 +416,7 @@ export type Database = {
           title: string
           type: string
           updated_at?: string | null
+          updated_by?: string | null
           url?: string | null
         }
         Update: {
@@ -426,9 +428,63 @@ export type Database = {
           title?: string
           type?: string
           updated_at?: string | null
+          updated_by?: string | null
           url?: string | null
         }
         Relationships: []
+      }
+      knowledge_base_history: {
+        Row: {
+          category: string
+          change_type: string
+          changed_at: string
+          changed_by: string
+          content: string
+          id: string
+          knowledge_base_id: string
+          new_data: Json | null
+          old_data: Json | null
+          title: string
+          type: string
+          url: string | null
+        }
+        Insert: {
+          category: string
+          change_type: string
+          changed_at?: string
+          changed_by: string
+          content: string
+          id?: string
+          knowledge_base_id: string
+          new_data?: Json | null
+          old_data?: Json | null
+          title: string
+          type: string
+          url?: string | null
+        }
+        Update: {
+          category?: string
+          change_type?: string
+          changed_at?: string
+          changed_by?: string
+          content?: string
+          id?: string
+          knowledge_base_id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          title?: string
+          type?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_history_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       loss_reasons: {
         Row: {

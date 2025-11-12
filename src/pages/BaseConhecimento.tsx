@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface KnowledgeItem {
@@ -19,6 +19,20 @@ interface KnowledgeItem {
   url?: string;
   created_at: string;
   created_by: string;
+  updated_at: string;
+  updated_by?: string;
+  creator?: { full_name: string };
+  updater?: { full_name: string };
+}
+
+interface HistoryItem {
+  id: string;
+  change_type: string;
+  changed_at: string;
+  changed_by: string;
+  changer?: { full_name: string };
+  old_data?: any;
+  new_data?: any;
 }
 
 const BaseConhecimento = () => {
@@ -27,6 +41,10 @@ const BaseConhecimento = () => {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
+  const [itemHistory, setItemHistory] = useState<HistoryItem[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   
   const [formData, setFormData] = useState({
@@ -64,15 +82,19 @@ const BaseConhecimento = () => {
   const fetchKnowledgeItems = async () => {
     const { data, error } = await supabase
       .from("knowledge_base")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select(`
+        *,
+        creator:profiles!knowledge_base_created_by_fkey(full_name),
+        updater:profiles!knowledge_base_updated_by_fkey(full_name)
+      `)
+      .order("updated_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching knowledge items:", error);
       return;
     }
 
-    setItems((data || []) as KnowledgeItem[]);
+    setItems((data || []) as any);
   };
 
   const filterItems = () => {
@@ -124,6 +146,90 @@ const BaseConhecimento = () => {
       url: "",
     });
     fetchKnowledgeItems();
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedItem) return;
+
+    const { error } = await supabase
+      .from("knowledge_base")
+      .update({
+        title: formData.title,
+        content: formData.content,
+        category: formData.category,
+        type: formData.type,
+        url: formData.url,
+      })
+      .eq("id", selectedItem.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar item");
+      console.error(error);
+      return;
+    }
+
+    toast.success("Item atualizado com sucesso!");
+    setEditDialogOpen(false);
+    setSelectedItem(null);
+    setFormData({
+      title: "",
+      content: "",
+      category: "",
+      type: "article",
+      url: "",
+    });
+    fetchKnowledgeItems();
+  };
+
+  const openEditDialog = (item: KnowledgeItem) => {
+    setSelectedItem(item);
+    setFormData({
+      title: item.title,
+      content: item.content,
+      category: item.category,
+      type: item.type,
+      url: item.url || "",
+    });
+    setEditDialogOpen(true);
+  };
+
+  const fetchItemHistory = async (itemId: string) => {
+    const { data, error } = await supabase
+      .from("knowledge_base_history")
+      .select("*")
+      .eq("knowledge_base_id", itemId)
+      .order("changed_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching history:", error);
+      return;
+    }
+
+    // Fetch changer profiles separately
+    const historyWithProfiles = await Promise.all(
+      (data || []).map(async (item) => {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", item.changed_by)
+          .single();
+        
+        return {
+          ...item,
+          changer: profile
+        };
+      })
+    );
+
+    setItemHistory(historyWithProfiles as any);
+  };
+
+  const openHistoryDialog = async (item: KnowledgeItem) => {
+    setSelectedItem(item);
+    await fetchItemHistory(item.id);
+    setHistoryDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -313,25 +419,47 @@ const BaseConhecimento = () => {
             <Card key={item.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-1">
                     {getTypeIcon(item.type)}
                     <Badge variant="secondary" className="text-xs">
                       {item.category}
                     </Badge>
                   </div>
-                  {(userRole === "admin" || userRole === "gestor") && (
+                  <div className="flex gap-1">
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => openEditDialog(item)}
+                      title="Editar"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Edit className="h-3 w-3" />
                     </Button>
-                  )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => openHistoryDialog(item)}
+                      title="Ver histórico"
+                    >
+                      <History className="h-3 w-3" />
+                    </Button>
+                    {(userRole === "admin" || userRole === "gestor") && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDelete(item.id)}
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <CardTitle className="text-base">{item.title}</CardTitle>
                 <CardDescription className="text-xs">
                   {getTypeLabel(item.type)}
+                  {item.updater && item.updater.full_name && (
+                    <span className="ml-2">• Editado por {item.updater.full_name}</span>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -353,6 +481,135 @@ const BaseConhecimento = () => {
           ))
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Item</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Título</Label>
+              <Input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <select
+                  className="w-full border rounded-md p-2 text-sm"
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  required
+                >
+                  <option value="">Selecione...</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <select
+                  className="w-full border rounded-md p-2 text-sm"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                  required
+                >
+                  <option value="article">Artigo</option>
+                  <option value="video">Vídeo</option>
+                  <option value="link">Link Externo</option>
+                </select>
+              </div>
+            </div>
+
+            {(formData.type === "video" || formData.type === "link") && (
+              <div className="space-y-2">
+                <Label>URL</Label>
+                <Input
+                  type="url"
+                  value={formData.url}
+                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  placeholder="https://..."
+                  required
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Conteúdo</Label>
+              <Textarea
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                rows={6}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar Alterações</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* History Dialog */}
+      <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico de Mudanças</DialogTitle>
+            {selectedItem && (
+              <p className="text-sm text-muted-foreground">{selectedItem.title}</p>
+            )}
+          </DialogHeader>
+          <div className="space-y-4">
+            {itemHistory.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum histórico encontrado
+              </p>
+            ) : (
+              itemHistory.map((historyItem) => (
+                <Card key={historyItem.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant={historyItem.change_type === "created" ? "default" : "secondary"}>
+                        {historyItem.change_type === "created" ? "Criado" : "Atualizado"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(historyItem.changed_at).toLocaleString("pt-BR")}
+                      </span>
+                    </div>
+                    <p className="text-sm">
+                      Por: <span className="font-medium">{historyItem.changer?.full_name || "Usuário desconhecido"}</span>
+                    </p>
+                  </CardHeader>
+                  {historyItem.old_data && (
+                    <CardContent className="pt-0">
+                      <div className="text-xs space-y-2">
+                        <p className="font-medium">Alterações:</p>
+                        <div className="bg-muted p-2 rounded">
+                          <pre className="whitespace-pre-wrap text-xs">
+                            {JSON.stringify(historyItem.new_data, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
