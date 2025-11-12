@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -112,12 +113,13 @@ const Clientes = () => {
   };
 
   const handleCnpjBlur = async () => {
-    if (cnpj.length < 14) return;
+    const cleanedCnpj = cnpj.replace(/\D/g, ''); // Remove máscara
+    if (cleanedCnpj.length < 14) return;
     
     setLoadingCnpj(true);
     try {
       const { data, error } = await supabase.functions.invoke("buscar-cnpj", {
-        body: { cnpj }
+        body: { cnpj: cleanedCnpj }
       });
 
       if (error) throw error;
@@ -318,13 +320,17 @@ const Clientes = () => {
                   <div className="space-y-2">
                     <Label htmlFor="cnpj">CNPJ *</Label>
                     <div className="relative">
-                      <Input
+                      <CNPJInput
                         id="cnpj"
                         value={cnpj}
-                        onChange={(e) => setCnpj(e.target.value)}
-                        onBlur={handleCnpjBlur}
+                        onValueChange={(value) => {
+                          setCnpj(value);
+                          if (value.replace(/\D/g, '').length === 14) {
+                            handleCnpjBlur();
+                          }
+                        }}
                         placeholder="00.000.000/0000-00"
-                        required
+                        disabled={loadingCnpj}
                       />
                       {loadingCnpj && (
                         <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary" size={20} />
@@ -365,13 +371,11 @@ const Clientes = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="shareCapital">Capital Social</Label>
-                      <Input
+                      <CurrencyInput
                         id="shareCapital"
-                        type="number"
-                        step="0.01"
                         value={shareCapital}
-                        onChange={(e) => setShareCapital(e.target.value)}
-                        placeholder="0.00"
+                        onValueChange={(value) => setShareCapital(value)}
+                        placeholder="R$ 0,00"
                       />
                     </div>
                   </div>
@@ -437,10 +441,11 @@ const Clientes = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="phone">Telefone</Label>
-                      <Input
+                      <PhoneInput
                         id="phone"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        onValueChange={(value) => setPhone(value)}
+                        placeholder="(00) 00000-0000"
                       />
                     </div>
                   </div>
@@ -476,10 +481,11 @@ const Clientes = () => {
 
                     <div className="space-y-2">
                       <Label htmlFor="zipCode">CEP</Label>
-                      <Input
+                      <CEPInput
                         id="zipCode"
                         value={zipCode}
-                        onChange={(e) => setZipCode(e.target.value)}
+                        onValueChange={(value) => setZipCode(value)}
+                        placeholder="00000-000"
                       />
                     </div>
                   </div>
@@ -538,17 +544,19 @@ const Clientes = () => {
 
                           <div className="space-y-2">
                             <Label>Telefone</Label>
-                            <Input
-                              value={contact.phone}
-                              onChange={(e) => updateContact(index, "phone", e.target.value)}
+                            <PhoneInput
+                              value={contact.phone || ""}
+                              onValueChange={(value) => updateContact(index, "phone", value)}
+                              placeholder="(00) 00000-0000"
                             />
                           </div>
 
                           <div className="space-y-2">
                             <Label>Celular</Label>
-                            <Input
-                              value={contact.mobile}
-                              onChange={(e) => updateContact(index, "mobile", e.target.value)}
+                            <PhoneInput
+                              value={contact.mobile || ""}
+                              onValueChange={(value) => updateContact(index, "mobile", value)}
+                              placeholder="(00) 00000-0000"
                             />
                           </div>
                         </div>
