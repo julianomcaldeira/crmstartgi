@@ -219,129 +219,185 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Dashboard {userRole === "gestor" || userRole === "admin" ? "- Visão Geral da Equipe" : ""}
+          <h1 className="text-2xl font-bold text-foreground">
+            Dashboard {userRole === "gestor" || userRole === "admin" ? "- Equipe" : ""}
           </h1>
-          <p className="text-muted-foreground">
-            {userRole === "gestor" || userRole === "admin" 
-              ? "Acompanhe o desempenho de toda a equipe"
-              : "Acompanhe seu desempenho e atividades"
-            }
+          <p className="text-sm text-muted-foreground">
+            {userRole === "gestor" || userRole === "admin" ? "Visão geral" : "Seu desempenho"}
           </p>
         </div>
         
-        <div className="w-full sm:w-auto">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-full sm:w-[240px]">
-              <Calendar className="mr-2 h-4 w-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {getPeriodOptions().map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <SelectTrigger className="w-[200px]">
+            <Calendar className="mr-2 h-4 w-4" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {getPeriodOptions().map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Tarefas Pendentes Hoje */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-orange-600" />
-            Tarefas Pendentes Hoje
-            <Badge variant="secondary">{todayTasks.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground text-center">Carregando...</p>
-          ) : todayTasks.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Nenhuma tarefa pendente para hoje
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {todayTasks.slice(0, 5).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {getTaskTypeLabel(task.task_type)}
-                      {task.contacts && ` - ${task.contacts.name}`}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {task.clients?.company_name}
-                    </p>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {task.due_date && format(new Date(task.due_date), "HH:mm")}
-                  </div>
-                </div>
-              ))}
-              {todayTasks.length > 5 && (
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                  + {todayTasks.length - 5} tarefas adicionais
-                </p>
-              )}
+      {/* Grid Principal Compacto */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Resumo Rápido Cards */}
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Tarefas Hoje</p>
+                <p className="text-2xl font-bold text-blue-600">{todayTasks.length}</p>
+              </div>
+              <CheckSquare className="h-8 w-8 text-blue-500/30" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">No Forecast</p>
+                <p className="text-2xl font-bold text-purple-600">{forecastAccounts.length}</p>
+              </div>
+              <Target className="h-8 w-8 text-purple-500/30" />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Metas do Período */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-primary" />
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Meta Atingida</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
+                </p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-500/30" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-primary">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Meta Total</p>
+                <p className="text-lg font-bold text-primary">
+                  {goalData ? new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                    notation: "compact",
+                  }).format(goalData.target) : "R$ 0"}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-primary/30" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Tarefas Pendentes - Compacto */}
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Clock className="h-4 w-4 text-orange-500" />
+              Tarefas Hoje
+              <Badge variant="secondary" className="text-xs">{todayTasks.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            {loading ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>
+            ) : todayTasks.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Nenhuma tarefa para hoje
+              </p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {todayTasks.slice(0, 4).map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-2 border rounded hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs truncate">
+                        {getTaskTypeLabel(task.task_type)}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {task.clients?.company_name}
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground ml-2">
+                      {task.due_date && format(new Date(task.due_date), "HH:mm")}
+                    </div>
+                  </div>
+                ))}
+                {todayTasks.length > 4 && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    +{todayTasks.length - 4} mais
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Progresso das Metas - Compacto */}
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
               Progresso das Metas
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 pt-0">
             {loading ? (
-              <p className="text-muted-foreground text-center">Carregando...</p>
+              <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>
             ) : !goalData || goalData.target === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Nenhuma meta definida para este período
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Sem metas definidas
               </p>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-end justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Meta Total</p>
-                    <p className="text-3xl font-bold text-primary">
+                    <p className="text-xs text-muted-foreground">Meta</p>
+                    <p className="text-lg font-bold text-primary">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
+                        notation: "compact",
                       }).format(goalData.target)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Realizado</p>
-                    <p className="text-3xl font-bold text-green-600">
+                    <p className="text-xs text-muted-foreground">Realizado</p>
+                    <p className="text-lg font-bold text-green-600">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
+                        notation: "compact",
                       }).format(goalData.achieved)}
                     </p>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Progresso</span>
                     <span className="font-medium">{goalData.percentage.toFixed(1)}%</span>
                   </div>
-                  <div className="h-4 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all ${
                         goalData.percentage >= 100
@@ -356,172 +412,110 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
-
-                {goalData.goals.length > 0 && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm font-medium mb-3">Metas Individuais</p>
-                    <div className="space-y-2">
-                      {goalData.goals.map((goal: any) => (
-                        <div key={goal.id} className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{goal.goal_type}</Badge>
-                            {goal.profiles && (
-                              <span className="text-muted-foreground">{goal.profiles.full_name}</span>
-                            )}
-                          </div>
-                          <span className="font-medium">
-                            {new Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            }).format(goal.target_value)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </CardContent>
         </Card>
 
+        {/* Funil - Compacto */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              Resumo Rápido
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Users className="h-4 w-4 text-chart-1" />
+              Funil de Vendas
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm font-medium">Tarefas Hoje</span>
-                </div>
-                <span className="text-lg font-bold text-blue-600">{todayTasks.length}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-purple-600" />
-                  <span className="text-sm font-medium">No Forecast</span>
-                </div>
-                <span className="text-lg font-bold text-purple-600">{forecastAccounts.length}</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <span className="text-sm font-medium">Meta Atingida</span>
-                </div>
-                <span className="text-lg font-bold text-green-600">
-                  {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
-                </span>
-              </div>
-            </div>
+          <CardContent className="p-4 pt-0">
+            {loading ? (
+              <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>
+            ) : funnelData.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Sem dados
+              </p>
+            ) : (
+              <ChartContainer
+                config={{
+                  value: {
+                    label: "Oportunidades",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-40"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={funnelData}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Forecast do Mês */}
+      {/* Forecast do Mês - Compacto */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-purple-600" />
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-purple-500" />
             Forecast do Mês
-            <Badge variant="secondary">{forecastAccounts.length}</Badge>
+            <Badge variant="secondary" className="text-xs">{forecastAccounts.length}</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           {loading ? (
-            <p className="text-muted-foreground text-center">Carregando...</p>
+            <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>
           ) : forecastAccounts.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Nenhuma oportunidade no forecast para este período
+            <p className="text-xs text-muted-foreground text-center py-4">
+              Sem oportunidades no forecast
             </p>
           ) : (
-            <div className="space-y-3">
-              {forecastAccounts.map((opp) => (
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {forecastAccounts.slice(0, 5).map((opp) => (
                 <div
                   key={opp.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between p-2 border rounded hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex-1">
-                    <p className="font-medium">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-xs truncate">
                       {opp.clients?.trade_name || opp.clients?.company_name}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {opp.status === "qualified" && "Qualificado"}
-                        {opp.status === "proposal" && "Proposta"}
-                        {opp.status === "negotiation" && "Negociação"}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Badge variant="outline" className="text-xs px-1 py-0">
+                        {opp.status === "qualified" && "Qual."}
+                        {opp.status === "proposal" && "Prop."}
+                        {opp.status === "negotiation" && "Negoc."}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        Probabilidade: {opp.probability}%
+                        {opp.probability}%
                       </span>
-                      {(userRole === "gestor" || userRole === "admin") && opp.profiles && (
-                        <span className="text-xs text-muted-foreground">
-                          • {opp.profiles.full_name}
-                        </span>
-                      )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">
+                  <div className="text-right ml-2">
+                    <p className="font-bold text-sm">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
+                        notation: "compact",
                       }).format(Number(opp.value) || 0)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {opp.expected_close_date && 
-                        format(new Date(opp.expected_close_date), "dd/MM/yyyy")
+                        format(new Date(opp.expected_close_date), "dd/MM")
                       }
                     </p>
                   </div>
                 </div>
               ))}
+              {forecastAccounts.length > 5 && (
+                <p className="text-xs text-muted-foreground text-center pt-1">
+                  +{forecastAccounts.length - 5} mais
+                </p>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Funil de Oportunidades */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Funil de Oportunidades
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-muted-foreground text-center">Carregando...</p>
-          ) : funnelData.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Nenhuma oportunidade encontrada
-            </p>
-          ) : (
-            <ChartContainer
-              config={{
-                value: {
-                  label: "Oportunidades",
-                  color: "hsl(var(--primary))",
-                },
-              }}
-              className="h-[300px]"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={funnelData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
           )}
         </CardContent>
       </Card>
