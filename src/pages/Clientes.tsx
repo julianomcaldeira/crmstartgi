@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit } from "lucide-react";
 import { toast } from "sonner";
+import { ClientEditDialog } from "@/components/ClientEditDialog";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,10 @@ const Clientes = () => {
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -60,7 +65,27 @@ const Clientes = () => {
     fetchClients();
     fetchSellers();
     fetchFeiras();
+    fetchCurrentUser();
   }, []);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      setCurrentUserId(user.id);
+      
+      const { data: rolesData, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
+      
+      if (rolesError) throw rolesError;
+      setUserRoles(rolesData?.map(r => r.role) || []);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
 
   const fetchFeiras = async () => {
     try {
@@ -284,6 +309,19 @@ const Clientes = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion]);
+
+  const canEditClient = (client: any) => {
+    if (!currentUserId) return false;
+    const isOwner = client.created_by === currentUserId;
+    const isAdminOrGestor = userRoles.includes('admin') || userRoles.includes('gestor');
+    return isOwner || isAdminOrGestor;
+  };
+
+  const handleEditClient = (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setSelectedClient(client);
+    setEditDialogOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -757,7 +795,7 @@ const Clientes = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-6">
                   {/* Main Client Info */}
-                  <div className="flex items-start gap-4 flex-1">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
                     <div className="p-3 rounded-lg bg-primary/10">
                       <Building2 className="text-primary" size={24} />
                     </div>
@@ -817,25 +855,38 @@ const Clientes = () => {
                     </div>
                   </div>
 
-                  {/* Seller Info - Highlighted */}
-                  {client.created_by_profile && (
-                    <div className="flex-shrink-0 px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className="text-primary" size={16} />
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                          Vendedor Responsável
-                        </span>
-                      </div>
-                      <p className="font-semibold text-primary text-lg">
-                        {client.created_by_profile.full_name}
-                      </p>
-                      {client.created_by_profile.email && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {client.created_by_profile.email}
+                  {/* Seller Info and Edit Button */}
+                  <div className="flex items-start gap-3 flex-shrink-0">
+                    {client.created_by_profile && (
+                      <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
+                        <div className="flex items-center gap-2 mb-1">
+                          <User className="text-primary" size={16} />
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            Vendedor Responsável
+                          </span>
+                        </div>
+                        <p className="font-semibold text-primary text-lg">
+                          {client.created_by_profile.full_name}
                         </p>
-                      )}
-                    </div>
-                  )}
+                        {client.created_by_profile.email && (
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            {client.created_by_profile.email}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {canEditClient(client) && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => handleEditClient(e, client)}
+                        className="h-10 w-10"
+                      >
+                        <Edit size={18} />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -889,6 +940,15 @@ const Clientes = () => {
           </>
         )}
       </div>
+
+      {selectedClient && (
+        <ClientEditDialog
+          client={selectedClient}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSuccess={fetchClients}
+        />
+      )}
     </div>
   );
 };
