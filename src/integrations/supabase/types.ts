@@ -212,6 +212,7 @@ export type Database = {
           expected_close_date: string | null
           id: string
           probability: number | null
+          product_id: string | null
           status: Database["public"]["Enums"]["opportunity_status"] | null
           title: string
           updated_at: string | null
@@ -226,6 +227,7 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           probability?: number | null
+          product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
           title: string
           updated_at?: string | null
@@ -240,6 +242,7 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           probability?: number | null
+          product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
           title?: string
           updated_at?: string | null
@@ -265,6 +268,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

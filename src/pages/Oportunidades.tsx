@@ -15,6 +15,7 @@ const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
@@ -23,6 +24,7 @@ const Oportunidades = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [clientId, setClientId] = useState("");
+  const [productId, setProductId] = useState("");
   const [value, setValue] = useState("");
   const [probability, setProbability] = useState("50");
   const [status, setStatus] = useState("lead");
@@ -45,26 +47,30 @@ const Oportunidades = () => {
 
   const fetchData = async () => {
     try {
-      const [oppsResponse, clientsResponse, usersResponse] = await Promise.all([
+      const [oppsResponse, clientsResponse, usersResponse, productsResponse] = await Promise.all([
         supabase
           .from("opportunities")
           .select(`
             *,
             client:clients(company_name, trade_name),
-            assigned:profiles!opportunities_assigned_to_fkey(full_name)
+            assigned:profiles!opportunities_assigned_to_fkey(full_name),
+            product:products(name, monthly_fee, implementation_fee)
           `)
           .order("created_at", { ascending: false }),
         supabase.from("clients").select("id, company_name, trade_name"),
         supabase.from("profiles").select("id, full_name"),
+        supabase.from("products").select("id, name, monthly_fee, implementation_fee").eq("active", true).order("name", { ascending: true }),
       ]);
 
       if (oppsResponse.error) throw oppsResponse.error;
       if (clientsResponse.error) throw clientsResponse.error;
       if (usersResponse.error) throw usersResponse.error;
+      if (productsResponse.error) throw productsResponse.error;
 
       setOpportunities(oppsResponse.data || []);
       setClients(clientsResponse.data || []);
       setUsers(usersResponse.data || []);
+      setProducts(productsResponse.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
@@ -84,6 +90,7 @@ const Oportunidades = () => {
         title,
         description,
         client_id: clientId,
+        product_id: productId || null,
         value: value ? parseFloat(value) : null,
         probability: parseInt(probability),
         status: status as any,
@@ -108,6 +115,7 @@ const Oportunidades = () => {
     setTitle("");
     setDescription("");
     setClientId("");
+    setProductId("");
     setValue("");
     setProbability("50");
     setStatus("lead");
@@ -212,16 +220,38 @@ const Oportunidades = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="value">Valor (R$)</Label>
-                  <Input
-                    id="value"
-                    type="number"
-                    step="0.01"
-                    value={value}
-                    onChange={(e) => setValue(e.target.value)}
-                    placeholder="0,00"
-                  />
+                  <Label htmlFor="product">Produto</Label>
+                  <Select value={productId} onValueChange={setProductId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="value">Valor (R$)</Label>
+                <Input
+                  id="value"
+                  type="number"
+                  step="0.01"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder="0,00"
+                />
+                {productId && products.find(p => p.id === productId) && (
+                  <p className="text-xs text-muted-foreground">
+                    Sugestão: R$ {Number(products.find(p => p.id === productId)?.implementation_fee || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} 
+                    {" + R$ "}{Number(products.find(p => p.id === productId)?.monthly_fee || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}/mês
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -344,6 +374,11 @@ const Oportunidades = () => {
                         <p className="text-xs text-muted-foreground line-clamp-1">
                           {opp.client?.trade_name || opp.client?.company_name}
                         </p>
+                        {opp.product && (
+                          <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                            {opp.product.name}
+                          </Badge>
+                        )}
                         {opp.value && (
                           <p className="text-sm font-semibold text-primary">
                             {formatCurrency(opp.value)}
@@ -387,7 +422,13 @@ const Oportunidades = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Produto</p>
+                      <p className="text-sm font-medium">
+                        {opp.product?.name || "-"}
+                      </p>
+                    </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Valor</p>
                       <p className="font-semibold text-primary">
