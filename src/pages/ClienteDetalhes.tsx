@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
+import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -42,7 +43,9 @@ const ClienteDetalhes = () => {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [oppDialogOpen, setOppDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
+  const [taskViewDialogOpen, setTaskViewDialogOpen] = useState(false);
+  const [oppViewDialogOpen, setOppViewDialogOpen] = useState(false);
   const [taskFormData, setTaskFormData] = useState({
     title: "",
     description: "",
@@ -86,10 +89,15 @@ const ClienteDetalhes = () => {
         .eq("client_id", id);
       setContacts(contactsData || []);
 
-      // Fetch opportunities
+      // Fetch opportunities with all related data
       const { data: opportunitiesData } = await supabase
         .from("opportunities")
-        .select("*, profiles(full_name)")
+        .select(`
+          *,
+          client:clients(company_name, trade_name),
+          assigned:profiles!opportunities_assigned_to_fkey(full_name),
+          product:products(name, description, logo_url)
+        `)
         .eq("client_id", id)
         .order("created_at", { ascending: false });
       setOpportunities(opportunitiesData || []);
@@ -595,7 +603,14 @@ const ClienteDetalhes = () => {
             ) : (
               <div className="space-y-3">
                 {opportunities.map((opp) => (
-                  <div key={opp.id} className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors">
+                  <div 
+                    key={opp.id} 
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedOpportunity(opp);
+                      setOppViewDialogOpen(true);
+                    }}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="font-medium text-foreground">{opp.title}</h4>
@@ -614,7 +629,7 @@ const ClienteDetalhes = () => {
                         </span>
                       </div>
                       <span className="text-muted-foreground">
-                        {opp.profiles?.full_name || "Não atribuído"}
+                        {opp.assigned?.full_name || "Não atribuído"}
                       </span>
                     </div>
                   </div>
@@ -731,7 +746,7 @@ const ClienteDetalhes = () => {
                     className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer"
                     onClick={() => {
                       setSelectedTask(task);
-                      setViewDialogOpen(true);
+                      setTaskViewDialogOpen(true);
                     }}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -765,8 +780,14 @@ const ClienteDetalhes = () => {
 
       <TaskViewDialog
         task={selectedTask}
-        open={viewDialogOpen}
-        onOpenChange={setViewDialogOpen}
+        open={taskViewDialogOpen}
+        onOpenChange={setTaskViewDialogOpen}
+      />
+      
+      <OpportunityViewDialog
+        opportunity={selectedOpportunity}
+        open={oppViewDialogOpen}
+        onOpenChange={setOppViewDialogOpen}
       />
     </div>
   );
