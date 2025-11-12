@@ -36,16 +36,29 @@ const ClienteDetalhes = () => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [oppDialogOpen, setOppDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
+  const [taskFormData, setTaskFormData] = useState({
     title: "",
     description: "",
     task_type: "ligacao",
     due_date: "",
     priority: "medium",
+  });
+  const [oppFormData, setOppFormData] = useState({
+    product_id: "",
+    implementation_value: "",
+    monthly_value: "",
+    probability: "50",
+    status: "lead",
+    assigned_to: "",
+    expected_close_date: "",
+    business_type: "cliente_novo",
   });
 
   useEffect(() => {
@@ -89,6 +102,20 @@ const ClienteDetalhes = () => {
         .order("created_at", { ascending: false });
       setTasks(tasksData || []);
 
+      // Fetch users for assignment
+      const { data: usersData } = await supabase
+        .from("profiles")
+        .select("id, full_name");
+      setUsers(usersData || []);
+
+      // Fetch products
+      const { data: productsData } = await supabase
+        .from("products")
+        .select("id, name, description")
+        .eq("active", true)
+        .order("name", { ascending: true });
+      setProducts(productsData || []);
+
     } catch (error: any) {
       toast.error("Erro ao carregar detalhes do cliente");
       console.error(error);
@@ -102,19 +129,19 @@ const ClienteDetalhes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      if (!formData.title || !formData.due_date) {
+      if (!taskFormData.title || !taskFormData.due_date) {
         toast.error("Preencha os campos obrigatórios");
         return;
       }
 
       const { error } = await supabase.from("tasks").insert([
         {
-          title: formData.title,
-          description: formData.description,
+          title: taskFormData.title,
+          description: taskFormData.description,
           client_id: id,
-          task_type: formData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
-          due_date: formData.due_date,
-          priority: formData.priority as "low" | "medium" | "high",
+          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          due_date: taskFormData.due_date,
+          priority: taskFormData.priority as "low" | "medium" | "high",
           status: "pending",
           assigned_to: user.id,
           created_by: user.id,
@@ -124,8 +151,8 @@ const ClienteDetalhes = () => {
       if (error) throw error;
 
       toast.success("Tarefa criada com sucesso!");
-      setDialogOpen(false);
-      resetForm();
+      setTaskDialogOpen(false);
+      resetTaskForm();
       fetchClientDetails();
     } catch (error) {
       console.error("Error creating task:", error);
@@ -133,13 +160,61 @@ const ClienteDetalhes = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
+  const handleCreateOpportunity = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase.from("opportunities").insert([
+        {
+          title: `Oportunidade - ${client?.trade_name || client?.company_name}`,
+          client_id: id,
+          product_id: oppFormData.product_id || null,
+          implementation_value: oppFormData.implementation_value ? parseFloat(oppFormData.implementation_value) : null,
+          monthly_value: oppFormData.monthly_value ? parseFloat(oppFormData.monthly_value) : null,
+          value: (oppFormData.implementation_value || oppFormData.monthly_value) ? 
+            (parseFloat(oppFormData.implementation_value || "0") + parseFloat(oppFormData.monthly_value || "0")) : null,
+          probability: parseInt(oppFormData.probability),
+          status: oppFormData.status as any,
+          assigned_to: oppFormData.assigned_to || user.id,
+          expected_close_date: oppFormData.expected_close_date || null,
+          created_by: user.id,
+          business_type: oppFormData.business_type as any,
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Oportunidade criada com sucesso!");
+      setOppDialogOpen(false);
+      resetOppForm();
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error creating opportunity:", error);
+      toast.error("Erro ao criar oportunidade");
+    }
+  };
+
+  const resetTaskForm = () => {
+    setTaskFormData({
       title: "",
       description: "",
       task_type: "ligacao",
       due_date: "",
       priority: "medium",
+    });
+  };
+
+  const resetOppForm = () => {
+    setOppFormData({
+      product_id: "",
+      implementation_value: "",
+      monthly_value: "",
+      probability: "50",
+      status: "lead",
+      assigned_to: "",
+      expected_close_date: "",
+      business_type: "cliente_novo",
     });
   };
 
@@ -353,7 +428,168 @@ const ClienteDetalhes = () => {
 
         <TabsContent value="opportunities" className="space-y-4">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Histórico de Oportunidades</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Histórico de Oportunidades</h3>
+              <Dialog open={oppDialogOpen} onOpenChange={setOppDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Oportunidade
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Oportunidade</DialogTitle>
+                    <DialogDescription>
+                      Adicione uma nova oportunidade para este cliente
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="product">Produto</Label>
+                      <Select
+                        value={oppFormData.product_id}
+                        onValueChange={(value) => setOppFormData({ ...oppFormData, product_id: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um produto (opcional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum produto</SelectItem>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="implementation_value">Valor de Implantação</Label>
+                        <Input
+                          id="implementation_value"
+                          type="number"
+                          step="0.01"
+                          value={oppFormData.implementation_value}
+                          onChange={(e) => setOppFormData({ ...oppFormData, implementation_value: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="monthly_value">Valor Mensal</Label>
+                        <Input
+                          id="monthly_value"
+                          type="number"
+                          step="0.01"
+                          value={oppFormData.monthly_value}
+                          onChange={(e) => setOppFormData({ ...oppFormData, monthly_value: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="probability">Probabilidade</Label>
+                        <Select
+                          value={oppFormData.probability}
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, probability: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="10">10%</SelectItem>
+                            <SelectItem value="25">25%</SelectItem>
+                            <SelectItem value="50">50%</SelectItem>
+                            <SelectItem value="80">80%</SelectItem>
+                            <SelectItem value="90">90%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status</Label>
+                        <Select
+                          value={oppFormData.status}
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, status: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="lead">Lead</SelectItem>
+                            <SelectItem value="contacted">Contactado</SelectItem>
+                            <SelectItem value="qualified">Qualificado</SelectItem>
+                            <SelectItem value="proposal">Proposta</SelectItem>
+                            <SelectItem value="negotiation">Negociação</SelectItem>
+                            <SelectItem value="won">Ganho</SelectItem>
+                            <SelectItem value="lost">Perdido</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="business_type">Tipo de Negócio</Label>
+                        <Select
+                          value={oppFormData.business_type}
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, business_type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                            <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="assigned_to">Responsável</Label>
+                        <Select
+                          value={oppFormData.assigned_to}
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, assigned_to: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Atribuir a mim" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Atribuir a mim</SelectItem>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="expected_close_date">Data Prevista de Fechamento</Label>
+                      <Input
+                        id="expected_close_date"
+                        type="date"
+                        value={oppFormData.expected_close_date}
+                        onChange={(e) => setOppFormData({ ...oppFormData, expected_close_date: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setOppDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleCreateOpportunity}>
+                        Criar Oportunidade
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             {opportunities.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Nenhuma oportunidade registrada</p>
             ) : (
@@ -392,7 +628,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Tarefas</h3>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm">
                     <Plus className="mr-2 h-4 w-4" />
@@ -411,8 +647,8 @@ const ClienteDetalhes = () => {
                       <Label htmlFor="title">Título *</Label>
                       <Input
                         id="title"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        value={taskFormData.title}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, title: e.target.value })}
                         placeholder="Ex: Reunião com cliente"
                       />
                     </div>
@@ -420,8 +656,8 @@ const ClienteDetalhes = () => {
                       <Label htmlFor="description">Descrição</Label>
                       <Textarea
                         id="description"
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        value={taskFormData.description}
+                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                         placeholder="Detalhes da tarefa..."
                         rows={3}
                       />
@@ -429,8 +665,8 @@ const ClienteDetalhes = () => {
                     <div className="space-y-2">
                       <Label htmlFor="task_type">Tipo de Tarefa</Label>
                       <Select
-                        value={formData.task_type}
-                        onValueChange={(value) => setFormData({ ...formData, task_type: value })}
+                        value={taskFormData.task_type}
+                        onValueChange={(value) => setTaskFormData({ ...taskFormData, task_type: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -452,15 +688,15 @@ const ClienteDetalhes = () => {
                         <Input
                           id="due_date"
                           type="datetime-local"
-                          value={formData.due_date}
-                          onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                          value={taskFormData.due_date}
+                          onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="priority">Prioridade</Label>
                         <Select
-                          value={formData.priority}
-                          onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                          value={taskFormData.priority}
+                          onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -474,7 +710,7 @@ const ClienteDetalhes = () => {
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                      <Button variant="outline" onClick={() => setTaskDialogOpen(false)}>
                         Cancelar
                       </Button>
                       <Button onClick={handleCreateTask}>
