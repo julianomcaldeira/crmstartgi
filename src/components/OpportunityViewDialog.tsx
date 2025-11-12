@@ -18,6 +18,7 @@ interface OpportunityViewDialogProps {
 const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityViewDialogProps) => {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
 
   useEffect(() => {
     if (open && opportunity?.id) {
@@ -89,6 +90,22 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       toast.error(error.message || "Erro ao enviar arquivos");
     } finally {
       setUploadingFiles(false);
+    }
+  };
+
+  const handlePreview = async (attachment: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("opportunity-attachments")
+        .download(attachment.file_path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      setPreviewFile({ url, name: attachment.file_name, type: attachment.file_type });
+    } catch (error: any) {
+      console.error("Error previewing file:", error);
+      toast.error("Erro ao visualizar arquivo");
     }
   };
 
@@ -363,47 +380,81 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
 
             {attachments.length > 0 && (
               <div className="space-y-2 pl-6">
-                {attachments.map((attachment) => (
-                  <div
-                    key={attachment.id}
-                    className="flex items-center justify-between p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{attachment.file_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(attachment.file_size)} • {format(parseISO(attachment.created_at), "dd/MM/yyyy HH:mm")}
-                        </p>
+                {attachments.map((attachment) => {
+                  const isImage = attachment.file_type?.startsWith('image/');
+                  const isPDF = attachment.file_type === 'application/pdf';
+                  const canPreview = isImage || isPDF;
+
+                  return (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center justify-between p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                    >
+                      <div 
+                        className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                        onClick={() => canPreview && handlePreview(attachment)}
+                      >
+                        <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate hover:underline">{attachment.file_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(attachment.file_size)} • {format(parseISO(attachment.created_at), "dd/MM/yyyy HH:mm")}
+                            {canPreview && " • Clique para visualizar"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownload(attachment)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteAttachment(attachment)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDownload(attachment)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteAttachment(attachment)}
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
       </DialogContent>
+
+      {/* Preview Dialog */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewFile?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center justify-center overflow-auto max-h-[75vh]">
+            {previewFile?.type.startsWith('image/') ? (
+              <img 
+                src={previewFile.url} 
+                alt={previewFile.name}
+                className="max-w-full h-auto rounded-lg"
+              />
+            ) : previewFile?.type === 'application/pdf' ? (
+              <iframe
+                src={previewFile.url}
+                className="w-full h-[75vh] rounded-lg"
+                title={previewFile.name}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };

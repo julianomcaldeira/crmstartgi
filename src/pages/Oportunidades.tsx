@@ -20,6 +20,17 @@ import { OpportunityEditDialog } from "@/components/OpportunityEditDialog";
 import { OpportunityActivityLog } from "@/components/OpportunityActivityLog";
 import { ProposalViewer } from "@/components/ProposalViewer";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
+import { DroppableColumn } from "@/components/DroppableColumn";
+import { DraggableCard } from "@/components/DraggableCard";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -40,11 +51,24 @@ const Oportunidades = () => {
   const [proposalTitle, setProposalTitle] = useState("");
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedOpportunity, setSelectedOpportunity] = useState<any>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
   
   // Filters
   const [searchClient, setSearchClient] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [filterAssignedTo, setFilterAssignedTo] = useState("");
+  const [filterProduct, setFilterProduct] = useState("");
+  const [filterProbability, setFilterProbability] = useState("");
+  const [filterBusinessType, setFilterBusinessType] = useState("");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -162,7 +186,13 @@ const Oportunidades = () => {
       const matchesStartDate = !startDate || oppDate >= new Date(startDate);
       const matchesEndDate = !endDate || oppDate <= new Date(endDate);
       
-      return matchesClient && matchesStartDate && matchesEndDate;
+      const matchesAssignedTo = !filterAssignedTo || opp.assigned_to === filterAssignedTo;
+      const matchesProduct = !filterProduct || opp.product_id === filterProduct;
+      const matchesProbability = !filterProbability || opp.probability?.toString() === filterProbability;
+      const matchesBusinessType = !filterBusinessType || opp.business_type === filterBusinessType;
+      
+      return matchesClient && matchesStartDate && matchesEndDate && 
+             matchesAssignedTo && matchesProduct && matchesProbability && matchesBusinessType;
     });
   };
 
@@ -178,7 +208,7 @@ const Oportunidades = () => {
     }).format(value || 0);
   };
 
-  const updateOpportunityStatus = async (oppId: string, newStatus: string) => {
+  const updateOpportunityStatus = async (oppId: string, newStatus: string, showToast = true) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -209,12 +239,32 @@ const Oportunidades = () => {
         });
       }
 
-      toast.success("Fase atualizada com sucesso!");
+      if (showToast) {
+        toast.success("Fase atualizada com sucesso!");
+      }
       fetchData();
     } catch (error) {
       console.error("Error updating opportunity:", error);
-      toast.error("Erro ao atualizar fase");
+      if (showToast) {
+        toast.error("Erro ao atualizar fase");
+      }
     }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      const opportunityId = active.id as string;
+      const newStatus = over.id as string;
+      updateOpportunityStatus(opportunityId, newStatus, true);
+    }
+    
+    setActiveId(null);
   };
 
   const getNextStage = (currentStage: string) => {
@@ -713,6 +763,61 @@ const Oportunidades = () => {
               />
             </div>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Select value={filterAssignedTo} onValueChange={setFilterAssignedTo}>
+              <SelectTrigger>
+                <SelectValue placeholder="Vendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">Todos os vendedores</SelectItem>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterProduct} onValueChange={setFilterProduct}>
+              <SelectTrigger>
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">Todos os produtos</SelectItem>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterProbability} onValueChange={setFilterProbability}>
+              <SelectTrigger>
+                <SelectValue placeholder="Probabilidade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">Todas as probabilidades</SelectItem>
+                <SelectItem value="10">10%</SelectItem>
+                <SelectItem value="25">25%</SelectItem>
+                <SelectItem value="50">50%</SelectItem>
+                <SelectItem value="80">80%</SelectItem>
+                <SelectItem value="90">90%</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filterBusinessType} onValueChange={setFilterBusinessType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo de Negócio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">Todos os tipos</SelectItem>
+                <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
       </Card>
 
@@ -727,42 +832,48 @@ const Oportunidades = () => {
           </p>
         </Card>
       ) : viewMode === "kanban" ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-          {stages.map((stage) => {
-            const stageOpps = getOpportunitiesByStage(stage.key);
-            const stageValue = stageOpps.reduce(
-              (sum, opp) => sum + (Number(opp.value) || 0),
-              0
-            );
+        <DndContext 
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            {stages.map((stage) => {
+              const stageOpps = getOpportunitiesByStage(stage.key);
+              const stageValue = stageOpps.reduce(
+                (sum, opp) => sum + (Number(opp.value) || 0),
+                0
+              );
 
-            return (
-              <div key={stage.key} className="space-y-3">
-                <Card className="shadow-md">
-                  <CardHeader className="p-4">
-                    <h3 className="font-semibold text-sm mb-1">{stage.label}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {stageOpps.length} oportunidade{stageOpps.length !== 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs font-medium text-primary mt-1">
-                      {formatCurrency(stageValue)}
-                    </p>
-                  </CardHeader>
-                </Card>
+              return (
+                <div key={stage.key} className="space-y-3">
+                  <Card className="shadow-md">
+                    <CardHeader className="p-4">
+                      <h3 className="font-semibold text-sm mb-1">{stage.label}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {stageOpps.length} oportunidade{stageOpps.length !== 1 ? "s" : ""}
+                      </p>
+                      <p className="text-xs font-medium text-primary mt-1">
+                        {formatCurrency(stageValue)}
+                      </p>
+                    </CardHeader>
+                  </Card>
 
-                <div className="space-y-3">
-                  {stageOpps.map((opp) => {
-                    const nextStage = getNextStage(opp.status);
-                    const previousStage = getPreviousStage(opp.status);
-                    
-                    return (
-                      <Card
-                        key={opp.id}
-                        className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group cursor-pointer"
-                        onClick={() => {
-                          setSelectedOpportunity(opp);
-                          setViewDialogOpen(true);
-                        }}
-                      >
+                  <DroppableColumn id={stage.key}>
+                    <div className="space-y-3">
+                      {stageOpps.map((opp) => {
+                        const nextStage = getNextStage(opp.status);
+                        const previousStage = getPreviousStage(opp.status);
+                        
+                        return (
+                          <DraggableCard key={opp.id} id={opp.id}>
+                            <Card
+                              className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group cursor-pointer"
+                              onClick={() => {
+                                setSelectedOpportunity(opp);
+                                setViewDialogOpen(true);
+                              }}
+                            >
                         <CardHeader className="p-3 pb-2">
                           <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-sm line-clamp-2 flex-1">{opp.title}</CardTitle>
@@ -874,9 +985,16 @@ const Oportunidades = () => {
                           </div>
                         </CardContent>
                       </Card>
-                    );
-                  })}
-                </div>
+                    </DraggableCard>
+                  );
+                })}
+              </div>
+            </DroppableColumn>
+          </div>
+        );
+      })}
+    </div>
+  </DndContext>
               </div>
             );
           })}
