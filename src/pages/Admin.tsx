@@ -38,6 +38,7 @@ import {
   Trash2,
   Upload,
   Image as ImageIcon,
+  Download,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -64,6 +65,9 @@ const Admin = () => {
   });
   const [savingProduct, setSavingProduct] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  
+  // Export state
+  const [exportingData, setExportingData] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -343,6 +347,92 @@ const Admin = () => {
     setProductDialogOpen(true);
   };
 
+  const handleExportDatabase = async () => {
+    setExportingData(true);
+    try {
+      // Fetch all data
+      const [clientsData, opportunitiesData, tasksData, contactsData, productsData, feirasData, clientFeirasData, profilesData] = await Promise.all([
+        supabase.from("clients").select("*"),
+        supabase.from("opportunities").select("*"),
+        supabase.from("tasks").select("*"),
+        supabase.from("contacts").select("*"),
+        supabase.from("products").select("*"),
+        supabase.from("feiras").select("*"),
+        supabase.from("client_feiras").select("*"),
+        supabase.from("profiles").select(`*, user_roles(role)`),
+      ]);
+
+      // Create CSV content
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      // Clients Section
+      csvContent += "=== CLIENTES ===\n";
+      csvContent += "ID,CNPJ,Razão Social,Nome Fantasia,Email,Telefone,Segmento,Endereço,Cidade,Estado,CEP,Status,Porte,Região,Concorrentes,Data Criação,Criado Por\n";
+      clientsData.data?.forEach(client => {
+        csvContent += `${client.id},${client.cnpj || ""},${client.company_name || ""},${client.trade_name || ""},${client.email || ""},${client.phone || ""},${client.segment || ""},${client.address || ""},${client.city || ""},${client.state || ""},${client.zip_code || ""},${client.registration_status || ""},${client.company_size || ""},${client.region || ""},${client.competitors || ""},${client.created_at || ""},${client.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== OPORTUNIDADES ===\n";
+      csvContent += "ID,Título,Cliente ID,Produto ID,Valor,Valor Implementação,Valor Mensal,Status,Probabilidade,Tipo de Negócio,Descrição,Data Prevista,Responsável,Data Criação,Criado Por\n";
+      opportunitiesData.data?.forEach(opp => {
+        csvContent += `${opp.id},${opp.title || ""},${opp.client_id || ""},${opp.product_id || ""},${opp.value || 0},${opp.implementation_value || 0},${opp.monthly_value || 0},${opp.status || ""},${opp.probability || 0},${opp.business_type || ""},${(opp.description || "").replace(/,/g, ";")},${opp.expected_close_date || ""},${opp.assigned_to || ""},${opp.created_at || ""},${opp.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== TAREFAS ===\n";
+      csvContent += "ID,Título,Descrição,Tipo,Status,Prioridade,Data Vencimento,Cliente ID,Oportunidade ID,Responsável,Data Conclusão,Data Criação,Criado Por\n";
+      tasksData.data?.forEach(task => {
+        csvContent += `${task.id},${(task.title || "").replace(/,/g, ";")},${(task.description || "").replace(/,/g, ";")},${task.task_type || ""},${task.status || ""},${task.priority || ""},${task.due_date || ""},${task.client_id || ""},${task.opportunity_id || ""},${task.assigned_to || ""},${task.completed_at || ""},${task.created_at || ""},${task.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== CONTATOS ===\n";
+      csvContent += "ID,Nome,Email,Telefone,Celular,Cargo,Cliente ID,Principal,Data Criação,Criado Por\n";
+      contactsData.data?.forEach(contact => {
+        csvContent += `${contact.id},${contact.name || ""},${contact.email || ""},${contact.phone || ""},${contact.mobile || ""},${contact.role || ""},${contact.client_id || ""},${contact.is_primary ? "Sim" : "Não"},${contact.created_at || ""},${contact.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== PRODUTOS ===\n";
+      csvContent += "ID,Nome,Descrição,Taxa Implementação,Taxa Mensal,Ativo,Logo URL,Data Criação\n";
+      productsData.data?.forEach(product => {
+        csvContent += `${product.id},${product.name || ""},${(product.description || "").replace(/,/g, ";")},${product.implementation_fee || 0},${product.monthly_fee || 0},${product.active ? "Sim" : "Não"},${product.logo_url || ""},${product.created_at || ""}\n`;
+      });
+      
+      csvContent += "\n=== FEIRAS ===\n";
+      csvContent += "ID,Nome,Descrição,Local,Cidade,Estado,Data Início,Data Fim,Status,Website,Data Criação,Criado Por\n";
+      feirasData.data?.forEach(feira => {
+        csvContent += `${feira.id},${feira.name || ""},${(feira.description || "").replace(/,/g, ";")},${feira.location || ""},${feira.city || ""},${feira.state || ""},${feira.start_date || ""},${feira.end_date || ""},${feira.status || ""},${feira.website || ""},${feira.created_at || ""},${feira.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== CLIENTES-FEIRAS (RELACIONAMENTOS) ===\n";
+      csvContent += "ID,Cliente ID,Feira ID,Notas,Data Criação,Criado Por\n";
+      clientFeirasData.data?.forEach(cf => {
+        csvContent += `${cf.id},${cf.client_id || ""},${cf.feira_id || ""},${(cf.notes || "").replace(/,/g, ";")},${cf.created_at || ""},${cf.created_by || ""}\n`;
+      });
+      
+      csvContent += "\n=== USUÁRIOS ===\n";
+      csvContent += "ID,Nome Completo,Email,Telefone,Avatar URL,Perfil,Data Criação\n";
+      profilesData.data?.forEach(profile => {
+        const role = profile.user_roles?.[0]?.role || "vendedor";
+        csvContent += `${profile.id},${profile.full_name || ""},${profile.email || ""},${profile.phone || ""},${profile.avatar_url || ""},${role},${profile.created_at || ""}\n`;
+      });
+
+      // Create download
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `startgi_database_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Base de dados exportada com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao exportar base de dados:", error);
+      toast.error("Erro ao exportar base de dados: " + error.message);
+    } finally {
+      setExportingData(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     if (role === "admin") {
       return (
@@ -465,11 +555,12 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="feiras">Feiras</TabsTrigger>
           <TabsTrigger value="metrics">Métricas da Equipe</TabsTrigger>
+          <TabsTrigger value="export">Exportar Base</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -786,6 +877,57 @@ const Admin = () => {
               <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
               <p>Métricas detalhadas em desenvolvimento</p>
               <p className="text-sm mt-2">Em breve: gráficos de performance, ranking de vendedores e muito mais</p>
+            </div>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="export" className="space-y-4">
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-6 text-foreground">Exportar Base de Dados Completa</h2>
+            <div className="text-center py-12">
+              <div className="p-6 rounded-full bg-primary/10 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+                <Download className="h-12 w-12 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-3">
+                Exportação Completa do Sistema
+              </h3>
+              <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
+                Esta funcionalidade permite exportar toda a base de dados do CRM em um único arquivo CSV. 
+                Ideal para backup, migração de plataforma ou análise externa dos dados.
+              </p>
+              <div className="bg-muted/30 rounded-lg p-4 max-w-2xl mx-auto mb-6 text-left">
+                <p className="text-sm font-semibold text-foreground mb-2">O relatório inclui:</p>
+                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Todos os clientes cadastrados com informações completas</li>
+                  <li>Todas as oportunidades de vendas e seus detalhes</li>
+                  <li>Histórico completo de tarefas e atividades</li>
+                  <li>Contatos vinculados aos clientes</li>
+                  <li>Catálogo de produtos StartGi</li>
+                  <li>Feiras cadastradas e relacionamentos com clientes</li>
+                  <li>Usuários do sistema e seus perfis de acesso</li>
+                </ul>
+              </div>
+              <Button
+                onClick={handleExportDatabase}
+                disabled={exportingData}
+                size="lg"
+                className="bg-primary hover:bg-primary-dark text-primary-foreground"
+              >
+                {exportingData ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar Base de Dados (CSV)
+                  </>
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-4">
+                O arquivo será salvo como: startgi_database_export_AAAA-MM-DD.csv
+              </p>
             </div>
           </Card>
         </TabsContent>
