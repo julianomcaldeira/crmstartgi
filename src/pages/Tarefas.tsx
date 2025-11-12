@@ -18,6 +18,7 @@ const Tarefas = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,6 +36,7 @@ const Tarefas = () => {
   const [clientId, setClientId] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
+  const [contactId, setContactId] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -93,7 +95,8 @@ const Tarefas = () => {
           .select(`
             *,
             client:clients(company_name),
-            opportunity:opportunities(title)
+            opportunity:opportunities(title),
+            contact:contacts(id, name, email, phone, mobile, role)
           `)
           .eq("assigned_to", user.id)
           .order("due_date", { ascending: true }),
@@ -116,6 +119,27 @@ const Tarefas = () => {
       toast.error("Erro ao carregar tarefas");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchContactsByClient = async (clientId: string) => {
+    if (!clientId) {
+      setContacts([]);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("name");
+      
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      setContacts([]);
     }
   };
 
@@ -146,6 +170,7 @@ const Tarefas = () => {
         priority: priority as any,
         task_type: taskType as any,
         client_id: clientId || null,
+        contact_id: contactId || null,
         opportunity_id: opportunityId || null,
         assigned_to: assignedTo || user.id,
         created_by: user.id,
@@ -169,8 +194,10 @@ const Tarefas = () => {
     setPriority("medium");
     setTaskType("ligacao");
     setClientId("");
+    setContactId("");
     setOpportunityId("");
     setAssignedTo("");
+    setContacts([]);
   };
 
   const toggleTaskStatus = async (taskId: string, currentStatus: string) => {
@@ -335,7 +362,14 @@ const Tarefas = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente (Opcional)</Label>
-                  <Select value={clientId} onValueChange={setClientId}>
+                  <Select 
+                    value={clientId} 
+                    onValueChange={(value) => {
+                      setClientId(value);
+                      setContactId("");
+                      fetchContactsByClient(value);
+                    }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um cliente" />
                     </SelectTrigger>
@@ -350,20 +384,44 @@ const Tarefas = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="opportunity">Oportunidade (Opcional)</Label>
-                  <Select value={opportunityId} onValueChange={setOpportunityId}>
+                  <Label htmlFor="contact">Contato (Opcional)</Label>
+                  <Select 
+                    value={contactId} 
+                    onValueChange={setContactId}
+                    disabled={!clientId || contacts.length === 0}
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma oportunidade" />
+                      <SelectValue placeholder={
+                        !clientId ? "Selecione um cliente primeiro" : 
+                        contacts.length === 0 ? "Nenhum contato cadastrado" :
+                        "Selecione um contato"
+                      } />
                     </SelectTrigger>
                     <SelectContent>
-                      {opportunities.map((opp) => (
-                        <SelectItem key={opp.id} value={opp.id}>
-                          {opp.title}
+                      {contacts.map((contact) => (
+                        <SelectItem key={contact.id} value={contact.id}>
+                          {contact.name} {contact.role ? `- ${contact.role}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="opportunity">Oportunidade (Opcional)</Label>
+                <Select value={opportunityId} onValueChange={setOpportunityId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma oportunidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {opportunities.map((opp) => (
+                      <SelectItem key={opp.id} value={opp.id}>
+                        {opp.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

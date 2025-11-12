@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, User, Building2, FileText, Flag } from "lucide-react";
+import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -117,6 +117,46 @@ const TaskViewDialog = ({ task, open, onOpenChange }: TaskViewDialogProps) => {
               <p className="text-foreground pl-6">
                 {task.clients.trade_name || task.clients.company_name}
               </p>
+            </div>
+          )}
+
+          {/* Contact Information */}
+          {task.contacts && (
+            <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <User className="h-4 w-4" />
+                Informações do Contato
+              </div>
+              <div className="space-y-2 pl-6">
+                <div className="flex items-center gap-2">
+                  <User className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-sm font-medium">{task.contacts.name}</span>
+                  {task.contacts.role && (
+                    <Badge variant="outline" className="text-xs">
+                      {task.contacts.role}
+                    </Badge>
+                  )}
+                </div>
+                {task.contacts.email && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="h-3 w-3" />
+                    <a href={`mailto:${task.contacts.email}`} className="hover:text-primary transition-colors">
+                      {task.contacts.email}
+                    </a>
+                  </div>
+                )}
+                {(task.contacts.phone || task.contacts.mobile) && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <a 
+                      href={`tel:${task.contacts.mobile || task.contacts.phone}`} 
+                      className="hover:text-primary transition-colors"
+                    >
+                      {task.contacts.mobile || task.contacts.phone}
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -20,6 +20,7 @@ import { DroppableColumn } from "@/components/DroppableColumn";
 const Agenda = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -29,6 +30,7 @@ const Agenda = () => {
   const [formData, setFormData] = useState({
     description: "",
     client_id: "none",
+    contact_id: "",
     due_date: "",
     priority: "medium",
     task_type: "ligacao",
@@ -59,7 +61,8 @@ const Agenda = () => {
         .from("tasks")
         .select(`
           *,
-          clients(company_name, trade_name)
+          clients(company_name, trade_name),
+          contacts(id, name, email, phone, mobile, role)
         `)
         .eq("assigned_to", user.id)
         .gte("due_date", weekStart.toISOString())
@@ -90,6 +93,27 @@ const Agenda = () => {
     }
   };
 
+  const fetchContactsByClient = async (clientId: string) => {
+    if (!clientId || clientId === "none") {
+      setContacts([]);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("name");
+      
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error("Error fetching contacts:", error);
+      setContacts([]);
+    }
+  };
+
   const handleCreateTask = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -113,6 +137,7 @@ const Agenda = () => {
           title,
           description: formData.description,
           client_id: formData.client_id === "none" ? null : formData.client_id,
+          contact_id: formData.contact_id || null,
           due_date: formData.due_date,
           priority: formData.priority as "low" | "medium" | "high",
           task_type: formData.task_type as any,
@@ -158,10 +183,12 @@ const Agenda = () => {
     setFormData({
       description: "",
       client_id: "none",
+      contact_id: "",
       due_date: "",
       priority: "medium",
       task_type: "ligacao",
     });
+    setContacts([]);
   };
   
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -340,7 +367,10 @@ const Agenda = () => {
                 <Label htmlFor="client">Cliente</Label>
                 <Select
                   value={formData.client_id || "none"}
-                  onValueChange={(value) => setFormData({ ...formData, client_id: value === "none" ? "" : value })}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, client_id: value === "none" ? "" : value, contact_id: "" });
+                    fetchContactsByClient(value);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente (opcional)" />
@@ -350,6 +380,30 @@ const Agenda = () => {
                     {clients.map((client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.trade_name || client.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact">Contato</Label>
+                <Select
+                  value={formData.contact_id || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, contact_id: value === "none" ? "" : value })}
+                  disabled={!formData.client_id || formData.client_id === "none" || contacts.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !formData.client_id || formData.client_id === "none" ? "Selecione um cliente primeiro" : 
+                      contacts.length === 0 ? "Nenhum contato cadastrado" :
+                      "Selecione um contato (opcional)"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum contato</SelectItem>
+                    {contacts.map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name} {contact.role ? `- ${contact.role}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
