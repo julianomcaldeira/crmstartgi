@@ -285,6 +285,47 @@ export type Database = {
           },
         ]
       }
+      opportunity_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          created_by: string
+          description: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          opportunity_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          created_by: string
+          description: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          opportunity_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          opportunity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_activities_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunity_attachments: {
         Row: {
           created_at: string | null

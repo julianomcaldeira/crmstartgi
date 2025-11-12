@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText } from "lucide-react";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { OpportunityEditDialog } from "@/components/OpportunityEditDialog";
+import { OpportunityActivityLog } from "@/components/OpportunityActivityLog";
+import { ProposalViewer } from "@/components/ProposalViewer";
 
 const Oportunidades = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -30,6 +32,11 @@ const Oportunidades = () => {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [showActivityLog, setShowActivityLog] = useState(false);
+  const [selectedOpportunityForLog, setSelectedOpportunityForLog] = useState<string | null>(null);
+  const [showProposal, setShowProposal] = useState(false);
+  const [proposalHtml, setProposalHtml] = useState("");
+  const [proposalTitle, setProposalTitle] = useState("");
   
   // Filters
   const [searchClient, setSearchClient] = useState("");
@@ -167,12 +174,34 @@ const Oportunidades = () => {
 
   const updateOpportunityStatus = async (oppId: string, newStatus: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Get current status
+      const { data: currentOpp } = await supabase
+        .from("opportunities")
+        .select("status")
+        .eq("id", oppId)
+        .single();
+
       const { error } = await supabase
         .from("opportunities")
         .update({ status: newStatus as any })
         .eq("id", oppId);
 
       if (error) throw error;
+
+      // Log activity
+      if (currentOpp) {
+        await supabase.from("opportunity_activities").insert({
+          opportunity_id: oppId,
+          activity_type: "status_change",
+          description: "Estágio da oportunidade alterado",
+          old_value: stages.find(s => s.key === currentOpp.status)?.label,
+          new_value: stages.find(s => s.key === newStatus)?.label,
+          created_by: user.id,
+        });
+      }
 
       toast.success("Fase atualizada com sucesso!");
       fetchData();
@@ -212,6 +241,30 @@ const Oportunidades = () => {
     // Fetch attachments
     fetchAttachments(opp.id);
     setEditDialogOpen(true);
+  };
+
+  const handleGenerateProposal = async (opp: any) => {
+    try {
+      toast.loading("Gerando proposta...");
+      
+      const { data, error } = await supabase.functions.invoke("generate-proposal", {
+        body: { opportunityId: opp.id },
+      });
+
+      toast.dismiss();
+
+      if (error) throw error;
+
+      if (data?.html) {
+        setProposalHtml(data.html);
+        setProposalTitle(opp.title);
+        setShowProposal(true);
+      }
+    } catch (error: any) {
+      toast.dismiss();
+      console.error("Error generating proposal:", error);
+      toast.error(error.message || "Erro ao gerar proposta");
+    }
   };
 
   const fetchAttachments = async (opportunityId: string) => {
@@ -263,6 +316,14 @@ const Oportunidades = () => {
           });
 
         if (dbError) throw dbError;
+
+        // Log activity
+        await supabase.from("opportunity_activities").insert({
+          opportunity_id: editingOpportunity.id,
+          activity_type: "attachment_added",
+          description: `Arquivo anexado: ${file.name}`,
+          created_by: user.id,
+        });
       }
 
       toast.success("Arquivos enviados com sucesso!");
@@ -277,6 +338,9 @@ const Oportunidades = () => {
 
   const handleDeleteAttachment = async (attachment: any) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from("opportunity-attachments")
@@ -291,6 +355,14 @@ const Oportunidades = () => {
         .eq("id", attachment.id);
 
       if (dbError) throw dbError;
+
+      // Log activity
+      await supabase.from("opportunity_activities").insert({
+        opportunity_id: editingOpportunity.id,
+        activity_type: "attachment_removed",
+        description: `Arquivo removido: ${attachment.file_name}`,
+        created_by: user.id,
+      });
 
       toast.success("Arquivo removido!");
       fetchAttachments(editingOpportunity.id);
@@ -326,6 +398,17 @@ const Oportunidades = () => {
     e.preventDefault();
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Get current opportunity data to compare changes
+      const { data: currentOpp } = await supabase
+        .from("opportunities")
+        .select("*")
+        .eq("id", editingOpportunity.id)
+        .single();
+
+      // Update opportunity
       const { error } = await supabase
         .from("opportunities")
         .update({
@@ -343,6 +426,45 @@ const Oportunidades = () => {
         .eq("id", editingOpportunity.id);
 
       if (error) throw error;
+
+      // Log activity for changes
+      const activities = [];
+      
+      if (currentOpp.status !== status) {
+        activities.push({
+          opportunity_id: editingOpportunity.id,
+          activity_type: "status_change",
+          description: "Estágio da oportunidade alterado",
+          old_value: stages.find(s => s.key === currentOpp.status)?.label,
+          new_value: stages.find(s => s.key === status)?.label,
+          created_by: user.id,
+        });
+      }
+
+      if (currentOpp.probability !== parseInt(probability)) {
+        activities.push({
+          opportunity_id: editingOpportunity.id,
+          activity_type: "edit",
+          description: "Probabilidade atualizada",
+          old_value: `${currentOpp.probability}%`,
+          new_value: `${probability}%`,
+          created_by: user.id,
+        });
+      }
+
+      if (currentOpp.implementation_value !== (implementationValue ? parseFloat(implementationValue) : null) ||
+          currentOpp.monthly_value !== (monthlyValue ? parseFloat(monthlyValue) : null)) {
+        activities.push({
+          opportunity_id: editingOpportunity.id,
+          activity_type: "edit",
+          description: "Valores atualizados",
+          created_by: user.id,
+        });
+      }
+
+      if (activities.length > 0) {
+        await supabase.from("opportunity_activities").insert(activities);
+      }
 
       toast.success("Oportunidade atualizada!");
       setEditDialogOpen(false);
@@ -747,6 +869,14 @@ const Oportunidades = () => {
                         <Edit size={16} className="mr-1" />
                         Editar
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateProposal(opp)}
+                      >
+                        <FileText size={16} className="mr-1" />
+                        Proposta
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Badge className={`${stage?.color} cursor-pointer hover:opacity-80`}>
@@ -819,6 +949,16 @@ const Oportunidades = () => {
                   )}
                   
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOpportunityForLog(opp.id);
+                        setShowActivityLog(true);
+                      }}
+                    >
+                      Ver Histórico
+                    </Button>
                     {previousStage && (
                       <Button
                         variant="outline"
@@ -876,6 +1016,21 @@ const Oportunidades = () => {
         onDownloadAttachment={handleDownloadAttachment}
         onDeleteAttachment={handleDeleteAttachment}
         uploadingFiles={uploadingFiles}
+      />
+
+      {showActivityLog && selectedOpportunityForLog && (
+        <Dialog open={showActivityLog} onOpenChange={setShowActivityLog}>
+          <DialogContent className="max-w-2xl">
+            <OpportunityActivityLog opportunityId={selectedOpportunityForLog} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      <ProposalViewer
+        open={showProposal}
+        onOpenChange={setShowProposal}
+        proposalHtml={proposalHtml}
+        opportunityTitle={proposalTitle}
       />
     </div>
   );
