@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Calendar, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isPast, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import TaskViewDialog from "@/components/TaskViewDialog";
 
 const Agenda = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -19,6 +20,8 @@ const Agenda = () => {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -361,6 +364,10 @@ const Agenda = () => {
                         <Card
                           key={task.id}
                           className={`p-2 hover:shadow-md transition-shadow cursor-pointer border-l-4 ${getTaskStatusColor(task)}`}
+                          onClick={() => {
+                            setSelectedTask(task);
+                            setViewDialogOpen(true);
+                          }}
                         >
                           <div className="space-y-1">
                             <div className="flex items-start justify-between gap-2">
@@ -420,6 +427,12 @@ const Agenda = () => {
           )}
         </CardContent>
       </Card>
+
+      <TaskViewDialog
+        task={selectedTask}
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+      />
     </div>
   );
 };

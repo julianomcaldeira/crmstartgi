@@ -6,6 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ArrowLeft, 
   Building2, 
@@ -18,9 +23,11 @@ import {
   CheckCircle2,
   Clock,
   User,
-  TrendingUp
+  TrendingUp,
+  Plus
 } from "lucide-react";
 import { toast } from "sonner";
+import TaskViewDialog from "@/components/TaskViewDialog";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -30,6 +37,16 @@ const ClienteDetalhes = () => {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    task_type: "ligacao",
+    due_date: "",
+    priority: "medium",
+  });
 
   useEffect(() => {
     fetchClientDetails();
@@ -78,6 +95,52 @@ const ClienteDetalhes = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCreateTask = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (!formData.title || !formData.due_date) {
+        toast.error("Preencha os campos obrigatórios");
+        return;
+      }
+
+      const { error } = await supabase.from("tasks").insert([
+        {
+          title: formData.title,
+          description: formData.description,
+          client_id: id,
+          task_type: formData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          due_date: formData.due_date,
+          priority: formData.priority as "low" | "medium" | "high",
+          status: "pending",
+          assigned_to: user.id,
+          created_by: user.id,
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Tarefa criada com sucesso!");
+      setDialogOpen(false);
+      resetForm();
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error creating task:", error);
+      toast.error("Erro ao criar tarefa");
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      task_type: "ligacao",
+      due_date: "",
+      priority: "medium",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -327,13 +390,114 @@ const ClienteDetalhes = () => {
 
         <TabsContent value="tasks" className="space-y-4">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4 text-foreground">Histórico de Tarefas</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Histórico de Tarefas</h3>
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nova Tarefa
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Tarefa</DialogTitle>
+                    <DialogDescription>
+                      Adicione uma nova tarefa para este cliente
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Título *</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="Ex: Reunião com cliente"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Detalhes da tarefa..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="task_type">Tipo de Tarefa</Label>
+                      <Select
+                        value={formData.task_type}
+                        onValueChange={(value) => setFormData({ ...formData, task_type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ligacao">Ligação</SelectItem>
+                          <SelectItem value="email">E-mail</SelectItem>
+                          <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                          <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                          <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                          <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                          <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="due_date">Data e Hora *</Label>
+                        <Input
+                          id="due_date"
+                          type="datetime-local"
+                          value={formData.due_date}
+                          onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="priority">Prioridade</Label>
+                        <Select
+                          value={formData.priority}
+                          onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Baixa</SelectItem>
+                            <SelectItem value="medium">Média</SelectItem>
+                            <SelectItem value="high">Alta</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleCreateTask}>
+                        Criar Tarefa
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
             {tasks.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Nenhuma tarefa registrada</p>
             ) : (
               <div className="space-y-3">
                 {tasks.map((task) => (
-                  <div key={task.id} className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors">
+                  <div 
+                    key={task.id} 
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setViewDialogOpen(true);
+                    }}
+                  >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="font-medium text-foreground">{task.title}</h4>
@@ -362,6 +526,12 @@ const ClienteDetalhes = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <TaskViewDialog
+        task={selectedTask}
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+      />
     </div>
   );
 };
