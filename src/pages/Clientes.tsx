@@ -490,30 +490,32 @@ const Clientes = () => {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
-            <Input
-              placeholder="Buscar por nome ou CNPJ..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <User size={16} className="text-muted-foreground" />
-            <select
-              value={selectedSeller}
-              onChange={(e) => setSelectedSeller(e.target.value)}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              <option value="all">Todos os vendedores</option>
-              {sellers.map((seller) => (
-                <option key={seller.id} value={seller.id}>
-                  {seller.full_name}
-                </option>
-              ))}
-            </select>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+              <Input
+                placeholder="Buscar por nome ou CNPJ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="relative w-full sm:w-64">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <select
+                value={selectedSeller}
+                onChange={(e) => setSelectedSeller(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os vendedores</option>
+                {sellers.map((seller) => (
+                  <option key={seller.id} value={seller.id}>
+                    {seller.full_name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </CardHeader>
       </Card>

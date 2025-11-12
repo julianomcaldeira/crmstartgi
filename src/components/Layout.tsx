@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import logo from "@/assets/logo-startgi.jpg";
+import { NotificationSystem } from "./NotificationSystem";
 
 interface LayoutProps {
   children: ReactNode;
@@ -101,6 +102,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <NotificationSystem />
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div

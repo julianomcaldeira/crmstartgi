@@ -107,9 +107,9 @@ const Configuracoes = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 2MB");
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 10MB");
       return;
     }
 
@@ -208,7 +208,7 @@ const Configuracoes = () => {
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  PNG, JPG até 2MB
+                  PNG, JPG até 10MB
                 </p>
               </div>
             </div>

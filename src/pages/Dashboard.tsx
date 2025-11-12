@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Target, CheckSquare, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend } from "recharts";
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -13,6 +15,9 @@ const Dashboard = () => {
     wonDeals: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [funnelData, setFunnelData] = useState<any[]>([]);
+  const [productData, setProductData] = useState<any[]>([]);
+  const [evolutionData, setEvolutionData] = useState<any[]>([]);
 
   useEffect(() => {
     fetchStats();
@@ -63,11 +68,89 @@ const Dashboard = () => {
         pendingTasks: pendingCount || 0,
         wonDeals: wonOpps?.length || 0,
       });
+
+      // Fetch funnel data
+      await fetchFunnelData();
+      await fetchProductData();
+      await fetchEvolutionData();
     } catch (error) {
       console.error("Error fetching stats:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFunnelData = async () => {
+    const { data: opportunities } = await supabase
+      .from("opportunities")
+      .select("status");
+
+    const statusLabels: Record<string, string> = {
+      lead: "Lead",
+      qualified: "Qualificado",
+      proposal: "Proposta",
+      negotiation: "Negociação",
+      won: "Ganho",
+      lost: "Perdido",
+    };
+
+    const statusCounts = opportunities?.reduce((acc: any, opp) => {
+      const label = statusLabels[opp.status] || opp.status;
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+
+    const chartData = Object.entries(statusCounts || {}).map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+    setFunnelData(chartData);
+  };
+
+  const fetchProductData = async () => {
+    const { data: opportunities } = await supabase
+      .from("opportunities")
+      .select("product_id, value, products(name)")
+      .eq("status", "won");
+
+    const productStats = opportunities?.reduce((acc: any, opp: any) => {
+      const productName = opp.products?.name || "Sem Produto";
+      if (!acc[productName]) {
+        acc[productName] = { name: productName, revenue: 0, count: 0 };
+      }
+      acc[productName].revenue += Number(opp.value) || 0;
+      acc[productName].count += 1;
+      return acc;
+    }, {});
+
+    const chartData = Object.values(productStats || {}).sort((a: any, b: any) => b.revenue - a.revenue);
+    setProductData(chartData);
+  };
+
+  const fetchEvolutionData = async () => {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+    const { data: opportunities } = await supabase
+      .from("opportunities")
+      .select("created_at, value, status")
+      .gte("created_at", sixMonthsAgo.toISOString());
+
+    const monthlyData = opportunities?.reduce((acc: any, opp) => {
+      const month = new Date(opp.created_at).toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+      if (!acc[month]) {
+        acc[month] = { month, oportunidades: 0, receita: 0 };
+      }
+      acc[month].oportunidades += 1;
+      if (opp.status === "won") {
+        acc[month].receita += Number(opp.value) || 0;
+      }
+      return acc;
+    }, {});
+
+    const chartData = Object.values(monthlyData || {});
+    setEvolutionData(chartData);
   };
 
   const statCards = [
@@ -162,31 +245,94 @@ const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-primary">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckSquare className="text-primary" size={20} />
-              Próximas Tarefas
-            </CardTitle>
+            <CardTitle>Funil de Vendas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-sm">
-              Você tem <span className="font-bold text-primary">{stats.pendingTasks}</span> tarefas pendentes
-            </p>
+            <ChartContainer
+              config={{
+                value: {
+                  label: "Oportunidades",
+                  color: "hsl(var(--primary))",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={funnelData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow border-l-4 border-l-purple-500">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="text-purple-600" size={20} />
-              Pipeline de Vendas
-            </CardTitle>
+            <CardTitle>Evolução de Métricas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-sm">
-              <span className="font-bold text-purple-600">{stats.opportunities}</span> oportunidades em aberto
-            </p>
+            <ChartContainer
+              config={{
+                oportunidades: {
+                  label: "Oportunidades",
+                  color: "hsl(var(--primary))",
+                },
+                receita: {
+                  label: "Receita",
+                  color: "hsl(142, 76%, 36%)",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={evolutionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line type="monotone" dataKey="oportunidades" stroke="hsl(var(--primary))" strokeWidth={2} />
+                  <Line type="monotone" dataKey="receita" stroke="hsl(142, 76%, 36%)" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Comparativo entre Produtos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                revenue: {
+                  label: "Receita",
+                  color: "hsl(var(--primary))",
+                },
+                count: {
+                  label: "Quantidade",
+                  color: "hsl(221, 83%, 53%)",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={productData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" name="Receita (R$)" />
+                  <Bar dataKey="count" fill="hsl(221, 83%, 53%)" name="Quantidade" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
       </div>
