@@ -438,41 +438,41 @@ const ClienteDetalhes = () => {
       </div>
 
       {/* Client Info Card */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4 text-foreground">Informações do Cliente</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+      <Card className="p-4">
+        <h2 className="text-lg font-semibold mb-3 text-foreground">Informações do Cliente</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">CNPJ</p>
-                <p className="font-medium text-foreground">{client.cnpj}</p>
+                <p className="text-xs text-muted-foreground">CNPJ</p>
+                <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
               </div>
             </div>
             
-            <div className="flex items-start gap-3">
-              <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Email</p>
-                <p className="font-medium text-foreground">{client.email || "-"}</p>
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="text-sm font-medium text-foreground">{client.email || "-"}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Telefone</p>
-                <p className="font-medium text-foreground">{client.phone || "-"}</p>
+                <p className="text-xs text-muted-foreground">Telefone</p>
+                <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Endereço</p>
-                <p className="font-medium text-foreground">
+                <p className="text-xs text-muted-foreground">Endereço</p>
+                <p className="text-sm font-medium text-foreground">
                   {client.address || "-"}
                   {client.city && `, ${client.city}`}
                   {client.state && ` - ${client.state}`}
@@ -480,45 +480,45 @@ const ClienteDetalhes = () => {
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <TrendingUp className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Segmento</p>
-                <p className="font-medium text-foreground">{client.segment || "-"}</p>
+                <p className="text-xs text-muted-foreground">Segmento</p>
+                <p className="text-sm font-medium text-foreground">{client.segment || "-"}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Capital Social</p>
-                <p className="font-medium text-foreground">
+                <p className="text-xs text-muted-foreground">Capital Social</p>
+                <p className="text-sm font-medium text-foreground">
                   {client.share_capital ? `R$ ${Number(client.share_capital).toLocaleString('pt-BR')}` : "-"}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Building2 className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Porte da Empresa</p>
-                <p className="font-medium text-foreground">{client.company_size || "-"}</p>
+                <p className="text-xs text-muted-foreground">Porte da Empresa</p>
+                <p className="text-sm font-medium text-foreground">{client.company_size || "-"}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Região</p>
-                <p className="font-medium text-foreground">{client.region || "-"}</p>
+                <p className="text-xs text-muted-foreground">Região</p>
+                <p className="text-sm font-medium text-foreground">{client.region || "-"}</p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
-              <Target className="h-5 w-5 text-muted-foreground mt-0.5" />
+            <div className="flex items-start gap-2">
+              <Target className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
-                <p className="text-sm text-muted-foreground">Concorrentes</p>
-                <p className="font-medium text-foreground">{client.competitors || "-"}</p>
+                <p className="text-xs text-muted-foreground">Concorrentes</p>
+                <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
               </div>
             </div>
           </div>
