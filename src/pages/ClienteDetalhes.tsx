@@ -43,6 +43,7 @@ const ClienteDetalhes = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [feiras, setFeiras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -156,6 +157,16 @@ const ClienteDetalhes = () => {
         .eq("active", true)
         .order("name", { ascending: true });
       setProducts(productsData || []);
+
+      // Fetch linked feiras
+      const { data: feirasData } = await (supabase as any)
+        .from("client_feiras")
+        .select(`
+          *,
+          feira:feiras(*)
+        `)
+        .eq("client_id", id);
+      setFeiras(feirasData || []);
 
     } catch (error: any) {
       toast.error("Erro ao carregar detalhes do cliente");
@@ -492,6 +503,44 @@ const ClienteDetalhes = () => {
                     )}
                   </div>
                 </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Feiras Vinculadas */}
+      {feiras.length > 0 && (
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Feiras Vinculadas</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {feiras.map((item) => (
+              <div key={item.id} className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg border border-primary/20">
+                <h3 className="font-semibold text-foreground mb-2">{item.feira?.name}</h3>
+                {item.feira?.city && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{item.feira.city}{item.feira.state && ` - ${item.feira.state}`}</span>
+                  </div>
+                )}
+                {item.feira?.start_date && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {new Date(item.feira.start_date).toLocaleDateString('pt-BR')}
+                      {item.feira.end_date && ` - ${new Date(item.feira.end_date).toLocaleDateString('pt-BR')}`}
+                    </span>
+                  </div>
+                )}
+                {item.feira?.status && (
+                  <Badge variant="secondary" className="mt-2">
+                    {item.feira.status === 'planejada' ? 'Planejada' : 
+                     item.feira.status === 'em_andamento' ? 'Em Andamento' : 'Concluída'}
+                  </Badge>
+                )}
+                {item.notes && (
+                  <p className="text-sm text-muted-foreground mt-2 italic">{item.notes}</p>
+                )}
               </div>
             ))}
           </div>
