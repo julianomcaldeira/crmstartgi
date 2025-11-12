@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -621,26 +622,22 @@ const Oportunidades = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="implementationValue">Valor de Implantação (R$)</Label>
-                  <Input
+                  <Label htmlFor="implementationValue">Valor de Implantação</Label>
+                  <CurrencyInput
                     id="implementationValue"
-                    type="number"
-                    step="0.01"
                     value={implementationValue}
-                    onChange={(e) => setImplementationValue(e.target.value)}
-                    placeholder="0,00"
+                    onValueChange={setImplementationValue}
+                    placeholder="R$ 0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="monthlyValue">Valor Mensal (R$)</Label>
-                  <Input
+                  <Label htmlFor="monthlyValue">Valor Mensal</Label>
+                  <CurrencyInput
                     id="monthlyValue"
-                    type="number"
-                    step="0.01"
                     value={monthlyValue}
-                    onChange={(e) => setMonthlyValue(e.target.value)}
-                    placeholder="0,00"
+                    onValueChange={setMonthlyValue}
+                    placeholder="R$ 0,00"
                   />
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Upload, X, Download, Paperclip } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CurrencyInput } from "@/components/ui/masked-input";
 
 interface OpportunityEditDialogProps {
   open: boolean;
@@ -135,26 +136,22 @@ export function OpportunityEditDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-implValue">Valor de Implantação (R$)</Label>
-                  <Input
+                  <Label htmlFor="edit-implValue">Valor de Implantação</Label>
+                  <CurrencyInput
                     id="edit-implValue"
-                    type="number"
-                    step="0.01"
                     value={implementationValue}
-                    onChange={(e) => setImplementationValue(e.target.value)}
-                    placeholder="0,00"
+                    onValueChange={setImplementationValue}
+                    placeholder="R$ 0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-monthlyValue">Valor Mensal (R$)</Label>
-                  <Input
+                  <Label htmlFor="edit-monthlyValue">Valor Mensal</Label>
+                  <CurrencyInput
                     id="edit-monthlyValue"
-                    type="number"
-                    step="0.01"
                     value={monthlyValue}
-                    onChange={(e) => setMonthlyValue(e.target.value)}
-                    placeholder="0,00"
+                    onValueChange={setMonthlyValue}
+                    placeholder="R$ 0,00"
                   />
                 </div>
               </div>

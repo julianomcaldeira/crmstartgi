@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2 } from "lucide-react";
+import { CurrencyInput } from "@/components/ui/masked-input";
 
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
@@ -311,23 +312,41 @@ const Metas = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="target_value">Valor Alvo *</Label>
-                    <Input
-                      id="target_value"
-                      type="number"
-                      value={formData.target_value}
-                      onChange={(e) => setFormData({ ...formData, target_value: e.target.value })}
-                      placeholder="Ex: 100000"
-                    />
+                    {(formData.goal_type === "revenue" || formData.goal_type === "annualized_sales") ? (
+                      <CurrencyInput
+                        id="target_value"
+                        value={formData.target_value}
+                        onValueChange={(value) => setFormData({ ...formData, target_value: value })}
+                        placeholder="R$ 0,00"
+                      />
+                    ) : (
+                      <Input
+                        id="target_value"
+                        type="number"
+                        value={formData.target_value}
+                        onChange={(e) => setFormData({ ...formData, target_value: e.target.value })}
+                        placeholder="Ex: 100"
+                      />
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="current_value">Valor Atual</Label>
-                    <Input
-                      id="current_value"
-                      type="number"
-                      value={formData.current_value}
-                      onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
-                      placeholder="Ex: 25000"
-                    />
+                    {(formData.goal_type === "revenue" || formData.goal_type === "annualized_sales") ? (
+                      <CurrencyInput
+                        id="current_value"
+                        value={formData.current_value}
+                        onValueChange={(value) => setFormData({ ...formData, current_value: value })}
+                        placeholder="R$ 0,00"
+                      />
+                    ) : (
+                      <Input
+                        id="current_value"
+                        type="number"
+                        value={formData.current_value}
+                        onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
+                        placeholder="Ex: 25"
+                      />
+                    )}
                   </div>
                 </div>
 

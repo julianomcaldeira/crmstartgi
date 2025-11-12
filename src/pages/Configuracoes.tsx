@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Upload, User, Mail, Link as LinkIcon, Unlink } from "lucide-react";
+import { PhoneInput } from "@/components/ui/masked-input";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
@@ -327,10 +328,10 @@ const Configuracoes = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
-              <Input
+              <PhoneInput
                 id="phone"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onValueChange={setPhone}
                 placeholder="(00) 00000-0000"
               />
             </div>
