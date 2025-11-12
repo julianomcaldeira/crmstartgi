@@ -24,6 +24,8 @@ const Clientes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
+  const [selectedCompanySize, setSelectedCompanySize] = useState<string>("all");
+  const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -262,7 +264,12 @@ const Clientes = () => {
     const matchesFeira = selectedFeiraFilter === "all" || 
       (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
     
-    return matchesSearch && matchesSeller && matchesFeira;
+    const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
+    
+    const matchesRegion = selectedRegion === "all" || 
+      (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
+    
+    return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion;
   });
 
   // Pagination
@@ -274,7 +281,7 @@ const Clientes = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion]);
 
   return (
     <div className="space-y-6">
@@ -692,6 +699,32 @@ const Clientes = () => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="relative w-full sm:w-64">
+              <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <select
+                value={selectedCompanySize}
+                onChange={(e) => setSelectedCompanySize(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os portes</option>
+                <option value="MEI">MEI</option>
+                <option value="ME">Microempresa (ME)</option>
+                <option value="EPP">Pequeno Porte (EPP)</option>
+                <option value="medio">Médio Porte</option>
+                <option value="grande">Grande Porte</option>
+              </select>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <Input
+                placeholder="Filtrar por região..."
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </div>
         </CardHeader>
