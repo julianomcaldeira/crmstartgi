@@ -2,3 +2,6 @@ project_id = "eifsbqqrimniclsssoru"
 
 [functions.buscar-cnpj]
 verify_jwt = false
+
+[functions.import-feiras]
+verify_jwt = false
