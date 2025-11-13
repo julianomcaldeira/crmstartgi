@@ -114,15 +114,15 @@ const BaseConhecimento = () => {
     let favoriteIds: string[] = [];
     if (user) {
       const { data: favorites } = await supabase
-        .from("knowledge_base_favorites")
+        .from("knowledge_base_favorites" as any)
         .select("knowledge_base_id")
         .eq("user_id", user.id);
       
-      favoriteIds = (favorites || []).map(f => f.knowledge_base_id);
+      favoriteIds = (favorites || []).map((f: any) => f.knowledge_base_id);
     }
 
     // Mark favorited items
-    const itemsWithFavorites = (data || []).map(item => ({
+    const itemsWithFavorites = (data || []).map((item: any) => ({
       ...item,
       is_favorited: favoriteIds.includes(item.id)
     }));
@@ -131,9 +131,9 @@ const BaseConhecimento = () => {
     
     // Extract all unique tags
     const tags = new Set<string>();
-    itemsWithFavorites.forEach(item => {
+    itemsWithFavorites.forEach((item: any) => {
       if (item.tags && Array.isArray(item.tags)) {
-        item.tags.forEach(tag => tags.add(tag));
+        item.tags.forEach((tag: string) => tags.add(tag));
       }
     });
     setAllTags(Array.from(tags).sort());
@@ -346,7 +346,7 @@ const BaseConhecimento = () => {
 
     if (isFavorited) {
       const { error } = await supabase
-        .from("knowledge_base_favorites")
+        .from("knowledge_base_favorites" as any)
         .delete()
         .eq("user_id", user.id)
         .eq("knowledge_base_id", itemId);
@@ -358,7 +358,7 @@ const BaseConhecimento = () => {
       toast.success("Removido dos favoritos");
     } else {
       const { error } = await supabase
-        .from("knowledge_base_favorites")
+        .from("knowledge_base_favorites" as any)
         .insert({
           user_id: user.id,
           knowledge_base_id: itemId,
