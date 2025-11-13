@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.import-feiras]
 verify_jwt = false
+
+[functions.import-prospects]
+verify_jwt = false
