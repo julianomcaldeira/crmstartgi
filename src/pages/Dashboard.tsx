@@ -97,19 +97,23 @@ const Dashboard = () => {
     let goalsQuery = supabase
       .from("goals")
       .select("*, profiles(full_name)")
-      .gte("start_date", format(startDate, "yyyy-MM-dd"))
-      .lte("end_date", format(endDate, "yyyy-MM-dd"));
+      .lte("start_date", format(endDate, "yyyy-MM-dd"))
+      .gte("end_date", format(startDate, "yyyy-MM-dd"));
 
     if (userRole === "vendedor") {
       goalsQuery = goalsQuery.eq("assigned_to", userId);
     }
 
-    const { data: goals } = await goalsQuery;
+    const { data: goals, error: goalsError } = await goalsQuery;
+    
+    if (goalsError) {
+      console.error("Error fetching goals:", goalsError);
+    }
 
     // Buscar oportunidades ganhas no período para calcular progresso
     let oppsQuery = supabase
       .from("opportunities")
-      .select("value, assigned_to, created_at")
+      .select("value, monthly_value, assigned_to, created_at")
       .eq("status", "won")
       .gte("created_at", format(startDate, "yyyy-MM-dd"))
       .lte("created_at", format(endDate, "yyyy-MM-dd"));
@@ -121,7 +125,7 @@ const Dashboard = () => {
     const { data: wonOpps } = await oppsQuery;
 
     const totalGoal = goals?.reduce((sum, g) => sum + Number(g.target_value), 0) || 0;
-    const totalAchieved = wonOpps?.reduce((sum, o) => sum + (Number(o.value) || 0), 0) || 0;
+    const totalAchieved = wonOpps?.reduce((sum, o) => sum + (Number(o.value) || Number(o.monthly_value) || 0), 0) || 0;
 
     setGoalData({
       target: totalGoal,

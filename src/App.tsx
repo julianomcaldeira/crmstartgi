@@ -12,7 +12,6 @@ import Oportunidades from "./pages/Oportunidades";
 import Tarefas from "./pages/Tarefas";
 import Metas from "./pages/Metas";
 import Configuracoes from "./pages/Configuracoes";
-import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Admin from "./pages/Admin";
 import Feiras from "./pages/Feiras";
@@ -36,7 +35,6 @@ const App = () => {
         <Route path="/tarefas" element={<Layout><Tarefas /></Layout>} />
         <Route path="/metas" element={<Layout><Metas /></Layout>} />
         <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
-        <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
         <Route path="/base-conhecimento" element={<Layout><BaseConhecimento /></Layout>} />
         <Route path="/processo-vendas" element={<Layout><ProcessoVendas /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />

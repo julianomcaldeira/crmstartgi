@@ -7,11 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInHours, isPast } from "date-fns";
+import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DraggableCard } from "@/components/DraggableCard";
+import { DroppableColumn } from "@/components/DroppableColumn";
+import TaskViewDialog from "@/components/TaskViewDialog";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -20,8 +25,12 @@ const Tarefas = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "completed">("pending");
+  const [filter, setFilter] = useState<"all" | "pending" | "completed" | "overdue">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedTask, setSelectedTask] = useState<any>(null);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
@@ -37,6 +46,14 @@ const Tarefas = () => {
   const [opportunityId, setOpportunityId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   useEffect(() => {
     fetchData();
@@ -45,7 +62,7 @@ const Tarefas = () => {
     // Check for upcoming tasks every 5 minutes
     const interval = setInterval(checkUpcomingTasks, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentDate, viewMode]);
 
   const checkUpcomingTasks = async () => {
     try {
@@ -89,17 +106,39 @@ const Tarefas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [tasksResponse, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
-        supabase
+      let tasksQuery;
+      
+      if (viewMode === "calendar") {
+        const weekStart = startOfWeek(currentDate, { locale: ptBR });
+        const weekEnd = endOfWeek(currentDate, { locale: ptBR });
+        
+        tasksQuery = supabase
           .from("tasks")
           .select(`
             *,
-            client:clients(company_name),
+            client:clients(company_name, trade_name),
             opportunity:opportunities(title),
             contact:contacts(id, name, email, phone, mobile, role)
           `)
           .eq("assigned_to", user.id)
-          .order("due_date", { ascending: true }),
+          .gte("due_date", weekStart.toISOString())
+          .lte("due_date", weekEnd.toISOString())
+          .order("due_date", { ascending: true });
+      } else {
+        tasksQuery = supabase
+          .from("tasks")
+          .select(`
+            *,
+            client:clients(company_name, trade_name),
+            opportunity:opportunities(title),
+            contact:contacts(id, name, email, phone, mobile, role)
+          `)
+          .eq("assigned_to", user.id)
+          .order("due_date", { ascending: true });
+      }
+
+      const [tasksResponse, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
+        tasksQuery,
         supabase.from("clients").select("id, company_name, trade_name"),
         supabase.from("opportunities").select("id, title"),
         supabase.from("profiles").select("id, full_name"),
@@ -221,6 +260,45 @@ const Tarefas = () => {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    try {
+      const taskId = active.id as string;
+      const newDateStr = over.id as string;
+      
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+      
+      const oldDueDate = parseISO(task.due_date);
+      const newDate = parseISO(newDateStr);
+      
+      const newDueDate = new Date(
+        newDate.getFullYear(),
+        newDate.getMonth(),
+        newDate.getDate(),
+        oldDueDate.getHours(),
+        oldDueDate.getMinutes(),
+        oldDueDate.getSeconds()
+      );
+      
+      const { error } = await supabase
+        .from("tasks")
+        .update({ due_date: newDueDate.toISOString() })
+        .eq("id", taskId);
+      
+      if (error) throw error;
+      
+      toast.success("Tarefa movida com sucesso!");
+      fetchData();
+    } catch (error) {
+      console.error("Error moving task:", error);
+      toast.error("Erro ao mover tarefa");
+    }
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "high": return "bg-destructive/20 text-destructive";
@@ -265,10 +343,49 @@ const Tarefas = () => {
     }
   };
 
+  const getTaskStatusColor = (task: any) => {
+    if (task.status === "completed") {
+      return "border-l-success bg-success/5";
+    }
+    
+    const taskDate = new Date(task.due_date);
+    const now = new Date();
+    
+    if (isPast(taskDate) && task.status !== "completed") {
+      return "border-l-destructive bg-destructive/10";
+    }
+    
+    const hoursUntilDue = (taskDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+    if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
+      return "border-l-warning bg-warning/10";
+    }
+    
+    return "border-l-primary bg-background";
+  };
+
+  const getTaskStatusIcon = (task: any) => {
+    if (task.status === "completed") {
+      return <CheckCircle2 className="h-4 w-4 text-success" />;
+    }
+    
+    const taskDate = new Date(task.due_date);
+    if (isPast(taskDate)) {
+      return <AlertCircle className="h-4 w-4 text-destructive" />;
+    }
+    
+    const hoursUntilDue = (taskDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
+    if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
+      return <AlertCircle className="h-4 w-4 text-warning" />;
+    }
+    
+    return <Clock className="h-4 w-4 text-muted-foreground" />;
+  };
+
   const filteredTasks = tasks.filter((task) => {
     const matchesStatus = 
       filter === "all" ? true :
-      filter === "pending" ? task.status !== "completed" :
+      filter === "pending" ? task.status !== "completed" && (!task.due_date || !isPast(new Date(task.due_date))) :
+      filter === "overdue" ? task.status !== "completed" && task.due_date && isPast(new Date(task.due_date)) :
       task.status === "completed";
     
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
@@ -279,6 +396,32 @@ const Tarefas = () => {
     
     return matchesStatus && matchesClient && matchesStartDate && matchesEndDate;
   });
+
+  const getWeekDays = () => {
+    const start = startOfWeek(currentDate, { locale: ptBR });
+    return Array.from({ length: 7 }, (_, i) => addDays(start, i));
+  };
+
+  const getTasksForDay = (day: Date) => {
+    return tasks.filter((task) => {
+      const taskDate = startOfDay(parseISO(task.due_date));
+      const matchesDay = isSameDay(taskDate, day);
+      
+      if (!matchesDay) return false;
+      
+      if (filter === "completed") {
+        return task.status === "completed";
+      } else if (filter === "pending") {
+        return task.status === "pending" && !isPast(new Date(task.due_date));
+      } else if (filter === "overdue") {
+        return task.status !== "completed" && isPast(new Date(task.due_date));
+      }
+      
+      return true;
+    });
+  };
+
+  const weekDays = getWeekDays();
 
   return (
     <div className="space-y-6">
@@ -455,167 +598,320 @@ const Tarefas = () => {
         </Dialog>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button
-            variant={filter === "all" ? "default" : "outline"}
-            onClick={() => setFilter("all")}
-            size="sm"
-          >
-            Todas
-          </Button>
-          <Button
-            variant={filter === "pending" ? "default" : "outline"}
-            onClick={() => setFilter("pending")}
-            size="sm"
-          >
-            Pendentes
-          </Button>
-          <Button
-            variant={filter === "completed" ? "default" : "outline"}
-            onClick={() => setFilter("completed")}
-            size="sm"
-          >
-            Concluídas
-          </Button>
-        </div>
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar")}>
+        <TabsList>
+          <TabsTrigger value="list" className="gap-2">
+            <ListTodo size={16} />
+            Lista
+          </TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-2">
+            <Calendar size={16} />
+            Agenda
+          </TabsTrigger>
+        </TabsList>
 
-        <Card className="shadow-lg">
-          <CardHeader className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-2">
-                <Building2 size={16} className="text-muted-foreground" />
-                <select
-                  value={selectedClient}
-                  onChange={(e) => setSelectedClient(e.target.value)}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                >
-                  <option value="all">Todos os clientes</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.trade_name || client.company_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="relative">
-                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                <Input
-                  type="date"
-                  placeholder="Data inicial"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="relative">
-                <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                <Input
-                  type="date"
-                  placeholder="Data final"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
+        <TabsContent value="list" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={filter === "all" ? "default" : "outline"}
+                onClick={() => setFilter("all")}
+                size="sm"
+              >
+                Todas
+              </Button>
+              <Button
+                variant={filter === "pending" ? "default" : "outline"}
+                onClick={() => setFilter("pending")}
+                size="sm"
+              >
+                Pendentes
+              </Button>
+              <Button
+                variant={filter === "overdue" ? "default" : "outline"}
+                onClick={() => setFilter("overdue")}
+                size="sm"
+              >
+                Atrasadas
+              </Button>
+              <Button
+                variant={filter === "completed" ? "default" : "outline"}
+                onClick={() => setFilter("completed")}
+                size="sm"
+              >
+                Concluídas
+              </Button>
             </div>
-          </CardHeader>
-        </Card>
-      </div>
 
-      <div className="space-y-3">
-        {loading ? (
-          <p className="text-center text-muted-foreground">Carregando...</p>
-        ) : filteredTasks.length === 0 ? (
-          <Card className="p-12 text-center">
-            <ListTodo className="mx-auto mb-4 text-muted-foreground" size={48} />
-            <p className="text-muted-foreground mb-4">Nenhuma tarefa encontrada</p>
-            <p className="text-sm text-muted-foreground">
-              {filter === "completed" 
-                ? "Você ainda não concluiu nenhuma tarefa"
-                : "Crie sua primeira tarefa para começar"}
-            </p>
-          </Card>
-        ) : (
-          filteredTasks.map((task) => (
-            <Card
-              key={task.id}
-              className={`hover:shadow-lg transition-all duration-300 border-l-4 ${
-                task.status === "completed" ? "opacity-60 border-l-success" : "border-l-primary"
-              }`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <button
-                      onClick={() => toggleTaskStatus(task.id, task.status)}
-                      className="mt-1 hover:scale-110 transition-transform"
-                    >
-                      {task.status === "completed" ? (
-                        <CheckCircle2 className="text-success" size={24} />
-                      ) : (
-                        <Circle className="text-muted-foreground hover:text-primary" size={24} />
-                      )}
-                    </button>
-                    <div className="flex-1">
-                      <CardTitle
-                        className={`text-lg ${
-                          task.status === "completed" ? "line-through" : ""
-                        }`}
-                      >
-                        {task.title}
-                      </CardTitle>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Badge className={getPriorityColor(task.priority)}>
-                    {getPriorityLabel(task.priority)}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {task.task_type && (
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      {getTaskTypeIcon(task.task_type)}
-                      {getTaskTypeLabel(task.task_type)}
-                    </Badge>
-                  )}
-                  {task.due_date && (
-                    <div className={`flex items-center gap-1 ${
-                      isPast(new Date(task.due_date)) && task.status !== "completed"
-                        ? "text-destructive font-semibold"
-                        : "text-muted-foreground"
-                    }`}>
-                      <Calendar size={16} />
-                      {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", {
-                        locale: ptBR,
-                      })}
-                      {isPast(new Date(task.due_date)) && task.status !== "completed" && (
-                        <span className="text-xs">(Atrasada)</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {(task.client || task.opportunity) && (
-                  <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mt-2">
-                    {task.client && (
-                      <span>Cliente: {task.client.company_name}</span>
-                    )}
-                    {task.opportunity && (
-                      <span>Oportunidade: {task.opportunity.title}</span>
-                    )}
-                  </div>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Select value={selectedClient} onValueChange={setSelectedClient}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os clientes</SelectItem>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.trade_name || client.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Input
+                type="date"
+                placeholder="Data início"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              
+              <Input
+                type="date"
+                placeholder="Data fim"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : filteredTasks.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <ListTodo className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Nenhuma tarefa encontrada</p>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredTasks.map((task) => (
+                <Card 
+                  key={task.id} 
+                  className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setViewDialogOpen(true);
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTaskStatus(task.id, task.status);
+                          }}
+                          className="mt-1"
+                        >
+                          {task.status === "completed" ? (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                          )}
+                        </button>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getTaskTypeIcon(task.task_type)}
+                            <span className="font-medium">{task.title}</span>
+                            <Badge className={getPriorityColor(task.priority)}>
+                              {getPriorityLabel(task.priority)}
+                            </Badge>
+                          </div>
+                          
+                          {task.description && (
+                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                              {task.description}
+                            </p>
+                          )}
+                          
+                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                            {task.due_date && (
+                              <div className="flex items-center gap-1">
+                                {getTaskStatusIcon(task)}
+                                <span>
+                                  {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </span>
+                              </div>
+                            )}
+                            {task.client && (
+                              <div className="flex items-center gap-1">
+                                <Building2 size={14} />
+                                <span>{task.client.trade_name || task.client.company_name}</span>
+                              </div>
+                            )}
+                            {task.contact && (
+                              <div className="flex items-center gap-1">
+                                <Users size={14} />
+                                <span>{task.contact.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="calendar" className="space-y-4">
+          <div className="flex gap-2 flex-wrap mb-4">
+            <Button
+              variant={filter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("all")}
+            >
+              Todas
+            </Button>
+            <Button
+              variant={filter === "pending" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("pending")}
+              className="gap-2"
+            >
+              <Clock className="h-4 w-4" />
+              Pendentes
+            </Button>
+            <Button
+              variant={filter === "overdue" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("overdue")}
+              className="gap-2"
+            >
+              <AlertCircle className="h-4 w-4" />
+              Atrasadas
+            </Button>
+            <Button
+              variant={filter === "completed" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFilter("completed")}
+              className="gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Concluídas
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentDate(addDays(currentDate, -7))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentDate(new Date())}
+                  >
+                    Hoje
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setCurrentDate(addDays(currentDate, 7))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((day) => {
+                    const dayTasks = getTasksForDay(day);
+                    const isToday = isTodayFn(day);
+
+                    return (
+                      <DroppableColumn key={day.toISOString()} id={day.toISOString()}>
+                        <div className={`min-h-[200px] rounded-lg border-2 p-3 ${
+                          isToday ? "border-primary bg-primary/5" : "border-border"
+                        }`}>
+                          <div className="text-center mb-3">
+                            <div className={`text-xs font-medium uppercase ${
+                              isToday ? "text-primary" : "text-muted-foreground"
+                            }`}>
+                              {format(day, "EEE", { locale: ptBR })}
+                            </div>
+                            <div className={`text-2xl font-bold ${
+                              isToday ? "text-primary" : ""
+                            }`}>
+                              {format(day, "dd")}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            {dayTasks.map((task) => (
+                              <DraggableCard 
+                                key={task.id} 
+                                id={task.id}
+                              >
+                                <div 
+                                  className={`p-2 rounded border-l-4 text-xs ${getTaskStatusColor(task)} cursor-move`}
+                                  onClick={() => {
+                                    setSelectedTask(task);
+                                    setViewDialogOpen(true);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-1 mb-1">
+                                    {getTaskTypeIcon(task.task_type)}
+                                    <span className="font-medium truncate">{task.title}</span>
+                                  </div>
+                                  {task.due_date && (
+                                    <div className="flex items-center gap-1 text-muted-foreground">
+                                      {getTaskStatusIcon(task)}
+                                      <span>{format(new Date(task.due_date), "HH:mm")}</span>
+                                    </div>
+                                  )}
+                                  {task.client && (
+                                    <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                                      <Building2 size={12} />
+                                      <span className="truncate">{task.client.trade_name || task.client.company_name}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </DraggableCard>
+                            ))}
+                          </div>
+                        </div>
+                      </DroppableColumn>
+                    );
+                  })}
+                </div>
+              </DndContext>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {selectedTask && (
+        <TaskViewDialog
+          task={selectedTask}
+          open={viewDialogOpen}
+          onOpenChange={(open) => {
+            setViewDialogOpen(open);
+            if (!open) {
+              fetchData();
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
