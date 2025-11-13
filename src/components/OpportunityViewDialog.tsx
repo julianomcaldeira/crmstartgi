@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2 } from "lucide-react";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -228,6 +228,12 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
               <Target className="h-3 w-3 mr-1" />
               {opportunity.probability}% de chance
             </Badge>
+            {opportunity.status === "won" && opportunity.close_cycle_days && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <Clock className="h-3 w-3 mr-1" />
+                Fechado em {opportunity.close_cycle_days} {opportunity.close_cycle_days === 1 ? 'dia' : 'dias'}
+              </Badge>
+            )}
           </div>
 
           <Separator />

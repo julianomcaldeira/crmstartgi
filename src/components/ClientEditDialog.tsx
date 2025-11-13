@@ -41,8 +41,10 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [competitors, setCompetitors] = useState("");
   const [distributor, setDistributor] = useState("");
   const [services, setServices] = useState("");
+  const [rating, setRating] = useState<number>(0);
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setCompetitors(client.competitors || "");
       setDistributor(client.distributor || "");
       setServices(client.services || "");
+      setRating(client.rating || 0);
       
       const feiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
       setSelectedFeiras(feiraIds);
@@ -71,6 +74,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setContacts(client.contacts || [{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
       
       fetchFeiras();
+      fetchProducts();
     }
   }, [client, open]);
 
@@ -85,6 +89,21 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setFeiras(data || []);
     } catch (error) {
       console.error("Error fetching feiras:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("active", true)
+        .order("name");
+      
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
     }
   };
 
@@ -132,6 +151,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           competitors: competitors,
           distributor: distributor,
           services: services,
+          rating: rating > 0 ? rating : null,
         })
         .eq("id", client.id);
 
@@ -325,12 +345,55 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-services">Serviços</Label>
-                  <Input
+                  <select
                     id="edit-services"
                     value={services}
                     onChange={(e) => setServices(e.target.value)}
-                    placeholder="Serviços contratados"
-                  />
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="">Selecione um produto/serviço...</option>
+                    {products.map((product) => (
+                      <option key={product.id} value={product.name}>
+                        {product.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-rating">Avaliação do Prospect</Label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setRating(star)}
+                      className="focus:outline-none transition-colors"
+                    >
+                      <svg
+                        className={`w-8 h-8 ${
+                          star <= rating
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'fill-none text-gray-300'
+                        }`}
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                        />
+                      </svg>
+                    </button>
+                  ))}
+                  {rating > 0 && (
+                    <span className="text-sm text-muted-foreground ml-2">
+                      {rating} {rating === 1 ? 'estrela' : 'estrelas'}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -464,6 +527,42 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                           onValueChange={(value) => updateContact(index, "mobile", value)}
                           placeholder="(00) 00000-0000"
                         />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Avaliação do Contato</Label>
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => updateContact(index, "rating", star)}
+                            className="focus:outline-none transition-colors"
+                          >
+                            <svg
+                              className={`w-6 h-6 ${
+                                star <= (contact.rating || 0)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'fill-none text-gray-300'
+                              }`}
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                              />
+                            </svg>
+                          </button>
+                        ))}
+                        {(contact.rating || 0) > 0 && (
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {contact.rating} {contact.rating === 1 ? 'estrela' : 'estrelas'}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </CardContent>
