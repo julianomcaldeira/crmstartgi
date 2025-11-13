@@ -20,6 +20,16 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Calendar as CalendarIcon,
@@ -29,6 +39,7 @@ import {
   Trash2,
   Globe,
   Search,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -42,6 +53,8 @@ const Feiras = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [feiraToDelete, setFeiraToDelete] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -75,11 +88,21 @@ const Feiras = () => {
     try {
       const { data, error } = await supabase
         .from("feiras")
-        .select("*")
+        .select(`
+          *,
+          client_feiras (count)
+        `)
         .order("start_date", { ascending: false });
 
       if (error) throw error;
-      setFeiras(data || []);
+      
+      // Process data to add prospect count
+      const feirasWithCount = data?.map(feira => ({
+        ...feira,
+        prospect_count: feira.client_feiras?.[0]?.count || 0
+      })) || [];
+      
+      setFeiras(feirasWithCount);
     } catch (error) {
       console.error("Error fetching feiras:", error);
       toast.error("Erro ao carregar feiras");
@@ -147,17 +170,24 @@ const Feiras = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta feira?")) return;
+  const handleDelete = async (feira: any) => {
+    setFeiraToDelete(feira);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!feiraToDelete) return;
 
     try {
       const { error } = await supabase
         .from("feiras")
         .delete()
-        .eq("id", id);
+        .eq("id", feiraToDelete.id);
 
       if (error) throw error;
       toast.success("Feira excluída com sucesso!");
+      setDeleteDialogOpen(false);
+      setFeiraToDelete(null);
       fetchFeiras();
     } catch (error: any) {
       console.error("Error deleting feira:", error);
@@ -470,7 +500,7 @@ const Feiras = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleDelete(feira.id)}
+                        onClick={() => handleDelete(feira)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -530,12 +560,51 @@ const Feiras = () => {
                       </a>
                     </div>
                   )}
+
+                  <div className="flex items-center gap-2 text-sm pt-2 border-t">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-foreground">
+                      {feira.prospect_count || 0} prospect(s) vinculado(s)
+                    </span>
+                  </div>
                 </div>
               </div>
             </Card>
           ))}
         </div>
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir a feira <strong>{feiraToDelete?.name}</strong>?
+              <br /><br />
+              {feiraToDelete?.prospect_count > 0 ? (
+                <>
+                  <span className="text-destructive font-semibold">
+                    Atenção: Esta feira possui {feiraToDelete.prospect_count} prospect(s) vinculado(s).
+                  </span>
+                  <br />
+                  Os prospects não serão excluídos, mas a vinculação com esta feira será removida.
+                </>
+              ) : (
+                "Esta ação não pode ser desfeita."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Feira
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
