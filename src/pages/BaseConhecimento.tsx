@@ -39,7 +39,6 @@ const BaseConhecimento = () => {
   const [items, setItems] = useState<KnowledgeItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<KnowledgeItem[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -50,12 +49,9 @@ const BaseConhecimento = () => {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    category: "",
     type: "article" as "article" | "video" | "link",
     url: "",
   });
-
-  const categories = ["Produtos", "Processos", "Vendas", "Técnico", "Suporte", "Onboarding"];
 
   useEffect(() => {
     fetchUserRole();
@@ -64,7 +60,7 @@ const BaseConhecimento = () => {
 
   useEffect(() => {
     filterItems();
-  }, [search, selectedCategory, items]);
+  }, [search, items]);
 
   const fetchUserRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -107,10 +103,6 @@ const BaseConhecimento = () => {
       );
     }
 
-    if (selectedCategory) {
-      filtered = filtered.filter(item => item.category === selectedCategory);
-    }
-
     setFilteredItems(filtered);
   };
 
@@ -127,6 +119,7 @@ const BaseConhecimento = () => {
       .from("knowledge_base")
       .insert({
         ...formData,
+        category: "comercial",
         created_by: user.id,
       });
 
@@ -141,7 +134,6 @@ const BaseConhecimento = () => {
     setFormData({
       title: "",
       content: "",
-      category: "",
       type: "article",
       url: "",
     });
@@ -158,7 +150,7 @@ const BaseConhecimento = () => {
       .update({
         title: formData.title,
         content: formData.content,
-        category: formData.category,
+        category: "comercial",
         type: formData.type,
         url: formData.url,
       })
@@ -176,7 +168,6 @@ const BaseConhecimento = () => {
     setFormData({
       title: "",
       content: "",
-      category: "",
       type: "article",
       url: "",
     });
@@ -188,7 +179,6 @@ const BaseConhecimento = () => {
     setFormData({
       title: item.title,
       content: item.content,
-      category: item.category,
       type: item.type,
       url: item.url || "",
     });
@@ -302,35 +292,18 @@ const BaseConhecimento = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <select
-                      className="w-full border rounded-md p-2 text-sm"
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      required
-                    >
-                      <option value="">Selecione...</option>
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <select
-                      className="w-full border rounded-md p-2 text-sm"
-                      value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                      required
-                    >
-                      <option value="article">Artigo</option>
-                      <option value="video">Vídeo</option>
-                      <option value="link">Link Externo</option>
-                    </select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <select
+                    className="w-full border rounded-md p-2 text-sm"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                    required
+                  >
+                    <option value="article">Artigo</option>
+                    <option value="video">Vídeo</option>
+                    <option value="link">Link Externo</option>
+                  </select>
                 </div>
 
                 {(formData.type === "video" || formData.type === "link") && (
@@ -380,34 +353,13 @@ const BaseConhecimento = () => {
         </div>
       </div>
 
-      {/* Categorias */}
-      <div className="flex gap-2 flex-wrap">
-        <Badge
-          variant={!selectedCategory ? "default" : "outline"}
-          className="cursor-pointer"
-          onClick={() => setSelectedCategory(null)}
-        >
-          Todas
-        </Badge>
-        {categories.map(cat => (
-          <Badge
-            key={cat}
-            variant={selectedCategory === cat ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setSelectedCategory(cat)}
-          >
-            {cat}
-          </Badge>
-        ))}
-      </div>
-
       {/* Lista de Itens */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredItems.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground">
-              {search || selectedCategory
+              {search
                 ? "Nenhum item encontrado"
                 : "Nenhum item na base de conhecimento"}
             </p>
@@ -419,9 +371,6 @@ const BaseConhecimento = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
                     {getTypeIcon(item.type)}
-                    <Badge variant="secondary" className="text-xs">
-                      {item.category}
-                    </Badge>
                   </div>
                   <div className="flex gap-1">
                     <Button
@@ -496,35 +445,18 @@ const BaseConhecimento = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <select
-                  className="w-full border rounded-md p-2 text-sm"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  required
-                >
-                  <option value="">Selecione...</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <select
-                  className="w-full border rounded-md p-2 text-sm"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                  required
-                >
-                  <option value="article">Artigo</option>
-                  <option value="video">Vídeo</option>
-                  <option value="link">Link Externo</option>
-                </select>
-              </div>
+            <div className="space-y-2">
+              <Label>Tipo</Label>
+              <select
+                className="w-full border rounded-md p-2 text-sm"
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                required
+              >
+                <option value="article">Artigo</option>
+                <option value="video">Vídeo</option>
+                <option value="link">Link Externo</option>
+              </select>
             </div>
 
             {(formData.type === "video" || formData.type === "link") && (
