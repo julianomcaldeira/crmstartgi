@@ -40,6 +40,7 @@ const BaseConhecimento = () => {
   const [filteredItems, setFilteredItems] = useState<KnowledgeItem[]>([]);
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState<"all" | "article" | "video" | "link">("all");
+  const [sortBy, setSortBy] = useState<"updated_at" | "created_at" | "title">("updated_at");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -62,7 +63,7 @@ const BaseConhecimento = () => {
 
   useEffect(() => {
     filterItems();
-  }, [search, selectedType, items]);
+  }, [search, selectedType, items, sortBy]);
 
   const fetchUserRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -108,6 +109,17 @@ const BaseConhecimento = () => {
     if (selectedType !== "all") {
       filtered = filtered.filter(item => item.type === selectedType);
     }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      if (sortBy === "title") {
+        return a.title.localeCompare(b.title);
+      } else if (sortBy === "created_at") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else {
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+    });
 
     setFilteredItems(filtered);
   };
@@ -478,43 +490,58 @@ const BaseConhecimento = () => {
           />
         </div>
         
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={selectedType === "all" ? "default" : "outline"}
-            onClick={() => setSelectedType("all")}
-            className="gap-2"
-          >
-            <BookOpen className="h-4 w-4" />
-            Todos
-          </Button>
-          <Button
-            size="sm"
-            variant={selectedType === "article" ? "default" : "outline"}
-            onClick={() => setSelectedType("article")}
-            className="gap-2"
-          >
-            <FileText className="h-4 w-4" />
-            Artigos
-          </Button>
-          <Button
-            size="sm"
-            variant={selectedType === "video" ? "default" : "outline"}
-            onClick={() => setSelectedType("video")}
-            className="gap-2"
-          >
-            <Video className="h-4 w-4" />
-            Vídeos
-          </Button>
-          <Button
-            size="sm"
-            variant={selectedType === "link" ? "default" : "outline"}
-            onClick={() => setSelectedType("link")}
-            className="gap-2"
-          >
-            <LinkIcon className="h-4 w-4" />
-            Links
-          </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={selectedType === "all" ? "default" : "outline"}
+              onClick={() => setSelectedType("all")}
+              className="gap-2"
+            >
+              <BookOpen className="h-4 w-4" />
+              Todos
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedType === "article" ? "default" : "outline"}
+              onClick={() => setSelectedType("article")}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              Artigos
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedType === "video" ? "default" : "outline"}
+              onClick={() => setSelectedType("video")}
+              className="gap-2"
+            >
+              <Video className="h-4 w-4" />
+              Vídeos
+            </Button>
+            <Button
+              size="sm"
+              variant={selectedType === "link" ? "default" : "outline"}
+              onClick={() => setSelectedType("link")}
+              className="gap-2"
+            >
+              <LinkIcon className="h-4 w-4" />
+              Links
+            </Button>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground">Ordenar por:</Label>
+            <select
+              className="border rounded-md px-3 py-1.5 text-sm bg-background"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+            >
+              <option value="updated_at">Última atualização</option>
+              <option value="created_at">Data de criação</option>
+              <option value="title">Título (A-Z)</option>
+            </select>
+          </div>
         </div>
       </div>
 
