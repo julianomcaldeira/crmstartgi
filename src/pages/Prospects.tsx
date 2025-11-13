@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2 } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { validateCNPJ } from "@/lib/cnpjValidator";
@@ -50,6 +50,9 @@ const Prospects = () => {
   const [cnpjValidationStatus, setCnpjValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [prospectToDelete, setProspectToDelete] = useState<any>(null);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
+  const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -412,6 +415,38 @@ const Prospects = () => {
     } catch (error: any) {
       console.error("Error deleting prospect:", error);
       toast.error("Erro ao excluir prospect");
+    }
+  };
+
+  const handleTransferClick = (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setProspectToTransfer(client);
+    setSelectedNewSeller("");
+    setTransferDialogOpen(true);
+  };
+
+  const handleTransferProspect = async () => {
+    if (!prospectToTransfer || !selectedNewSeller) {
+      toast.error("Selecione um vendedor");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .update({ created_by: selectedNewSeller })
+        .eq("id", prospectToTransfer.id);
+
+      if (error) throw error;
+
+      toast.success("Prospect transferido com sucesso!");
+      setTransferDialogOpen(false);
+      setProspectToTransfer(null);
+      setSelectedNewSeller("");
+      fetchClients();
+    } catch (error: any) {
+      console.error("Error transferring prospect:", error);
+      toast.error("Erro ao transferir prospect");
     }
   };
 
@@ -1011,14 +1046,26 @@ const Prospects = () => {
                     
                     <div className="flex items-center gap-2">
                       {canEditClient(client) && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={(e) => handleEditClient(e, client)}
-                          className="h-10 w-10"
-                        >
-                          <Edit size={18} />
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleEditClient(e, client)}
+                            className="h-10 w-10"
+                            title="Editar prospect"
+                          >
+                            <Edit size={18} />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleTransferClick(e, client)}
+                            className="h-10 w-10"
+                            title="Transferir prospect"
+                          >
+                            <UserCog size={18} />
+                          </Button>
+                        </>
                       )}
                       
                       {userRoles.includes('admin') && (
@@ -1027,6 +1074,7 @@ const Prospects = () => {
                           size="icon"
                           onClick={(e) => handleDeleteClick(e, client)}
                           className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Excluir prospect"
                         >
                           <Trash2 size={18} />
                         </Button>
@@ -1123,6 +1171,63 @@ const Prospects = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transferir Prospect</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Prospect</Label>
+              <p className="text-sm font-medium">
+                {prospectToTransfer?.trade_name || prospectToTransfer?.company_name}
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="newSeller">Transferir para</Label>
+              <select
+                id="newSeller"
+                value={selectedNewSeller}
+                onChange={(e) => setSelectedNewSeller(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">Selecione um vendedor</option>
+                {sellers
+                  .filter(seller => seller.id !== prospectToTransfer?.created_by)
+                  .map((seller) => (
+                    <option key={seller.id} value={seller.id}>
+                      {seller.full_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="bg-muted/50 p-3 rounded-md">
+              <p className="text-sm text-muted-foreground">
+                <strong>Atenção:</strong> Ao transferir este prospect, você perderá o acesso para editá-lo. 
+                O novo vendedor será o responsável por todas as informações e histórico deste prospect.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTransferDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleTransferProspect}
+              disabled={!selectedNewSeller}
+            >
+              Transferir Prospect
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
