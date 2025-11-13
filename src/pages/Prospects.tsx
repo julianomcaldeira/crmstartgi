@@ -74,6 +74,8 @@ const Prospects = () => {
   const [companySize, setCompanySize] = useState("");
   const [region, setRegion] = useState("");
   const [competitors, setCompetitors] = useState("");
+  const [distributor, setDistributor] = useState("");
+  const [services, setServices] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
 
@@ -291,6 +293,8 @@ const Prospects = () => {
           company_size: companySize,
           region: region,
           competitors: competitors,
+          distributor: distributor,
+          services: services,
           created_by: user.id,
         })
         .select()
@@ -355,6 +359,8 @@ const Prospects = () => {
     setCompanySize("");
     setRegion("");
     setCompetitors("");
+    setDistributor("");
+    setServices("");
     setSelectedFeiras([]);
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
@@ -748,6 +754,28 @@ const Prospects = () => {
                       onChange={(e) => setCompetitors(e.target.value)}
                       placeholder="Liste os principais concorrentes"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="distributor">Distribuidor</Label>
+                      <Input
+                        id="distributor"
+                        value={distributor}
+                        onChange={(e) => setDistributor(e.target.value)}
+                        placeholder="Nome do distribuidor"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="services">Serviços</Label>
+                      <Input
+                        id="services"
+                        value={services}
+                        onChange={(e) => setServices(e.target.value)}
+                        placeholder="Serviços contratados"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
