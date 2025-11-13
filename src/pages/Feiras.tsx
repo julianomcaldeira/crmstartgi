@@ -41,8 +41,7 @@ const Feiras = () => {
   const [editingFeira, setEditingFeira] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isGestor, setIsGestor] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -64,22 +63,11 @@ const Feiras = () => {
   const checkUserRole = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (roleData?.role === "admin") {
-        setIsAdmin(true);
-        setIsGestor(true);
-      } else if (roleData?.role === "gestor") {
-        setIsGestor(true);
+      if (user) {
+        setIsAuthenticated(true);
       }
     } catch (error) {
-      console.error("Error checking user role:", error);
+      console.error("Error checking user:", error);
     }
   };
 
@@ -257,7 +245,7 @@ const Feiras = () => {
           </p>
         </div>
 
-        {(isAdmin || isGestor) && (
+        {isAuthenticated && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 shadow-primary">
@@ -470,7 +458,7 @@ const Feiras = () => {
                     </h3>
                     {getStatusBadge(feira.status)}
                   </div>
-                  {(isAdmin || isGestor) && (
+                  {isAuthenticated && (
                     <div className="flex gap-1">
                       <Button
                         size="icon"
