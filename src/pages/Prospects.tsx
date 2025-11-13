@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
+import { validateCNPJ } from "@/lib/cnpjValidator";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ const Prospects = () => {
   const [selectedClient, setSelectedClient] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
+  const [cnpjValidationStatus, setCnpjValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -137,47 +139,95 @@ const Prospects = () => {
     }
   };
 
-  const handleCnpjBlur = async () => {
-    const cleanedCnpj = cnpj.replace(/\D/g, ''); // Remove máscara
-    if (cleanedCnpj.length < 14) return;
+  const handleCnpjChange = (value: string) => {
+    setCnpj(value);
+    const cleanedCnpj = value.replace(/\D/g, '');
     
+    // Validação em tempo real
+    if (cleanedCnpj.length === 0) {
+      setCnpjValidationStatus('idle');
+    } else if (cleanedCnpj.length === 14) {
+      const isValid = validateCNPJ(cleanedCnpj);
+      setCnpjValidationStatus(isValid ? 'valid' : 'invalid');
+      
+      // Se válido, busca automaticamente
+      if (isValid) {
+        handleCnpjBlur(cleanedCnpj);
+      }
+    } else {
+      setCnpjValidationStatus('idle');
+    }
+  };
+
+  const handleCnpjBlur = async (cnpjToSearch?: string) => {
+    const cleanedCnpj = cnpjToSearch || cnpj.replace(/\D/g, '');
+    
+    console.log("=== INICIANDO BUSCA DE CNPJ ===");
+    console.log("CNPJ limpo:", cleanedCnpj);
+    
+    if (cleanedCnpj.length !== 14) {
+      console.log("CNPJ incompleto, abortando busca");
+      return;
+    }
+    
+    // Valida CNPJ antes de buscar
+    if (!validateCNPJ(cleanedCnpj)) {
+      console.error("CNPJ inválido (falhou na validação do algoritmo)");
+      toast.error("CNPJ inválido. Verifique os dígitos.");
+      setCnpjValidationStatus('invalid');
+      return;
+    }
+    
+    setCnpjValidationStatus('valid');
     setLoadingCnpj(true);
+    
     try {
+      console.log("Chamando edge function buscar-cnpj...");
+      
       const { data, error } = await supabase.functions.invoke("buscar-cnpj", {
         body: { cnpj: cleanedCnpj }
       });
 
+      console.log("Resposta da edge function:", { data, error });
+
       if (error) {
-        console.error("Edge function error:", error);
-        throw error;
+        console.error("Erro da edge function:", error);
+        throw new Error(error.message || "Erro ao buscar CNPJ");
       }
 
-      console.log("CNPJ data received:", data);
-
       if (data && !data.error) {
+        console.log("✅ Dados recebidos com sucesso:", data);
+        
         setCompanyName(data.company_name || "");
         setTradeName(data.trade_name || "");
         setEmail(data.email || "");
-        // Remove formatação do telefone retornado
         setPhone(data.phone?.replace(/\D/g, '') || "");
         setAddress(data.address || "");
         setCity(data.city || "");
         setState(data.state || "");
-        // Remove formatação do CEP retornado
         setZipCode(data.zip_code?.replace(/\D/g, '') || "");
         setSegment(data.segment || "");
         setShareCapital(data.share_capital?.toString() || "");
         setLegalNature(data.legal_nature || "");
         
-        toast.success("Dados da empresa carregados com sucesso!");
+        const source = data.source === 'cache' ? ' (do cache)' : ' (da Receita Federal)';
+        toast.success(`Dados da empresa carregados${source}!`);
       } else if (data?.error) {
+        console.error("Erro retornado pela API:", data.error);
         toast.error(data.error);
+      } else {
+        console.error("Resposta inesperada da API:", data);
+        toast.error("Resposta inesperada ao buscar CNPJ");
       }
     } catch (error: any) {
-      console.error("Error fetching CNPJ:", error);
-      toast.error(error.message || "Erro ao buscar dados do CNPJ. Verifique o número e tente novamente.");
+      console.error("❌ ERRO ao buscar CNPJ:", error);
+      toast.error(
+        error.message || 
+        "Erro ao buscar dados do CNPJ. A API pode estar temporariamente indisponível. Tente novamente."
+      );
     } finally {
       setLoadingCnpj(false);
+      console.log("=== FIM DA BUSCA DE CNPJ ===");
     }
   };
 
@@ -370,19 +420,35 @@ const Prospects = () => {
                       <CNPJInput
                         id="cnpj"
                         value={cnpj}
-                        onValueChange={(value) => {
-                          setCnpj(value);
-                          if (value.replace(/\D/g, '').length === 14) {
-                            handleCnpjBlur();
-                          }
-                        }}
+                        onValueChange={handleCnpjChange}
                         placeholder="00.000.000/0000-00"
                         disabled={loadingCnpj}
+                        className={
+                          cnpjValidationStatus === 'valid' 
+                            ? 'border-green-500 pr-10' 
+                            : cnpjValidationStatus === 'invalid' 
+                            ? 'border-red-500 pr-10' 
+                            : ''
+                        }
                       />
-                      {loadingCnpj && (
-                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-primary" size={20} />
-                      )}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                        {loadingCnpj && (
+                          <Loader2 className="animate-spin text-primary" size={20} />
+                        )}
+                        {!loadingCnpj && cnpjValidationStatus === 'valid' && (
+                          <CheckCircle2 className="text-green-500" size={20} />
+                        )}
+                        {!loadingCnpj && cnpjValidationStatus === 'invalid' && (
+                          <XCircle className="text-red-500" size={20} />
+                        )}
+                      </div>
                     </div>
+                    {cnpjValidationStatus === 'invalid' && (
+                      <p className="text-sm text-red-500">CNPJ inválido. Verifique os dígitos.</p>
+                    )}
+                    {cnpjValidationStatus === 'valid' && !loadingCnpj && (
+                      <p className="text-sm text-green-600">CNPJ válido ✓</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
