@@ -521,6 +521,22 @@ const ClienteDetalhes = () => {
                 <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
               </div>
             </div>
+
+            <div className="flex items-start gap-2">
+              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground">Distribuidor</p>
+                <p className="text-sm font-medium text-foreground">{client.distributor || "-"}</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground">Serviços</p>
+                <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
+              </div>
+            </div>
           </div>
         </div>
       </Card>

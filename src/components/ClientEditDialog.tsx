@@ -39,6 +39,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [companySize, setCompanySize] = useState("");
   const [region, setRegion] = useState("");
   const [competitors, setCompetitors] = useState("");
+  const [distributor, setDistributor] = useState("");
+  const [services, setServices] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -60,6 +62,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setCompanySize(client.company_size || "");
       setRegion(client.region || "");
       setCompetitors(client.competitors || "");
+      setDistributor(client.distributor || "");
+      setServices(client.services || "");
       
       const feiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
       setSelectedFeiras(feiraIds);
@@ -126,6 +130,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           company_size: companySize,
           region: region,
           competitors: competitors,
+          distributor: distributor,
+          services: services,
         })
         .eq("id", client.id);
 
@@ -304,6 +310,28 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                   onChange={(e) => setCompetitors(e.target.value)}
                   placeholder="Liste os principais concorrentes"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-distributor">Distribuidor</Label>
+                  <Input
+                    id="edit-distributor"
+                    value={distributor}
+                    onChange={(e) => setDistributor(e.target.value)}
+                    placeholder="Nome do distribuidor"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-services">Serviços</Label>
+                  <Input
+                    id="edit-services"
+                    value={services}
+                    onChange={(e) => setServices(e.target.value)}
+                    placeholder="Serviços contratados"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
