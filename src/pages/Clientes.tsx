@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 
@@ -11,6 +11,8 @@ const Clientes = () => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchClientes();
@@ -92,8 +94,11 @@ const Clientes = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {clientes.map((cliente) => (
+        <>
+          <div className="space-y-4">
+            {clientes
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((cliente) => (
             <Card
               key={cliente.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
@@ -219,7 +224,43 @@ const Clientes = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+
+          {/* Paginação */}
+          {clientes.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {((currentPage - 1) * itemsPerPage) + 1} a{" "}
+                {Math.min(currentPage * itemsPerPage, clientes.length)} de{" "}
+                {clientes.length} clientes
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((prev) =>
+                      Math.min(prev + 1, Math.ceil(clientes.length / itemsPerPage))
+                    )
+                  }
+                  disabled={currentPage === Math.ceil(clientes.length / itemsPerPage)}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
