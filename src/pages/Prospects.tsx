@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { validateCNPJ } from "@/lib/cnpjValidator";
@@ -16,6 +16,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -38,6 +48,8 @@ const Prospects = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [cnpjValidationStatus, setCnpjValidationStatus] = useState<'idle' | 'valid' | 'invalid'>('idle');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [prospectToDelete, setProspectToDelete] = useState<any>(null);
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -374,6 +386,33 @@ const Prospects = () => {
     const isOwner = client.created_by === currentUserId;
     const isAdminOrGestor = userRoles.includes('admin') || userRoles.includes('gestor');
     return isOwner || isAdminOrGestor;
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setProspectToDelete(client);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteProspect = async () => {
+    if (!prospectToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .eq("id", prospectToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Prospect excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setProspectToDelete(null);
+      fetchClients();
+    } catch (error: any) {
+      console.error("Error deleting prospect:", error);
+      toast.error("Erro ao excluir prospect");
+    }
   };
 
   const handleEditClient = (e: React.MouseEvent, client: any) => {
@@ -970,16 +1009,29 @@ const Prospects = () => {
                       </div>
                     )}
                     
-                    {canEditClient(client) && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => handleEditClient(e, client)}
-                        className="h-10 w-10"
-                      >
-                        <Edit size={18} />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {canEditClient(client) && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleEditClient(e, client)}
+                          className="h-10 w-10"
+                        >
+                          <Edit size={18} />
+                        </Button>
+                      )}
+                      
+                      {userRoles.includes('admin') && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleDeleteClick(e, client)}
+                          className="h-10 w-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 size={18} />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -1043,6 +1095,34 @@ const Prospects = () => {
           onSuccess={fetchClients}
         />
       )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o prospect <strong>{prospectToDelete?.trade_name || prospectToDelete?.company_name}</strong>?
+              <br /><br />
+              Esta ação é irreversível e excluirá permanentemente:
+              <ul className="list-disc pl-6 mt-2">
+                <li>Todos os contatos vinculados</li>
+                <li>Todas as oportunidades e seus anexos</li>
+                <li>Todas as tarefas relacionadas</li>
+                <li>Todo o histórico de atividades</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteProspect}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
