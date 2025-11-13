@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History } from "lucide-react";
+import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download } from "lucide-react";
 import { toast } from "sonner";
 
 interface KnowledgeItem {
@@ -298,6 +298,49 @@ const BaseConhecimento = () => {
     }
   };
 
+  const handleExportKnowledgeBase = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        return;
+      }
+
+      toast.info("Gerando arquivo Excel...");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-knowledge-base`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao exportar');
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `base-conhecimento-${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Base de conhecimento exportada com sucesso!");
+    } catch (error) {
+      console.error('Error exporting:', error);
+      toast.error("Erro ao exportar base de conhecimento");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -310,16 +353,27 @@ const BaseConhecimento = () => {
 
         <div className="flex gap-2">
           {(userRole === "admin" || userRole === "gestor") && (
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="gap-2"
-              onClick={handleImportKnowledgeBase}
-              disabled={importing}
-            >
-              <BookOpen className="h-4 w-4" />
-              {importing ? "Importando..." : "Importar Planilha"}
-            </Button>
+            <>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="gap-2"
+                onClick={handleImportKnowledgeBase}
+                disabled={importing}
+              >
+                <BookOpen className="h-4 w-4" />
+                {importing ? "Importando..." : "Importar"}
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="gap-2"
+                onClick={handleExportKnowledgeBase}
+              >
+                <Download className="h-4 w-4" />
+                Exportar Excel
+              </Button>
+            </>
           )}
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
