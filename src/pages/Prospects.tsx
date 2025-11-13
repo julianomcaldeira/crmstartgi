@@ -147,26 +147,35 @@ const Prospects = () => {
         body: { cnpj: cleanedCnpj }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw error;
+      }
 
-      if (data) {
+      console.log("CNPJ data received:", data);
+
+      if (data && !data.error) {
         setCompanyName(data.company_name || "");
         setTradeName(data.trade_name || "");
         setEmail(data.email || "");
-        setPhone(data.phone || "");
+        // Remove formatação do telefone retornado
+        setPhone(data.phone?.replace(/\D/g, '') || "");
         setAddress(data.address || "");
         setCity(data.city || "");
         setState(data.state || "");
-        setZipCode(data.zip_code || "");
+        // Remove formatação do CEP retornado
+        setZipCode(data.zip_code?.replace(/\D/g, '') || "");
         setSegment(data.segment || "");
         setShareCapital(data.share_capital?.toString() || "");
         setLegalNature(data.legal_nature || "");
         
-        toast.success("Dados da empresa carregados!");
+        toast.success("Dados da empresa carregados com sucesso!");
+      } else if (data?.error) {
+        toast.error(data.error);
       }
     } catch (error: any) {
       console.error("Error fetching CNPJ:", error);
-      toast.error(error.message || "Erro ao buscar CNPJ");
+      toast.error(error.message || "Erro ao buscar dados do CNPJ. Verifique o número e tente novamente.");
     } finally {
       setLoadingCnpj(false);
     }
