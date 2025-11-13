@@ -53,6 +53,10 @@ const Prospects = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<any>(null);
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -450,6 +454,61 @@ const Prospects = () => {
     }
   };
 
+  const handleImportFile = async () => {
+    if (!importFile || !currentUserId) return;
+
+    setImporting(true);
+    setImportProgress({ status: 'processing', message: 'Processando arquivo e buscando dados na Receita Federal...' });
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+      formData.append('userId', currentUserId);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-prospects`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Erro ao processar importação');
+      }
+
+      const result = await response.json();
+      
+      setImportProgress({
+        status: 'completed',
+        message: 'Importação concluída!',
+        details: result
+      });
+
+      toast.success(
+        `Importação concluída! ${result.success} prospects importados, ${result.duplicates} duplicados ignorados, ${result.errors} erros.`
+      );
+
+      // Refresh list after import
+      setTimeout(() => {
+        fetchClients();
+        setImportDialogOpen(false);
+        setImportFile(null);
+        setImportProgress(null);
+      }, 3000);
+    } catch (error: any) {
+      console.error('Erro na importação:', error);
+      setImportProgress({
+        status: 'error',
+        message: 'Erro ao importar prospects',
+        error: error.message
+      });
+      toast.error('Erro ao importar prospects');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleEditClient = (e: React.MouseEvent, client: any) => {
     e.stopPropagation();
     setSelectedClient(client);
@@ -468,14 +527,90 @@ const Prospects = () => {
           </p>
         </div>
         
+        <div className="flex gap-2">
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Plus size={20} />
+                Importar Planilha
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Importar Prospects via Excel</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label>Selecione o arquivo Excel</Label>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Planilha deve conter CNPJs na coluna A (sem formatação)
+                  </p>
+                  <Input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    disabled={importing}
+                  />
+                </div>
+
+                {importProgress && (
+                  <div className="p-4 border rounded-lg space-y-2">
+                    <p className="font-medium">{importProgress.message}</p>
+                    {importProgress.details && (
+                      <div className="text-sm space-y-1">
+                        <p>✅ Sucesso: {importProgress.details.success}</p>
+                        <p>⚠️ Duplicados: {importProgress.details.duplicates}</p>
+                        <p>❌ Erros: {importProgress.details.errors}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Total processado: {importProgress.details.total}
+                        </p>
+                      </div>
+                    )}
+                    {importProgress.status === 'processing' && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                  </div>
+                )}
+
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setImportDialogOpen(false);
+                      setImportFile(null);
+                      setImportProgress(null);
+                    }}
+                    disabled={importing}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleImportFile}
+                    disabled={!importFile || importing}
+                  >
+                    {importing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importando...
+                      </>
+                    ) : (
+                      'Importar'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-primary">
-              <Plus size={20} />
-              Novo Prospect
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogTrigger asChild>
+              <Button className="gap-2 shadow-primary">
+                <Plus size={20} />
+                Novo Prospect
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-2xl">Cadastrar Novo Prospect</DialogTitle>
             </DialogHeader>
