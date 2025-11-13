@@ -45,6 +45,7 @@ const BaseConhecimento = () => {
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
   const [itemHistory, setItemHistory] = useState<HistoryItem[]>([]);
   const [userRole, setUserRole] = useState<string>("");
+  const [importing, setImporting] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
@@ -261,6 +262,42 @@ const BaseConhecimento = () => {
     }
   };
 
+  const handleImportKnowledgeBase = async () => {
+    setImporting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Você precisa estar logado");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-knowledge-base`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao importar');
+      }
+
+      toast.success(result.message);
+      fetchKnowledgeItems();
+    } catch (error) {
+      console.error('Error importing:', error);
+      toast.error("Erro ao importar base de conhecimento");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -271,13 +308,26 @@ const BaseConhecimento = () => {
           </p>
         </div>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Item
+        <div className="flex gap-2">
+          {(userRole === "admin" || userRole === "gestor") && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="gap-2"
+              onClick={handleImportKnowledgeBase}
+              disabled={importing}
+            >
+              <BookOpen className="h-4 w-4" />
+              {importing ? "Importando..." : "Importar Planilha"}
             </Button>
-          </DialogTrigger>
+          )}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Item
+              </Button>
+            </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Adicionar à Base de Conhecimento</DialogTitle>
@@ -338,6 +388,7 @@ const BaseConhecimento = () => {
               </form>
             </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filtros */}
