@@ -222,7 +222,7 @@ const Dashboard = () => {
 
       // Calculate average
       if (data && data.length > 0) {
-        const sum = data.reduce((acc, opp) => acc + (opp.close_cycle_days || 0), 0);
+        const sum = (data as any[]).reduce((acc: number, opp: any) => acc + (opp.close_cycle_days || 0), 0);
         const avg = Math.round(sum / data.length);
         setAvgCloseCycle(avg);
       } else {

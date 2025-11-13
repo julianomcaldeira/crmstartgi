@@ -113,62 +113,89 @@ serve(async (req) => {
         if (!companyData) {
           console.log(`Buscando dados da ReceitaWS para CNPJ ${cnpj}`);
           
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          let retryCount = 0;
+          const maxRetries = 3;
+          let fetchSuccess = false;
           
-          try {
-            const response = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`, {
-              signal: controller.signal,
-              headers: {
-                'User-Agent': 'Mozilla/5.0',
-              }
-            });
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-              throw new Error(`ReceitaWS retornou status ${response.status}`);
-            }
-
-            const data = await response.json();
-            
-            if (data.status === "ERROR") {
-              throw new Error(data.message || "Erro ao buscar dados");
-            }
-
-            // Transform data
-            companyData = {
-              cnpj: cnpj,
-              company_name: data.nome || "",
-              trade_name: data.fantasia || data.nome || "",
-              email: data.email || "",
-              phone: data.telefone || "",
-              address: `${data.logradouro || ""}, ${data.numero || ""} ${data.complemento || ""}`.trim(),
-              city: data.municipio || "",
-              state: data.uf || "",
-              zip_code: (data.cep || "").replace(/\D/g, ""),
-              segment: data.atividade_principal?.[0]?.text || "",
-              share_capital: data.capital_social || "",
-              legal_nature: data.natureza_juridica || "",
-              registration_status: data.situacao || "",
-              foundation_date: data.abertura || null,
-            };
-
-            // Save to cache
-            await supabase
-              .from("cnpj_cache")
-              .upsert({
-                ...companyData,
-                cached_at: new Date().toISOString(),
+          while (!fetchSuccess && retryCount < maxRetries) {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 15000);
+              
+              const response = await fetch(`https://receitaws.com.br/v1/cnpj/${cnpj}`, {
+                signal: controller.signal,
+                headers: {
+                  'User-Agent': 'Mozilla/5.0',
+                }
               });
+              clearTimeout(timeoutId);
 
-            // Small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          } catch (fetchError: any) {
-            clearTimeout(timeoutId);
-            if (fetchError.name === 'AbortError') {
-              throw new Error("Timeout ao buscar dados da ReceitaWS");
+              if (response.status === 429) {
+                retryCount++;
+                if (retryCount < maxRetries) {
+                  const backoffDelay = 3000 * Math.pow(2, retryCount - 1); // 3s, 6s, 12s
+                  console.log(`Rate limit atingido. Tentativa ${retryCount}/${maxRetries}. Aguardando ${backoffDelay/1000}s...`);
+                  await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                  continue;
+                } else {
+                  throw new Error("Limite de requisições atingido após múltiplas tentativas");
+                }
+              }
+
+              if (!response.ok) {
+                throw new Error(`ReceitaWS retornou status ${response.status}`);
+              }
+
+              const data = await response.json();
+              
+              if (data.status === "ERROR") {
+                throw new Error(data.message || "Erro ao buscar dados");
+              }
+
+              // Transform data
+              companyData = {
+                cnpj: cnpj,
+                company_name: data.nome || "",
+                trade_name: data.fantasia || data.nome || "",
+                email: data.email || "",
+                phone: data.telefone || "",
+                address: `${data.logradouro || ""}, ${data.numero || ""} ${data.complemento || ""}`.trim(),
+                city: data.municipio || "",
+                state: data.uf || "",
+                zip_code: (data.cep || "").replace(/\D/g, ""),
+                segment: data.atividade_principal?.[0]?.text || "",
+                share_capital: data.capital_social || "",
+                legal_nature: data.natureza_juridica || "",
+                registration_status: data.situacao || "",
+                foundation_date: data.abertura || null,
+              };
+
+              // Save to cache
+              await supabase
+                .from("cnpj_cache")
+                .upsert({
+                  ...companyData,
+                  cached_at: new Date().toISOString(),
+                });
+
+              fetchSuccess = true;
+              
+              // Delay between successful requests to avoid rate limiting
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } catch (fetchError: any) {
+              if (fetchError.name === 'AbortError') {
+                throw new Error("Timeout ao buscar dados da ReceitaWS");
+              }
+              
+              if (retryCount >= maxRetries - 1) {
+                throw fetchError;
+              }
+              
+              retryCount++;
+              const backoffDelay = 3000 * Math.pow(2, retryCount - 1);
+              console.log(`Erro na requisição. Tentativa ${retryCount}/${maxRetries}. Aguardando ${backoffDelay/1000}s...`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
             }
-            throw fetchError;
           }
         }
 
