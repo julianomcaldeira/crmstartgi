@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download } from "lucide-react";
+import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 interface KnowledgeItem {
   id: string;
@@ -21,8 +22,10 @@ interface KnowledgeItem {
   created_by: string;
   updated_at: string;
   updated_by?: string;
+  tags?: string[];
   creator?: { full_name: string };
   updater?: { full_name: string };
+  is_favorited?: boolean;
 }
 
 interface HistoryItem {
@@ -41,6 +44,11 @@ const BaseConhecimento = () => {
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState<"all" | "article" | "video" | "link">("all");
   const [sortBy, setSortBy] = useState<"updated_at" | "created_at" | "title">("updated_at");
+  const [selectedTag, setSelectedTag] = useState<string>("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const itemsPerPage = 20;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -54,7 +62,10 @@ const BaseConhecimento = () => {
     content: "",
     type: "article" as "article" | "video" | "link",
     url: "",
+    tags: [] as string[],
   });
+  
+  const [newTag, setNewTag] = useState("");
 
   useEffect(() => {
     fetchUserRole();
@@ -63,7 +74,11 @@ const BaseConhecimento = () => {
 
   useEffect(() => {
     filterItems();
-  }, [search, selectedType, items, sortBy]);
+  }, [search, selectedType, items, sortBy, selectedTag, showFavoritesOnly]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedType, selectedTag, showFavoritesOnly]);
 
   const fetchUserRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -79,6 +94,8 @@ const BaseConhecimento = () => {
   };
 
   const fetchKnowledgeItems = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
     const { data, error } = await supabase
       .from("knowledge_base")
       .select(`
@@ -93,7 +110,33 @@ const BaseConhecimento = () => {
       return;
     }
 
-    setItems((data || []) as any);
+    // Fetch user's favorites
+    let favoriteIds: string[] = [];
+    if (user) {
+      const { data: favorites } = await supabase
+        .from("knowledge_base_favorites")
+        .select("knowledge_base_id")
+        .eq("user_id", user.id);
+      
+      favoriteIds = (favorites || []).map(f => f.knowledge_base_id);
+    }
+
+    // Mark favorited items
+    const itemsWithFavorites = (data || []).map(item => ({
+      ...item,
+      is_favorited: favoriteIds.includes(item.id)
+    }));
+
+    setItems(itemsWithFavorites as any);
+    
+    // Extract all unique tags
+    const tags = new Set<string>();
+    itemsWithFavorites.forEach(item => {
+      if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach(tag => tags.add(tag));
+      }
+    });
+    setAllTags(Array.from(tags).sort());
   };
 
   const filterItems = () => {
@@ -108,6 +151,16 @@ const BaseConhecimento = () => {
 
     if (selectedType !== "all") {
       filtered = filtered.filter(item => item.type === selectedType);
+    }
+    
+    if (selectedTag !== "all") {
+      filtered = filtered.filter(item => 
+        item.tags && item.tags.includes(selectedTag)
+      );
+    }
+    
+    if (showFavoritesOnly) {
+      filtered = filtered.filter(item => item.is_favorited);
     }
 
     // Apply sorting
@@ -136,7 +189,11 @@ const BaseConhecimento = () => {
     const { error } = await supabase
       .from("knowledge_base")
       .insert({
-        ...formData,
+        title: formData.title,
+        content: formData.content,
+        type: formData.type,
+        url: formData.url,
+        tags: formData.tags,
         category: "comercial",
         created_by: user.id,
       });
@@ -154,6 +211,7 @@ const BaseConhecimento = () => {
       content: "",
       type: "article",
       url: "",
+      tags: [],
     });
     fetchKnowledgeItems();
   };
@@ -171,6 +229,7 @@ const BaseConhecimento = () => {
         category: "comercial",
         type: formData.type,
         url: formData.url,
+        tags: formData.tags,
       })
       .eq("id", selectedItem.id);
 
@@ -188,6 +247,7 @@ const BaseConhecimento = () => {
       content: "",
       type: "article",
       url: "",
+      tags: [],
     });
     fetchKnowledgeItems();
   };
@@ -199,6 +259,7 @@ const BaseConhecimento = () => {
       content: item.content,
       type: item.type,
       url: item.url || "",
+      tags: item.tags || [],
     });
     setEditDialogOpen(true);
   };
@@ -277,6 +338,57 @@ const BaseConhecimento = () => {
       case "link":
         return "Link";
     }
+  };
+  
+  const toggleFavorite = async (itemId: string, isFavorited: boolean) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    if (isFavorited) {
+      const { error } = await supabase
+        .from("knowledge_base_favorites")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("knowledge_base_id", itemId);
+
+      if (error) {
+        toast.error("Erro ao remover favorito");
+        return;
+      }
+      toast.success("Removido dos favoritos");
+    } else {
+      const { error } = await supabase
+        .from("knowledge_base_favorites")
+        .insert({
+          user_id: user.id,
+          knowledge_base_id: itemId,
+        });
+
+      if (error) {
+        toast.error("Erro ao adicionar favorito");
+        return;
+      }
+      toast.success("Adicionado aos favoritos");
+    }
+
+    fetchKnowledgeItems();
+  };
+  
+  const addTag = () => {
+    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
+      setFormData({
+        ...formData,
+        tags: [...formData.tags, newTag.trim()]
+      });
+      setNewTag("");
+    }
+  };
+  
+  const removeTag = (tagToRemove: string) => {
+    setFormData({
+      ...formData,
+      tags: formData.tags.filter(tag => tag !== tagToRemove)
+    });
   };
 
   const handleImportKnowledgeBase = async () => {
@@ -465,6 +577,40 @@ const BaseConhecimento = () => {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      placeholder="Digite uma tag..."
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={addTag} variant="outline">
+                      Adicionar
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {formData.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="gap-1">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          ×
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
@@ -492,6 +638,15 @@ const BaseConhecimento = () => {
         
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={showFavoritesOnly ? "default" : "outline"}
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className="gap-2"
+            >
+              <Star className="h-4 w-4" />
+              Favoritos
+            </Button>
             <Button
               size="sm"
               variant={selectedType === "all" ? "default" : "outline"}
@@ -543,6 +698,29 @@ const BaseConhecimento = () => {
             </select>
           </div>
         </div>
+        
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <Label className="text-sm text-muted-foreground">Tags:</Label>
+            <Button
+              size="sm"
+              variant={selectedTag === "all" ? "default" : "outline"}
+              onClick={() => setSelectedTag("all")}
+            >
+              Todas
+            </Button>
+            {allTags.map(tag => (
+              <Button
+                key={tag}
+                size="sm"
+                variant={selectedTag === tag ? "default" : "outline"}
+                onClick={() => setSelectedTag(tag)}
+              >
+                {tag}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Lista de Itens */}
@@ -557,7 +735,9 @@ const BaseConhecimento = () => {
             </p>
           </div>
         ) : (
-          filteredItems.map(item => (
+          filteredItems
+            .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+            .map(item => (
             <Card key={item.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
@@ -565,6 +745,14 @@ const BaseConhecimento = () => {
                     {getTypeIcon(item.type)}
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => toggleFavorite(item.id, item.is_favorited || false)}
+                      title={item.is_favorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                    >
+                      <Star className={`h-3 w-3 ${item.is_favorited ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -600,6 +788,15 @@ const BaseConhecimento = () => {
                     <span className="ml-2">• Editado por {item.updater.full_name}</span>
                   )}
                 </CardDescription>
+                {item.tags && item.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {item.tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground line-clamp-3">
@@ -620,6 +817,76 @@ const BaseConhecimento = () => {
           ))
         )}
       </div>
+      
+      {/* Paginação */}
+      {filteredItems.length > itemsPerPage && (
+        <div className="flex justify-center mt-6">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+              </PaginationItem>
+              
+              {Array.from({ length: Math.ceil(filteredItems.length / itemsPerPage) }, (_, i) => i + 1)
+                .filter(page => {
+                  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+                  return page === 1 || 
+                         page === totalPages || 
+                         (page >= currentPage - 1 && page <= currentPage + 1);
+                })
+                .map((page, index, array) => {
+                  if (index > 0 && page - array[index - 1] > 1) {
+                    return [
+                      <PaginationItem key={`ellipsis-${page}`}>
+                        <span className="px-4">...</span>
+                      </PaginationItem>,
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ];
+                  }
+                  return (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+              
+              <PaginationItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => 
+                    Math.min(Math.ceil(filteredItems.length / itemsPerPage), prev + 1)
+                  )}
+                  disabled={currentPage === Math.ceil(filteredItems.length / itemsPerPage)}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -672,6 +939,40 @@ const BaseConhecimento = () => {
                 rows={6}
                 required
               />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  placeholder="Digite uma tag..."
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
+                />
+                <Button type="button" onClick={addTag} variant="outline">
+                  Adicionar
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.tags.map(tag => (
+                  <Badge key={tag} variant="secondary" className="gap-1">
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      ×
+                    </button>
+                  </Badge>
+                ))}
+              </div>
             </div>
 
             <div className="flex justify-end gap-2">
