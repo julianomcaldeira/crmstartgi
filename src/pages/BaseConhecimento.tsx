@@ -39,6 +39,7 @@ const BaseConhecimento = () => {
   const [items, setItems] = useState<KnowledgeItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<KnowledgeItem[]>([]);
   const [search, setSearch] = useState("");
+  const [selectedType, setSelectedType] = useState<"all" | "article" | "video" | "link">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -61,7 +62,7 @@ const BaseConhecimento = () => {
 
   useEffect(() => {
     filterItems();
-  }, [search, items]);
+  }, [search, selectedType, items]);
 
   const fetchUserRole = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -102,6 +103,10 @@ const BaseConhecimento = () => {
         item.title.toLowerCase().includes(search.toLowerCase()) ||
         item.content.toLowerCase().includes(search.toLowerCase())
       );
+    }
+
+    if (selectedType !== "all") {
+      filtered = filtered.filter(item => item.type === selectedType);
     }
 
     setFilteredItems(filtered);
@@ -451,7 +456,7 @@ const BaseConhecimento = () => {
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="space-y-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -460,6 +465,45 @@ const BaseConhecimento = () => {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10"
           />
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={selectedType === "all" ? "default" : "outline"}
+            onClick={() => setSelectedType("all")}
+            className="gap-2"
+          >
+            <BookOpen className="h-4 w-4" />
+            Todos
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedType === "article" ? "default" : "outline"}
+            onClick={() => setSelectedType("article")}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Artigos
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedType === "video" ? "default" : "outline"}
+            onClick={() => setSelectedType("video")}
+            className="gap-2"
+          >
+            <Video className="h-4 w-4" />
+            Vídeos
+          </Button>
+          <Button
+            size="sm"
+            variant={selectedType === "link" ? "default" : "outline"}
+            onClick={() => setSelectedType("link")}
+            className="gap-2"
+          >
+            <LinkIcon className="h-4 w-4" />
+            Links
+          </Button>
         </div>
       </div>
 
