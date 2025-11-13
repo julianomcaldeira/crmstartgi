@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [goalData, setGoalData] = useState<any>(null);
   const [forecastAccounts, setForecastAccounts] = useState<any[]>([]);
   const [funnelData, setFunnelData] = useState<any[]>([]);
+  const [avgCloseCycle, setAvgCloseCycle] = useState<number>(0);
 
   useEffect(() => {
     initializeDashboard();
@@ -57,6 +58,7 @@ const Dashboard = () => {
         fetchGoalProgress(),
         fetchForecastAccounts(),
         fetchFunnelData(),
+        fetchAvgCloseCycle(),
       ]);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -195,6 +197,42 @@ const Dashboard = () => {
     setFunnelData(chartData);
   };
 
+  const fetchAvgCloseCycle = async () => {
+    try {
+      const [year, month] = selectedPeriod.split("-");
+      const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+      const endDate = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+
+      let query = supabase
+        .from("opportunities")
+        .select("close_cycle_days")
+        .eq("status", "won")
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString())
+        .not("close_cycle_days", "is", null);
+
+      // Filter by user if not gestor/admin
+      if (userRole !== "gestor" && userRole !== "admin") {
+        query = query.eq("assigned_to", userId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Calculate average
+      if (data && data.length > 0) {
+        const sum = data.reduce((acc, opp) => acc + (opp.close_cycle_days || 0), 0);
+        const avg = Math.round(sum / data.length);
+        setAvgCloseCycle(avg);
+      } else {
+        setAvgCloseCycle(0);
+      }
+    } catch (error) {
+      console.error("Error fetching average close cycle:", error);
+    }
+  };
+
   const getTaskTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       ligacao: "Ligação",
@@ -304,6 +342,24 @@ const Dashboard = () => {
                 </p>
               </div>
               <DollarSign className="h-8 w-8 text-primary/30" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Ciclo Médio de Fechamento */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-orange-500">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Ciclo Médio</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {avgCloseCycle} {avgCloseCycle === 1 ? 'dia' : 'dias'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Para fechar oportunidades</p>
+              </div>
+              <Clock className="h-8 w-8 text-orange-500/30" />
             </div>
           </CardContent>
         </Card>
