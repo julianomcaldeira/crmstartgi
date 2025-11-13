@@ -281,14 +281,13 @@ const BaseConhecimento = () => {
           </p>
         </div>
 
-        {(userRole === "admin" || userRole === "gestor") && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Novo Item
-              </Button>
-            </DialogTrigger>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Item
+            </Button>
+          </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Adicionar à Base de Conhecimento</DialogTitle>
@@ -365,8 +364,7 @@ const BaseConhecimento = () => {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
-        )}
+        </Dialog>
       </div>
 
       {/* Filtros */}
