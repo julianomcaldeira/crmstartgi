@@ -276,6 +276,8 @@ const BaseConhecimento = () => {
         return;
       }
 
+      toast.info("Importando base de conhecimento...");
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-knowledge-base`,
         {
@@ -293,7 +295,16 @@ const BaseConhecimento = () => {
         throw new Error(result.error || 'Erro ao importar');
       }
 
-      toast.success(result.message);
+      // Show detailed success message
+      if (result.duplicates > 0) {
+        toast.success(
+          `✅ ${result.inserted} novos artigos importados\n⚠️ ${result.duplicates} duplicados ignorados`,
+          { duration: 5000 }
+        );
+      } else {
+        toast.success(result.message);
+      }
+      
       fetchKnowledgeItems();
     } catch (error) {
       console.error('Error importing:', error);

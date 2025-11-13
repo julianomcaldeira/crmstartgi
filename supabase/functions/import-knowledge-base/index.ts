@@ -242,8 +242,47 @@ Deno.serve(async (req) => {
       }
     ];
 
-    // Insert all items
-    const itemsToInsert = knowledgeItems.map(item => ({
+    // Check for existing titles to prevent duplicates
+    const { data: existingItems, error: fetchError } = await supabase
+      .from('knowledge_base')
+      .select('title');
+
+    if (fetchError) {
+      console.error('Error fetching existing items:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar itens existentes', details: fetchError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create a Set of existing titles for efficient lookup (case-insensitive)
+    const existingTitles = new Set(
+      (existingItems || []).map(item => item.title.toLowerCase().trim())
+    );
+
+    // Filter out items that already exist
+    const newItems = knowledgeItems.filter(
+      item => !existingTitles.has(item.title.toLowerCase().trim())
+    );
+
+    const duplicateCount = knowledgeItems.length - newItems.length;
+
+    // If no new items to insert, return early
+    if (newItems.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Todos os itens já existem na base de conhecimento.',
+          inserted: 0,
+          duplicates: duplicateCount,
+          total: knowledgeItems.length
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Insert only new items
+    const itemsToInsert = newItems.map(item => ({
       title: item.title,
       content: item.content,
       category: 'comercial',
@@ -267,8 +306,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `${knowledgeItems.length} itens importados com sucesso!`,
-        inserted: data?.length || 0
+        message: `${data?.length || 0} novos itens importados. ${duplicateCount} duplicados ignorados.`,
+        inserted: data?.length || 0,
+        duplicates: duplicateCount,
+        total: knowledgeItems.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
