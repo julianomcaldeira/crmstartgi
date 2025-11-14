@@ -1,5 +1,8 @@
 project_id = "eifsbqqrimniclsssoru"
 
+[functions.batch-import-cnpj]
+verify_jwt = false
+
 [functions.buscar-cnpj]
 verify_jwt = false
 

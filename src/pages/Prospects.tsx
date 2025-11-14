@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
+import { BatchImportDialog } from "@/components/BatchImportDialog";
 import { validateCNPJ } from "@/lib/cnpjValidator";
 import {
   Dialog,
@@ -54,11 +55,6 @@ const Prospects = () => {
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState<any>(null);
-  const [importPaused, setImportPaused] = useState(false);
-  const [savedImportState, setSavedImportState] = useState<any>(null);
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -482,116 +478,6 @@ const Prospects = () => {
     }
   };
 
-  useEffect(() => {
-    const savedState = localStorage.getItem('prospectImportState');
-    if (savedState) {
-      setSavedImportState(JSON.parse(savedState));
-    }
-  }, []);
-
-  const handleImportFile = async (resumeFromIndex: number = 0) => {
-    if (!importFile || !currentUserId) return;
-
-    setImporting(true);
-    setImportPaused(false);
-    setImportProgress({ 
-      status: 'processing', 
-      message: resumeFromIndex > 0 
-        ? `Retomando importação do índice ${resumeFromIndex + 1}...` 
-        : 'Processando arquivo e buscando dados na Receita Federal...',
-      currentIndex: resumeFromIndex
-    });
-
-    try {
-      const formData = new FormData();
-      formData.append('file', importFile);
-      formData.append('userId', currentUserId);
-      formData.append('startIndex', resumeFromIndex.toString());
-
-      // Save import state
-      const importState = {
-        fileName: importFile.name,
-        startIndex: resumeFromIndex,
-        userId: currentUserId,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem('prospectImportState', JSON.stringify(importState));
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-prospects`,
-        {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Falha na requisição');
-      }
-
-      const result = await response.json();
-
-      // Clear saved state on completion
-      if (result.completed) {
-        localStorage.removeItem('prospectImportState');
-        setSavedImportState(null);
-      }
-
-      setImportProgress({
-        status: 'success',
-        message: 'Importação concluída!',
-        details: result
-      });
-
-      toast.success(
-        `Importação concluída! ${result.success} prospects importados, ${result.duplicates} duplicados ignorados, ${result.errors} erros.`
-      );
-
-      // Refresh list after import
-      setTimeout(() => {
-        fetchClients();
-        setImportDialogOpen(false);
-        setImportFile(null);
-        setImportProgress(null);
-      }, 3000);
-    } catch (error: any) {
-      console.error('Erro na importação:', error);
-      setImportProgress({
-        status: 'error',
-        message: 'Erro ao importar prospects',
-        error: error.message
-      });
-      toast.error('Erro ao importar prospects');
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const handlePauseImport = () => {
-    setImportPaused(true);
-    setImporting(false);
-    toast.info('Importação pausada. Você pode retomar mais tarde.');
-  };
-
-  const handleResumeImport = () => {
-    if (savedImportState) {
-      handleImportFile(savedImportState.startIndex);
-    }
-  };
-
-  const handleCancelImport = () => {
-    localStorage.removeItem('prospectImportState');
-    setSavedImportState(null);
-    setImportDialogOpen(false);
-    setImportFile(null);
-    setImportProgress(null);
-    setImportPaused(false);
-    toast.info('Importação cancelada');
-  };
-
   const handleEditClient = (e: React.MouseEvent, client: any) => {
     e.stopPropagation();
     setSelectedClient(client);
@@ -611,110 +497,20 @@ const Prospects = () => {
         </div>
         
         <div className="flex gap-2">
-          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Plus size={20} />
-                Importar Planilha
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Importar Prospects via Excel</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {savedImportState && !importing && (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-                      Importação anterior pausada
-                    </p>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
-                      Arquivo: {savedImportState.fileName}<br />
-                      Pausado em: {new Date(savedImportState.timestamp).toLocaleString('pt-BR')}
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleResumeImport}
-                      >
-                        Retomar Importação
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleCancelImport}
-                      >
-                        Cancelar e Nova Importação
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <Label>Selecione o arquivo Excel</Label>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Planilha deve conter CNPJs na coluna A (sem formatação)
-                  </p>
-                  <Input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    disabled={importing}
-                  />
-                </div>
-
-                {importProgress && (
-                  <div className="p-4 border rounded-lg space-y-2">
-                    <p className="font-medium">{importProgress.message}</p>
-                    {importProgress.details && (
-                      <div className="text-sm space-y-1">
-                        <p>✅ Sucesso: {importProgress.details.success}</p>
-                        <p>⚠️ Duplicados: {importProgress.details.duplicates}</p>
-                        <p>❌ Erros: {importProgress.details.errors}</p>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Total processado: {importProgress.details.total}
-                        </p>
-                      </div>
-                    )}
-                    {importProgress.status === 'processing' && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                  </div>
-                )}
-
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={handleCancelImport}
-                    disabled={importing}
-                  >
-                    Cancelar
-                  </Button>
-                  {importing && (
-                    <Button
-                      variant="destructive"
-                      onClick={handlePauseImport}
-                    >
-                      Pausar
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => handleImportFile(0)}
-                    disabled={!importFile || importing}
-                  >
-                    {importing ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Importando...
-                      </>
-                    ) : (
-                      'Importar'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Plus size={20} />
+            Importar Planilha
+          </Button>
+          
+          <BatchImportDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            onSuccess={fetchClients}
+          />
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
