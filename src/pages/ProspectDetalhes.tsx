@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
+import { ClientEditDialog } from "@/components/ClientEditDialog";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -47,6 +48,7 @@ const ClienteDetalhes = () => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editClientDialogOpen, setEditClientDialogOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [oppDialogOpen, setOppDialogOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -425,6 +427,14 @@ const ClienteDetalhes = () => {
           <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setEditClientDialogOpen(true)}
+        >
+          <Edit className="mr-2 h-4 w-4" />
+          Editar Cliente
+        </Button>
         {isAdmin && (
           <Button 
             variant="destructive" 
@@ -438,104 +448,98 @@ const ClienteDetalhes = () => {
       </div>
 
       {/* Client Info Card */}
-      <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-3 text-foreground">Informações do Cliente</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">CNPJ</p>
-                <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
-              </div>
+      <Card className="p-6">
+        <h2 className="text-lg font-semibold mb-4 text-foreground">Informações do Cliente</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+          <div className="flex items-start gap-3">
+            <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">CNPJ</p>
+              <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
             </div>
-            
-            <div className="flex items-start gap-2">
-              <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium text-foreground">{client.email || "-"}</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Telefone</p>
-                <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
-              </div>
+          </div>
+          
+          <div className="flex items-start gap-3">
+            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Endereço</p>
+              <p className="text-sm font-medium text-foreground">
+                {client.address ? `${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? ` - ${client.state}` : ''}` : "-"}
+              </p>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Endereço</p>
-                <p className="text-sm font-medium text-foreground">
-                  {client.address || "-"}
-                  {client.city && `, ${client.city}`}
-                  {client.state && ` - ${client.state}`}
-                </p>
-              </div>
+          <div className="flex items-start gap-3">
+            <Mail className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Email</p>
+              <p className="text-sm font-medium text-foreground break-all">{client.email || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Segmento</p>
-                <p className="text-sm font-medium text-foreground">{client.segment || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <TrendingUp className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Segmento</p>
+              <p className="text-sm font-medium text-foreground">{client.segment || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Capital Social</p>
-                <p className="text-sm font-medium text-foreground">
-                  {client.share_capital ? `R$ ${Number(client.share_capital).toLocaleString('pt-BR')}` : "-"}
-                </p>
-              </div>
+          <div className="flex items-start gap-3">
+            <Phone className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Telefone</p>
+              <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Porte da Empresa</p>
-                <p className="text-sm font-medium text-foreground">{client.company_size || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Capital Social</p>
+              <p className="text-sm font-medium text-foreground">
+                {client.share_capital ? `R$ ${Number(client.share_capital).toLocaleString('pt-BR')}` : "-"}
+              </p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Região</p>
-                <p className="text-sm font-medium text-foreground">{client.region || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Porte da Empresa</p>
+              <p className="text-sm font-medium text-foreground">{client.company_size || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <Target className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Concorrentes</p>
-                <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Região</p>
+              <p className="text-sm font-medium text-foreground">{client.region || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Distribuidor</p>
-                <p className="text-sm font-medium text-foreground">{client.distributor || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <Target className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Concorrentes</p>
+              <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
             </div>
+          </div>
 
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground">Serviços</p>
-                <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
-              </div>
+          <div className="flex items-start gap-3">
+            <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Distribuidor</p>
+              <p className="text-sm font-medium text-foreground">{client.distributor || "-"}</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Serviços</p>
+              <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
             </div>
           </div>
         </div>
@@ -1072,6 +1076,13 @@ const ClienteDetalhes = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ClientEditDialog
+        client={client}
+        open={editClientDialogOpen}
+        onOpenChange={setEditClientDialogOpen}
+        onSuccess={fetchClientDetails}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
