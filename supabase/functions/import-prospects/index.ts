@@ -18,6 +18,7 @@ serve(async (req) => {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const userId = formData.get("userId") as string;
+    const startIndex = parseInt(formData.get("startIndex") as string || "0");
     
     if (!file) {
       throw new Error("Arquivo não fornecido");
@@ -29,6 +30,7 @@ serve(async (req) => {
 
     console.log("Arquivo recebido:", file.name);
     console.log("Usuário:", userId);
+    console.log("Começando do índice:", startIndex);
 
     // Read Excel file
     const arrayBuffer = await file.arrayBuffer();
@@ -67,8 +69,8 @@ serve(async (req) => {
       errorDetails: [] as string[],
     };
 
-    // Process each CNPJ
-    for (let i = 0; i < cnpjs.length; i++) {
+    // Process each CNPJ starting from startIndex
+    for (let i = startIndex; i < cnpjs.length; i++) {
       const cnpj = cnpjs[i];
       console.log(`\n[${i + 1}/${cnpjs.length}] Processando CNPJ: ${cnpj}`);
       
@@ -237,7 +239,11 @@ serve(async (req) => {
     console.log("\n=== IMPORT-PROSPECTS: Importação concluída ===");
     console.log("Resumo:", results);
 
-    return new Response(JSON.stringify(results), {
+    return new Response(JSON.stringify({
+      ...results,
+      lastProcessedIndex: cnpjs.length - 1,
+      completed: true
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

@@ -57,6 +57,8 @@ const Prospects = () => {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<any>(null);
+  const [importPaused, setImportPaused] = useState(false);
+  const [savedImportState, setSavedImportState] = useState<any>(null);
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -480,33 +482,66 @@ const Prospects = () => {
     }
   };
 
-  const handleImportFile = async () => {
+  useEffect(() => {
+    const savedState = localStorage.getItem('prospectImportState');
+    if (savedState) {
+      setSavedImportState(JSON.parse(savedState));
+    }
+  }, []);
+
+  const handleImportFile = async (resumeFromIndex: number = 0) => {
     if (!importFile || !currentUserId) return;
 
     setImporting(true);
-    setImportProgress({ status: 'processing', message: 'Processando arquivo e buscando dados na Receita Federal...' });
+    setImportPaused(false);
+    setImportProgress({ 
+      status: 'processing', 
+      message: resumeFromIndex > 0 
+        ? `Retomando importação do índice ${resumeFromIndex + 1}...` 
+        : 'Processando arquivo e buscando dados na Receita Federal...',
+      currentIndex: resumeFromIndex
+    });
 
     try {
       const formData = new FormData();
       formData.append('file', importFile);
       formData.append('userId', currentUserId);
+      formData.append('startIndex', resumeFromIndex.toString());
+
+      // Save import state
+      const importState = {
+        fileName: importFile.name,
+        startIndex: resumeFromIndex,
+        userId: currentUserId,
+        timestamp: new Date().toISOString()
+      };
+      localStorage.setItem('prospectImportState', JSON.stringify(importState));
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-prospects`,
         {
           method: 'POST',
           body: formData,
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+          }
         }
       );
 
       if (!response.ok) {
-        throw new Error('Erro ao processar importação');
+        throw new Error('Falha na requisição');
       }
 
       const result = await response.json();
-      
+
+      // Clear saved state on completion
+      if (result.completed) {
+        localStorage.removeItem('prospectImportState');
+        setSavedImportState(null);
+      }
+
       setImportProgress({
-        status: 'completed',
+        status: 'success',
         message: 'Importação concluída!',
         details: result
       });
@@ -533,6 +568,28 @@ const Prospects = () => {
     } finally {
       setImporting(false);
     }
+  };
+
+  const handlePauseImport = () => {
+    setImportPaused(true);
+    setImporting(false);
+    toast.info('Importação pausada. Você pode retomar mais tarde.');
+  };
+
+  const handleResumeImport = () => {
+    if (savedImportState) {
+      handleImportFile(savedImportState.startIndex);
+    }
+  };
+
+  const handleCancelImport = () => {
+    localStorage.removeItem('prospectImportState');
+    setSavedImportState(null);
+    setImportDialogOpen(false);
+    setImportFile(null);
+    setImportProgress(null);
+    setImportPaused(false);
+    toast.info('Importação cancelada');
   };
 
   const handleEditClient = (e: React.MouseEvent, client: any) => {
@@ -566,6 +623,33 @@ const Prospects = () => {
                 <DialogTitle>Importar Prospects via Excel</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                {savedImportState && !importing && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                      Importação anterior pausada
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                      Arquivo: {savedImportState.fileName}<br />
+                      Pausado em: {new Date(savedImportState.timestamp).toLocaleString('pt-BR')}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={handleResumeImport}
+                      >
+                        Retomar Importação
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleCancelImport}
+                      >
+                        Cancelar e Nova Importação
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <Label>Selecione o arquivo Excel</Label>
                   <p className="text-sm text-muted-foreground mb-2">
@@ -601,17 +685,21 @@ const Prospects = () => {
                 <div className="flex gap-2 justify-end">
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setImportDialogOpen(false);
-                      setImportFile(null);
-                      setImportProgress(null);
-                    }}
+                    onClick={handleCancelImport}
                     disabled={importing}
                   >
                     Cancelar
                   </Button>
+                  {importing && (
+                    <Button
+                      variant="destructive"
+                      onClick={handlePauseImport}
+                    >
+                      Pausar
+                    </Button>
+                  )}
                   <Button
-                    onClick={handleImportFile}
+                    onClick={() => handleImportFile(0)}
                     disabled={!importFile || importing}
                   >
                     {importing ? (
