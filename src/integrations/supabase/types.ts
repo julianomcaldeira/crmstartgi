@@ -66,14 +66,17 @@ export type Database = {
           competitors: string | null
           created_at: string | null
           created_by: string
+          distributor: string | null
           email: string | null
           foundation_date: string | null
           id: string
           legal_nature: string | null
           phone: string | null
+          rating: number | null
           region: string | null
           registration_status: string | null
           segment: string | null
+          services: string | null
           share_capital: number | null
           state: string | null
           trade_name: string | null
@@ -89,14 +92,17 @@ export type Database = {
           competitors?: string | null
           created_at?: string | null
           created_by: string
+          distributor?: string | null
           email?: string | null
           foundation_date?: string | null
           id?: string
           legal_nature?: string | null
           phone?: string | null
+          rating?: number | null
           region?: string | null
           registration_status?: string | null
           segment?: string | null
+          services?: string | null
           share_capital?: number | null
           state?: string | null
           trade_name?: string | null
@@ -112,14 +118,17 @@ export type Database = {
           competitors?: string | null
           created_at?: string | null
           created_by?: string
+          distributor?: string | null
           email?: string | null
           foundation_date?: string | null
           id?: string
           legal_nature?: string | null
           phone?: string | null
+          rating?: number | null
           region?: string | null
           registration_status?: string | null
           segment?: string | null
+          services?: string | null
           share_capital?: number | null
           state?: string | null
           trade_name?: string | null
@@ -207,6 +216,7 @@ export type Database = {
           mobile: string | null
           name: string
           phone: string | null
+          rating: number | null
           role: string | null
           updated_at: string | null
         }
@@ -220,6 +230,7 @@ export type Database = {
           mobile?: string | null
           name: string
           phone?: string | null
+          rating?: number | null
           role?: string | null
           updated_at?: string | null
         }
@@ -233,6 +244,7 @@ export type Database = {
           mobile?: string | null
           name?: string
           phone?: string | null
+          rating?: number | null
           role?: string | null
           updated_at?: string | null
         }
@@ -296,10 +308,12 @@ export type Database = {
           id: string
           location: string | null
           name: string
+          segmento: string | null
           start_date: string | null
           state: string | null
           status: string | null
           updated_at: string
+          updated_by: string | null
           website: string | null
         }
         Insert: {
@@ -311,10 +325,12 @@ export type Database = {
           id?: string
           location?: string | null
           name: string
+          segmento?: string | null
           start_date?: string | null
           state?: string | null
           status?: string | null
           updated_at?: string
+          updated_by?: string | null
           website?: string | null
         }
         Update: {
@@ -326,10 +342,12 @@ export type Database = {
           id?: string
           location?: string | null
           name?: string
+          segmento?: string | null
           start_date?: string | null
           state?: string | null
           status?: string | null
           updated_at?: string
+          updated_by?: string | null
           website?: string | null
         }
         Relationships: []
@@ -401,6 +419,7 @@ export type Database = {
           created_at: string | null
           created_by: string
           id: string
+          tags: string[] | null
           title: string
           type: string
           updated_at: string | null
@@ -413,6 +432,7 @@ export type Database = {
           created_at?: string | null
           created_by: string
           id?: string
+          tags?: string[] | null
           title: string
           type: string
           updated_at?: string | null
@@ -425,13 +445,58 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           id?: string
+          tags?: string[] | null
           title?: string
           type?: string
           updated_at?: string | null
           updated_by?: string | null
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_base_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          knowledge_base_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          knowledge_base_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          knowledge_base_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_favorites_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_base_history: {
         Row: {
@@ -478,6 +543,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "knowledge_base_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "knowledge_base_history_knowledge_base_id_fkey"
             columns: ["knowledge_base_id"]
             isOneToOne: false
@@ -512,6 +584,7 @@ export type Database = {
           assigned_to: string
           business_type: Database["public"]["Enums"]["business_type"] | null
           client_id: string
+          close_cycle_days: number | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -531,6 +604,7 @@ export type Database = {
           assigned_to: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
           client_id: string
+          close_cycle_days?: number | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -550,6 +624,7 @@ export type Database = {
           assigned_to?: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
           client_id?: string
+          close_cycle_days?: number | null
           created_at?: string | null
           created_by?: string
           description?: string | null
