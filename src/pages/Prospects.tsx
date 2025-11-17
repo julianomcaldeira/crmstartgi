@@ -156,18 +156,54 @@ const Prospects = () => {
 
   const fetchClients = async () => {
     try {
-      const { data, error } = await supabase
+      console.log("Fetching clients...");
+      
+      // Buscar clientes
+      const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
-        .select(`
-          *,
-          contacts(*),
-          created_by_profile:profiles!clients_created_by_fkey(full_name, email),
-          client_feiras(feira_id)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setClients(data || []);
+      if (clientsError) {
+        console.error("Error fetching clients:", clientsError);
+        throw clientsError;
+      }
+
+      console.log("Clients data fetched:", clientsData?.length || 0, "records");
+
+      // Buscar dados adicionais para cada cliente
+      const enrichedClients = await Promise.all(
+        (clientsData || []).map(async (client) => {
+          // Buscar contatos
+          const { data: contacts } = await supabase
+            .from("contacts")
+            .select("*")
+            .eq("client_id", client.id);
+
+          // Buscar perfil do criador
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", client.created_by)
+            .single();
+
+          // Buscar feiras vinculadas
+          const { data: clientFeiras } = await supabase
+            .from("client_feiras")
+            .select("feira_id")
+            .eq("client_id", client.id);
+
+          return {
+            ...client,
+            contacts: contacts || [],
+            created_by_profile: profile || null,
+            client_feiras: clientFeiras || []
+          };
+        })
+      );
+
+      console.log("Enriched clients:", enrichedClients.length);
+      setClients(enrichedClients);
     } catch (error) {
       console.error("Error fetching clients:", error);
       toast.error("Erro ao carregar prospects");
