@@ -22,6 +22,7 @@ const Dashboard = () => {
   const [forecastAccounts, setForecastAccounts] = useState<any[]>([]);
   const [funnelData, setFunnelData] = useState<any[]>([]);
   const [avgCloseCycle, setAvgCloseCycle] = useState<number>(0);
+  const [upcomingFeiras, setUpcomingFeiras] = useState<any[]>([]);
 
   useEffect(() => {
     initializeDashboard();
@@ -61,6 +62,7 @@ const Dashboard = () => {
         fetchForecastAccounts(),
         fetchFunnelData(),
         fetchAvgCloseCycle(),
+        fetchUpcomingFeiras(),
       ]);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -235,6 +237,26 @@ const Dashboard = () => {
     }
   };
 
+  const fetchUpcomingFeiras = async () => {
+    try {
+      const [year, month] = selectedPeriod.split("-");
+      const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+      const endDate = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+
+      const { data, error } = await supabase
+        .from("feiras")
+        .select("*")
+        .gte("start_date", format(startDate, "yyyy-MM-dd"))
+        .lte("start_date", format(endDate, "yyyy-MM-dd"))
+        .order("start_date", { ascending: true });
+
+      if (error) throw error;
+      setUpcomingFeiras(data || []);
+    } catch (error) {
+      console.error("Error fetching upcoming feiras:", error);
+    }
+  };
+
   const getTaskTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       ligacao: "Ligação",
@@ -354,7 +376,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      {/* Ciclo Médio de Fechamento */}
+      {/* Ciclo Médio de Fechamento e Feiras */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-l-4 border-l-orange-500">
           <CardContent className="p-4">
@@ -368,6 +390,49 @@ const Dashboard = () => {
               </div>
               <Clock className="h-8 w-8 text-orange-500/30" />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-cyan-500 md:col-span-3">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-4 w-4 text-cyan-500" />
+              <p className="text-xs text-muted-foreground font-medium">Feiras Previstas no Mês</p>
+              <Badge variant="secondary" className="text-xs">{upcomingFeiras.length}</Badge>
+            </div>
+            {upcomingFeiras.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-2">
+                Nenhuma feira prevista para este mês
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {upcomingFeiras.slice(0, 3).map((feira) => (
+                  <div key={feira.id} className="flex items-center justify-between text-xs bg-muted/50 p-2 rounded">
+                    <div className="flex-1">
+                      <p className="font-medium">{feira.name}</p>
+                      <p className="text-muted-foreground text-[10px]">
+                        {feira.city && feira.state && `${feira.city}, ${feira.state}`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-cyan-600">
+                        {format(new Date(feira.start_date), "dd/MM")}
+                      </p>
+                      {feira.end_date && (
+                        <p className="text-[10px] text-muted-foreground">
+                          até {format(new Date(feira.end_date), "dd/MM")}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {upcomingFeiras.length > 3 && (
+                  <p className="text-[10px] text-muted-foreground text-center pt-1">
+                    +{upcomingFeiras.length - 3} feira{upcomingFeiras.length - 3 > 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

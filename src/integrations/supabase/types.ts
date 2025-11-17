@@ -513,6 +513,48 @@ export type Database = {
           },
         ]
       }
+      knowledge_base_comments: {
+        Row: {
+          comment: string
+          created_at: string | null
+          id: string
+          knowledge_base_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string | null
+          id?: string
+          knowledge_base_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string | null
+          id?: string
+          knowledge_base_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_base_comments_knowledge_base_id_fkey"
+            columns: ["knowledge_base_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_base"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_base_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base_favorites: {
         Row: {
           created_at: string | null
