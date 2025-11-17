@@ -79,6 +79,9 @@ const Admin = () => {
   
   // Export state
   const [exportingData, setExportingData] = useState(false);
+  
+  // Clean database state
+  const [cleaningDatabase, setCleaningDatabase] = useState(false);
 
   useEffect(() => {
     checkAdminAccess();
@@ -446,6 +449,33 @@ const Admin = () => {
       setLossReasonForm({ reason: "" });
     }
     setLossReasonDialogOpen(true);
+  };
+
+  const handleCleanProspectsDatabase = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Esta ação irá apagar TODOS os prospects do sistema. Esta ação não pode ser desfeita. Deseja continuar?")) {
+      return;
+    }
+
+    if (!confirm("Confirme novamente: Tem certeza que deseja limpar toda a base de prospects?")) {
+      return;
+    }
+
+    setCleaningDatabase(true);
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all
+
+      if (error) throw error;
+
+      toast.success("Base de prospects limpa com sucesso!");
+    } catch (error: any) {
+      console.error("Erro ao limpar base:", error);
+      toast.error("Erro ao limpar base de prospects");
+    } finally {
+      setCleaningDatabase(false);
+    }
   };
 
   const handleExportDatabase = async () => {
@@ -1122,24 +1152,44 @@ const Admin = () => {
                   <li>Usuários do sistema e seus perfis de acesso</li>
                 </ul>
               </div>
-              <Button
-                onClick={handleExportDatabase}
-                disabled={exportingData}
-                size="lg"
-                className="bg-primary hover:bg-primary-dark text-primary-foreground"
-              >
-                {exportingData ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
-                    Exportando...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar Base de Dados (CSV)
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-col gap-4">
+                <Button
+                  onClick={handleExportDatabase}
+                  disabled={exportingData}
+                  size="lg"
+                  className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                >
+                  {exportingData ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
+                      Exportando...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Base de Dados (CSV)
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleCleanProspectsDatabase}
+                  disabled={cleaningDatabase}
+                  size="lg"
+                  variant="destructive"
+                >
+                  {cleaningDatabase ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Limpando...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Limpar Base de Prospects
+                    </>
+                  )}
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground mt-4">
                 O arquivo será salvo como: startgi_database_export_AAAA-MM-DD.csv
               </p>

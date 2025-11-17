@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
-import { BatchImportDialog } from "@/components/BatchImportDialog";
+import { ImportWizard } from "@/components/ImportWizard";
 import { validateCNPJ } from "@/lib/cnpjValidator";
 import {
   Dialog,
@@ -553,7 +553,7 @@ const Prospects = () => {
             Importar Planilha
           </Button>
           
-          <BatchImportDialog
+          <ImportWizard
             open={importDialogOpen}
             onOpenChange={setImportDialogOpen}
             onSuccess={fetchClients}
