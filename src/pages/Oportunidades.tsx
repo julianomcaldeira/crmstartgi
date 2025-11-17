@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -82,6 +82,11 @@ const Oportunidades = () => {
   const [quickProbabilityFilter, setQuickProbabilityFilter] = useState("all");
   const [quickBusinessTypeFilter, setQuickBusinessTypeFilter] = useState("all");
   const [compactView, setCompactView] = useViewMode("opportunities-compact-view", "cards");
+  
+  // Quick filters for Kanban
+  const [quickFilterSeller, setQuickFilterSeller] = useState("");
+  const [quickFilterProduct, setQuickFilterProduct] = useState("");
+  const [quickFilterProbability, setQuickFilterProbability] = useState("");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -258,10 +263,58 @@ const Oportunidades = () => {
       const matchesQuickProbability = quickProbabilityFilter === "all" || opp.probability?.toString() === quickProbabilityFilter;
       const matchesQuickBusinessType = quickBusinessTypeFilter === "all" || opp.business_type === quickBusinessTypeFilter;
       
+      // Quick filters for Kanban
+      const matchesQuickSeller = !quickFilterSeller || opp.assigned_to === quickFilterSeller;
+      const matchesQuickProduct = !quickFilterProduct || opp.product_id === quickFilterProduct;
+      const matchesQuickProbabilityKanban = !quickFilterProbability || opp.probability?.toString() === quickFilterProbability;
+      
       return matchesClient && matchesStartDate && matchesEndDate && 
              matchesAssignedTo && matchesProduct && matchesProbability && matchesBusinessType &&
-             matchesQuickStatus && matchesQuickProbability && matchesQuickBusinessType;
+             matchesQuickStatus && matchesQuickProbability && matchesQuickBusinessType &&
+             matchesQuickSeller && matchesQuickProduct && matchesQuickProbabilityKanban;
     });
+  };
+
+  const calculateStageMetrics = (stageKey: string) => {
+    const stageOpps = opportunities.filter(opp => opp.status === stageKey);
+    const stageIndex = stages.findIndex(s => s.key === stageKey);
+    const nextStage = stages[stageIndex + 1];
+    
+    // Calculate average days in stage
+    let avgDays = 0;
+    if (stageOpps.length > 0) {
+      const totalDays = stageOpps.reduce((sum, opp) => {
+        const createdDate = new Date(opp.created_at);
+        const now = new Date();
+        const days = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+        return sum + days;
+      }, 0);
+      avgDays = Math.round(totalDays / stageOpps.length);
+    }
+    
+    // Calculate conversion rate to next stage
+    let conversionRate = 0;
+    if (nextStage && stageIndex < stages.length - 2) { // Exclude "won" and "lost"
+      const allOppsFromThisStage = opportunities.filter(opp => 
+        opp.status === stageKey || opp.status === nextStage.key
+      );
+      if (allOppsFromThisStage.length > 0) {
+        const converted = opportunities.filter(opp => opp.status === nextStage.key).length;
+        conversionRate = Math.round((converted / allOppsFromThisStage.length) * 100);
+      }
+    }
+    
+    // Determine color based on metrics
+    let daysColor = "text-green-600 dark:text-green-400";
+    let conversionColor = "text-green-600 dark:text-green-400";
+    
+    if (avgDays > 30) daysColor = "text-red-600 dark:text-red-400";
+    else if (avgDays > 15) daysColor = "text-amber-600 dark:text-amber-400";
+    
+    if (conversionRate < 30) conversionColor = "text-red-600 dark:text-red-400";
+    else if (conversionRate < 60) conversionColor = "text-amber-600 dark:text-amber-400";
+    
+    return { avgDays, conversionRate, daysColor, conversionColor };
   };
 
   const getOpportunitiesByStage = (stageKey: string) => {
@@ -974,11 +1027,118 @@ const Oportunidades = () => {
           </p>
         </Card>
       ) : viewModeKanban === "kanban" ? (
-        <DndContext 
-          sensors={sensors}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
+        <>
+          {/* Quick Filters for Kanban */}
+          <div className="mb-4 space-y-3 animate-fade-in">
+            <div className="flex flex-wrap items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Filtros Rápidos:</span>
+              
+              {/* Seller Filter */}
+              <Badge
+                variant={quickFilterSeller ? "default" : "outline"}
+                className="cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => setQuickFilterSeller("")}
+              >
+                {quickFilterSeller 
+                  ? users.find(u => u.id === quickFilterSeller)?.full_name || "Vendedor"
+                  : "Todos Vendedores"}
+                {quickFilterSeller && <X className="ml-1 h-3 w-3" />}
+              </Badge>
+              {!quickFilterSeller && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {users.map((user) => (
+                      <DropdownMenuItem
+                        key={user.id}
+                        onClick={() => setQuickFilterSeller(user.id)}
+                      >
+                        {user.full_name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
+              {/* Product Filter */}
+              <Badge
+                variant={quickFilterProduct ? "default" : "outline"}
+                className="cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => setQuickFilterProduct("")}
+              >
+                {quickFilterProduct 
+                  ? products.find(p => p.id === quickFilterProduct)?.name || "Produto"
+                  : "Todos Produtos"}
+                {quickFilterProduct && <X className="ml-1 h-3 w-3" />}
+              </Badge>
+              {!quickFilterProduct && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    {products.map((product) => (
+                      <DropdownMenuItem
+                        key={product.id}
+                        onClick={() => setQuickFilterProduct(product.id)}
+                      >
+                        {product.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
+              {/* Probability Filter */}
+              <Badge
+                variant={quickFilterProbability ? "default" : "outline"}
+                className="cursor-pointer hover:scale-105 transition-transform"
+                onClick={() => setQuickFilterProbability("")}
+              >
+                {quickFilterProbability 
+                  ? `${quickFilterProbability}%`
+                  : "Todas Probabilidades"}
+                {quickFilterProbability && <X className="ml-1 h-3 w-3" />}
+              </Badge>
+              {!quickFilterProbability && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setQuickFilterProbability("10")}>10%</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setQuickFilterProbability("25")}>25%</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setQuickFilterProbability("50")}>50%</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setQuickFilterProbability("80")}>80%</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setQuickFilterProbability("90")}>90%</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+            
+            {/* Contador de oportunidades filtradas */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUpIcon className="h-4 w-4" />
+              <span className="font-medium">
+                {getFilteredOpportunities().length} oportunidades encontradas
+              </span>
+            </div>
+          </div>
+          
+          <DndContext 
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
           <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
@@ -986,6 +1146,7 @@ const Oportunidades = () => {
                 (sum, opp) => sum + (Number(opp.value) || 0),
                 0
               );
+              const metrics = calculateStageMetrics(stage.key);
 
               return (
                 <div key={stage.key} className="flex-shrink-0 w-64 space-y-2 animate-fade-in snap-center">
@@ -1005,6 +1166,32 @@ const Oportunidades = () => {
                           {formatCurrency(stageValue)}
                         </p>
                       </div>
+                      
+                      {/* Performance Metrics */}
+                      {stage.key !== "won" && stage.key !== "lost" && (
+                        <div className="pt-2 space-y-1 border-t border-border/30">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-[9px] text-muted-foreground">Tempo médio</span>
+                            </div>
+                            <span className={`text-[10px] font-bold ${metrics.daysColor}`}>
+                              {metrics.avgDays}d
+                            </span>
+                          </div>
+                          {metrics.conversionRate > 0 && (
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <TrendingUpIcon className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-[9px] text-muted-foreground">Taxa conversão</span>
+                              </div>
+                              <span className={`text-[10px] font-bold ${metrics.conversionColor}`}>
+                                {metrics.conversionRate}%
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardHeader>
                   </Card>
 
@@ -1183,6 +1370,7 @@ const Oportunidades = () => {
       })}
     </div>
   </DndContext>
+        </>
       ) : (
         <div 
           key={viewModeKanban}
