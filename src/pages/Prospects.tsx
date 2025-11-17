@@ -80,6 +80,7 @@ const Prospects = () => {
   const [registrationStatus, setRegistrationStatus] = useState("");
   const [foundationDate, setFoundationDate] = useState("");
   const [cnaePrincipal, setCnaePrincipal] = useState("");
+  const [cnaeDescription, setCnaeDescription] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -278,6 +279,7 @@ const Prospects = () => {
         setRegistrationStatus(data.registration_status || "");
         setFoundationDate(data.foundation_date || "");
         setCnaePrincipal(data.cnae_principal || "");
+        setCnaeDescription(data.cnae_description || "");
         
         const source = data.source === 'cache' ? ' (do cache)' : ' (da Receita Federal)';
         toast.success(`Dados da empresa carregados${source}!`);
@@ -347,6 +349,7 @@ const Prospects = () => {
           registration_status: registrationStatus,
           foundation_date: foundationDate || null,
           cnae_principal: cnaePrincipal,
+          cnae_description: cnaeDescription,
           created_by: user.id,
         })
         .select()
@@ -411,6 +414,7 @@ const Prospects = () => {
     setRegistrationStatus("");
     setFoundationDate("");
     setCnaePrincipal("");
+    setCnaeDescription("");
     setCompanySize("");
     setRegion("");
     setCompetitors("");
@@ -687,6 +691,16 @@ const Prospects = () => {
                       value={cnaePrincipal}
                       onChange={(e) => setCnaePrincipal(e.target.value)}
                       placeholder="0000-0/00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cnaeDescription">CNAE Descrição</Label>
+                    <Input
+                      id="cnaeDescription"
+                      value={cnaeDescription}
+                      onChange={(e) => setCnaeDescription(e.target.value)}
+                      placeholder="Descrição da atividade principal"
                     />
                   </div>
 

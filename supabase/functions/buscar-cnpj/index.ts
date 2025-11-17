@@ -73,6 +73,7 @@ serve(async (req) => {
           registration_status: cachedData.registration_status,
           foundation_date: cachedData.foundation_date,
           cnae_principal: cachedData.cnae_principal,
+          cnae_description: cachedData.cnae_description,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -142,6 +143,7 @@ serve(async (req) => {
       registration_status: data.situacao || "",
       foundation_date: data.data_situacao || null,
       cnae_principal: data.atividade_principal?.[0]?.code || "",
+      cnae_description: data.atividade_principal?.[0]?.text || "",
     };
 
     console.log("Salvando no cache...");
@@ -164,6 +166,7 @@ serve(async (req) => {
         registration_status: transformedData.registration_status,
         foundation_date: transformedData.foundation_date,
         cnae_principal: transformedData.cnae_principal,
+        cnae_description: transformedData.cnae_description,
         cached_at: new Date().toISOString(),
       }, {
         onConflict: "cnpj",
