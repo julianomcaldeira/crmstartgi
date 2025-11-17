@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { AlertsTester } from "@/components/AlertsTester";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -652,6 +653,9 @@ const Admin = () => {
           </div>
         </Card>
       </div>
+
+      {/* Alerts System Tester */}
+      <AlertsTester />
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
