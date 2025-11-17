@@ -98,7 +98,7 @@ const Dashboard = () => {
 
     let goalsQuery = supabase
       .from("goals")
-      .select("*, profiles(full_name)")
+      .select("*, assigned_user:profiles!goals_assigned_to_fkey(full_name)")
       .lte("start_date", format(endDate, "yyyy-MM-dd"))
       .gte("end_date", format(startDate, "yyyy-MM-dd"));
 
@@ -147,7 +147,7 @@ const Dashboard = () => {
       .select(`
         *,
         clients(company_name, trade_name),
-        profiles(full_name)
+        assigned_user:profiles!opportunities_assigned_to_fkey(full_name)
       `)
       .in("status", ["qualified", "proposal", "negotiation"])
       .gte("expected_close_date", format(startDate, "yyyy-MM-dd"))

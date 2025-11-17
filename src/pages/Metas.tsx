@@ -118,7 +118,7 @@ const Metas = () => {
         .from("goals")
         .select(`
           *,
-          profiles:assigned_to(id, full_name, email)
+          assigned_user:profiles!goals_assigned_to_fkey(id, full_name, email)
         `)
         .order("end_date", { ascending: false });
 

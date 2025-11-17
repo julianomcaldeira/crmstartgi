@@ -181,7 +181,7 @@ const Prospects = () => {
         .select(`
           *,
           contacts(*),
-          created_by_profile:profiles!created_by(full_name, email),
+          created_by_profile:profiles!clients_created_by_fkey(full_name, email),
           client_feiras(feira_id)
         `)
         .order("created_at", { ascending: false });
