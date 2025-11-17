@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -10,16 +10,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2 } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
+import { Switch } from "@/components/ui/switch";
 
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isGestor, setIsGestor] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  
+  // Filter states
+  const [filterSeller, setFilterSeller] = useState<string>("all");
+  const [filterGoalType, setFilterGoalType] = useState<string>("all");
+  const [filterPeriod, setFilterPeriod] = useState<string>("all");
+  const [groupBySeller, setGroupBySeller] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -34,15 +43,22 @@ const Metas = () => {
   });
 
   useEffect(() => {
-    checkAdminStatus();
-    fetchGoals();
-    fetchUsers();
+    const initializeData = async () => {
+      await Promise.all([
+        checkAdminStatus(),
+        fetchUsers(),
+      ]);
+      await fetchGoals();
+    };
+    initializeData();
   }, []);
 
   const checkAdminStatus = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      setCurrentUserId(user.id);
 
       const { data, error } = await supabase
         .from("user_roles")
@@ -52,6 +68,7 @@ const Metas = () => {
 
       if (error) throw error;
       setIsAdmin(data?.role === "admin");
+      setIsGestor(data?.role === "gestor");
     } catch (error) {
       console.error("Error checking admin status:", error);
     }
@@ -76,25 +93,26 @@ const Metas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Check if user is admin
+      // Check if user is admin or gestor
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .single();
 
-      const isUserAdmin = roleData?.role === "admin";
+      const canViewAll = roleData?.role === "admin" || roleData?.role === "gestor";
 
+      // Optimized query with JOIN
       let query = supabase
         .from("goals")
         .select(`
           *,
-          profiles:assigned_to(full_name, email)
+          profiles:assigned_to(id, full_name, email)
         `)
-        .order("end_date", { ascending: true });
+        .order("end_date", { ascending: false });
 
-      // If not admin, only show their goals
-      if (!isUserAdmin) {
+      // If not admin/gestor, only show their own goals
+      if (!canViewAll) {
         query = query.or(`assigned_to.eq.${user.id},assigned_to.is.null`);
       }
 
@@ -239,13 +257,56 @@ const Metas = () => {
     }
   };
 
+  // Memoized filtered goals
+  const filteredGoals = useMemo(() => {
+    let filtered = [...goals];
+
+    // Filter by seller
+    if (filterSeller !== "all") {
+      if (filterSeller === "unassigned") {
+        filtered = filtered.filter(g => !g.assigned_to);
+      } else {
+        filtered = filtered.filter(g => g.assigned_to === filterSeller);
+      }
+    }
+
+    // Filter by goal type
+    if (filterGoalType !== "all") {
+      filtered = filtered.filter(g => g.goal_type === filterGoalType);
+    }
+
+    // Filter by period
+    if (filterPeriod !== "all") {
+      filtered = filtered.filter(g => g.period === filterPeriod);
+    }
+
+    return filtered;
+  }, [goals, filterSeller, filterGoalType, filterPeriod]);
+
+  // Group goals by seller
+  const groupedGoals = useMemo(() => {
+    if (!groupBySeller) return null;
+
+    const grouped = new Map<string, any[]>();
+    
+    filteredGoals.forEach(goal => {
+      const key = goal.assigned_to || "unassigned";
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(goal);
+    });
+
+    return grouped;
+  }, [filteredGoals, groupBySeller]);
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Metas</h1>
           <p className="text-muted-foreground">
-            {isAdmin ? "Gerencie as metas da equipe" : "Acompanhe seu progresso e objetivos"}
+            {isAdmin || isGestor ? "Gerencie as metas da equipe" : "Acompanhe seu progresso e objetivos"}
           </p>
         </div>
         {isAdmin && (
@@ -400,9 +461,91 @@ const Metas = () => {
         )}
       </div>
 
+      {/* Filters */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Vendedor
+            </Label>
+            <Select value={filterSeller} onValueChange={setFilterSeller}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(isAdmin || isGestor) && (
+                  <>
+                    <SelectItem value="unassigned">Não atribuído</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                {!isAdmin && !isGestor && (
+                  <SelectItem value={currentUserId}>Minhas metas</SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tipo de Meta</Label>
+            <Select value={filterGoalType} onValueChange={setFilterGoalType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="revenue">Receita Caixa</SelectItem>
+                <SelectItem value="annualized_sales">Venda Anualizada</SelectItem>
+                <SelectItem value="tasks">Tarefas</SelectItem>
+                <SelectItem value="activities">Atividades</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Período</Label>
+            <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="mensal">Mensal</SelectItem>
+                <SelectItem value="semestral">Semestral</SelectItem>
+                <SelectItem value="anual">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(isAdmin || isGestor) && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Agrupar por vendedor
+              </Label>
+              <div className="flex items-center space-x-2 h-10">
+                <Switch
+                  checked={groupBySeller}
+                  onCheckedChange={setGroupBySeller}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {groupBySeller ? "Ativado" : "Desativado"}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {loading ? (
         <p className="text-center text-muted-foreground">Carregando...</p>
-      ) : goals.length === 0 ? (
+      ) : filteredGoals.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <Target className="mx-auto mb-4 text-muted-foreground" size={48} />
@@ -411,9 +554,116 @@ const Metas = () => {
             </p>
           </CardContent>
         </Card>
+      ) : groupBySeller && groupedGoals ? (
+        <div className="space-y-6">
+          {Array.from(groupedGoals.entries()).map(([sellerId, sellerGoals]) => {
+            const seller = sellerId === "unassigned" 
+              ? { full_name: "Não atribuído", email: "" }
+              : users.find(u => u.id === sellerId);
+
+            return (
+              <Card key={sellerId} className="border-2">
+                <CardHeader className="bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Users className="text-primary" size={20} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl">
+                        {seller?.full_name || "Vendedor desconhecido"}
+                      </CardTitle>
+                      {seller?.email && (
+                        <p className="text-sm text-muted-foreground">{seller.email}</p>
+                      )}
+                    </div>
+                    <Badge variant="secondary" className="ml-auto">
+                      {sellerGoals.length} {sellerGoals.length === 1 ? "meta" : "metas"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {sellerGoals.map((goal) => {
+                      const Icon = getGoalIcon(goal.goal_type);
+                      return (
+                        <Card key={goal.id} className="hover:shadow-md transition-shadow">
+                          <CardHeader>
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 bg-primary/10 rounded-lg">
+                                  <Icon className="text-primary" size={20} />
+                                </div>
+                                <div className="flex-1">
+                                  <CardTitle className="text-base mb-1">
+                                    {goal.title}
+                                  </CardTitle>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {getGoalTypeLabel(goal.goal_type)}
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {getPeriodLabel(goal.period)}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              </div>
+                              {isAdmin && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => openEditDialog(goal)}
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleDeleteGoal(goal.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-3">
+                            {goal.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {goal.description}
+                              </p>
+                            )}
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium">Meta</span>
+                                <span className="text-base font-bold text-primary">
+                                  {formatValue(goal.target_value, goal.goal_type)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="pt-2 border-t border-border">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Período</span>
+                                <span className="font-medium">
+                                  {new Date(goal.start_date).toLocaleDateString("pt-BR")} - {new Date(goal.end_date).toLocaleDateString("pt-BR")}
+                                </span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.map((goal) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+          {filteredGoals.map((goal) => {
             const Icon = getGoalIcon(goal.goal_type);
 
             return (
