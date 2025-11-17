@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2 } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -93,14 +93,62 @@ const Oportunidades = () => {
   const [businessType, setBusinessType] = useState("cliente_novo");
 
   const stages = [
-    { key: "lead", label: "Lead", color: "bg-muted text-muted-foreground" },
-    { key: "contacted", label: "Contatado", color: "bg-info/20 text-info" },
-    { key: "qualified", label: "Qualificado", color: "bg-primary/20 text-primary" },
-    { key: "apresentacao", label: "Apresentação", color: "bg-purple-500/20 text-purple-500" },
-    { key: "proposal", label: "Proposta", color: "bg-warning/20 text-warning" },
-    { key: "negotiation", label: "Negociação", color: "bg-accent/20 text-accent" },
-    { key: "won", label: "Ganho", color: "bg-success/20 text-success" },
-    { key: "lost", label: "Perdido", color: "bg-destructive/20 text-destructive" },
+    { 
+      key: "lead", 
+      label: "Lead", 
+      color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+      borderColor: "border-l-slate-400",
+      bgGradient: "from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900"
+    },
+    { 
+      key: "contacted", 
+      label: "Contatado", 
+      color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+      borderColor: "border-l-blue-500",
+      bgGradient: "from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-950"
+    },
+    { 
+      key: "qualified", 
+      label: "Qualificado", 
+      color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300",
+      borderColor: "border-l-cyan-500",
+      bgGradient: "from-cyan-50 to-cyan-100 dark:from-cyan-900 dark:to-cyan-950"
+    },
+    { 
+      key: "apresentacao", 
+      label: "Apresentação", 
+      color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+      borderColor: "border-l-purple-500",
+      bgGradient: "from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-950"
+    },
+    { 
+      key: "proposal", 
+      label: "Proposta", 
+      color: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+      borderColor: "border-l-amber-500",
+      bgGradient: "from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-950"
+    },
+    { 
+      key: "negotiation", 
+      label: "Negociação", 
+      color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+      borderColor: "border-l-orange-500",
+      bgGradient: "from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-950"
+    },
+    { 
+      key: "won", 
+      label: "Ganho", 
+      color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+      borderColor: "border-l-green-500",
+      bgGradient: "from-green-50 to-green-100 dark:from-green-900 dark:to-green-950"
+    },
+    { 
+      key: "lost", 
+      label: "Perdido", 
+      color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+      borderColor: "border-l-red-500",
+      bgGradient: "from-red-50 to-red-100 dark:from-red-900 dark:to-red-950"
+    },
   ];
 
   useEffect(() => {
@@ -916,7 +964,7 @@ const Oportunidades = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <div className="flex gap-4 overflow-x-auto pb-4 px-2">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageValue = stageOpps.reduce(
@@ -925,21 +973,28 @@ const Oportunidades = () => {
               );
 
               return (
-                <div key={stage.key} className="space-y-3">
-                  <Card className="shadow-md">
-                    <CardHeader className="p-4">
-                      <h3 className="font-semibold text-sm mb-1">{stage.label}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {stageOpps.length} oportunidade{stageOpps.length !== 1 ? "s" : ""}
-                      </p>
-                      <p className="text-xs font-medium text-primary mt-1">
-                        {formatCurrency(stageValue)}
-                      </p>
+                <div key={stage.key} className="flex-shrink-0 w-80 space-y-3 animate-fade-in">
+                  <Card className={`shadow-lg bg-gradient-to-br ${stage.bgGradient} border-2 ${stage.borderColor}`}>
+                    <CardHeader className="p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h3 className={`font-bold text-base ${stage.color.split(' ')[1]}`}>
+                          {stage.label}
+                        </h3>
+                        <Badge className={`${stage.color} font-semibold`}>
+                          {stageOpps.length}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border/30">
+                        <span className="text-xs font-medium text-muted-foreground">Total</span>
+                        <p className="text-sm font-bold text-primary">
+                          {formatCurrency(stageValue)}
+                        </p>
+                      </div>
                     </CardHeader>
                   </Card>
 
                   <DroppableColumn id={stage.key}>
-                    <div className="space-y-3">
+                    <div className="space-y-3 min-h-[200px]">
                       {stageOpps.map((opp) => {
                         const nextStage = getNextStage(opp.status);
                         const previousStage = getPreviousStage(opp.status);
@@ -947,15 +1002,15 @@ const Oportunidades = () => {
                         return (
                           <DraggableCard key={opp.id} id={opp.id}>
                             <Card
-                              className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary group cursor-pointer"
+                              className={`hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border-l-4 ${stage.borderColor} group cursor-pointer bg-gradient-to-br from-card to-card/50 backdrop-blur-sm animate-fade-in`}
                               onClick={() => {
                                 setSelectedOpportunity(opp);
                                 setViewDialogOpen(true);
                               }}
                             >
-                        <CardHeader className="p-3 pb-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <CardTitle className="text-sm line-clamp-2 flex-1">{opp.title}</CardTitle>
+                        <CardHeader className="p-4 pb-3">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <CardTitle className="text-sm font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{opp.title}</CardTitle>
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
@@ -998,12 +1053,16 @@ const Oportunidades = () => {
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="p-3 pt-0 space-y-2">
-                          <p className="text-xs text-muted-foreground line-clamp-1">
-                            {opp.client?.trade_name || opp.client?.company_name}
-                          </p>
+                        <CardContent className="p-4 pt-0 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Building2 size={14} className="text-muted-foreground flex-shrink-0" />
+                            <p className="text-xs font-medium text-foreground line-clamp-1">
+                              {opp.client?.trade_name || opp.client?.company_name}
+                            </p>
+                          </div>
+                          
                           {opp.product && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg border border-primary/10">
                               {opp.product.logo_url ? (
                                 <img
                                   src={opp.product.logo_url}
@@ -1011,39 +1070,44 @@ const Oportunidades = () => {
                                   className="h-6 w-6 object-contain bg-white rounded p-0.5"
                                 />
                               ) : null}
-                              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+                              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 font-semibold">
                                 {opp.product.name}
                               </Badge>
                             </div>
                           )}
+                          
                           {opp.value && (
-                            <p className="text-sm font-semibold text-primary">
-                              {formatCurrency(opp.value)}
-                            </p>
+                            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                              <span className="text-xs font-medium text-muted-foreground">Valor</span>
+                              <p className="text-base font-bold text-primary">
+                                {formatCurrency(opp.value)}
+                              </p>
+                            </div>
                           )}
-                          <div className="flex items-center justify-between gap-2">
-                            <Badge variant="outline" className="text-xs">
+                          
+                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
+                            <Badge variant="outline" className="text-xs font-semibold">
                               {opp.probability}%
                             </Badge>
                             {opp.assigned && (
-                              <p className="text-xs text-muted-foreground truncate">
+                              <p className="text-xs text-muted-foreground truncate font-medium">
                                 {opp.assigned.full_name}
                               </p>
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-1 pt-2 border-t opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-2 pt-3 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-all duration-300">
                             {previousStage && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 h-7 text-xs"
+                                className="flex-1 h-8 text-xs font-semibold hover:bg-muted"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   updateOpportunityStatus(opp.id, previousStage.key);
                                 }}
                               >
-                                <ChevronLeft size={12} className="mr-1" />
+                                <ChevronLeft size={14} className="mr-1" />
                                 {previousStage.label}
                               </Button>
                             )}
@@ -1051,14 +1115,14 @@ const Oportunidades = () => {
                               <Button
                                 variant="default"
                                 size="sm"
-                                className="flex-1 h-7 text-xs"
+                                className="flex-1 h-8 text-xs font-semibold bg-primary hover:bg-primary/90 shadow-md"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   updateOpportunityStatus(opp.id, nextStage.key);
                                 }}
                               >
                                 {nextStage.label}
-                                <ChevronRight size={12} className="ml-1" />
+                                <ChevronRight size={14} className="ml-1" />
                               </Button>
                             )}
                           </div>
