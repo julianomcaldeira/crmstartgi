@@ -77,6 +77,8 @@ const Prospects = () => {
   const [distributor, setDistributor] = useState("");
   const [services, setServices] = useState("");
   const [rating, setRating] = useState<number>(0);
+  const [registrationStatus, setRegistrationStatus] = useState("");
+  const [foundationDate, setFoundationDate] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -272,6 +274,8 @@ const Prospects = () => {
         setSegment(data.segment || "");
         setShareCapital(data.share_capital?.toString() || "");
         setLegalNature(data.legal_nature || "");
+        setRegistrationStatus(data.registration_status || "");
+        setFoundationDate(data.foundation_date || "");
         
         const source = data.source === 'cache' ? ' (do cache)' : ' (da Receita Federal)';
         toast.success(`Dados da empresa carregados${source}!`);
@@ -338,6 +342,8 @@ const Prospects = () => {
           distributor: distributor,
           services: services,
           rating: rating > 0 ? rating : null,
+          registration_status: registrationStatus,
+          foundation_date: foundationDate || null,
           created_by: user.id,
         })
         .select()
@@ -399,6 +405,8 @@ const Prospects = () => {
     setSegment("");
     setShareCapital("");
     setLegalNature("");
+    setRegistrationStatus("");
+    setFoundationDate("");
     setCompanySize("");
     setRegion("");
     setCompetitors("");
@@ -666,6 +674,27 @@ const Prospects = () => {
                       value={legalNature}
                       onChange={(e) => setLegalNature(e.target.value)}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="registrationStatus">Situação</Label>
+                      <Input
+                        id="registrationStatus"
+                        value={registrationStatus}
+                        onChange={(e) => setRegistrationStatus(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="foundationDate">Data de Abertura</Label>
+                      <Input
+                        id="foundationDate"
+                        type="date"
+                        value={foundationDate}
+                        onChange={(e) => setFoundationDate(e.target.value)}
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
