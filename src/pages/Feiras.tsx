@@ -47,6 +47,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
+import { SwipeableCard } from "@/components/SwipeableCard";
 
 const Feiras = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
@@ -584,43 +585,48 @@ const Feiras = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredFeiras.map((feira) => (
-            <Card key={feira.id} className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
-              <div className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <Checkbox
-                      checked={selectedFeiras.includes(feira.id)}
-                      onCheckedChange={() => toggleFeiraSelection(feira.id)}
-                      className="mt-1 flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 truncate">
-                        {feira.name}
-                      </h3>
-                      {getStatusBadge(feira.status)}
+            <SwipeableCard
+              key={feira.id}
+              onEdit={isAuthenticated ? () => openDialog(feira) : undefined}
+              onDelete={isAuthenticated ? () => handleDelete(feira) : undefined}
+            >
+              <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Checkbox
+                        checked={selectedFeiras.includes(feira.id)}
+                        onCheckedChange={() => toggleFeiraSelection(feira.id)}
+                        className="mt-1 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 truncate">
+                          {feira.name}
+                        </h3>
+                        {getStatusBadge(feira.status)}
+                      </div>
                     </div>
+                    {isAuthenticated && (
+                      <div className="hidden md:flex gap-1 flex-shrink-0">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => openDialog(feira)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(feira)}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  {isAuthenticated && (
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => openDialog(feira)}
-                        className="h-8 w-8"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(feira)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
 
                 {feira.description && (
                   <p className="text-sm text-muted-foreground line-clamp-2">
@@ -686,6 +692,7 @@ const Feiras = () => {
                 </div>
               </div>
             </Card>
+          </SwipeableCard>
           ))}
         </div>
       )}
