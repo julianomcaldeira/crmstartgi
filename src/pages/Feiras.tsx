@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Calendar as CalendarIcon,
   MapPin,
@@ -57,6 +58,13 @@ const Feiras = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [feiraToDelete, setFeiraToDelete] = useState<any>(null);
+  const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [deleteConfirmations, setDeleteConfirmations] = useState({
+    first: false,
+    second: false,
+    third: false,
+  });
 
   const [formData, setFormData] = useState({
     name: "",
@@ -233,6 +241,57 @@ const Feiras = () => {
     setEditingFeira(null);
   };
 
+  const handleBulkDelete = () => {
+    if (selectedFeiras.length === 0) {
+      toast.error("Selecione ao menos uma feira para excluir");
+      return;
+    }
+    setDeleteConfirmations({ first: false, second: false, third: false });
+    setBulkDeleteDialogOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
+    if (!deleteConfirmations.first || !deleteConfirmations.second || !deleteConfirmations.third) {
+      toast.error("Confirme todas as opções para prosseguir");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("feiras")
+        .delete()
+        .in("id", selectedFeiras);
+
+      if (error) throw error;
+
+      toast.success(`${selectedFeiras.length} feira(s) excluída(s) com sucesso`);
+      setSelectedFeiras([]);
+      fetchFeiras();
+    } catch (error) {
+      console.error("Error deleting feiras:", error);
+      toast.error("Erro ao excluir feiras");
+    } finally {
+      setBulkDeleteDialogOpen(false);
+      setDeleteConfirmations({ first: false, second: false, third: false });
+    }
+  };
+
+  const toggleFeiraSelection = (feiraId: string) => {
+    setSelectedFeiras(prev =>
+      prev.includes(feiraId)
+        ? prev.filter(id => id !== feiraId)
+        : [...prev, feiraId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedFeiras.length === filteredFeiras.length) {
+      setSelectedFeiras([]);
+    } else {
+      setSelectedFeiras(filteredFeiras.map(f => f.id));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const statusConfig: any = {
       planejada: { label: "Planejada", variant: "secondary" },
@@ -269,10 +328,10 @@ const Feiras = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
             Gestão de Feiras
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie e acompanhe as feiras e eventos que sua equipe irá visitar
           </p>
           <p className="text-sm text-muted-foreground mt-2">
@@ -281,13 +340,24 @@ const Feiras = () => {
         </div>
 
         {isAuthenticated && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2 shadow-primary">
-                <Plus size={20} />
-                Nova Feira
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {selectedFeiras.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleBulkDelete}
+                className="w-full sm:w-auto gap-2"
+              >
+                <Trash2 size={18} />
+                Excluir ({selectedFeiras.length})
               </Button>
-            </DialogTrigger>
+            )}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 shadow-primary w-full sm:w-auto">
+                  <Plus size={20} />
+                  Nova Feira
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-2xl">
@@ -440,42 +510,72 @@ const Feiras = () => {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         )}
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, cidade ou local..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
+      <Card className="p-3 sm:p-4">
+        <div className="flex flex-col gap-4">
+          {selectedFeiras.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
+              <span className="text-sm font-medium">
+                {selectedFeiras.length} feira(s) selecionada(s)
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedFeiras([])}
+              >
+                Limpar seleção
+              </Button>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, cidade ou local..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="planejada">Planejada</SelectItem>
+                <SelectItem value="confirmada">Confirmada</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Concluída</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="planejada">Planejada</SelectItem>
-              <SelectItem value="confirmada">Confirmada</SelectItem>
-              <SelectItem value="em_andamento">Em Andamento</SelectItem>
-              <SelectItem value="concluida">Concluída</SelectItem>
-              <SelectItem value="cancelada">Cancelada</SelectItem>
-            </SelectContent>
-          </Select>
+          {filteredFeiras.length > 0 && (
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <Checkbox
+                checked={selectedFeiras.length === filteredFeiras.length && filteredFeiras.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">
+                Selecionar todas ({filteredFeiras.length})
+              </span>
+            </div>
+          )}
         </div>
       </Card>
 
       {/* Feiras List */}
       {filteredFeiras.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">
+        <Card className="p-8 sm:p-12 text-center">
+          <p className="text-muted-foreground text-sm sm:text-base">
             {searchTerm || filterStatus !== "all"
               ? "Nenhuma feira encontrada com os filtros aplicados"
               : "Nenhuma feira cadastrada ainda"}
@@ -484,21 +584,29 @@ const Feiras = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredFeiras.map((feira) => (
-            <Card key={feira.id} className="p-6 hover:shadow-lg transition-shadow">
+            <Card key={feira.id} className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
               <div className="space-y-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground mb-2">
-                      {feira.name}
-                    </h3>
-                    {getStatusBadge(feira.status)}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <Checkbox
+                      checked={selectedFeiras.includes(feira.id)}
+                      onCheckedChange={() => toggleFeiraSelection(feira.id)}
+                      className="mt-1 flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 truncate">
+                        {feira.name}
+                      </h3>
+                      {getStatusBadge(feira.status)}
+                    </div>
                   </div>
                   {isAuthenticated && (
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => openDialog(feira)}
+                        className="h-8 w-8"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -506,6 +614,7 @@ const Feiras = () => {
                         size="icon"
                         variant="ghost"
                         onClick={() => handleDelete(feira)}
+                        className="h-8 w-8"
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -519,62 +628,51 @@ const Feiras = () => {
                   </p>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-2 text-sm">
                   {(feira.start_date || feira.end_date) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <CalendarIcon className="h-4 w-4" />
-                      <span>
-                        {feira.start_date
-                          ? format(new Date(feira.start_date), "dd/MM/yyyy", {
-                              locale: ptBR,
-                            })
-                          : ""}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <CalendarIcon className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {feira.start_date && format(new Date(feira.start_date), "dd/MM/yyyy", { locale: ptBR })}
                         {feira.start_date && feira.end_date && " - "}
-                        {feira.end_date
-                          ? format(new Date(feira.end_date), "dd/MM/yyyy", {
-                              locale: ptBR,
-                            })
-                          : ""}
+                        {feira.end_date && format(new Date(feira.end_date), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
                     </div>
                   )}
 
                   {(feira.location || feira.city || feira.state) && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>
-                        {feira.location && `${feira.location}`}
-                        {feira.location && (feira.city || feira.state) && " - "}
-                        {feira.city && `${feira.city}`}
-                        {feira.city && feira.state && ", "}
-                        {feira.state}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">
+                        {feira.location}{feira.location && (feira.city || feira.state) && " - "}
+                        {feira.city}{feira.city && feira.state && ", "}{feira.state}
                       </span>
                     </div>
                   )}
 
                   {feira.website && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Globe className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <a
                         href={feira.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline truncate"
+                        className="text-primary hover:underline truncate text-sm"
                       >
                         {feira.website}
                       </a>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 text-sm pt-2 border-t">
-                    <Users className="h-4 w-4 text-primary" />
-                    <span className="font-medium text-foreground">
-                      {feira.prospect_count || 0} prospect(s) vinculado(s)
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Users className="h-4 w-4 text-primary flex-shrink-0" />
+                    <span className="font-medium text-foreground text-sm">
+                      {feira.prospect_count || 0} prospect(s)
                     </span>
                   </div>
                   
                   {isAuthenticated && (
-                    <div className="pt-3 border-t flex gap-2">
+                    <div className="pt-3 border-t flex flex-col sm:flex-row gap-2">
                       <FeiraVisitsDialog 
                         feiraId={feira.id} 
                         feiraName={feira.name} 
@@ -593,7 +691,7 @@ const Feiras = () => {
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -612,13 +710,87 @@ const Feiras = () => {
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto"
             >
               Excluir Feira
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão em Lote</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Você está prestes a excluir <strong>{selectedFeiras.length} feira(s)</strong>.
+                  <br />
+                  Esta ação não pode ser desfeita.
+                </p>
+                
+                <div className="space-y-3 p-4 bg-muted rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={deleteConfirmations.first}
+                      onCheckedChange={(checked) => 
+                        setDeleteConfirmations(prev => ({ ...prev, first: checked as boolean }))
+                      }
+                    />
+                    <label className="text-sm">
+                      Entendo que esta ação excluirá permanentemente as feiras selecionadas
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={deleteConfirmations.second}
+                      onCheckedChange={(checked) => 
+                        setDeleteConfirmations(prev => ({ ...prev, second: checked as boolean }))
+                      }
+                    />
+                    <label className="text-sm">
+                      Entendo que todos os vínculos com prospects serão removidos
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      checked={deleteConfirmations.third}
+                      onCheckedChange={(checked) => 
+                        setDeleteConfirmations(prev => ({ ...prev, third: checked as boolean }))
+                      }
+                    />
+                    <label className="text-sm font-semibold text-destructive">
+                      Confirmo que desejo prosseguir com a exclusão
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel 
+              className="w-full sm:w-auto"
+              onClick={() => {
+                setBulkDeleteDialogOpen(false);
+                setDeleteConfirmations({ first: false, second: false, third: false });
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={!deleteConfirmations.first || !deleteConfirmations.second || !deleteConfirmations.third}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 w-full sm:w-auto"
+            >
+              Confirmar Exclusão
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
