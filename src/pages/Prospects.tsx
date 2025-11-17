@@ -81,6 +81,11 @@ const Prospects = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [viewMode, setViewMode] = useViewMode("prospects-view-mode", "cards");
+  
+  // Quick filters for compact view
+  const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
+  const [quickRegionFilter, setQuickRegionFilter] = useState("all");
+  const [quickSegmentFilter, setQuickSegmentFilter] = useState("all");
 
   // Contacts
   const [contacts, setContacts] = useState<any[]>([{
@@ -437,7 +442,13 @@ const Prospects = () => {
     const matchesRegion = selectedRegion === "all" || 
       (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
     
-    return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion;
+    // Quick filters for compact view
+    const matchesQuickRating = quickRatingFilter === null || client.rating === quickRatingFilter;
+    const matchesQuickRegion = quickRegionFilter === "all" || client.region === quickRegionFilter;
+    const matchesQuickSegment = quickSegmentFilter === "all" || client.segment === quickSegmentFilter;
+    
+    return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
+      matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
   });
 
   // Pagination
@@ -449,7 +460,7 @@ const Prospects = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter]);
 
   const canEditClient = (client: any) => {
     if (!currentUserId) return false;
@@ -1128,29 +1139,73 @@ const Prospects = () => {
           )}
         </div>
         
-        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-          <Button
-            size="sm"
-            variant={viewMode === "cards" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("cards")}
-            className="h-8 px-3"
-          >
-            <LayoutGrid className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Cards</span>
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === "compact" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("compact")}
-            className="h-8 px-3"
-          >
-            <List className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Lista</span>
-          </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {viewMode === 'compact' && (
+            <div className="flex items-center gap-2 animate-fade-in">
+              <select 
+                value={quickRatingFilter?.toString() || "all"} 
+                onChange={(e) => setQuickRatingFilter(e.target.value === "all" ? null : parseInt(e.target.value))}
+                className="h-8 px-3 text-sm border rounded-md bg-background"
+              >
+                <option value="all">Todos Ratings</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="1">⭐</option>
+              </select>
+              <select 
+                value={quickRegionFilter} 
+                onChange={(e) => setQuickRegionFilter(e.target.value)}
+                className="h-8 px-3 text-sm border rounded-md bg-background"
+              >
+                <option value="all">Todas Regiões</option>
+                <option value="Norte">Norte</option>
+                <option value="Nordeste">Nordeste</option>
+                <option value="Centro-Oeste">Centro-Oeste</option>
+                <option value="Sudeste">Sudeste</option>
+                <option value="Sul">Sul</option>
+              </select>
+              <select 
+                value={quickSegmentFilter} 
+                onChange={(e) => setQuickSegmentFilter(e.target.value)}
+                className="h-8 px-3 text-sm border rounded-md bg-background"
+              >
+                <option value="all">Todos Segmentos</option>
+                {Array.from(new Set(clients?.map(c => c.segment).filter(Boolean))).map((segment) => (
+                  <option key={segment} value={segment!}>{segment}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+            <Button
+              size="sm"
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("cards")}
+              className="h-8 px-3"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Cards</span>
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === "compact" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("compact")}
+              className="h-8 px-3"
+            >
+              <List className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Lista</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-3">
+      <div 
+        key={viewMode}
+        className="space-y-3 animate-fade-in"
+      >
         {loading ? (
           <p className="text-center text-muted-foreground">Carregando...</p>
         ) : filteredClients.length === 0 ? (
