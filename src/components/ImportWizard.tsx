@@ -18,7 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, AlertCircle, CheckCircle2, Loader2, Download } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Upload, AlertCircle, CheckCircle2, Loader2, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import * as XLSX from 'xlsx';
@@ -69,6 +75,8 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
     errors: 0,
     duplicates: 0,
   });
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
 
   // Subscribe to real-time progress updates
   useEffect(() => {
@@ -301,6 +309,8 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
       errors: 0,
       duplicates: 0,
     });
+    setErrorDetails([]);
+    setShowErrors(false);
     onOpenChange(false);
   };
 
@@ -450,6 +460,34 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
                 <div className="text-xs text-muted-foreground">Erros</div>
               </div>
             </div>
+
+            {errorDetails.length > 0 && progressPercentage === 100 && (
+              <Collapsible open={showErrors} onOpenChange={setShowErrors} className="space-y-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span>Ver detalhes dos erros ({errorDetails.length})</span>
+                    </div>
+                    {showErrors ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                    <div className="space-y-2">
+                      {errorDetails.map((error, index) => (
+                        <div
+                          key={index}
+                          className="text-sm p-2 rounded-md bg-destructive/10 border border-destructive/20"
+                        >
+                          <p className="text-destructive font-medium">{error}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {progressPercentage === 100 && (
               <Alert>

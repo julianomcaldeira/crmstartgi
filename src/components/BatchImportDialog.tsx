@@ -10,7 +10,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Upload } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Upload, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 interface BatchImportDialogProps {
@@ -29,6 +35,8 @@ export function BatchImportDialog({ open, onOpenChange, onSuccess }: BatchImport
     failed: 0,
     duplicates: 0,
   });
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [showErrors, setShowErrors] = useState(false);
 
   const handleBatchImport = async (file: File) => {
     try {
@@ -73,6 +81,11 @@ export function BatchImportDialog({ open, onOpenChange, onSuccess }: BatchImport
         failed: result.errors,
         duplicates: result.duplicates,
       });
+
+      // Store error details for display
+      if (result.errorDetails && result.errorDetails.length > 0) {
+        setErrorDetails(result.errorDetails);
+      }
 
       const successRate = result.total > 0 
         ? Math.round((result.success / result.total) * 100) 
@@ -120,6 +133,8 @@ Taxa de sucesso: ${successRate}%
       failed: 0,
       duplicates: 0,
     });
+    setErrorDetails([]);
+    setShowErrors(false);
     onOpenChange(false);
   };
 
@@ -182,6 +197,34 @@ Taxa de sucesso: ${successRate}%
                   <p className="text-xs text-muted-foreground">Falhas</p>
                 </div>
               </div>
+            )}
+
+            {errorDetails.length > 0 && batchProgress.processed === batchProgress.total && (
+              <Collapsible open={showErrors} onOpenChange={setShowErrors} className="space-y-2">
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span>Ver detalhes dos erros ({errorDetails.length})</span>
+                    </div>
+                    {showErrors ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <ScrollArea className="h-[200px] w-full rounded-md border p-4">
+                    <div className="space-y-2">
+                      {errorDetails.map((error, index) => (
+                        <div
+                          key={index}
+                          className="text-sm p-2 rounded-md bg-destructive/10 border border-destructive/20"
+                        >
+                          <p className="text-destructive font-medium">{error}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {batchProgress.processed === batchProgress.total && batchProgress.total > 0 && (
