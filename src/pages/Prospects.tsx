@@ -415,7 +415,17 @@ const Prospects = () => {
         client.cnpj?.includes(searchTerm) ||
         (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
+      // Enhanced seller filter with "my_portfolio" and "no_seller" options
+      let matchesSeller = true;
+      if (selectedSeller === "all") {
+        matchesSeller = true;
+      } else if (selectedSeller === "my_portfolio") {
+        matchesSeller = client.created_by === currentUserId;
+      } else if (selectedSeller === "no_seller") {
+        matchesSeller = !client.created_by;
+      } else {
+        matchesSeller = client.created_by === selectedSeller;
+      }
       
       const matchesFeira = selectedFeiraFilter === "all" || 
         (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
@@ -434,7 +444,7 @@ const Prospects = () => {
         matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
     });
   }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, 
-      quickRatingFilter, quickRegionFilter, quickSegmentFilter]);
+      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId]);
 
   // Pagination with memoization
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
@@ -1056,6 +1066,8 @@ const Prospects = () => {
                 className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="all">Todos os vendedores</option>
+                <option value="my_portfolio">Minha Carteira</option>
+                <option value="no_seller">Sem Vendedor</option>
                 {sellers.map((seller) => (
                   <option key={seller.id} value={seller.id}>
                     {seller.full_name}
