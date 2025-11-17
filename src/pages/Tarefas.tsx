@@ -201,6 +201,7 @@ const Tarefas = () => {
         ligacao: "Ligação",
         email: "E-mail",
         whatsapp: "WhatsApp",
+        linkedin: "LinkedIn",
         visita_presencial: "Visita Presencial",
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
@@ -329,6 +330,7 @@ const Tarefas = () => {
       case "ligacao": return <Phone size={16} />;
       case "email": return <Mail size={16} />;
       case "whatsapp": return <MessageCircle size={16} />;
+      case "linkedin": return <Users size={16} />;
       case "visita_presencial": return <MapPin size={16} />;
       case "reuniao_online": return <Video size={16} />;
       case "visita_feira": return <Briefcase size={16} />;
@@ -342,6 +344,7 @@ const Tarefas = () => {
       case "ligacao": return "Ligação";
       case "email": return "E-mail";
       case "whatsapp": return "WhatsApp";
+      case "linkedin": return "LinkedIn";
       case "visita_presencial": return "Visita Presencial";
       case "reuniao_online": return "Reunião Online";
       case "visita_feira": return "Visita a Feira";
@@ -481,6 +484,7 @@ const Tarefas = () => {
                       <SelectItem value="ligacao">Ligação</SelectItem>
                       <SelectItem value="email">E-mail</SelectItem>
                       <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
                       <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
                       <SelectItem value="reuniao_online">Reunião Online</SelectItem>
                       <SelectItem value="visita_feira">Visita a Feira</SelectItem>
@@ -665,6 +669,7 @@ const Tarefas = () => {
                     <option value="ligacao">Ligação</option>
                     <option value="email">E-mail</option>
                     <option value="whatsapp">WhatsApp</option>
+                    <option value="linkedin">LinkedIn</option>
                     <option value="visita_presencial">Visita Presencial</option>
                     <option value="reuniao_online">Reunião Online</option>
                     <option value="visita_feira">Visita a Feira</option>

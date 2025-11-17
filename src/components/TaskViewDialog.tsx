@@ -19,6 +19,7 @@ const TaskViewDialog = ({ task, open, onOpenChange }: TaskViewDialogProps) => {
       ligacao: "Ligação",
       email: "E-mail",
       whatsapp: "WhatsApp",
+      linkedin: "LinkedIn",
       visita_presencial: "Visita Presencial",
       reuniao_online: "Reunião Online",
       visita_feira: "Visita a Feira",

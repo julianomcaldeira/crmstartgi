@@ -94,8 +94,9 @@ const Oportunidades = () => {
 
   const stages = [
     { key: "lead", label: "Lead", color: "bg-muted text-muted-foreground" },
-    { key: "contacted", label: "Contactado", color: "bg-info/20 text-info" },
+    { key: "contacted", label: "Contatado", color: "bg-info/20 text-info" },
     { key: "qualified", label: "Qualificado", color: "bg-primary/20 text-primary" },
+    { key: "apresentacao", label: "Apresentação", color: "bg-purple-500/20 text-purple-500" },
     { key: "proposal", label: "Proposta", color: "bg-warning/20 text-warning" },
     { key: "negotiation", label: "Negociação", color: "bg-accent/20 text-accent" },
     { key: "won", label: "Ganho", color: "bg-success/20 text-success" },
