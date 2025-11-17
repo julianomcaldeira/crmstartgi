@@ -197,6 +197,7 @@ export type Database = {
           address: string | null
           cached_at: string | null
           city: string | null
+          cnae_principal: string | null
           cnpj: string
           company_name: string | null
           created_at: string | null
@@ -216,6 +217,7 @@ export type Database = {
           address?: string | null
           cached_at?: string | null
           city?: string | null
+          cnae_principal?: string | null
           cnpj: string
           company_name?: string | null
           created_at?: string | null
@@ -235,6 +237,7 @@ export type Database = {
           address?: string | null
           cached_at?: string | null
           city?: string | null
+          cnae_principal?: string | null
           cnpj?: string
           company_name?: string | null
           created_at?: string | null
