@@ -45,7 +45,7 @@ const Oportunidades = () => {
   const [editingOpportunity, setEditingOpportunity] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
-  const [viewMode, setViewMode] = useState<"kanban" | "list">("kanban");
+  const [viewModeKanban, setViewModeKanban] = useState<"kanban" | "list">("kanban");
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [selectedOpportunityForLog, setSelectedOpportunityForLog] = useState<string | null>(null);
   const [showProposal, setShowProposal] = useState(false);
@@ -583,18 +583,18 @@ const Oportunidades = () => {
         <div className="flex gap-2">
           <div className="flex border rounded-lg overflow-hidden">
             <Button
-              variant={viewMode === "kanban" ? "default" : "ghost"}
+              variant={viewModeKanban === "kanban" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode("kanban")}
+              onClick={() => setViewModeKanban("kanban")}
               className="rounded-none"
             >
               <LayoutGrid className="h-4 w-4 mr-2" />
               Kanban
             </Button>
             <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
+              variant={viewModeKanban === "list" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setViewMode("list")}
+              onClick={() => setViewModeKanban("list")}
               className="rounded-none"
             >
               <List className="h-4 w-4 mr-2" />
@@ -862,7 +862,7 @@ const Oportunidades = () => {
             Crie sua primeira oportunidade para começar a gerenciar seu pipeline
           </p>
         </Card>
-      ) : viewMode === "kanban" ? (
+      ) : viewModeKanban === "kanban" ? (
         <DndContext 
           sensors={sensors}
           onDragStart={handleDragStart}

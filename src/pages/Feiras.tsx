@@ -50,6 +50,7 @@ import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
 import { SwipeableCard } from "@/components/SwipeableCard";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const Feiras = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
@@ -68,7 +69,7 @@ const Feiras = () => {
     second: false,
     third: false,
   });
-  const [viewMode, setViewMode] = useState<"cards" | "compact">("cards");
+  const [viewMode, setViewMode] = useViewMode("feiras-view-mode", "cards");
 
   const [formData, setFormData] = useState({
     name: "",

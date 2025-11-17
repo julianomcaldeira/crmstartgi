@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight, LayoutGrid, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
+import { SwipeableCard } from "@/components/SwipeableCard";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const Clientes = () => {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [viewMode, setViewMode] = useViewMode("clientes-view-mode", "cards");
 
   useEffect(() => {
     fetchClientes();
@@ -73,12 +76,37 @@ const Clientes = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
-        <p className="text-muted-foreground">
-          Empresas com oportunidades ganhas - Total de {clientes.length} cliente
-          {clientes.length !== 1 ? "s" : ""}
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
+          <p className="text-muted-foreground">
+            Empresas com oportunidades ganhas - Total de {clientes.length} cliente
+            {clientes.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+        
+        {clientes.length > 0 && (
+          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+            <Button
+              size="sm"
+              variant={viewMode === "cards" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("cards")}
+              className="h-8 px-3"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Cards</span>
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === "compact" ? "secondary" : "ghost"}
+              onClick={() => setViewMode("compact")}
+              className="h-8 px-3"
+            >
+              <List className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Lista</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -99,8 +127,8 @@ const Clientes = () => {
             {clientes
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((cliente) => (
+            <SwipeableCard key={cliente.id}>
             <Card
-              key={cliente.id}
               className="hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => navigate(`/prospects/${cliente.id}`)}
             >
@@ -223,6 +251,7 @@ const Clientes = () => {
                 </div>
               </CardContent>
             </Card>
+            </SwipeableCard>
           ))}
           </div>
 
