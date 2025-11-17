@@ -107,7 +107,7 @@ const Feiras = () => {
           *,
           client_feiras (count)
         `)
-        .order("start_date", { ascending: false });
+        .order("start_date", { ascending: true });
 
       if (error) throw error;
       
