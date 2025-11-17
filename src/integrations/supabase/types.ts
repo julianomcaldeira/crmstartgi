@@ -22,6 +22,9 @@ export type Database = {
           feira_id: string
           id: string
           notes: string | null
+          visited: boolean | null
+          visited_at: string | null
+          visited_by: string | null
         }
         Insert: {
           client_id: string
@@ -30,6 +33,9 @@ export type Database = {
           feira_id: string
           id?: string
           notes?: string | null
+          visited?: boolean | null
+          visited_at?: string | null
+          visited_by?: string | null
         }
         Update: {
           client_id?: string
@@ -38,6 +44,9 @@ export type Database = {
           feira_id?: string
           id?: string
           notes?: string | null
+          visited?: boolean | null
+          visited_at?: string | null
+          visited_by?: string | null
         }
         Relationships: [
           {
