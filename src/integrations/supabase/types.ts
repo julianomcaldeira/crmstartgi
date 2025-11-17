@@ -1022,6 +1022,7 @@ export type Database = {
         | "lead"
         | "contacted"
         | "qualified"
+        | "apresentacao"
         | "proposal"
         | "negotiation"
         | "won"
@@ -1036,6 +1037,7 @@ export type Database = {
         | "reuniao_online"
         | "visita_feira"
         | "visita_evento"
+        | "linkedin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1170,6 +1172,7 @@ export const Constants = {
         "lead",
         "contacted",
         "qualified",
+        "apresentacao",
         "proposal",
         "negotiation",
         "won",
@@ -1185,6 +1188,7 @@ export const Constants = {
         "reuniao_online",
         "visita_feira",
         "visita_evento",
+        "linkedin",
       ],
     },
   },

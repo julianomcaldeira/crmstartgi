@@ -175,8 +175,9 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const getStatusLabel = (status: string) => {
     const statuses: any = {
       lead: "Lead",
-      contacted: "Contactado",
+      contacted: "Contatado",
       qualified: "Qualificado",
+      apresentacao: "Apresentação",
       proposal: "Proposta",
       negotiation: "Negociação",
       won: "Ganho",

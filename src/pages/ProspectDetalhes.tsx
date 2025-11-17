@@ -192,6 +192,7 @@ const ClienteDetalhes = () => {
         ligacao: "Ligação",
         email: "E-mail",
         whatsapp: "WhatsApp",
+        linkedin: "LinkedIn",
         visita_presencial: "Visita Presencial",
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
@@ -205,7 +206,7 @@ const ClienteDetalhes = () => {
           title,
           description: taskFormData.description,
           client_id: id,
-          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
           due_date: taskFormData.due_date,
           priority: taskFormData.priority as "low" | "medium" | "high",
           status: "pending",
@@ -306,6 +307,7 @@ const ClienteDetalhes = () => {
         ligacao: "Ligação",
         email: "E-mail",
         whatsapp: "WhatsApp",
+        linkedin: "LinkedIn",
         visita_presencial: "Visita Presencial",
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
@@ -319,7 +321,7 @@ const ClienteDetalhes = () => {
         .update({
           title,
           description: taskFormData.description,
-          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
           due_date: taskFormData.due_date,
           priority: taskFormData.priority as "low" | "medium" | "high",
         })
@@ -715,8 +717,9 @@ const ClienteDetalhes = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="lead">Lead</SelectItem>
-                            <SelectItem value="contacted">Contactado</SelectItem>
+                            <SelectItem value="contacted">Contatado</SelectItem>
                             <SelectItem value="qualified">Qualificado</SelectItem>
+                            <SelectItem value="apresentacao">Apresentação</SelectItem>
                             <SelectItem value="proposal">Proposta</SelectItem>
                             <SelectItem value="negotiation">Negociação</SelectItem>
                             <SelectItem value="won">Ganho</SelectItem>
@@ -858,6 +861,7 @@ const ClienteDetalhes = () => {
                           <SelectItem value="ligacao">Ligação</SelectItem>
                           <SelectItem value="email">E-mail</SelectItem>
                           <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                          <SelectItem value="linkedin">LinkedIn</SelectItem>
                           <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
                           <SelectItem value="reuniao_online">Reunião Online</SelectItem>
                           <SelectItem value="visita_feira">Visita a Feira</SelectItem>
@@ -1017,6 +1021,7 @@ const ClienteDetalhes = () => {
                   <SelectItem value="ligacao">Ligação</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="linkedin">LinkedIn</SelectItem>
                   <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
                   <SelectItem value="reuniao_online">Reunião Online</SelectItem>
                   <SelectItem value="visita_feira">Visita a Feira</SelectItem>
