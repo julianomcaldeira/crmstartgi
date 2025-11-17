@@ -84,9 +84,29 @@ export function BatchImportDialog({ open, onOpenChange, onSuccess }: BatchImport
         if (batchIntervalRef.current) {
           clearInterval(batchIntervalRef.current);
         }
+        
+        // Criar relatório detalhado
+        const successRate = Math.round((batchProgress.success / batchProgress.total) * 100);
+        const reportMessage = `
+📊 Relatório de Importação Concluída
+
+Total processado: ${batchProgress.total} CNPJs
+✅ Sucessos: ${batchProgress.success}
+🔄 Duplicados: ${batchProgress.duplicates}
+❌ Falhas: ${batchProgress.failed}
+
+Taxa de sucesso: ${successRate}%
+        `.trim();
+        
+        console.log("=== RELATÓRIO DE IMPORTAÇÃO ===");
+        console.log(reportMessage);
+        console.log("================================");
+        
         toast.success(
-          `Importação concluída! ${batchProgress.success} sucessos, ${batchProgress.duplicates} duplicados, ${batchProgress.failed} falhas.`
+          `Importação concluída! ${batchProgress.success} sucessos, ${batchProgress.duplicates} duplicados, ${batchProgress.failed} falhas. Taxa: ${successRate}%`,
+          { duration: 10000 }
         );
+        
         onSuccess();
         return;
       }
