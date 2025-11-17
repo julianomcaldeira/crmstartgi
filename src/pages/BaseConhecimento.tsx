@@ -7,9 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download, Star, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { KnowledgeBaseComments } from "@/components/KnowledgeBaseComments";
 
 interface KnowledgeItem {
   id: string;
@@ -52,6 +53,7 @@ const BaseConhecimento = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<KnowledgeItem | null>(null);
   const [itemHistory, setItemHistory] = useState<HistoryItem[]>([]);
   const [userRole, setUserRole] = useState<string>("");
@@ -756,6 +758,17 @@ const BaseConhecimento = () => {
                     <Button
                       size="sm"
                       variant="ghost"
+                      onClick={() => {
+                        setSelectedItem(item);
+                        setCommentsDialogOpen(true);
+                      }}
+                      title="Comentários"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
                       onClick={() => openEditDialog(item)}
                       title="Editar"
                     >
@@ -1031,6 +1044,21 @@ const BaseConhecimento = () => {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Comments Dialog */}
+      <Dialog open={commentsDialogOpen} onOpenChange={setCommentsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Discussões</DialogTitle>
+            {selectedItem && (
+              <p className="text-sm text-muted-foreground">{selectedItem.title}</p>
+            )}
+          </DialogHeader>
+          {selectedItem && (
+            <KnowledgeBaseComments knowledgeBaseId={selectedItem.id} />
+          )}
         </DialogContent>
       </Dialog>
     </div>
