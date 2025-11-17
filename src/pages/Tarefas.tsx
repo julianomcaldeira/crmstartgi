@@ -419,6 +419,8 @@ const Tarefas = () => {
 
   const getTasksForDay = (day: Date) => {
     return tasks.filter((task) => {
+      if (!task.due_date) return false;
+      
       const taskDate = startOfDay(parseISO(task.due_date));
       const matchesDay = isSameDay(taskDate, day);
       
