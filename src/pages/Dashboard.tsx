@@ -8,6 +8,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTodayTasks, useGoals, useOpportunities } from "@/hooks/useQueries";
+import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -263,6 +265,10 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-4">
+      {loading && <DashboardSkeleton />}
+      
+      {!loading && (
+        <>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -580,6 +586,8 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
     </div>
   );
 };
