@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -87,6 +87,12 @@ const Oportunidades = () => {
   const [quickFilterSeller, setQuickFilterSeller] = useState("");
   const [quickFilterProduct, setQuickFilterProduct] = useState("");
   const [quickFilterProbability, setQuickFilterProbability] = useState("");
+  
+  // Sort configuration
+  type SortField = "value" | "created_at" | "probability" | "expected_close_date";
+  type SortDirection = "asc" | "desc";
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -319,7 +325,52 @@ const Oportunidades = () => {
 
   const getOpportunitiesByStage = (stageKey: string) => {
     const filtered = getFilteredOpportunities();
-    return filtered.filter((opp) => opp.status === stageKey);
+    const stageOpps = filtered.filter((opp) => opp.status === stageKey);
+    
+    // Apply sorting
+    return stageOpps.sort((a, b) => {
+      let compareValue = 0;
+      
+      switch (sortField) {
+        case "value":
+          compareValue = (Number(a.value) || 0) - (Number(b.value) || 0);
+          break;
+        case "created_at":
+          compareValue = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          break;
+        case "probability":
+          compareValue = (Number(a.probability) || 0) - (Number(b.probability) || 0);
+          break;
+        case "expected_close_date":
+          const dateA = a.expected_close_date ? new Date(a.expected_close_date).getTime() : 0;
+          const dateB = b.expected_close_date ? new Date(b.expected_close_date).getTime() : 0;
+          compareValue = dateA - dateB;
+          break;
+      }
+      
+      return sortDirection === "asc" ? compareValue : -compareValue;
+    });
+  };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New field, default to descending
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
+  const getSortLabel = (field: SortField) => {
+    const labels = {
+      value: "Valor",
+      created_at: "Data Criação",
+      probability: "Probabilidade",
+      expected_close_date: "Data Fechamento"
+    };
+    return labels[field];
   };
 
   const formatCurrency = (value: number) => {
@@ -1156,10 +1207,88 @@ const Oportunidades = () => {
                         <h3 className={`font-semibold text-sm ${stage.color.split(' ')[1]}`}>
                           {stage.label}
                         </h3>
-                        <Badge className={`${stage.color} font-semibold text-xs h-5`}>
-                          {stageOpps.length}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge className={`${stage.color} font-semibold text-xs h-5`}>
+                            {stageOpps.length}
+                          </Badge>
+                          
+                          {/* Sort Dropdown */}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 hover:bg-background/50"
+                                title="Ordenar"
+                              >
+                                {sortDirection === "asc" ? (
+                                  <ArrowUp className="h-3 w-3 text-muted-foreground" />
+                                ) : (
+                                  <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                                )}
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                Ordenar por
+                              </div>
+                              <DropdownMenuItem
+                                onClick={() => toggleSort("value")}
+                                className={sortField === "value" ? "bg-accent" : ""}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span>Valor</span>
+                                  {sortField === "value" && (
+                                    sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => toggleSort("probability")}
+                                className={sortField === "probability" ? "bg-accent" : ""}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span>Probabilidade</span>
+                                  {sortField === "probability" && (
+                                    sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => toggleSort("created_at")}
+                                className={sortField === "created_at" ? "bg-accent" : ""}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span>Data Criação</span>
+                                  {sortField === "created_at" && (
+                                    sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => toggleSort("expected_close_date")}
+                                className={sortField === "expected_close_date" ? "bg-accent" : ""}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span>Data Fechamento</span>
+                                  {sortField === "expected_close_date" && (
+                                    sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
+                      
+                      {/* Active Sort Indicator */}
+                      <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <ArrowUpDown className="h-2.5 w-2.5" />
+                        <span>
+                          {getSortLabel(sortField)} ({sortDirection === "asc" ? "Crescente" : "Decrescente"})
+                        </span>
+                      </div>
+                      
                       <div className="flex items-center justify-between pt-1.5 border-t border-border/30">
                         <span className="text-[10px] font-medium text-muted-foreground">Total</span>
                         <p className="text-xs font-bold text-primary">
