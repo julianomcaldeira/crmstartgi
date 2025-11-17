@@ -21,6 +21,10 @@ const fieldMappings: Record<string, string[]> = {
   company_size: ["porte", "porte da empresa", "tamanho", "size"],
   region: ["região", "regiao", "region"],
   share_capital: ["capital social", "capital", "share capital"],
+  registration_status: ["situação", "situacao", "status", "registration status"],
+  foundation_date: ["data de abertura", "data abertura", "abertura", "foundation date", "data fundação", "data fundacao"],
+  cnae_principal: ["cnae principal", "cnae", "codigo cnae", "código cnae"],
+  cnae_description: ["cnae descrição", "cnae descricao", "descrição cnae", "descricao cnae", "atividade principal"],
   seller_name: ["vendedor", "responsável", "responsavel", "seller", "representante"],
 };
 

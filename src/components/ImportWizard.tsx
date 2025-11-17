@@ -43,6 +43,10 @@ const SYSTEM_FIELDS = [
   { value: "company_size", label: "Porte da Empresa" },
   { value: "region", label: "Região" },
   { value: "share_capital", label: "Capital Social" },
+  { value: "registration_status", label: "Situação" },
+  { value: "foundation_date", label: "Data de Abertura" },
+  { value: "cnae_principal", label: "CNAE Principal" },
+  { value: "cnae_description", label: "CNAE Descrição" },
   { value: "seller_name", label: "Vendedor" },
   { value: "ignore", label: "Ignorar esta coluna" },
 ];
@@ -127,6 +131,10 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
         "Porte da Empresa": "Médio",
         "Região": "Sudeste",
         "Capital Social": "500000",
+        "Situação": "Ativa",
+        "Data de Abertura": "2020-01-15",
+        "CNAE Principal": "6201-5/00",
+        "CNAE Descrição": "Desenvolvimento de programas de computador sob encomenda",
         "Vendedor": "João Silva"
       },
       {
@@ -143,6 +151,10 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
         "Porte da Empresa": "Grande",
         "Região": "Sudeste",
         "Capital Social": "2000000",
+        "Situação": "Ativa",
+        "Data de Abertura": "2018-05-20",
+        "CNAE Principal": "4711-3/02",
+        "CNAE Descrição": "Comércio varejista de mercadorias em geral",
         "Vendedor": "Maria Santos"
       }
     ];
@@ -167,6 +179,10 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
       { wch: 20 }, // Porte da Empresa
       { wch: 15 }, // Região
       { wch: 18 }, // Capital Social
+      { wch: 15 }, // Situação
+      { wch: 18 }, // Data de Abertura
+      { wch: 18 }, // CNAE Principal
+      { wch: 50 }, // CNAE Descrição
       { wch: 20 }  // Vendedor
     ];
     ws['!cols'] = colWidths;

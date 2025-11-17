@@ -21,6 +21,10 @@ interface ProspectData {
   company_size?: string;
   region?: string;
   share_capital?: number;
+  registration_status?: string;
+  foundation_date?: string;
+  cnae_principal?: string;
+  cnae_description?: string;
   seller_name?: string;
   seller_id?: string | null;
 }
@@ -183,6 +187,10 @@ serve(async (req) => {
                 company_size: prospect.company_size,
                 region: prospect.region,
                 share_capital: prospect.share_capital,
+                registration_status: prospect.registration_status,
+                foundation_date: prospect.foundation_date,
+                cnae_principal: prospect.cnae_principal,
+                cnae_description: prospect.cnae_description,
                 created_by: prospect.seller_id || userId,
               });
 
