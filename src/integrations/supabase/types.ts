@@ -104,6 +104,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          cnae_description: string | null
           cnae_principal: string | null
           cnpj: string
           company_name: string
@@ -131,6 +132,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          cnae_description?: string | null
           cnae_principal?: string | null
           cnpj: string
           company_name: string
@@ -158,6 +160,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          cnae_description?: string | null
           cnae_principal?: string | null
           cnpj?: string
           company_name?: string
@@ -197,6 +200,7 @@ export type Database = {
           address: string | null
           cached_at: string | null
           city: string | null
+          cnae_description: string | null
           cnae_principal: string | null
           cnpj: string
           company_name: string | null
@@ -217,6 +221,7 @@ export type Database = {
           address?: string | null
           cached_at?: string | null
           city?: string | null
+          cnae_description?: string | null
           cnae_principal?: string | null
           cnpj: string
           company_name?: string | null
@@ -237,6 +242,7 @@ export type Database = {
           address?: string | null
           cached_at?: string | null
           city?: string | null
+          cnae_description?: string | null
           cnae_principal?: string | null
           cnpj?: string
           company_name?: string | null

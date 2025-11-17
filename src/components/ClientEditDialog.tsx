@@ -45,6 +45,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [registrationStatus, setRegistrationStatus] = useState("");
   const [foundationDate, setFoundationDate] = useState("");
   const [cnaePrincipal, setCnaePrincipal] = useState("");
+  const [cnaeDescription, setCnaeDescription] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -73,6 +74,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setRegistrationStatus(client.registration_status || "");
       setFoundationDate(client.foundation_date || "");
       setCnaePrincipal(client.cnae_principal || "");
+      setCnaeDescription(client.cnae_description || "");
       
       const feiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
       setSelectedFeiras(feiraIds);
@@ -161,6 +163,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           registration_status: registrationStatus,
           foundation_date: foundationDate || null,
           cnae_principal: cnaePrincipal,
+          cnae_description: cnaeDescription,
         })
         .eq("id", client.id);
 
@@ -309,6 +312,16 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                   value={cnaePrincipal}
                   onChange={(e) => setCnaePrincipal(e.target.value)}
                   placeholder="0000-0/00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-cnaeDescription">CNAE Descrição</Label>
+                <Input
+                  id="edit-cnaeDescription"
+                  value={cnaeDescription}
+                  onChange={(e) => setCnaeDescription(e.target.value)}
+                  placeholder="Descrição da atividade principal"
                 />
               </div>
 
