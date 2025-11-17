@@ -6,7 +6,7 @@ import { Users, Target, CheckSquare, DollarSign, TrendingUp, Clock, Calendar } f
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTodayTasks, useGoals, useOpportunities } from "@/hooks/useQueries";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
@@ -416,11 +416,11 @@ const Dashboard = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-medium text-cyan-600">
-                        {format(new Date(feira.start_date), "dd/MM")}
+                        {format(parseISO(feira.start_date), "dd/MM")}
                       </p>
                       {feira.end_date && (
                         <p className="text-[10px] text-muted-foreground">
-                          até {format(new Date(feira.end_date), "dd/MM")}
+                          até {format(parseISO(feira.end_date), "dd/MM")}
                         </p>
                       )}
                     </div>
