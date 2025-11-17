@@ -121,6 +121,24 @@ serve(async (req) => {
                 prospect.share_capital = parsed;
               }
             }
+          } else if (fieldName === 'foundation_date') {
+            if (value !== null && value !== undefined && value !== '') {
+              // Handle Excel serial date numbers
+              if (typeof value === 'number') {
+                const excelEpoch = new Date(1899, 11, 30);
+                const date = new Date(excelEpoch.getTime() + value * 86400000);
+                prospect.foundation_date = date.toISOString().split('T')[0];
+              } else {
+                // Handle string dates
+                const dateStr = String(value).trim();
+                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                  prospect.foundation_date = dateStr;
+                } else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                  const [day, month, year] = dateStr.split('/');
+                  prospect.foundation_date = `${year}-${month}-${day}`;
+                }
+              }
+            }
           } else if (fieldName === 'seller_name') {
             prospect.seller_name = value ? String(value).trim() : undefined;
           } else if (value) {
