@@ -273,6 +273,9 @@ const Feiras = () => {
           <p className="text-muted-foreground">
             Gerencie e acompanhe as feiras e eventos que sua equipe irá visitar
           </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Total: <span className="font-semibold text-foreground">{filteredFeiras.length}</span> {filteredFeiras.length !== feiras.length && `de ${feiras.length}`} feira{filteredFeiras.length !== 1 ? 's' : ''}
+          </p>
         </div>
 
         {isAuthenticated && (
