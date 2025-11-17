@@ -44,6 +44,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [rating, setRating] = useState<number>(0);
   const [registrationStatus, setRegistrationStatus] = useState("");
   const [foundationDate, setFoundationDate] = useState("");
+  const [cnaePrincipal, setCnaePrincipal] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -71,6 +72,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setRating(client.rating || 0);
       setRegistrationStatus(client.registration_status || "");
       setFoundationDate(client.foundation_date || "");
+      setCnaePrincipal(client.cnae_principal || "");
       
       const feiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
       setSelectedFeiras(feiraIds);
@@ -158,6 +160,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           rating: rating > 0 ? rating : null,
           registration_status: registrationStatus,
           foundation_date: foundationDate || null,
+          cnae_principal: cnaePrincipal,
         })
         .eq("id", client.id);
 
@@ -296,6 +299,16 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                   id="edit-legalNature"
                   value={legalNature}
                   onChange={(e) => setLegalNature(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-cnaePrincipal">CNAE Principal</Label>
+                <Input
+                  id="edit-cnaePrincipal"
+                  value={cnaePrincipal}
+                  onChange={(e) => setCnaePrincipal(e.target.value)}
+                  placeholder="0000-0/00"
                 />
               </div>
 
