@@ -42,6 +42,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [distributor, setDistributor] = useState("");
   const [services, setServices] = useState("");
   const [rating, setRating] = useState<number>(0);
+  const [registrationStatus, setRegistrationStatus] = useState("");
+  const [foundationDate, setFoundationDate] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -67,6 +69,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setDistributor(client.distributor || "");
       setServices(client.services || "");
       setRating(client.rating || 0);
+      setRegistrationStatus(client.registration_status || "");
+      setFoundationDate(client.foundation_date || "");
       
       const feiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
       setSelectedFeiras(feiraIds);
@@ -152,6 +156,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           distributor: distributor,
           services: services,
           rating: rating > 0 ? rating : null,
+          registration_status: registrationStatus,
+          foundation_date: foundationDate || null,
         })
         .eq("id", client.id);
 
@@ -291,6 +297,27 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                   value={legalNature}
                   onChange={(e) => setLegalNature(e.target.value)}
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-registrationStatus">Situação</Label>
+                  <Input
+                    id="edit-registrationStatus"
+                    value={registrationStatus}
+                    onChange={(e) => setRegistrationStatus(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-foundationDate">Data de Abertura</Label>
+                  <Input
+                    id="edit-foundationDate"
+                    type="date"
+                    value={foundationDate}
+                    onChange={(e) => setFoundationDate(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
