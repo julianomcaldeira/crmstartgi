@@ -59,6 +59,7 @@ const Metas = () => {
   useEffect(() => {
     if (goals.length > 0) {
       fetchGoalsProgress();
+      fetchHistoricalData();
     }
   }, [goals]);
 
