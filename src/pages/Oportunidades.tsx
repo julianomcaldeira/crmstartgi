@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,7 +81,7 @@ const Oportunidades = () => {
   const [quickStatusFilter, setQuickStatusFilter] = useState("all");
   const [quickProbabilityFilter, setQuickProbabilityFilter] = useState("all");
   const [quickBusinessTypeFilter, setQuickBusinessTypeFilter] = useState("all");
-  const [compactView, setCompactView] = useState(false);
+  const [compactView, setCompactView] = useViewMode("opportunities-compact-view", "cards");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -645,14 +646,14 @@ const Oportunidades = () => {
         <div className="flex gap-2">
           {viewModeKanban === "kanban" && (
             <Button
-              variant={compactView ? "default" : "outline"}
+              variant={compactView === "compact" ? "default" : "outline"}
               size="sm"
-              onClick={() => setCompactView(!compactView)}
+              onClick={() => setCompactView(compactView === "compact" ? "cards" : "compact")}
               className="gap-2"
-              title={compactView ? "Visualização Expandida" : "Visualização Compacta"}
+              title={compactView === "compact" ? "Visualização Expandida" : "Visualização Compacta"}
             >
-              {compactView ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
-              {compactView ? "Expandir" : "Compacto"}
+              {compactView === "compact" ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+              {compactView === "compact" ? "Expandir" : "Compacto"}
             </Button>
           )}
           
@@ -978,7 +979,7 @@ const Oportunidades = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-3 overflow-x-auto pb-4 px-1">
+          <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageValue = stageOpps.reduce(
@@ -987,7 +988,7 @@ const Oportunidades = () => {
               );
 
               return (
-                <div key={stage.key} className="flex-shrink-0 w-64 space-y-2 animate-fade-in">
+                <div key={stage.key} className="flex-shrink-0 w-64 space-y-2 animate-fade-in snap-center">
                   <Card className={`shadow-md bg-gradient-to-br ${stage.bgGradient} border ${stage.borderColor}`}>
                     <CardHeader className="p-3 space-y-1.5">
                       <div className="flex items-center justify-between">
@@ -1022,7 +1023,7 @@ const Oportunidades = () => {
                                 setViewDialogOpen(true);
                               }}
                             >
-                        {compactView ? (
+                        {compactView === "compact" ? (
                           // Modo Ultra-Compacto
                           <CardContent className="p-2 space-y-1.5">
                             <div className="flex items-center gap-1">
