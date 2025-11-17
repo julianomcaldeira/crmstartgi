@@ -964,7 +964,7 @@ const Oportunidades = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 overflow-x-auto pb-4 px-2">
+          <div className="flex gap-3 overflow-x-auto pb-4 px-1">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageValue = stageOpps.reduce(
@@ -973,20 +973,20 @@ const Oportunidades = () => {
               );
 
               return (
-                <div key={stage.key} className="flex-shrink-0 w-80 space-y-3 animate-fade-in">
-                  <Card className={`shadow-lg bg-gradient-to-br ${stage.bgGradient} border-2 ${stage.borderColor}`}>
-                    <CardHeader className="p-4 space-y-2">
+                <div key={stage.key} className="flex-shrink-0 w-64 space-y-2 animate-fade-in">
+                  <Card className={`shadow-md bg-gradient-to-br ${stage.bgGradient} border ${stage.borderColor}`}>
+                    <CardHeader className="p-3 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <h3 className={`font-bold text-base ${stage.color.split(' ')[1]}`}>
+                        <h3 className={`font-semibold text-sm ${stage.color.split(' ')[1]}`}>
                           {stage.label}
                         </h3>
-                        <Badge className={`${stage.color} font-semibold`}>
+                        <Badge className={`${stage.color} font-semibold text-xs h-5`}>
                           {stageOpps.length}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-border/30">
-                        <span className="text-xs font-medium text-muted-foreground">Total</span>
-                        <p className="text-sm font-bold text-primary">
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border/30">
+                        <span className="text-[10px] font-medium text-muted-foreground">Total</span>
+                        <p className="text-xs font-bold text-primary">
                           {formatCurrency(stageValue)}
                         </p>
                       </div>
@@ -994,7 +994,7 @@ const Oportunidades = () => {
                   </Card>
 
                   <DroppableColumn id={stage.key}>
-                    <div className="space-y-3 min-h-[200px]">
+                    <div className="space-y-2 min-h-[200px]">
                       {stageOpps.map((opp) => {
                         const nextStage = getNextStage(opp.status);
                         const previousStage = getPreviousStage(opp.status);
@@ -1002,15 +1002,15 @@ const Oportunidades = () => {
                         return (
                           <DraggableCard key={opp.id} id={opp.id}>
                             <Card
-                              className={`hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border-l-4 ${stage.borderColor} group cursor-pointer bg-gradient-to-br from-card to-card/50 backdrop-blur-sm animate-fade-in`}
+                              className={`hover:shadow-lg hover:scale-[1.01] transition-all duration-200 border-l-4 ${stage.borderColor} group cursor-pointer bg-gradient-to-br from-card to-card/50 backdrop-blur-sm animate-fade-in`}
                               onClick={() => {
                                 setSelectedOpportunity(opp);
                                 setViewDialogOpen(true);
                               }}
                             >
-                        <CardHeader className="p-4 pb-3">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <CardTitle className="text-sm font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{opp.title}</CardTitle>
+                        <CardHeader className="p-3 pb-2">
+                          <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                            <CardTitle className="text-xs font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{opp.title}</CardTitle>
                             <div className="flex gap-1">
                               <Button
                                 variant="ghost"
@@ -1053,76 +1053,76 @@ const Oportunidades = () => {
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent className="p-4 pt-0 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Building2 size={14} className="text-muted-foreground flex-shrink-0" />
-                            <p className="text-xs font-medium text-foreground line-clamp-1">
+                        <CardContent className="p-3 pt-0 space-y-2">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
+                            <p className="text-[10px] font-medium text-foreground line-clamp-1">
                               {opp.client?.trade_name || opp.client?.company_name}
                             </p>
                           </div>
                           
                           {opp.product && (
-                            <div className="flex items-center gap-2 p-2 bg-primary/5 rounded-lg border border-primary/10">
+                            <div className="flex items-center gap-1.5 p-1.5 bg-primary/5 rounded border border-primary/10">
                               {opp.product.logo_url ? (
                                 <img
                                   src={opp.product.logo_url}
                                   alt={opp.product.name}
-                                  className="h-6 w-6 object-contain bg-white rounded p-0.5"
+                                  className="h-4 w-4 object-contain bg-white rounded p-0.5"
                                 />
                               ) : null}
-                              <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20 font-semibold">
+                              <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold h-4">
                                 {opp.product.name}
                               </Badge>
                             </div>
                           )}
                           
                           {opp.value && (
-                            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-                              <span className="text-xs font-medium text-muted-foreground">Valor</span>
-                              <p className="text-base font-bold text-primary">
+                            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded border border-primary/20">
+                              <span className="text-[10px] font-medium text-muted-foreground">Valor</span>
+                              <p className="text-xs font-bold text-primary">
                                 {formatCurrency(opp.value)}
                               </p>
                             </div>
                           )}
                           
-                          <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/30">
-                            <Badge variant="outline" className="text-xs font-semibold">
+                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/30">
+                            <Badge variant="outline" className="text-[10px] font-semibold h-4">
                               {opp.probability}%
                             </Badge>
                             {opp.assigned && (
-                              <p className="text-xs text-muted-foreground truncate font-medium">
+                              <p className="text-[10px] text-muted-foreground truncate font-medium">
                                 {opp.assigned.full_name}
                               </p>
                             )}
                           </div>
                           
-                          <div className="flex items-center gap-2 pt-3 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                          <div className="flex items-center gap-1.5 pt-2 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-all duration-200">
                             {previousStage && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="flex-1 h-8 text-xs font-semibold hover:bg-muted"
+                                className="flex-1 h-6 text-[10px] font-semibold hover:bg-muted"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   updateOpportunityStatus(opp.id, previousStage.key);
                                 }}
                               >
-                                <ChevronLeft size={14} className="mr-1" />
-                                {previousStage.label}
+                                <ChevronLeft size={12} className="mr-0.5" />
+                                Voltar
                               </Button>
                             )}
                             {nextStage && (
                               <Button
                                 variant="default"
                                 size="sm"
-                                className="flex-1 h-8 text-xs font-semibold bg-primary hover:bg-primary/90 shadow-md"
+                                className="flex-1 h-6 text-[10px] font-semibold bg-primary hover:bg-primary/90"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   updateOpportunityStatus(opp.id, nextStage.key);
                                 }}
                               >
-                                {nextStage.label}
-                                <ChevronRight size={14} className="ml-1" />
+                                Avançar
+                                <ChevronRight size={12} className="ml-0.5" />
                               </Button>
                             )}
                           </div>
