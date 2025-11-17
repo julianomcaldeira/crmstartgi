@@ -75,6 +75,11 @@ const Oportunidades = () => {
   const [filterProduct, setFilterProduct] = useState("");
   const [filterProbability, setFilterProbability] = useState("");
   const [filterBusinessType, setFilterBusinessType] = useState("");
+  
+  // Quick filters for list view
+  const [quickStatusFilter, setQuickStatusFilter] = useState("all");
+  const [quickProbabilityFilter, setQuickProbabilityFilter] = useState("all");
+  const [quickBusinessTypeFilter, setQuickBusinessTypeFilter] = useState("all");
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -197,8 +202,14 @@ const Oportunidades = () => {
       const matchesProbability = !filterProbability || opp.probability?.toString() === filterProbability;
       const matchesBusinessType = !filterBusinessType || opp.business_type === filterBusinessType;
       
+      // Quick filters for list view
+      const matchesQuickStatus = quickStatusFilter === "all" || opp.status === quickStatusFilter;
+      const matchesQuickProbability = quickProbabilityFilter === "all" || opp.probability?.toString() === quickProbabilityFilter;
+      const matchesQuickBusinessType = quickBusinessTypeFilter === "all" || opp.business_type === quickBusinessTypeFilter;
+      
       return matchesClient && matchesStartDate && matchesEndDate && 
-             matchesAssignedTo && matchesProduct && matchesProbability && matchesBusinessType;
+             matchesAssignedTo && matchesProduct && matchesProbability && matchesBusinessType &&
+             matchesQuickStatus && matchesQuickProbability && matchesQuickBusinessType;
     });
   };
 
@@ -583,6 +594,41 @@ const Oportunidades = () => {
 
         <div className="flex gap-2">
           <div className="flex border rounded-lg overflow-hidden">
+            {viewModeKanban === "list" && (
+              <div className="flex items-center gap-2 mr-2 animate-fade-in">
+                <select 
+                  value={quickStatusFilter} 
+                  onChange={(e) => setQuickStatusFilter(e.target.value)}
+                  className="h-9 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="all">Todos Status</option>
+                  {stages.map((stage) => (
+                    <option key={stage.key} value={stage.key}>{stage.label}</option>
+                  ))}
+                </select>
+                <select 
+                  value={quickProbabilityFilter} 
+                  onChange={(e) => setQuickProbabilityFilter(e.target.value)}
+                  className="h-9 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="all">Todas Probabilidades</option>
+                  <option value="10">10%</option>
+                  <option value="25">25%</option>
+                  <option value="50">50%</option>
+                  <option value="80">80%</option>
+                  <option value="90">90%</option>
+                </select>
+                <select 
+                  value={quickBusinessTypeFilter} 
+                  onChange={(e) => setQuickBusinessTypeFilter(e.target.value)}
+                  className="h-9 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="all">Todos Tipos</option>
+                  <option value="cliente_novo">Cliente Novo</option>
+                  <option value="venda_na_base">Venda na Base</option>
+                </select>
+              </div>
+            )}
             <Button
               variant={viewModeKanban === "kanban" ? "default" : "ghost"}
               size="sm"
@@ -1028,7 +1074,10 @@ const Oportunidades = () => {
     </div>
   </DndContext>
       ) : (
-        <div className="space-y-4">
+        <div 
+          key={viewModeKanban}
+          className="space-y-4 animate-fade-in"
+        >
           {getFilteredOpportunities().map((opp) => {
             const stage = stages.find((s) => s.key === opp.status);
             const nextStage = getNextStage(opp.status);
