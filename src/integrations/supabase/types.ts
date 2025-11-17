@@ -763,6 +763,66 @@ export type Database = {
           },
         ]
       }
+      opportunity_alerts: {
+        Row: {
+          alert_type: string
+          assigned_to: string
+          created_at: string
+          dismissed_at: string | null
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          message: string
+          metadata: Json | null
+          opportunity_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          assigned_to: string
+          created_at?: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message: string
+          metadata?: Json | null
+          opportunity_id: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          assigned_to?: string
+          created_at?: string
+          dismissed_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          message?: string
+          metadata?: Json | null
+          opportunity_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_alerts_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_alerts_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunity_attachments: {
         Row: {
           created_at: string | null

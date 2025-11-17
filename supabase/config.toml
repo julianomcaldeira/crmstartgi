@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.import-prospects]
 verify_jwt = false
+
+[functions.check-opportunity-alerts]
+verify_jwt = false

@@ -24,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import logo from "@/assets/logo-startgi.jpg";
 import { NotificationSystem } from "./NotificationSystem";
+import { AlertsPanel } from "./AlertsPanel";
 
 interface LayoutProps {
   children: ReactNode;
@@ -202,6 +203,8 @@ const Layout = ({ children }: LayoutProps) => {
           
           {/* User Profile */}
           <div className="ml-auto flex items-center gap-3 group">
+            <AlertsPanel />
+            
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-foreground">
                 {userProfile?.full_name || "Usuário"}
