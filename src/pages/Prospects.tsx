@@ -79,6 +79,7 @@ const Prospects = () => {
   const [rating, setRating] = useState<number>(0);
   const [registrationStatus, setRegistrationStatus] = useState("");
   const [foundationDate, setFoundationDate] = useState("");
+  const [cnaePrincipal, setCnaePrincipal] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -276,6 +277,7 @@ const Prospects = () => {
         setLegalNature(data.legal_nature || "");
         setRegistrationStatus(data.registration_status || "");
         setFoundationDate(data.foundation_date || "");
+        setCnaePrincipal(data.cnae_principal || "");
         
         const source = data.source === 'cache' ? ' (do cache)' : ' (da Receita Federal)';
         toast.success(`Dados da empresa carregados${source}!`);
@@ -344,6 +346,7 @@ const Prospects = () => {
           rating: rating > 0 ? rating : null,
           registration_status: registrationStatus,
           foundation_date: foundationDate || null,
+          cnae_principal: cnaePrincipal,
           created_by: user.id,
         })
         .select()
@@ -407,6 +410,7 @@ const Prospects = () => {
     setLegalNature("");
     setRegistrationStatus("");
     setFoundationDate("");
+    setCnaePrincipal("");
     setCompanySize("");
     setRegion("");
     setCompetitors("");
@@ -673,6 +677,16 @@ const Prospects = () => {
                       id="legalNature"
                       value={legalNature}
                       onChange={(e) => setLegalNature(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cnaePrincipal">CNAE Principal</Label>
+                    <Input
+                      id="cnaePrincipal"
+                      value={cnaePrincipal}
+                      onChange={(e) => setCnaePrincipal(e.target.value)}
+                      placeholder="0000-0/00"
                     />
                   </div>
 

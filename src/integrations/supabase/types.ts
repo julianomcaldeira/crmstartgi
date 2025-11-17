@@ -104,6 +104,7 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
+          cnae_principal: string | null
           cnpj: string
           company_name: string
           company_size: string | null
@@ -130,6 +131,7 @@ export type Database = {
         Insert: {
           address?: string | null
           city?: string | null
+          cnae_principal?: string | null
           cnpj: string
           company_name: string
           company_size?: string | null
@@ -156,6 +158,7 @@ export type Database = {
         Update: {
           address?: string | null
           city?: string | null
+          cnae_principal?: string | null
           cnpj?: string
           company_name?: string
           company_size?: string | null

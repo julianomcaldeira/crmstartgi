@@ -72,6 +72,7 @@ serve(async (req) => {
           legal_nature: cachedData.legal_nature,
           registration_status: cachedData.registration_status,
           foundation_date: cachedData.foundation_date,
+          cnae_principal: cachedData.cnae_principal,
         }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -140,6 +141,7 @@ serve(async (req) => {
       legal_nature: data.natureza_juridica || "",
       registration_status: data.situacao || "",
       foundation_date: data.data_situacao || null,
+      cnae_principal: data.atividade_principal?.[0]?.code || "",
     };
 
     console.log("Salvando no cache...");
@@ -161,6 +163,7 @@ serve(async (req) => {
         legal_nature: transformedData.legal_nature,
         registration_status: transformedData.registration_status,
         foundation_date: transformedData.foundation_date,
+        cnae_principal: transformedData.cnae_principal,
         cached_at: new Date().toISOString(),
       }, {
         onConflict: "cnpj",
