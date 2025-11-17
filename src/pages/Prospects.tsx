@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { BatchImportDialog } from "@/components/BatchImportDialog";
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SwipeableCard } from "@/components/SwipeableCard";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const Prospects = () => {
   const navigate = useNavigate();
@@ -78,6 +80,7 @@ const Prospects = () => {
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [viewMode, setViewMode] = useViewMode("prospects-view-mode", "cards");
 
   // Contacts
   const [contacts, setContacts] = useState<any[]>([{
@@ -1108,7 +1111,7 @@ const Prospects = () => {
       </Card>
 
       {/* Results Counter */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1 flex-wrap gap-4">
         <div className="flex items-center gap-2">
           <div className="px-4 py-2 bg-primary/10 rounded-lg">
             <p className="text-sm font-medium text-foreground">
@@ -1124,6 +1127,27 @@ const Prospects = () => {
             </p>
           )}
         </div>
+        
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+          <Button
+            size="sm"
+            variant={viewMode === "cards" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("cards")}
+            className="h-8 px-3"
+          >
+            <LayoutGrid className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Cards</span>
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === "compact" ? "secondary" : "ghost"}
+            onClick={() => setViewMode("compact")}
+            className="h-8 px-3"
+          >
+            <List className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">Lista</span>
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -1137,8 +1161,16 @@ const Prospects = () => {
         ) : (
           <>
             {paginatedClients.map((client) => (
+            <SwipeableCard
+              key={client.id}
+              onEdit={canEditClient(client) ? () => {
+                handleEditClient({ stopPropagation: () => {} } as any, client);
+              } : undefined}
+              onDelete={userRoles.includes('admin') ? () => {
+                handleDeleteClick({ stopPropagation: () => {} } as any, client);
+              } : undefined}
+            >
             <Card 
-              key={client.id} 
               className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
               onClick={() => navigate(`/prospects/${client.id}`)}
             >
@@ -1266,6 +1298,7 @@ const Prospects = () => {
                 </div>
               </CardContent>
             </Card>
+            </SwipeableCard>
             ))}
 
             {/* Pagination Controls */}

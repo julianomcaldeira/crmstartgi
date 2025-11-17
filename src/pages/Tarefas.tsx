@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,6 +17,8 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import { DraggableCard } from "@/components/DraggableCard";
 import { DroppableColumn } from "@/components/DroppableColumn";
 import TaskViewDialog from "@/components/TaskViewDialog";
+import { SwipeableCard } from "@/components/SwipeableCard";
+import { useViewMode } from "@/hooks/useViewMode";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -28,6 +30,7 @@ const Tarefas = () => {
   const [filter, setFilter] = useState<"all" | "pending" | "completed" | "overdue">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [cardViewMode, setCardViewMode] = useViewMode("tasks-card-view-mode", "cards");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
