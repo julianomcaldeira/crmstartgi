@@ -691,8 +691,14 @@ const Tarefas = () => {
           ) : (
             <div className="space-y-3">
               {filteredTasks.map((task) => (
+                <SwipeableCard
+                  key={task.id}
+                  onEdit={() => {
+                    setSelectedTask(task);
+                    setViewDialogOpen(true);
+                  }}
+                >
                 <Card 
-                  key={task.id} 
                   className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
                   onClick={() => {
                     setSelectedTask(task);
@@ -760,6 +766,7 @@ const Tarefas = () => {
                     </div>
                   </CardContent>
                 </Card>
+                </SwipeableCard>
               ))}
             </div>
           )}

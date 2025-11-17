@@ -24,6 +24,7 @@ import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { LossReasonDialog } from "@/components/LossReasonDialog";
 import { DroppableColumn } from "@/components/DroppableColumn";
 import { DraggableCard } from "@/components/DraggableCard";
+import { SwipeableCard } from "@/components/SwipeableCard";
 import {
   DndContext,
   DragEndEvent,
@@ -1034,8 +1035,11 @@ const Oportunidades = () => {
             const previousStage = getPreviousStage(opp.status);
             
             return (
+              <SwipeableCard
+                key={opp.id}
+                onEdit={() => handleEditOpportunity(opp)}
+              >
               <Card 
-                key={opp.id} 
                 className="hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => {
                   setSelectedOpportunity(opp);
@@ -1191,6 +1195,7 @@ const Oportunidades = () => {
                   </div>
                 </CardContent>
               </Card>
+              </SwipeableCard>
             );
           })}
         </div>

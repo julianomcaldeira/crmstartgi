@@ -69,6 +69,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [notesText, setNotesText] = useState("");
   const [uploadingPhotos, setUploadingPhotos] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
 
   useEffect(() => {
     if (open) {
@@ -334,23 +335,38 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
           {/* Add Client Section */}
           <Card className="p-4">
             <h3 className="font-semibold mb-3 text-sm">Adicionar Empresa à Lista de Visitas</h3>
-            <div className="flex gap-2">
-              <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione uma empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableClients.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.company_name} {client.city && `- ${client.city}/${client.state}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button onClick={handleAddClient} disabled={loading || !selectedClient}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
+            <div className="space-y-3">
+              <Input
+                placeholder="Buscar empresa por nome ou CNPJ..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                className="w-full"
+              />
+              <div className="flex gap-2">
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecione uma empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClients
+                      .filter(client => 
+                        !clientSearch || 
+                        client.company_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+                        client.cnpj?.includes(clientSearch)
+                      )
+                      .map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.company_name} {client.city && `- ${client.city}/${client.state}`}
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleAddClient} disabled={loading || !selectedClient}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar
+                </Button>
+              </div>
             </div>
           </Card>
 
