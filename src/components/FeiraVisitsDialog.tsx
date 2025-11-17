@@ -19,10 +19,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, CheckCircle2, Circle } from "lucide-react";
+import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
 
 interface FeiraVisitsDialogProps {
   feiraId: string;
@@ -47,6 +48,15 @@ interface ClientFeira {
   visited_by_profile?: {
     full_name: string;
   };
+  photos?: FeiraPhoto[];
+}
+
+interface FeiraPhoto {
+  id: string;
+  photo_url: string;
+  uploaded_at: string;
+  uploaded_by: string;
+  notes: string | null;
 }
 
 export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps) {
@@ -57,6 +67,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [loading, setLoading] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
+  const [uploadingPhotos, setUploadingPhotos] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -85,22 +96,31 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
       if (error) throw error;
 
-      // Fetch profiles for visited_by
-      const visitsWithProfiles = await Promise.all(
+      // Fetch profiles and photos for each visit
+      const visitsWithDetails = await Promise.all(
         (data || []).map(async (visit) => {
+          let visited_by_profile = null;
           if (visit.visited_by) {
             const { data: profile } = await supabase
               .from("profiles")
               .select("full_name")
               .eq("id", visit.visited_by)
               .single();
-            return { ...visit, visited_by_profile: profile };
+            visited_by_profile = profile;
           }
-          return visit;
+
+          // Fetch photos for this visit
+          const { data: photos } = await supabase
+            .from("client_feira_photos")
+            .select("*")
+            .eq("client_feira_id", visit.id)
+            .order("uploaded_at", { ascending: false });
+
+          return { ...visit, visited_by_profile, photos: photos || [] };
         })
       );
 
-      setVisits(visitsWithProfiles as ClientFeira[]);
+      setVisits(visitsWithDetails as ClientFeira[]);
     } catch (error) {
       console.error("Error fetching visits:", error);
       toast.error("Erro ao carregar visitas");
@@ -216,6 +236,84 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const startEditingNotes = (visitId: string, currentNotes: string | null) => {
     setEditingNotes(visitId);
     setNotesText(currentNotes || "");
+  };
+
+  const handlePhotoUpload = async (visitId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    setUploadingPhotos(visitId);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Upload to storage
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${visitId}/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('feira-visit-photos')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('feira-visit-photos')
+          .getPublicUrl(fileName);
+
+        // Save metadata to database
+        const { error: dbError } = await supabase
+          .from('client_feira_photos')
+          .insert({
+            client_feira_id: visitId,
+            photo_url: publicUrl,
+            uploaded_by: user.id,
+          });
+
+        if (dbError) throw dbError;
+      });
+
+      await Promise.all(uploadPromises);
+      toast.success(`${files.length} foto(s) enviada(s) com sucesso`);
+      fetchVisits();
+    } catch (error) {
+      console.error("Error uploading photos:", error);
+      toast.error("Erro ao enviar fotos");
+    } finally {
+      setUploadingPhotos(null);
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string, photoUrl: string) => {
+    try {
+      // Extract file path from URL
+      const urlParts = photoUrl.split('/feira-visit-photos/');
+      if (urlParts.length < 2) throw new Error("URL inválida");
+      
+      const filePath = urlParts[1];
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('feira-visit-photos')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('client_feira_photos')
+        .delete()
+        .eq('id', photoId);
+
+      if (dbError) throw dbError;
+
+      toast.success("Foto excluída com sucesso");
+      fetchVisits();
+    } catch (error) {
+      console.error("Error deleting photo:", error);
+      toast.error("Erro ao excluir foto");
+    }
   };
 
   return (
@@ -362,6 +460,63 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                               {visit.notes ? "Editar anotações" : "Adicionar anotações"}
                             </Button>
                           </div>
+                        )}
+                      </div>
+
+                      {/* Photos Section */}
+                      <div className="space-y-2 mt-4">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-sm font-medium flex items-center gap-2">
+                            <ImageIcon className="h-4 w-4" />
+                            Fotos da Visita
+                          </h5>
+                          <label htmlFor={`photo-upload-${visit.id}`}>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              disabled={uploadingPhotos === visit.id}
+                              asChild
+                            >
+                              <span className="cursor-pointer">
+                                <Upload className="h-4 w-4 mr-2" />
+                                {uploadingPhotos === visit.id ? "Enviando..." : "Adicionar Fotos"}
+                              </span>
+                            </Button>
+                            <Input
+                              id={`photo-upload-${visit.id}`}
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={(e) => handlePhotoUpload(visit.id, e.target.files)}
+                            />
+                          </label>
+                        </div>
+
+                        {visit.photos && visit.photos.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-2">
+                            {visit.photos.map((photo) => (
+                              <div key={photo.id} className="relative group">
+                                <img
+                                  src={photo.photo_url}
+                                  alt="Foto da visita"
+                                  className="w-full h-24 object-cover rounded-md"
+                                />
+                                <Button
+                                  size="icon"
+                                  variant="destructive"
+                                  className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleDeletePhoto(photo.id, photo.photo_url)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">
+                            Nenhuma foto adicionada
+                          </p>
                         )}
                       </div>
                     </div>

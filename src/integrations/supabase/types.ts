@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_feira_photos: {
+        Row: {
+          client_feira_id: string
+          id: string
+          notes: string | null
+          photo_url: string
+          uploaded_at: string | null
+          uploaded_by: string
+        }
+        Insert: {
+          client_feira_id: string
+          id?: string
+          notes?: string | null
+          photo_url: string
+          uploaded_at?: string | null
+          uploaded_by: string
+        }
+        Update: {
+          client_feira_id?: string
+          id?: string
+          notes?: string | null
+          photo_url?: string
+          uploaded_at?: string | null
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_feira_photos_client_feira_id_fkey"
+            columns: ["client_feira_id"]
+            isOneToOne: false
+            referencedRelation: "client_feiras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_feiras: {
         Row: {
           client_id: string
