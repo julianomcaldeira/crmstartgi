@@ -26,6 +26,7 @@ const Metas = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
   const [goalsProgress, setGoalsProgress] = useState<any[]>([]);
+  const [historicalData, setHistoricalData] = useState<any[]>([]);
   
   // Filter states
   const [filterSeller, setFilterSeller] = useState<string>("all");
@@ -224,6 +225,99 @@ const Metas = () => {
       setGoalsProgress(progressData);
     } catch (error) {
       console.error("Error fetching goals progress:", error);
+    }
+  };
+
+  const fetchHistoricalData = async () => {
+    try {
+      const twelveMonthsAgo = new Date();
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if user is admin or gestor
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      const canViewAll = roleData?.role === "admin" || roleData?.role === "gestor";
+
+      let query = supabase
+        .from("goals")
+        .select(`
+          *,
+          profiles:assigned_to(id, full_name, email)
+        `)
+        .gte("end_date", twelveMonthsAgo.toISOString())
+        .order("end_date", { ascending: true });
+
+      if (!canViewAll) {
+        query = query.or(`assigned_to.eq.${user.id},assigned_to.is.null`);
+      }
+
+      const { data: historicalGoals } = await query;
+
+      if (historicalGoals) {
+        const historyWithProgress = await Promise.all(
+          historicalGoals.map(async (goal) => {
+            let currentValue = 0;
+
+            if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
+              let query = supabase
+                .from("opportunities")
+                .select("value, monthly_value, created_at")
+                .eq("status", "won")
+                .gte("created_at", goal.start_date)
+                .lte("created_at", goal.end_date);
+
+              if (goal.assigned_to) {
+                query = query.eq("assigned_to", goal.assigned_to);
+              }
+
+              const { data: opportunities } = await query;
+
+              if (opportunities) {
+                currentValue = opportunities.reduce((sum, opp) => {
+                  if (goal.goal_type === "revenue") {
+                    return sum + (opp.value || 0);
+                  } else {
+                    return sum + ((opp.monthly_value || 0) * 12);
+                  }
+                }, 0);
+              }
+            } else if (goal.goal_type === "tasks" || goal.goal_type === "activities") {
+              let query = supabase
+                .from("tasks")
+                .select("id")
+                .eq("status", "completed")
+                .gte("completed_at", goal.start_date)
+                .lte("completed_at", goal.end_date);
+
+              if (goal.assigned_to) {
+                query = query.eq("assigned_to", goal.assigned_to);
+              }
+
+              const { data: tasks, count } = await query;
+              currentValue = count || 0;
+            }
+
+            const achievement = (currentValue / goal.target_value) * 100;
+
+            return {
+              ...goal,
+              currentValue,
+              achievement: Math.min(100, achievement),
+            };
+          })
+        );
+
+        setHistoricalData(historyWithProgress);
+      }
+    } catch (error) {
+      console.error("Error fetching historical data:", error);
     }
   };
 
@@ -632,7 +726,7 @@ const Metas = () => {
                     ))}
                   </>
                 )}
-                {!isAdmin && !isGestor && (
+                {!isAdmin && !isGestor && currentUserId && (
                   <SelectItem value={currentUserId}>Minhas metas</SelectItem>
                 )}
               </SelectContent>
