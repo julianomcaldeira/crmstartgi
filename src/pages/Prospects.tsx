@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -93,11 +93,20 @@ const Prospects = () => {
   }]);
 
   useEffect(() => {
-    fetchClients();
-    fetchSellers();
-    fetchFeiras();
-    fetchCurrentUser();
-    fetchProducts();
+    const initialize = async () => {
+      // Executar fetches independentes em paralelo para maior velocidade
+      await Promise.all([
+        fetchCurrentUser(),
+        fetchSellers(),
+        fetchFeiras(),
+        fetchProducts()
+      ]);
+      
+      // Buscar clientes por último (é a query mais pesada)
+      await fetchClients();
+    };
+    
+    initialize();
   }, []);
 
   const fetchCurrentUser = async () => {
@@ -166,10 +175,15 @@ const Prospects = () => {
     try {
       console.log("Fetching clients...");
       
-      // Buscar clientes
+      // Buscar clientes com todos os dados relacionados em uma única query otimizada
       const { data: clientsData, error: clientsError } = await supabase
         .from("clients")
-        .select("*")
+        .select(`
+          *,
+          contacts(*),
+          created_by_profile:profiles!created_by(full_name, email),
+          client_feiras(feira_id)
+        `)
         .order("created_at", { ascending: false });
 
       if (clientsError) {
@@ -179,39 +193,7 @@ const Prospects = () => {
 
       console.log("Clients data fetched:", clientsData?.length || 0, "records");
 
-      // Buscar dados adicionais para cada cliente
-      const enrichedClients = await Promise.all(
-        (clientsData || []).map(async (client) => {
-          // Buscar contatos
-          const { data: contacts } = await supabase
-            .from("contacts")
-            .select("*")
-            .eq("client_id", client.id);
-
-          // Buscar perfil do criador
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", client.created_by)
-            .single();
-
-          // Buscar feiras vinculadas
-          const { data: clientFeiras } = await supabase
-            .from("client_feiras")
-            .select("feira_id")
-            .eq("client_id", client.id);
-
-          return {
-            ...client,
-            contacts: contacts || [],
-            created_by_profile: profile || null,
-            client_feiras: clientFeiras || []
-          };
-        })
-      );
-
-      console.log("Enriched clients:", enrichedClients.length);
-      setClients(enrichedClients);
+      setClients(clientsData || []);
     } catch (error) {
       console.error("Error fetching clients:", error);
       toast.error("Erro ao carregar prospects");
@@ -427,35 +409,40 @@ const Prospects = () => {
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
 
-  const filteredClients = clients.filter((client) => {
-    const matchesSearch = client.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.cnpj.includes(searchTerm) ||
-      (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
-    
-    const matchesFeira = selectedFeiraFilter === "all" || 
-      (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
-    
-    const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
-    
-    const matchesRegion = selectedRegion === "all" || 
-      (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
-    
-    // Quick filters for compact view
-    const matchesQuickRating = quickRatingFilter === null || client.rating === quickRatingFilter;
-    const matchesQuickRegion = quickRegionFilter === "all" || client.region === quickRegionFilter;
-    const matchesQuickSegment = quickSegmentFilter === "all" || client.segment === quickSegmentFilter;
-    
-    return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
-      matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
-  });
+  const filteredClients = useMemo(() => {
+    return clients.filter((client) => {
+      const matchesSearch = client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.cnpj?.includes(searchTerm) ||
+        (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesSeller = selectedSeller === "all" || client.created_by === selectedSeller;
+      
+      const matchesFeira = selectedFeiraFilter === "all" || 
+        (client.client_feiras && client.client_feiras.some((cf: any) => cf.feira_id === selectedFeiraFilter));
+      
+      const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
+      
+      const matchesRegion = selectedRegion === "all" || 
+        (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
+      
+      // Quick filters for compact view
+      const matchesQuickRating = quickRatingFilter === null || client.rating === quickRatingFilter;
+      const matchesQuickRegion = quickRegionFilter === "all" || client.region === quickRegionFilter;
+      const matchesQuickSegment = quickSegmentFilter === "all" || client.segment === quickSegmentFilter;
+      
+      return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
+        matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
+    });
+  }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, 
+      quickRatingFilter, quickRegionFilter, quickSegmentFilter]);
 
-  // Pagination
+  // Pagination with memoization
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedClients = filteredClients.slice(startIndex, endIndex);
+  const paginatedClients = useMemo(() => {
+    return filteredClients.slice(startIndex, endIndex);
+  }, [filteredClients, currentPage, itemsPerPage]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
