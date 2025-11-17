@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2 } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2 } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -80,6 +80,7 @@ const Oportunidades = () => {
   const [quickStatusFilter, setQuickStatusFilter] = useState("all");
   const [quickProbabilityFilter, setQuickProbabilityFilter] = useState("all");
   const [quickBusinessTypeFilter, setQuickBusinessTypeFilter] = useState("all");
+  const [compactView, setCompactView] = useState(false);
 
   // Form state
   const [clientId, setClientId] = useState("");
@@ -642,6 +643,19 @@ const Oportunidades = () => {
         </div>
 
         <div className="flex gap-2">
+          {viewModeKanban === "kanban" && (
+            <Button
+              variant={compactView ? "default" : "outline"}
+              size="sm"
+              onClick={() => setCompactView(!compactView)}
+              className="gap-2"
+              title={compactView ? "Visualização Expandida" : "Visualização Compacta"}
+            >
+              {compactView ? <Maximize2 className="h-4 w-4" /> : <Minimize2 className="h-4 w-4" />}
+              {compactView ? "Expandir" : "Compacto"}
+            </Button>
+          )}
+          
           <div className="flex border rounded-lg overflow-hidden">
             {viewModeKanban === "list" && (
               <div className="flex items-center gap-2 mr-2 animate-fade-in">
@@ -1008,125 +1022,155 @@ const Oportunidades = () => {
                                 setViewDialogOpen(true);
                               }}
                             >
-                        <CardHeader className="p-3 pb-2">
-                          <div className="flex items-start justify-between gap-1.5 mb-1.5">
-                            <CardTitle className="text-xs font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{opp.title}</CardTitle>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditOpportunity(opp);
-                                }}
-                              >
-                                <Edit size={14} />
-                              </Button>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <ChevronRight size={14} />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="bg-background z-50">
-                                  {stages
-                                    .filter(s => s.key !== opp.status)
-                                    .map(stage => (
-                                      <DropdownMenuItem
-                                        key={stage.key}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          updateOpportunityStatus(opp.id, stage.key);
-                                        }}
-                                      >
-                                        Mover para {stage.label}
-                                      </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                        {compactView ? (
+                          // Modo Ultra-Compacto
+                          <CardContent className="p-2 space-y-1.5">
+                            <div className="flex items-center gap-1">
+                              <Building2 size={10} className="text-muted-foreground flex-shrink-0" />
+                              <p className="text-[9px] font-medium text-foreground line-clamp-1 flex-1">
+                                {opp.client?.trade_name || opp.client?.company_name}
+                              </p>
                             </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="p-3 pt-0 space-y-2">
-                          <div className="flex items-center gap-1.5">
-                            <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
-                            <p className="text-[10px] font-medium text-foreground line-clamp-1">
-                              {opp.client?.trade_name || opp.client?.company_name}
-                            </p>
-                          </div>
-                          
-                          {opp.product && (
-                            <div className="flex items-center gap-1.5 p-1.5 bg-primary/5 rounded border border-primary/10">
-                              {opp.product.logo_url ? (
-                                <img
-                                  src={opp.product.logo_url}
-                                  alt={opp.product.name}
-                                  className="h-4 w-4 object-contain bg-white rounded p-0.5"
-                                />
-                              ) : null}
-                              <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold h-4">
-                                {opp.product.name}
+                            
+                            {opp.value && (
+                              <div className="flex items-center justify-between p-1.5 bg-gradient-to-r from-primary/10 to-primary/5 rounded">
+                                <span className="text-[8px] font-medium text-muted-foreground">Valor</span>
+                                <p className="text-[10px] font-bold text-primary">
+                                  {formatCurrency(opp.value)}
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-center pt-1">
+                              <Badge variant="outline" className="text-[9px] font-semibold h-4">
+                                {opp.probability}%
                               </Badge>
                             </div>
-                          )}
-                          
-                          {opp.value && (
-                            <div className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded border border-primary/20">
-                              <span className="text-[10px] font-medium text-muted-foreground">Valor</span>
-                              <p className="text-xs font-bold text-primary">
-                                {formatCurrency(opp.value)}
-                              </p>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/30">
-                            <Badge variant="outline" className="text-[10px] font-semibold h-4">
-                              {opp.probability}%
-                            </Badge>
-                            {opp.assigned && (
-                              <p className="text-[10px] text-muted-foreground truncate font-medium">
-                                {opp.assigned.full_name}
-                              </p>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-1.5 pt-2 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                            {previousStage && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 h-6 text-[10px] font-semibold hover:bg-muted"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateOpportunityStatus(opp.id, previousStage.key);
-                                }}
-                              >
-                                <ChevronLeft size={12} className="mr-0.5" />
-                                Voltar
-                              </Button>
-                            )}
-                            {nextStage && (
-                              <Button
-                                variant="default"
-                                size="sm"
-                                className="flex-1 h-6 text-[10px] font-semibold bg-primary hover:bg-primary/90"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateOpportunityStatus(opp.id, nextStage.key);
-                                }}
-                              >
-                                Avançar
-                                <ChevronRight size={12} className="ml-0.5" />
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
+                          </CardContent>
+                        ) : (
+                          // Modo Completo
+                          <>
+                            <CardHeader className="p-3 pb-2">
+                              <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                                <CardTitle className="text-xs font-bold line-clamp-2 flex-1 group-hover:text-primary transition-colors">{opp.title}</CardTitle>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditOpportunity(opp);
+                                    }}
+                                  >
+                                    <Edit size={14} />
+                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <ChevronRight size={14} />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-background z-50">
+                                      {stages
+                                        .filter(s => s.key !== opp.status)
+                                        .map(stage => (
+                                          <DropdownMenuItem
+                                            key={stage.key}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateOpportunityStatus(opp.id, stage.key);
+                                            }}
+                                          >
+                                            Mover para {stage.label}
+                                          </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-3 pt-0 space-y-2">
+                              <div className="flex items-center gap-1.5">
+                                <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
+                                <p className="text-[10px] font-medium text-foreground line-clamp-1">
+                                  {opp.client?.trade_name || opp.client?.company_name}
+                                </p>
+                              </div>
+                              
+                              {opp.product && (
+                                <div className="flex items-center gap-1.5 p-1.5 bg-primary/5 rounded border border-primary/10">
+                                  {opp.product.logo_url ? (
+                                    <img
+                                      src={opp.product.logo_url}
+                                      alt={opp.product.name}
+                                      className="h-4 w-4 object-contain bg-white rounded p-0.5"
+                                    />
+                                  ) : null}
+                                  <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-primary/20 font-semibold h-4">
+                                    {opp.product.name}
+                                  </Badge>
+                                </div>
+                              )}
+                              
+                              {opp.value && (
+                                <div className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded border border-primary/20">
+                                  <span className="text-[10px] font-medium text-muted-foreground">Valor</span>
+                                  <p className="text-xs font-bold text-primary">
+                                    {formatCurrency(opp.value)}
+                                  </p>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/30">
+                                <Badge variant="outline" className="text-[10px] font-semibold h-4">
+                                  {opp.probability}%
+                                </Badge>
+                                {opp.assigned && (
+                                  <p className="text-[10px] text-muted-foreground truncate font-medium">
+                                    {opp.assigned.full_name}
+                                  </p>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center gap-1.5 pt-2 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                {previousStage && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 h-6 text-[10px] font-semibold hover:bg-muted"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateOpportunityStatus(opp.id, previousStage.key);
+                                    }}
+                                  >
+                                    <ChevronLeft size={12} className="mr-0.5" />
+                                    Voltar
+                                  </Button>
+                                )}
+                                {nextStage && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="flex-1 h-6 text-[10px] font-semibold bg-primary hover:bg-primary/90"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateOpportunityStatus(opp.id, nextStage.key);
+                                    }}
+                                  >
+                                    Avançar
+                                    <ChevronRight size={12} className="ml-0.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </CardContent>
+                          </>
+                        )}
                       </Card>
                     </DraggableCard>
                   );
