@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
+import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
@@ -23,6 +25,7 @@ const Metas = () => {
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
+  const [goalsProgress, setGoalsProgress] = useState<any[]>([]);
   
   // Filter states
   const [filterSeller, setFilterSeller] = useState<string>("all");
@@ -52,6 +55,12 @@ const Metas = () => {
     };
     initializeData();
   }, []);
+
+  useEffect(() => {
+    if (goals.length > 0) {
+      fetchGoalsProgress();
+    }
+  }, [goals]);
 
   const checkAdminStatus = async () => {
     try {
@@ -125,6 +134,95 @@ const Metas = () => {
       toast.error("Erro ao carregar metas");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGoalsProgress = async () => {
+    try {
+      const progressData = await Promise.all(
+        goals.map(async (goal) => {
+          let currentValue = 0;
+
+          if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
+            // Fetch won opportunities in the goal period
+            let query = supabase
+              .from("opportunities")
+              .select("value, monthly_value, created_at")
+              .eq("status", "won")
+              .gte("created_at", goal.start_date)
+              .lte("created_at", goal.end_date);
+
+            if (goal.assigned_to) {
+              query = query.eq("assigned_to", goal.assigned_to);
+            }
+
+            const { data: opportunities } = await query;
+
+            if (opportunities) {
+              currentValue = opportunities.reduce((sum, opp) => {
+                if (goal.goal_type === "revenue") {
+                  return sum + (opp.value || 0);
+                } else {
+                  return sum + ((opp.monthly_value || 0) * 12);
+                }
+              }, 0);
+            }
+          } else if (goal.goal_type === "tasks") {
+            // Fetch completed tasks in the goal period
+            let query = supabase
+              .from("tasks")
+              .select("id")
+              .eq("status", "completed")
+              .gte("completed_at", goal.start_date)
+              .lte("completed_at", goal.end_date);
+
+            if (goal.assigned_to) {
+              query = query.eq("assigned_to", goal.assigned_to);
+            }
+
+            const { data: tasks, count } = await query;
+            currentValue = count || 0;
+          } else if (goal.goal_type === "activities") {
+            // Fetch all completed tasks as activities
+            let query = supabase
+              .from("tasks")
+              .select("id")
+              .eq("status", "completed")
+              .gte("completed_at", goal.start_date)
+              .lte("completed_at", goal.end_date);
+
+            if (goal.assigned_to) {
+              query = query.eq("assigned_to", goal.assigned_to);
+            }
+
+            const { data: tasks, count } = await query;
+            currentValue = count || 0;
+          }
+
+          const progress = (currentValue / goal.target_value) * 100;
+          const daysInPeriod = Math.ceil(
+            (new Date(goal.end_date).getTime() - new Date(goal.start_date).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const daysPassed = Math.ceil(
+            (new Date().getTime() - new Date(goal.start_date).getTime()) / (1000 * 60 * 60 * 24)
+          );
+          const expectedProgress = Math.min(100, (daysPassed / daysInPeriod) * 100);
+          const projection = daysPassed > 0 ? (currentValue / daysPassed) * daysInPeriod : 0;
+
+          return {
+            ...goal,
+            currentValue,
+            progress: Math.min(100, progress),
+            expectedProgress: Math.max(0, expectedProgress),
+            projection,
+            isOnTrack: progress >= expectedProgress,
+          };
+        })
+      );
+
+      setGoalsProgress(progressData);
+    } catch (error) {
+      console.error("Error fetching goals progress:", error);
     }
   };
 
@@ -299,6 +397,54 @@ const Metas = () => {
 
     return grouped;
   }, [filteredGoals, groupBySeller]);
+
+  // Chart data for seller comparison
+  const sellerComparisonData = useMemo(() => {
+    if (!goalsProgress.length) return [];
+
+    const sellerMap = new Map<string, { name: string; meta: number; atual: number; previsao: number }>();
+
+    goalsProgress.forEach((goal) => {
+      const sellerId = goal.assigned_to || "unassigned";
+      const sellerName = goal.profiles?.full_name || "Não atribuído";
+
+      if (!sellerMap.has(sellerId)) {
+        sellerMap.set(sellerId, { name: sellerName, meta: 0, atual: 0, previsao: 0 });
+      }
+
+      const seller = sellerMap.get(sellerId)!;
+      seller.meta += goal.target_value;
+      seller.atual += goal.currentValue;
+      seller.previsao += goal.projection;
+    });
+
+    return Array.from(sellerMap.values());
+  }, [goalsProgress]);
+
+  // Monthly evolution data
+  const monthlyEvolutionData = useMemo(() => {
+    if (!goalsProgress.length) return [];
+
+    // Group by month
+    const monthlyData = new Map<string, { month: string; meta: number; realizado: number }>();
+
+    goalsProgress.forEach((goal) => {
+      const startDate = new Date(goal.start_date);
+      const endDate = new Date(goal.end_date);
+      const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = startDate.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+
+      if (!monthlyData.has(monthKey)) {
+        monthlyData.set(monthKey, { month: monthLabel, meta: 0, realizado: 0 });
+      }
+
+      const data = monthlyData.get(monthKey)!;
+      data.meta += goal.target_value;
+      data.realizado += goal.currentValue;
+    });
+
+    return Array.from(monthlyData.values()).sort((a, b) => a.month.localeCompare(b.month));
+  }, [goalsProgress]);
 
   return (
     <div className="space-y-6">
@@ -543,9 +689,22 @@ const Metas = () => {
         </div>
       </Card>
 
-      {loading ? (
-        <p className="text-center text-muted-foreground">Carregando...</p>
-      ) : filteredGoals.length === 0 ? (
+      <Tabs defaultValue="lista" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="lista" className="gap-2">
+            <Target className="h-4 w-4" />
+            Lista de Metas
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Dashboard Visual
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="lista" className="space-y-6">
+          {loading ? (
+            <p className="text-center text-muted-foreground">Carregando...</p>
+          ) : filteredGoals.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <Target className="mx-auto mb-4 text-muted-foreground" size={48} />
@@ -744,6 +903,294 @@ const Metas = () => {
           })}
         </div>
       )}
+        </TabsContent>
+
+        <TabsContent value="dashboard" className="space-y-6">
+          {loading || goalsProgress.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <BarChart3 className="mx-auto mb-4 text-muted-foreground" size={48} />
+                <p className="text-muted-foreground">
+                  {loading ? "Carregando dados..." : "Nenhum dado disponível para visualização"}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Target className="h-4 w-4 text-primary" />
+                      Total de Metas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{filteredGoals.length}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Ativas no período selecionado
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                      No Caminho Certo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {goalsProgress.filter(g => g.isOnTrack).length}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Acima do esperado
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-orange-600" />
+                      Precisam Atenção
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {goalsProgress.filter(g => !g.isOnTrack).length}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Abaixo do esperado
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Seller Comparison Chart */}
+              {(isAdmin || isGestor) && sellerComparisonData.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Comparação por Vendedor
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Meta, progresso atual e projeção de atingimento
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={sellerComparisonData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis 
+                          dataKey="name" 
+                          className="text-xs"
+                          tick={{ fill: 'hsl(var(--foreground))' }}
+                        />
+                        <YAxis 
+                          className="text-xs"
+                          tick={{ fill: 'hsl(var(--foreground))' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                          formatter={(value: any) => 
+                            new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            }).format(value)
+                          }
+                        />
+                        <Legend />
+                        <Bar dataKey="meta" fill="hsl(var(--muted))" name="Meta" />
+                        <Bar dataKey="atual" fill="hsl(var(--primary))" name="Atual" />
+                        <Bar dataKey="previsao" fill="hsl(var(--chart-2))" name="Projeção" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Monthly Evolution Chart */}
+              {monthlyEvolutionData.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <LineChart className="h-5 w-5" />
+                      Evolução Mensal
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Acompanhamento do desempenho ao longo do tempo
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsLineChart data={monthlyEvolutionData}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis 
+                          dataKey="month" 
+                          className="text-xs"
+                          tick={{ fill: 'hsl(var(--foreground))' }}
+                        />
+                        <YAxis 
+                          className="text-xs"
+                          tick={{ fill: 'hsl(var(--foreground))' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                          formatter={(value: any) => 
+                            new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            }).format(value)
+                          }
+                        />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="meta" 
+                          stroke="hsl(var(--muted-foreground))" 
+                          strokeWidth={2}
+                          name="Meta"
+                          strokeDasharray="5 5"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="realizado" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          name="Realizado"
+                        />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Individual Goals Progress */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Progresso Individual das Metas
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Status detalhado de cada meta com projeções
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {goalsProgress
+                    .filter(goal => {
+                      if (filterSeller !== "all") {
+                        if (filterSeller === "unassigned") return !goal.assigned_to;
+                        return goal.assigned_to === filterSeller;
+                      }
+                      if (filterGoalType !== "all") return goal.goal_type === filterGoalType;
+                      if (filterPeriod !== "all") return goal.period === filterPeriod;
+                      return true;
+                    })
+                    .map((goal) => {
+                      const Icon = getGoalIcon(goal.goal_type);
+                      return (
+                        <div key={goal.id} className="space-y-3 p-4 border rounded-lg hover:shadow-sm transition-shadow">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className="p-2 bg-primary/10 rounded-lg">
+                                <Icon className="text-primary" size={20} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-base mb-1">{goal.title}</h4>
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    {getGoalTypeLabel(goal.goal_type)}
+                                  </Badge>
+                                  {goal.profiles && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {goal.profiles.full_name}
+                                    </Badge>
+                                  )}
+                                  <Badge 
+                                    variant={goal.isOnTrack ? "default" : "destructive"}
+                                    className="text-xs"
+                                  >
+                                    {goal.isOnTrack ? "No caminho" : "Atenção"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                            <div>
+                              <p className="text-muted-foreground mb-1">Meta</p>
+                              <p className="font-bold text-primary">
+                                {formatValue(goal.target_value, goal.goal_type)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Atual</p>
+                              <p className="font-bold">
+                                {formatValue(goal.currentValue, goal.goal_type)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Projeção</p>
+                              <p className="font-bold text-chart-2">
+                                {formatValue(goal.projection, goal.goal_type)}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Progresso Real</span>
+                              <span className="font-medium">{goal.progress.toFixed(1)}%</span>
+                            </div>
+                            <Progress value={goal.progress} className="h-2" />
+                            
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Esperado para a data</span>
+                              <span className="font-medium text-muted-foreground">
+                                {goal.expectedProgress.toFixed(1)}%
+                              </span>
+                            </div>
+                            <Progress value={goal.expectedProgress} className="h-1 opacity-50" />
+                          </div>
+
+                          {goal.projection > goal.target_value ? (
+                            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 p-2 rounded">
+                              <TrendingUp className="h-4 w-4" />
+                              <span>
+                                Projeção: {((goal.projection / goal.target_value) * 100).toFixed(0)}% da meta
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-sm text-orange-600 bg-orange-50 dark:bg-orange-950/20 p-2 rounded">
+                              <TrendingDown className="h-4 w-4" />
+                              <span>
+                                Projeção: {((goal.projection / goal.target_value) * 100).toFixed(0)}% da meta
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
