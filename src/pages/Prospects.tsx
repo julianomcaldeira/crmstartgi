@@ -1160,7 +1160,8 @@ const Prospects = () => {
           </Card>
         ) : (
           <>
-            {paginatedClients.map((client) => (
+            {viewMode === "cards" ? (
+              paginatedClients.map((client) => (
             <SwipeableCard
               key={client.id}
               onEdit={canEditClient(client) ? () => {
@@ -1299,7 +1300,91 @@ const Prospects = () => {
               </CardContent>
             </Card>
             </SwipeableCard>
-            ))}
+              ))
+            ) : (
+              // Compact View
+              paginatedClients.map((client) => (
+            <SwipeableCard
+              key={client.id}
+              onEdit={canEditClient(client) ? () => {
+                handleEditClient({ stopPropagation: () => {} } as any, client);
+              } : undefined}
+              onDelete={userRoles.includes('admin') ? () => {
+                handleDeleteClick({ stopPropagation: () => {} } as any, client);
+              } : undefined}
+            >
+            <Card 
+              className="hover:shadow-md transition-all duration-300 cursor-pointer"
+              onClick={() => navigate(`/prospects/${client.id}`)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <Building2 className="text-primary h-5 w-5" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 flex-1 min-w-0">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm truncate">
+                          {client.trade_name || client.company_name}
+                        </h3>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {client.cnpj}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {[client.city, client.state].filter(Boolean).join(", ") || "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {client.rating > 0 && (
+                          <div className="flex items-center gap-1">
+                            {[...Array(client.rating)].map((_, i) => (
+                              <svg
+                                key={i}
+                                className="w-3 h-3 fill-yellow-400 text-yellow-400"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                              </svg>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                    {canEditClient(client) && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => handleEditClient(e, client)}
+                        className="h-8 w-8"
+                        title="Editar prospect"
+                      >
+                        <Edit size={16} />
+                      </Button>
+                    )}
+                    {userRoles.includes('admin') && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={(e) => handleDeleteClick(e, client)}
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="Excluir prospect"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            </SwipeableCard>
+              ))
+            )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
