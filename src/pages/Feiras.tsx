@@ -45,7 +45,7 @@ import {
   List,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, isToday, isThisWeek, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
@@ -244,6 +244,38 @@ const Feiras = () => {
       status: "planejada",
     });
     setEditingFeira(null);
+  };
+
+  const isFeiraHappeningToday = (feira: any) => {
+    if (!feira.start_date || !feira.end_date) return false;
+    const today = new Date();
+    const startDate = parseISO(feira.start_date);
+    const endDate = parseISO(feira.end_date);
+    return today >= startDate && today <= endDate;
+  };
+
+  const isFeiraHappeningThisWeek = (feira: any) => {
+    if (!feira.start_date) return false;
+    const startDate = parseISO(feira.start_date);
+    return isThisWeek(startDate, { weekStartsOn: 0 });
+  };
+
+  const getFeiraTimingBadge = (feira: any) => {
+    if (isFeiraHappeningToday(feira)) {
+      return (
+        <Badge className="bg-green-500 text-white hover:bg-green-600 animate-pulse">
+          Acontecendo Hoje
+        </Badge>
+      );
+    }
+    if (isFeiraHappeningThisWeek(feira)) {
+      return (
+        <Badge className="bg-blue-500 text-white hover:bg-blue-600">
+          Esta Semana
+        </Badge>
+      );
+    }
+    return null;
   };
 
   const handleBulkDelete = () => {
@@ -630,7 +662,10 @@ const Feiras = () => {
                         <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 truncate">
                           {feira.name}
                         </h3>
-                        {getStatusBadge(feira.status)}
+                        <div className="flex flex-wrap gap-2 items-center">
+                          {getStatusBadge(feira.status)}
+                          {getFeiraTimingBadge(feira)}
+                        </div>
                       </div>
                     </div>
                     {isAuthenticated && (
@@ -759,6 +794,7 @@ const Feiras = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(feira.status)}
+                        {getFeiraTimingBadge(feira)}
                       </div>
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {feira.start_date && (
