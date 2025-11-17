@@ -41,6 +41,8 @@ import {
   Globe,
   Search,
   Users,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -66,6 +68,7 @@ const Feiras = () => {
     second: false,
     third: false,
   });
+  const [viewMode, setViewMode] = useState<"cards" | "compact">("cards");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -560,14 +563,37 @@ const Feiras = () => {
           </div>
 
           {filteredFeiras.length > 0 && (
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <Checkbox
-                checked={selectedFeiras.length === filteredFeiras.length && filteredFeiras.length > 0}
-                onCheckedChange={toggleSelectAll}
-              />
-              <span className="text-sm text-muted-foreground">
-                Selecionar todas ({filteredFeiras.length})
-              </span>
+            <div className="flex items-center justify-between gap-4 pt-2 border-t flex-wrap">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedFeiras.length === filteredFeiras.length && filteredFeiras.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  Selecionar todas ({filteredFeiras.length})
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+                <Button
+                  size="sm"
+                  variant={viewMode === "cards" ? "secondary" : "ghost"}
+                  onClick={() => setViewMode("cards")}
+                  className="h-8 px-3"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="ml-2 hidden sm:inline">Cards</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={viewMode === "compact" ? "secondary" : "ghost"}
+                  onClick={() => setViewMode("compact")}
+                  className="h-8 px-3"
+                >
+                  <List className="h-4 w-4" />
+                  <span className="ml-2 hidden sm:inline">Lista</span>
+                </Button>
+              </div>
             </div>
           )}
         </div>
@@ -582,7 +608,7 @@ const Feiras = () => {
               : "Nenhuma feira cadastrada ainda"}
           </p>
         </Card>
-      ) : (
+      ) : viewMode === "cards" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredFeiras.map((feira) => (
             <SwipeableCard
@@ -639,9 +665,15 @@ const Feiras = () => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
-                        {feira.start_date && format(new Date(feira.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                        {feira.start_date &&
+                          format(new Date(feira.start_date), "dd/MM/yyyy", {
+                            locale: ptBR,
+                          })}
                         {feira.start_date && feira.end_date && " - "}
-                        {feira.end_date && format(new Date(feira.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                        {feira.end_date &&
+                          format(new Date(feira.end_date), "dd/MM/yyyy", {
+                            locale: ptBR,
+                          })}
                       </span>
                     </div>
                   )}
@@ -650,27 +682,29 @@ const Feiras = () => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
-                        {feira.location}{feira.location && (feira.city || feira.state) && " - "}
-                        {feira.city}{feira.city && feira.state && ", "}{feira.state}
+                        {[feira.location, feira.city, feira.state]
+                          .filter(Boolean)
+                          .join(", ")}
                       </span>
                     </div>
                   )}
 
                   {feira.website && (
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="h-4 w-4 flex-shrink-0" />
                       <a
                         href={feira.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline truncate text-sm"
+                        className="hover:underline truncate"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         {feira.website}
                       </a>
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 pt-2 border-t">
+                  <div className="flex items-center gap-2 pt-2">
                     <Users className="h-4 w-4 text-primary flex-shrink-0" />
                     <span className="font-medium text-foreground text-sm">
                       {feira.prospect_count || 0} prospect(s)
@@ -693,6 +727,82 @@ const Feiras = () => {
               </div>
             </Card>
           </SwipeableCard>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredFeiras.map((feira) => (
+            <SwipeableCard
+              key={feira.id}
+              onEdit={isAuthenticated ? () => openDialog(feira) : undefined}
+              onDelete={isAuthenticated ? () => handleDelete(feira) : undefined}
+            >
+              <Card className="p-3 sm:p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <Checkbox
+                      checked={selectedFeiras.includes(feira.id)}
+                      onCheckedChange={() => toggleFeiraSelection(feira.id)}
+                      className="flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-center">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm truncate">
+                          {feira.name}
+                        </h3>
+                        {(feira.city || feira.state) && (
+                          <p className="text-xs text-muted-foreground truncate">
+                            {[feira.city, feira.state].filter(Boolean).join(", ")}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(feira.status)}
+                      </div>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        {feira.start_date && (
+                          <span className="truncate">
+                            {format(new Date(feira.start_date), "dd/MM/yy")}
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          <span>{feira.prospect_count || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {isAuthenticated && (
+                    <div className="hidden sm:flex gap-1 flex-shrink-0">
+                      <FeiraVisitsDialog 
+                        feiraId={feira.id} 
+                        feiraName={feira.name} 
+                      />
+                      <FeiraVisitsReport 
+                        feiraId={feira.id} 
+                        feiraName={feira.name} 
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openDialog(feira)}
+                        className="h-8 w-8"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(feira)}
+                        className="h-8 w-8"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </SwipeableCard>
           ))}
         </div>
       )}

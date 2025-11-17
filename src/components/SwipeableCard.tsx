@@ -14,6 +14,13 @@ interface SwipeableCardProps {
 export function SwipeableCard({ children, onEdit, onDelete, className }: SwipeableCardProps) {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Trigger fade-in animation on mount
+  useState(() => {
+    const timer = setTimeout(() => setIsVisible(true), 50);
+    return () => clearTimeout(timer);
+  });
 
   const handlers = useSwipeable({
     onSwiping: (eventData) => {
@@ -56,7 +63,10 @@ export function SwipeableCard({ children, onEdit, onDelete, className }: Swipeab
   };
 
   return (
-    <div className="relative overflow-hidden">
+    <div className={cn(
+      "relative overflow-hidden transition-all duration-500 ease-out",
+      isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+    )}>
       {/* Swipe actions background - only visible on mobile */}
       <div className="absolute right-0 top-0 bottom-0 w-[120px] flex md:hidden">
         {onEdit && (
@@ -85,8 +95,9 @@ export function SwipeableCard({ children, onEdit, onDelete, className }: Swipeab
       <div
         {...handlers}
         className={cn(
-          "transition-transform",
-          isSwiping ? "duration-0" : "duration-300",
+          "transition-all",
+          isSwiping ? "duration-0" : "duration-300 ease-out",
+          swipeOffset !== 0 && "scale-[0.98]",
           className
         )}
         style={{ transform: `translateX(${swipeOffset}px)` }}
