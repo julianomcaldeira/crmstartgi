@@ -39,6 +39,10 @@ const Tarefas = () => {
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  
+  // Quick filters for list view
+  const [quickTaskTypeFilter, setQuickTaskTypeFilter] = useState("all");
+  const [quickPriorityFilter, setQuickPriorityFilter] = useState("all");
 
   // Form state
   const [description, setDescription] = useState("");
@@ -397,7 +401,12 @@ const Tarefas = () => {
     const matchesStartDate = !startDate || !taskDate || taskDate >= new Date(startDate);
     const matchesEndDate = !endDate || !taskDate || taskDate <= new Date(endDate);
     
-    return matchesStatus && matchesClient && matchesStartDate && matchesEndDate;
+    // Quick filters
+    const matchesQuickTaskType = quickTaskTypeFilter === "all" || task.task_type === quickTaskTypeFilter;
+    const matchesQuickPriority = quickPriorityFilter === "all" || task.priority === quickPriorityFilter;
+    
+    return matchesStatus && matchesClient && matchesStartDate && matchesEndDate &&
+      matchesQuickTaskType && matchesQuickPriority;
   });
 
   const getWeekDays = () => {
@@ -615,7 +624,7 @@ const Tarefas = () => {
 
         <TabsContent value="list" className="space-y-4">
           <div className="space-y-4">
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
               <Button
                 variant={filter === "all" ? "default" : "outline"}
                 onClick={() => setFilter("all")}
@@ -644,6 +653,56 @@ const Tarefas = () => {
               >
                 Concluídas
               </Button>
+              
+              {cardViewMode === 'compact' && (
+                <div className="flex items-center gap-2 ml-auto animate-fade-in">
+                  <select 
+                    value={quickTaskTypeFilter} 
+                    onChange={(e) => setQuickTaskTypeFilter(e.target.value)}
+                    className="h-9 px-3 text-sm border rounded-md bg-background"
+                  >
+                    <option value="all">Todos Tipos</option>
+                    <option value="ligacao">Ligação</option>
+                    <option value="email">E-mail</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="visita_presencial">Visita Presencial</option>
+                    <option value="reuniao_online">Reunião Online</option>
+                    <option value="visita_feira">Visita a Feira</option>
+                    <option value="visita_evento">Visita a Evento</option>
+                  </select>
+                  <select 
+                    value={quickPriorityFilter} 
+                    onChange={(e) => setQuickPriorityFilter(e.target.value)}
+                    className="h-9 px-3 text-sm border rounded-md bg-background"
+                  >
+                    <option value="all">Todas Prioridades</option>
+                    <option value="low">Baixa</option>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                  </select>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-md ml-auto">
+                <Button
+                  size="sm"
+                  variant={cardViewMode === "cards" ? "secondary" : "ghost"}
+                  onClick={() => setCardViewMode("cards")}
+                  className="h-8 px-3"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span className="ml-2 hidden sm:inline">Cards</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={cardViewMode === "compact" ? "secondary" : "ghost"}
+                  onClick={() => setCardViewMode("compact")}
+                  className="h-8 px-3"
+                >
+                  <ListIcon className="h-4 w-4" />
+                  <span className="ml-2 hidden sm:inline">Lista</span>
+                </Button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -689,7 +748,10 @@ const Tarefas = () => {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div 
+              key={cardViewMode}
+              className="space-y-3 animate-fade-in"
+            >
               {filteredTasks.map((task) => (
                 <SwipeableCard
                   key={task.id}

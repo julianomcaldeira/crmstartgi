@@ -16,6 +16,10 @@ const Clientes = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [viewMode, setViewMode] = useViewMode("clientes-view-mode", "cards");
+  
+  // Quick filters for compact view
+  const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
+  const [quickRegionFilter, setQuickRegionFilter] = useState("all");
 
   useEffect(() => {
     fetchClientes();
@@ -73,6 +77,12 @@ const Clientes = () => {
       setLoading(false);
     }
   };
+  
+  const filteredClientes = clientes.filter((cliente) => {
+    const matchesQuickRating = quickRatingFilter === null || cliente.rating === quickRatingFilter;
+    const matchesQuickRegion = quickRegionFilter === "all" || cliente.region === quickRegionFilter;
+    return matchesQuickRating && matchesQuickRegion;
+  });
 
   return (
     <div className="space-y-6">
@@ -80,31 +90,62 @@ const Clientes = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
           <p className="text-muted-foreground">
-            Empresas com oportunidades ganhas - Total de {clientes.length} cliente
-            {clientes.length !== 1 ? "s" : ""}
+            Empresas com oportunidades ganhas - Total de {filteredClientes.length} cliente
+            {filteredClientes.length !== 1 ? "s" : ""}
           </p>
         </div>
         
         {clientes.length > 0 && (
-          <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-            <Button
-              size="sm"
-              variant={viewMode === "cards" ? "secondary" : "ghost"}
-              onClick={() => setViewMode("cards")}
-              className="h-8 px-3"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Cards</span>
-            </Button>
-            <Button
-              size="sm"
-              variant={viewMode === "compact" ? "secondary" : "ghost"}
-              onClick={() => setViewMode("compact")}
-              className="h-8 px-3"
-            >
-              <List className="h-4 w-4" />
-              <span className="ml-2 hidden sm:inline">Lista</span>
-            </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            {viewMode === 'compact' && (
+              <div className="flex items-center gap-2 animate-fade-in">
+                <select 
+                  value={quickRatingFilter?.toString() || "all"} 
+                  onChange={(e) => setQuickRatingFilter(e.target.value === "all" ? null : parseInt(e.target.value))}
+                  className="h-8 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="all">Todos Ratings</option>
+                  <option value="5">⭐⭐⭐⭐⭐</option>
+                  <option value="4">⭐⭐⭐⭐</option>
+                  <option value="3">⭐⭐⭐</option>
+                  <option value="2">⭐⭐</option>
+                  <option value="1">⭐</option>
+                </select>
+                <select 
+                  value={quickRegionFilter} 
+                  onChange={(e) => setQuickRegionFilter(e.target.value)}
+                  className="h-8 px-3 text-sm border rounded-md bg-background"
+                >
+                  <option value="all">Todas Regiões</option>
+                  <option value="Norte">Norte</option>
+                  <option value="Nordeste">Nordeste</option>
+                  <option value="Centro-Oeste">Centro-Oeste</option>
+                  <option value="Sudeste">Sudeste</option>
+                  <option value="Sul">Sul</option>
+                </select>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
+              <Button
+                size="sm"
+                variant={viewMode === "cards" ? "secondary" : "ghost"}
+                onClick={() => setViewMode("cards")}
+                className="h-8 px-3"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Cards</span>
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === "compact" ? "secondary" : "ghost"}
+                onClick={() => setViewMode("compact")}
+                className="h-8 px-3"
+              >
+                <List className="h-4 w-4" />
+                <span className="ml-2 hidden sm:inline">Lista</span>
+              </Button>
+            </div>
           </div>
         )}
       </div>
@@ -123,8 +164,11 @@ const Clientes = () => {
         </Card>
       ) : (
         <>
-          <div className="space-y-4">
-            {clientes
+          <div 
+            key={viewMode}
+            className="space-y-4 animate-fade-in"
+          >
+            {filteredClientes
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((cliente) => (
             <SwipeableCard key={cliente.id}>
@@ -256,12 +300,12 @@ const Clientes = () => {
           </div>
 
           {/* Paginação */}
-          {clientes.length > itemsPerPage && (
+          {filteredClientes.length > itemsPerPage && (
             <div className="flex items-center justify-between mt-6">
               <div className="text-sm text-muted-foreground">
                 Mostrando {((currentPage - 1) * itemsPerPage) + 1} a{" "}
-                {Math.min(currentPage * itemsPerPage, clientes.length)} de{" "}
-                {clientes.length} clientes
+                {Math.min(currentPage * itemsPerPage, filteredClientes.length)} de{" "}
+                {filteredClientes.length} clientes
               </div>
               <div className="flex gap-2">
                 <Button
@@ -278,10 +322,10 @@ const Clientes = () => {
                   size="sm"
                   onClick={() =>
                     setCurrentPage((prev) =>
-                      Math.min(prev + 1, Math.ceil(clientes.length / itemsPerPage))
+                      Math.min(prev + 1, Math.ceil(filteredClientes.length / itemsPerPage))
                     )
                   }
-                  disabled={currentPage === Math.ceil(clientes.length / itemsPerPage)}
+                  disabled={currentPage === Math.ceil(filteredClientes.length / itemsPerPage)}
                 >
                   Próxima
                   <ChevronRight className="h-4 w-4 ml-1" />
