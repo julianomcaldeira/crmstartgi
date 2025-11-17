@@ -456,6 +456,51 @@ export type Database = {
           },
         ]
       }
+      import_progress: {
+        Row: {
+          created_at: string
+          duplicate_count: number
+          error_count: number
+          error_message: string | null
+          id: string
+          processed_rows: number
+          session_id: string
+          status: string
+          success_count: number
+          total_rows: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duplicate_count?: number
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          processed_rows?: number
+          session_id: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duplicate_count?: number
+          error_count?: number
+          error_message?: string | null
+          id?: string
+          processed_rows?: number
+          session_id?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       knowledge_base: {
         Row: {
           category: string
