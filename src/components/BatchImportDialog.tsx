@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Upload, Play, Pause, X } from "lucide-react";
+import { Upload } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from 'xlsx';
 
 interface BatchImportDialogProps {
   open: boolean;
@@ -29,163 +28,110 @@ export function BatchImportDialog({ open, onOpenChange, onSuccess }: BatchImport
     success: 0,
     failed: 0,
     duplicates: 0,
-    currentBatch: 0
   });
-  const [batchPaused, setBatchPaused] = useState(false);
-  const batchIntervalRef = useRef<number | null>(null);
-  const cnpjListRef = useRef<string[]>([]);
 
   const handleBatchImport = async (file: File) => {
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer);
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+      toast.info("Iniciando importação completa da planilha...");
       
-      const cnpjs = data
-        .map((row: any) => String(row[0] || '').trim())
-        .filter((cnpj: string) => cnpj && cnpj.length >= 11);
-
-      if (cnpjs.length === 0) {
-        toast.error("Nenhum CNPJ válido encontrado na planilha");
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Usuário não autenticado");
         return;
       }
 
-      cnpjListRef.current = cnpjs;
+      setBatchImporting(true);
       setBatchProgress({
-        total: cnpjs.length,
+        total: 0,
         processed: 0,
         success: 0,
         failed: 0,
         duplicates: 0,
-        currentBatch: 0
       });
-      setBatchImporting(true);
-      setBatchPaused(false);
 
-      processBatch();
-    } catch (error: any) {
-      toast.error("Erro ao ler arquivo: " + error.message);
-    }
-  };
+      // Prepare form data
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userId", user.id);
 
-  const processBatch = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+      // Call edge function to process complete import
+      const response = await supabase.functions.invoke('import-prospects-complete', {
+        body: formData,
+      });
 
-    const processNextBatch = async () => {
-      if (batchPaused) return;
+      if (response.error) {
+        console.error("Erro na importação:", response.error);
+        throw new Error(response.error.message || "Erro ao processar importação");
+      }
 
-      const startIdx = batchProgress.processed;
-      const batch = cnpjListRef.current.slice(startIdx, startIdx + 3);
+      const result = response.data;
+      
+      setBatchProgress({
+        total: result.total,
+        processed: result.total,
+        success: result.success,
+        failed: result.errors,
+        duplicates: result.duplicates,
+      });
 
-      if (batch.length === 0) {
-        setBatchImporting(false);
-        if (batchIntervalRef.current) {
-          clearInterval(batchIntervalRef.current);
-        }
-        
-        // Criar relatório detalhado
-        const successRate = Math.round((batchProgress.success / batchProgress.total) * 100);
-        const reportMessage = `
-📊 Relatório de Importação Concluída
+      const successRate = result.total > 0 
+        ? Math.round((result.success / result.total) * 100) 
+        : 0;
+      
+      const reportMessage = `
+📊 Importação Completa Finalizada
 
-Total processado: ${batchProgress.total} CNPJs
-✅ Sucessos: ${batchProgress.success}
-🔄 Duplicados: ${batchProgress.duplicates}
-❌ Falhas: ${batchProgress.failed}
+Total processado: ${result.total} registros
+✅ Sucessos: ${result.success}
+🔄 Duplicados: ${result.duplicates}
+❌ Falhas: ${result.errors}
 
 Taxa de sucesso: ${successRate}%
-        `.trim();
-        
-        console.log("=== RELATÓRIO DE IMPORTAÇÃO ===");
-        console.log(reportMessage);
-        console.log("================================");
-        
-        toast.success(
-          `Importação concluída! ${batchProgress.success} sucessos, ${batchProgress.duplicates} duplicados, ${batchProgress.failed} falhas. Taxa: ${successRate}%`,
-          { duration: 10000 }
-        );
-        
-        onSuccess();
-        return;
+      `.trim();
+      
+      console.log("=== RELATÓRIO DE IMPORTAÇÃO ===");
+      console.log(reportMessage);
+      if (result.errorDetails && result.errorDetails.length > 0) {
+        console.log("\nDetalhes dos erros:");
+        result.errorDetails.forEach((err: string) => console.log(`- ${err}`));
       }
-
-      try {
-        const response = await supabase.functions.invoke('batch-import-cnpj', {
-          body: { cnpjs: batch, userId: user.id }
-        });
-
-        if (response.error) throw response.error;
-
-        const result = response.data;
-        
-        setBatchProgress(prev => ({
-          ...prev,
-          processed: prev.processed + result.processed,
-          success: prev.success + result.success,
-          failed: prev.failed + result.failed,
-          duplicates: prev.duplicates + result.duplicates,
-          currentBatch: prev.currentBatch + 1
-        }));
-
-      } catch (error: any) {
-        console.error('Batch error:', error);
-        toast.error("Erro no lote: " + error.message);
-      }
-    };
-
-    await processNextBatch();
-    batchIntervalRef.current = window.setInterval(processNextBatch, 60000);
-  };
-
-  const handlePauseBatch = () => {
-    setBatchPaused(true);
-    if (batchIntervalRef.current) {
-      clearInterval(batchIntervalRef.current);
-      batchIntervalRef.current = null;
+      console.log("================================");
+      
+      toast.success(
+        `Importação concluída! ${result.success} sucessos, ${result.duplicates} duplicados, ${result.errors} falhas. Taxa: ${successRate}%`,
+        { duration: 10000 }
+      );
+      
+      onSuccess();
+    } catch (error: any) {
+      console.error("Erro ao processar importação:", error);
+      toast.error("Erro ao processar importação: " + error.message);
+    } finally {
+      setBatchImporting(false);
     }
   };
 
-  const handleResumeBatch = () => {
-    setBatchPaused(false);
-    processBatch();
-  };
-
-  const handleCancelBatch = () => {
-    setBatchImporting(false);
-    setBatchPaused(false);
-    if (batchIntervalRef.current) {
-      clearInterval(batchIntervalRef.current);
-      batchIntervalRef.current = null;
-    }
-    cnpjListRef.current = [];
+  const handleClose = () => {
+    setImportFile(null);
     setBatchProgress({
       total: 0,
       processed: 0,
       success: 0,
       failed: 0,
       duplicates: 0,
-      currentBatch: 0
     });
+    onOpenChange(false);
   };
 
-  useEffect(() => {
-    return () => {
-      if (batchIntervalRef.current) {
-        clearInterval(batchIntervalRef.current);
-      }
-    };
-  }, []);
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Importar Prospects em Lote</DialogTitle>
+          <DialogTitle>Importação em Lote de Prospects</DialogTitle>
           <DialogDescription>
-            Faça upload de um arquivo Excel (.xlsx) com os CNPJs na primeira coluna.
-            Os prospects serão processados em lotes de 3 a cada 1 minuto.
+            Faça upload de uma planilha Excel com todos os dados dos prospects. A primeira linha deve conter os cabeçalhos.
+            <br />
+            <strong>Colunas esperadas:</strong> CNPJ, Razão Social, Nome Fantasia, Telefone, Email, Endereço, Cidade, Estado, CEP, Segmento, Porte da Empresa, Região, Capital Social
           </DialogDescription>
         </DialogHeader>
         
@@ -209,53 +155,42 @@ Taxa de sucesso: ${successRate}%
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progresso</span>
-                <span>{batchProgress.processed} / {batchProgress.total}</span>
-              </div>
-              <Progress value={(batchProgress.processed / batchProgress.total) * 100} />
+              <p className="text-sm text-muted-foreground">
+                {batchProgress.processed === batchProgress.total && batchProgress.total > 0
+                  ? `Importação concluída: ${batchProgress.total} registros processados`
+                  : `Processando importação... aguarde`
+                }
+              </p>
+              <Progress 
+                value={batchProgress.total > 0 ? (batchProgress.processed / batchProgress.total) * 100 : 0} 
+                className="h-2"
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-              <div>
-                <div className="text-sm text-muted-foreground">Sucesso</div>
-                <div className="text-2xl font-bold text-green-600">{batchProgress.success}</div>
+            {batchProgress.processed > 0 && (
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="space-y-1">
+                  <p className="text-2xl font-bold text-green-500">{batchProgress.success}</p>
+                  <p className="text-xs text-muted-foreground">Sucessos</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-2xl font-bold text-yellow-500">{batchProgress.duplicates}</p>
+                  <p className="text-xs text-muted-foreground">Duplicados</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-2xl font-bold text-red-500">{batchProgress.failed}</p>
+                  <p className="text-xs text-muted-foreground">Falhas</p>
+                </div>
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Duplicados</div>
-                <div className="text-2xl font-bold text-yellow-600">{batchProgress.duplicates}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Falhas</div>
-                <div className="text-2xl font-bold text-red-600">{batchProgress.failed}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Lote Atual</div>
-                <div className="text-2xl font-bold">{batchProgress.currentBatch}</div>
-              </div>
-            </div>
+            )}
 
-            <div className="text-sm text-muted-foreground text-center">
-              Processando 3 CNPJs a cada 1 minuto para respeitar os limites da Receita Federal
-            </div>
-
-            <div className="flex gap-2">
-              {!batchPaused ? (
-                <Button onClick={handlePauseBatch} variant="outline" className="flex-1">
-                  <Pause className="mr-2 h-4 w-4" />
-                  Pausar
+            {batchProgress.processed === batchProgress.total && batchProgress.total > 0 && (
+              <div className="flex justify-center">
+                <Button onClick={handleClose} variant="default">
+                  Fechar
                 </Button>
-              ) : (
-                <Button onClick={handleResumeBatch} className="flex-1">
-                  <Play className="mr-2 h-4 w-4" />
-                  Retomar
-                </Button>
-              )}
-              <Button onClick={handleCancelBatch} variant="destructive" className="flex-1">
-                <X className="mr-2 h-4 w-4" />
-                Cancelar
-              </Button>
-            </div>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
