@@ -45,7 +45,7 @@ import {
   List,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isThisWeek, parseISO } from "date-fns";
+import { format, isToday, isThisWeek, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
@@ -702,12 +702,12 @@ const Feiras = () => {
                       <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
                         {feira.start_date &&
-                          format(new Date(feira.start_date), "dd/MM/yyyy", {
+                          format(parseISO(feira.start_date), "dd/MM/yyyy", {
                             locale: ptBR,
                           })}
                         {feira.start_date && feira.end_date && " - "}
                         {feira.end_date &&
-                          format(new Date(feira.end_date), "dd/MM/yyyy", {
+                          format(parseISO(feira.end_date), "dd/MM/yyyy", {
                             locale: ptBR,
                           })}
                       </span>
@@ -799,7 +799,7 @@ const Feiras = () => {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {feira.start_date && (
                           <span className="truncate">
-                            {format(new Date(feira.start_date), "dd/MM/yy")}
+                            {format(parseISO(feira.start_date), "dd/MM/yy")}
                           </span>
                         )}
                         <div className="flex items-center gap-1">
