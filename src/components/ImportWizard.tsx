@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Upload, AlertCircle, CheckCircle2, Loader2, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import * as XLSX from 'xlsx';
 
 interface ImportWizardProps {
   open: boolean;
@@ -108,6 +109,72 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
       supabase.removeChannel(channel);
     };
   }, [sessionId, step]);
+
+  const downloadTemplate = () => {
+    // Create template data with examples
+    const templateData = [
+      {
+        "CNPJ": "12.345.678/0001-90",
+        "Razão Social": "Empresa Exemplo Ltda",
+        "Nome Fantasia": "Exemplo",
+        "Telefone": "(11) 3456-7890",
+        "Email": "contato@exemplo.com.br",
+        "Endereço": "Rua Exemplo, 123",
+        "Cidade": "São Paulo",
+        "Estado": "SP",
+        "CEP": "01234-567",
+        "Segmento": "Tecnologia",
+        "Porte da Empresa": "Médio",
+        "Região": "Sudeste",
+        "Capital Social": "500000",
+        "Vendedor": "João Silva"
+      },
+      {
+        "CNPJ": "98.765.432/0001-10",
+        "Razão Social": "Outra Empresa S.A.",
+        "Nome Fantasia": "Outra Empresa",
+        "Telefone": "(21) 9876-5432",
+        "Email": "vendas@outraempresa.com.br",
+        "Endereço": "Av. Principal, 456",
+        "Cidade": "Rio de Janeiro",
+        "Estado": "RJ",
+        "CEP": "20000-000",
+        "Segmento": "Varejo",
+        "Porte da Empresa": "Grande",
+        "Região": "Sudeste",
+        "Capital Social": "2000000",
+        "Vendedor": "Maria Santos"
+      }
+    ];
+
+    // Create workbook and worksheet
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Prospects");
+
+    // Set column widths for better readability
+    const colWidths = [
+      { wch: 20 }, // CNPJ
+      { wch: 35 }, // Razão Social
+      { wch: 25 }, // Nome Fantasia
+      { wch: 18 }, // Telefone
+      { wch: 30 }, // Email
+      { wch: 30 }, // Endereço
+      { wch: 20 }, // Cidade
+      { wch: 8 },  // Estado
+      { wch: 15 }, // CEP
+      { wch: 20 }, // Segmento
+      { wch: 20 }, // Porte da Empresa
+      { wch: 15 }, // Região
+      { wch: 18 }, // Capital Social
+      { wch: 20 }  // Vendedor
+    ];
+    ws['!cols'] = colWidths;
+
+    // Generate file and trigger download
+    XLSX.writeFile(wb, 'template_importacao_prospects.xlsx');
+    toast.success("Template baixado com sucesso!");
+  };
 
   const handleFileSelect = async (selectedFile: File) => {
     setFile(selectedFile);
@@ -234,10 +301,23 @@ export function ImportWizard({ open, onOpenChange, onSuccess }: ImportWizardProp
             {step === "mapping" && "Mapeamento de Colunas"}
             {step === "importing" && "Importando Prospects"}
           </DialogTitle>
-          <DialogDescription>
-            {step === "upload" && "Faça upload de uma planilha Excel (.xlsx ou .xls). A primeira linha será usada como cabeçalho."}
-            {step === "mapping" && "Revise e ajuste o mapeamento das colunas para os campos do sistema."}
-            {step === "importing" && "Aguarde enquanto os prospects são importados..."}
+          <DialogDescription className="flex items-center justify-between gap-4">
+            <span>
+              {step === "upload" && "Faça upload de uma planilha Excel (.xlsx ou .xls). A primeira linha será usada como cabeçalho."}
+              {step === "mapping" && "Revise e ajuste o mapeamento das colunas para os campos do sistema."}
+              {step === "importing" && "Aguarde enquanto os prospects são importados..."}
+            </span>
+            {step === "upload" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={downloadTemplate}
+                className="gap-2 shrink-0"
+              >
+                <Download className="h-4 w-4" />
+                Baixar Template
+              </Button>
+            )}
           </DialogDescription>
         </DialogHeader>
 
