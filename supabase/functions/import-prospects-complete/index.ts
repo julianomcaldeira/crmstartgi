@@ -21,6 +21,8 @@ interface ProspectData {
   company_size?: string;
   region?: string;
   share_capital?: number;
+  seller_name?: string;
+  seller_id?: string | null;
 }
 
 serve(async (req) => {
@@ -85,6 +87,9 @@ serve(async (req) => {
         }
       }
 
+      // Extract seller_name (column N - index 13)
+      const sellerName = row[13] ? String(row[13]).trim() : undefined;
+
       prospects.push({
         cnpj: cnpjRaw,
         company_name: companyName,
@@ -99,6 +104,7 @@ serve(async (req) => {
         company_size: row[10] ? String(row[10]).trim() : undefined,
         region: row[11] ? String(row[11]).trim() : undefined,
         share_capital: shareCapital,
+        seller_name: sellerName,
       });
     }
     
@@ -108,6 +114,33 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch all sellers to map names to IDs
+    console.log("Buscando vendedores...");
+    const { data: sellersData, error: sellersError } = await supabase
+      .from("profiles")
+      .select("id, full_name, email");
+    
+    if (sellersError) {
+      console.error("Erro ao buscar vendedores:", sellersError);
+    }
+    
+    const sellers = sellersData || [];
+    console.log(`Total de vendedores encontrados: ${sellers.length}`);
+    
+    // Map seller names to IDs
+    for (const prospect of prospects) {
+      if (prospect.seller_name) {
+        const seller = sellers.find(s => 
+          s.full_name?.toLowerCase() === prospect.seller_name?.toLowerCase() ||
+          s.email?.toLowerCase() === prospect.seller_name?.toLowerCase()
+        );
+        prospect.seller_id = seller ? seller.id : null;
+        console.log(`Vendedor "${prospect.seller_name}": ${prospect.seller_id ? 'encontrado' : 'não encontrado'}`);
+      } else {
+        prospect.seller_id = null;
+      }
+    }
 
     const results = {
       total: prospects.length,
@@ -141,6 +174,9 @@ serve(async (req) => {
         }
 
         // Insert into clients table
+        // If seller_id is null or undefined, use the importing user's ID
+        const finalCreatedBy = prospect.seller_id || userId;
+        
         const { error: insertError } = await supabase
           .from("clients")
           .insert({
@@ -157,7 +193,7 @@ serve(async (req) => {
             company_size: prospect.company_size,
             region: prospect.region,
             share_capital: prospect.share_capital,
-            created_by: userId,
+            created_by: finalCreatedBy,
           });
 
         if (insertError) {
