@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
+import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
 
 const Feiras = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
@@ -573,8 +574,12 @@ const Feiras = () => {
                   </div>
                   
                   {isAuthenticated && (
-                    <div className="pt-3 border-t">
+                    <div className="pt-3 border-t flex gap-2">
                       <FeiraVisitsDialog 
+                        feiraId={feira.id} 
+                        feiraName={feira.name} 
+                      />
+                      <FeiraVisitsReport 
                         feiraId={feira.id} 
                         feiraName={feira.name} 
                       />

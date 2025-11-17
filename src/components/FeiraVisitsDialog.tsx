@@ -68,6 +68,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
   const [uploadingPhotos, setUploadingPhotos] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -500,13 +501,17 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                                 <img
                                   src={photo.photo_url}
                                   alt="Foto da visita"
-                                  className="w-full h-24 object-cover rounded-md"
+                                  className="w-full h-24 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedPhoto(photo.photo_url)}
                                 />
                                 <Button
                                   size="icon"
                                   variant="destructive"
                                   className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => handleDeletePhoto(photo.id, photo.photo_url)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePhoto(photo.id, photo.photo_url);
+                                  }}
                                 >
                                   <X className="h-3 w-3" />
                                 </Button>
@@ -527,6 +532,24 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
           </div>
         </div>
       </DialogContent>
+
+      {/* Photo Viewer Dialog */}
+      <Dialog open={!!selectedPhoto} onOpenChange={() => setSelectedPhoto(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Visualização da Foto</DialogTitle>
+          </DialogHeader>
+          {selectedPhoto && (
+            <div className="flex items-center justify-center">
+              <img
+                src={selectedPhoto}
+                alt="Foto ampliada"
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
