@@ -25,6 +25,10 @@ interface ProspectData {
   foundation_date?: string;
   cnae_principal?: string;
   cnae_description?: string;
+  legal_nature?: string;
+  services?: string;
+  distributor?: string;
+  competitors?: string;
   seller_name?: string;
   seller_id?: string | null;
 }
@@ -63,7 +67,7 @@ serve(async (req) => {
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = utils.sheet_to_json(worksheet, { header: 1 });
     
-    const totalRows = jsonData.length - 1; // Exclude header
+    const totalRows = jsonData.length - 1;
 
     // Create initial progress record
     await supabase.from("import_progress").insert({
@@ -79,222 +83,32 @@ serve(async (req) => {
 
     console.log(`Total de linhas: ${totalRows}`);
 
-    // Fetch sellers for mapping
-    const { data: sellers } = await supabase
-      .from("profiles")
-      .select("id, full_name");
-    
-    const sellerMap = new Map(
-      (sellers || []).map((s: any) => [s.full_name.toLowerCase().trim(), s.id])
-    );
-
-    // Parse prospects using mappings
-    const prospects: ProspectData[] = [];
-    const errors: string[] = [];
-
-    for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i] as any[];
-      
-      try {
-        const prospect: any = {};
-        
-        // Apply mappings
-        for (const [colIndex, fieldName] of Object.entries(mappings)) {
-          const value = row[parseInt(colIndex)];
-          
-          if (fieldName === 'cnpj') {
-            const cnpjRaw = String(value || '').replace(/\D/g, '');
-            if (cnpjRaw.length !== 14) {
-              throw new Error("CNPJ inválido");
-            }
-            prospect.cnpj = cnpjRaw;
-          } else if (fieldName === 'company_name') {
-            const companyName = String(value || '').trim();
-            if (!companyName) {
-              throw new Error("Razão Social obrigatória");
-            }
-            prospect.company_name = companyName;
-          } else if (fieldName === 'share_capital') {
-            if (value !== null && value !== undefined && value !== '') {
-              const parsed = parseFloat(String(value).replace(/[^\d.,]/g, '').replace(',', '.'));
-              if (!isNaN(parsed)) {
-                prospect.share_capital = parsed;
-              }
-            }
-          } else if (fieldName === 'foundation_date') {
-            if (value !== null && value !== undefined && value !== '') {
-              // Handle Excel serial date numbers
-              if (typeof value === 'number') {
-                const excelEpoch = new Date(1899, 11, 30);
-                const date = new Date(excelEpoch.getTime() + value * 86400000);
-                prospect.foundation_date = date.toISOString().split('T')[0];
-              } else {
-                // Handle string dates
-                const dateStr = String(value).trim();
-                if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                  prospect.foundation_date = dateStr;
-                } else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                  const [day, month, year] = dateStr.split('/');
-                  prospect.foundation_date = `${year}-${month}-${day}`;
-                }
-              }
-            }
-          } else if (fieldName === 'seller_name') {
-            prospect.seller_name = value ? String(value).trim() : undefined;
-          } else if (value) {
-            prospect[fieldName] = String(value).trim();
-          }
-        }
-
-        // Validate required fields
-        if (!prospect.cnpj || !prospect.company_name) {
-          throw new Error("CNPJ e Razão Social são obrigatórios");
-        }
-
-        // Map seller
-        if (prospect.seller_name) {
-          const sellerId = sellerMap.get(prospect.seller_name.toLowerCase().trim());
-          prospect.seller_id = sellerId || null;
-        }
-
-        prospects.push(prospect);
-      } catch (error: any) {
-        errors.push(`Linha ${i + 1}: ${error.message}`);
-        console.error(`Erro na linha ${i + 1}:`, error.message);
-      }
-    }
-
-    console.log(`Prospects válidos: ${prospects.length}`);
-
-    // Import prospects in batches
-    let successCount = 0;
-    let duplicateCount = 0;
-    let errorCount = errors.length;
-
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < prospects.length; i += BATCH_SIZE) {
-      const batch = prospects.slice(i, i + BATCH_SIZE);
-      
-      for (const prospect of batch) {
-        try {
-          // Check for duplicate
-          const { data: existing } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("cnpj", prospect.cnpj)
-            .maybeSingle();
-
-          if (existing) {
-            duplicateCount++;
-            console.log(`Duplicado: CNPJ ${prospect.cnpj}`);
-          } else {
-            // Insert new prospect
-            const { error: insertError } = await supabase
-              .from("clients")
-              .insert({
-                cnpj: prospect.cnpj,
-                company_name: prospect.company_name,
-                trade_name: prospect.trade_name,
-                phone: prospect.phone,
-                email: prospect.email,
-                address: prospect.address,
-                city: prospect.city,
-                state: prospect.state,
-                zip_code: prospect.zip_code,
-                segment: prospect.segment,
-                company_size: prospect.company_size,
-                region: prospect.region,
-                share_capital: prospect.share_capital,
-                registration_status: prospect.registration_status,
-                foundation_date: prospect.foundation_date,
-                cnae_principal: prospect.cnae_principal,
-                cnae_description: prospect.cnae_description,
-                created_by: prospect.seller_id || userId,
-              });
-
-            if (insertError) {
-              throw insertError;
-            }
-
-            successCount++;
-            console.log(`✅ Importado: ${prospect.company_name}`);
-          }
-        } catch (error: any) {
-          errorCount++;
-          errors.push(`${prospect.company_name}: ${error.message}`);
-          console.error(`Erro ao importar ${prospect.company_name}:`, error);
-        }
-      }
-
-      // Update progress
+    // Start background processing without waiting
+    processImport(supabase, jsonData, mappings, userId, sessionId, totalRows).catch(async (error: any) => {
+      console.error("Erro no processamento em background:", error);
       await supabase
         .from("import_progress")
         .update({
-          processed_rows: Math.min(i + BATCH_SIZE, prospects.length),
-          success_count: successCount,
-          error_count: errorCount,
-          duplicate_count: duplicateCount,
+          status: 'failed',
+          error_message: error.message,
         })
         .eq("session_id", sessionId);
+    });
 
-      console.log(`Progresso: ${i + BATCH_SIZE}/${prospects.length}`);
-    }
-
-    // Mark as completed
-    await supabase
-      .from("import_progress")
-      .update({
-        processed_rows: totalRows,
-        success_count: successCount,
-        error_count: errorCount,
-        duplicate_count: duplicateCount,
-        status: 'completed',
-      })
-      .eq("session_id", sessionId);
-
-    console.log("=== IMPORTAÇÃO CONCLUÍDA ===");
-    console.log(`Sucessos: ${successCount}`);
-    console.log(`Duplicados: ${duplicateCount}`);
-    console.log(`Erros: ${errorCount}`);
-
+    // Return immediately
     return new Response(
       JSON.stringify({
         success: true,
-        total: totalRows,
-        successCount: successCount,
-        duplicates: duplicateCount,
-        errors: errorCount,
-        errorDetails: errors,
+        message: "Importação iniciada",
+        sessionId: sessionId,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+        status: 202,
       }
     );
   } catch (error: any) {
-    console.error("Erro fatal na importação:", error);
-    
-    // Try to update progress with error
-    try {
-      const formData = await req.formData();
-      const sessionId = formData.get("sessionId") as string;
-      if (sessionId) {
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        
-        await supabase
-          .from("import_progress")
-          .update({
-            status: 'failed',
-            error_message: error.message,
-          })
-          .eq("session_id", sessionId);
-      }
-    } catch (e) {
-      console.error("Erro ao atualizar progresso:", e);
-    }
-
+    console.error("Erro ao iniciar importação:", error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
@@ -304,3 +118,185 @@ serve(async (req) => {
     );
   }
 });
+
+async function processImport(
+  supabase: any,
+  jsonData: any[],
+  mappings: Record<number, string>,
+  userId: string,
+  sessionId: string,
+  totalRows: number
+) {
+  console.log("=== INICIANDO PROCESSAMENTO ===");
+  
+  const { data: sellers } = await supabase
+    .from("profiles")
+    .select("id, full_name");
+  
+  const sellerMap = new Map(
+    (sellers || []).map((s: any) => [s.full_name.toLowerCase().trim(), s.id])
+  );
+
+  const prospects: ProspectData[] = [];
+  const errors: string[] = [];
+
+  for (let i = 1; i < jsonData.length; i++) {
+    const row = jsonData[i] as any[];
+    
+    try {
+      const prospect: any = {};
+      
+      for (const [colIndex, fieldName] of Object.entries(mappings)) {
+        const value = row[parseInt(colIndex)];
+        
+        if (fieldName === 'cnpj') {
+          const cnpjRaw = String(value || '').replace(/\D/g, '');
+          if (cnpjRaw.length !== 14) {
+            throw new Error("CNPJ inválido");
+          }
+          prospect.cnpj = cnpjRaw;
+        } else if (fieldName === 'company_name') {
+          const companyName = String(value || '').trim();
+          if (!companyName) {
+            throw new Error("Razão Social obrigatória");
+          }
+          prospect.company_name = companyName;
+        } else if (fieldName === 'share_capital') {
+          if (value !== null && value !== undefined && value !== '') {
+            const parsed = parseFloat(String(value).replace(/[^\d.,]/g, '').replace(',', '.'));
+            if (!isNaN(parsed)) {
+              prospect.share_capital = parsed;
+            }
+          }
+        } else if (fieldName === 'foundation_date') {
+          if (value !== null && value !== undefined && value !== '') {
+            if (typeof value === 'number') {
+              const excelEpoch = new Date(1899, 11, 30);
+              const date = new Date(excelEpoch.getTime() + value * 86400000);
+              prospect.foundation_date = date.toISOString().split('T')[0];
+            } else {
+              const dateStr = String(value).trim();
+              if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                prospect.foundation_date = dateStr;
+              } else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                const [day, month, year] = dateStr.split('/');
+                prospect.foundation_date = `${year}-${month}-${day}`;
+              }
+            }
+          }
+        } else if (fieldName === 'seller_name') {
+          if (value !== null && value !== undefined && value !== '') {
+            prospect.seller_name = String(value).trim();
+          }
+        } else if (fieldName !== 'ignore' && value !== null && value !== undefined && value !== '') {
+          prospect[fieldName] = String(value).trim();
+        }
+      }
+
+      if (prospect.cnpj && prospect.company_name) {
+        if (prospect.seller_name) {
+          const sellerNameLower = prospect.seller_name.toLowerCase().trim();
+          prospect.seller_id = sellerMap.get(sellerNameLower) || null;
+        }
+        prospects.push(prospect);
+      } else {
+        errors.push(`Linha ${i + 1}: CNPJ ou Razão Social ausente`);
+      }
+    } catch (error: any) {
+      errors.push(`Linha ${i + 1}: ${error.message}`);
+      console.error(`Erro na linha ${i + 1}:`, error);
+    }
+  }
+
+  console.log(`Prospects parseados: ${prospects.length}`);
+
+  const BATCH_SIZE = 50;
+  let successCount = 0;
+  let errorCount = 0;
+  let duplicateCount = 0;
+
+  for (let i = 0; i < prospects.length; i += BATCH_SIZE) {
+    const batch = prospects.slice(i, i + BATCH_SIZE);
+    
+    for (const prospect of batch) {
+      try {
+        const { data: existing } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("cnpj", prospect.cnpj)
+          .single();
+
+        if (existing) {
+          duplicateCount++;
+          console.log(`⚠️ CNPJ duplicado: ${prospect.cnpj}`);
+        } else {
+          const { error: insertError } = await supabase
+            .from("clients")
+            .insert({
+              cnpj: prospect.cnpj,
+              company_name: prospect.company_name,
+              trade_name: prospect.trade_name,
+              phone: prospect.phone,
+              email: prospect.email,
+              address: prospect.address,
+              city: prospect.city,
+              state: prospect.state,
+              zip_code: prospect.zip_code,
+              segment: prospect.segment,
+              company_size: prospect.company_size,
+              region: prospect.region,
+              share_capital: prospect.share_capital,
+              registration_status: prospect.registration_status,
+              foundation_date: prospect.foundation_date,
+              cnae_principal: prospect.cnae_principal,
+              cnae_description: prospect.cnae_description,
+              legal_nature: prospect.legal_nature,
+              services: prospect.services,
+              distributor: prospect.distributor,
+              competitors: prospect.competitors,
+              created_by: prospect.seller_id || userId,
+            });
+
+          if (insertError) {
+            throw insertError;
+          }
+
+          successCount++;
+          console.log(`✅ Importado: ${prospect.company_name}`);
+        }
+      } catch (error: any) {
+        errorCount++;
+        errors.push(`${prospect.company_name}: ${error.message}`);
+        console.error(`Erro ao importar ${prospect.company_name}:`, error);
+      }
+    }
+
+    await supabase
+      .from("import_progress")
+      .update({
+        processed_rows: Math.min(i + BATCH_SIZE, prospects.length),
+        success_count: successCount,
+        error_count: errorCount,
+        duplicate_count: duplicateCount,
+      })
+      .eq("session_id", sessionId);
+
+    console.log(`Progresso: ${i + BATCH_SIZE}/${prospects.length}`);
+  }
+
+  await supabase
+    .from("import_progress")
+    .update({
+      processed_rows: totalRows,
+      success_count: successCount,
+      error_count: errorCount,
+      duplicate_count: duplicateCount,
+      status: 'completed',
+    })
+    .eq("session_id", sessionId);
+
+  console.log("=== IMPORTAÇÃO CONCLUÍDA ===");
+  console.log(`Sucessos: ${successCount}`);
+  console.log(`Duplicados: ${duplicateCount}`);
+  console.log(`Erros: ${errorCount}`);
+}

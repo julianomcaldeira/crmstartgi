@@ -191,7 +191,11 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
         console.error('Error invoking function:', error);
         toast.error('Erro ao iniciar importação: ' + error.message);
         setStep('mapping');
+        return;
       }
+
+      // Importação iniciada com sucesso, agora monitora via Realtime
+      toast.success('Importação iniciada! Acompanhe o progresso abaixo.');
     } catch (error: any) {
       console.error('Import error:', error);
       toast.error('Erro ao importar: ' + error.message);
