@@ -57,6 +57,9 @@ const Prospects = () => {
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState("");
   
   // Client form fields
   const [cnpj, setCnpj] = useState("");
@@ -535,9 +538,50 @@ const Prospects = () => {
       setProspectToTransfer(null);
       setSelectedNewSeller("");
       fetchClients();
-    } catch (error: any) {
-      console.error("Error transferring prospect:", error);
+    } catch (error) {
+      console.error("Erro ao transferir prospect:", error);
       toast.error("Erro ao transferir prospect");
+    }
+  };
+
+  const handleSelectProspect = (prospectId: string) => {
+    setSelectedProspects(prev => 
+      prev.includes(prospectId) 
+        ? prev.filter(id => id !== prospectId)
+        : [...prev, prospectId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedProspects.length === paginatedClients.length) {
+      setSelectedProspects([]);
+    } else {
+      setSelectedProspects(paginatedClients.map(c => c.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (bulkDeleteConfirmation !== "EXCLUIR TUDO") {
+      toast.error("Digite 'EXCLUIR TUDO' para confirmar a exclusão");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("clients")
+        .delete()
+        .in("id", selectedProspects);
+
+      if (error) throw error;
+
+      toast.success(`${selectedProspects.length} prospect(s) excluído(s) com sucesso!`);
+      setSelectedProspects([]);
+      setBulkDeleteDialogOpen(false);
+      setBulkDeleteConfirmation("");
+      fetchClients();
+    } catch (error) {
+      console.error("Erro ao excluir prospects:", error);
+      toast.error("Erro ao excluir prospects");
     }
   };
 
@@ -560,6 +604,17 @@ const Prospects = () => {
         </div>
         
         <div className="flex gap-2">
+          {userRoles.includes('admin') && selectedProspects.length > 0 && (
+            <Button 
+              variant="destructive" 
+              className="gap-2"
+              onClick={() => setBulkDeleteDialogOpen(true)}
+            >
+              <Trash2 size={20} />
+              Excluir {selectedProspects.length} selecionado(s)
+            </Button>
+          )}
+          
           <Button 
             variant="outline" 
             className="gap-2"
@@ -1193,6 +1248,15 @@ const Prospects = () => {
               (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
           )}
+          {userRoles.includes('admin') && filteredClients.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSelectAll}
+            >
+              {selectedProspects.length === paginatedClients.length ? "Desmarcar todos" : "Selecionar todos"}
+            </Button>
+          )}
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
@@ -1431,6 +1495,16 @@ const Prospects = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {userRoles.includes('admin') && (
+                      <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedProspects.includes(client.id)}
+                          onChange={() => handleSelectProspect(client.id)}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
                       <Building2 className="text-primary h-5 w-5" />
                     </div>
@@ -1578,6 +1652,52 @@ const Prospects = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">⚠️ ATENÇÃO: Exclusão em Lote</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-4">
+              <p className="font-semibold text-foreground">
+                Você está prestes a excluir {selectedProspects.length} prospect(s) permanentemente.
+              </p>
+              <p>
+                Esta ação é <span className="font-bold text-destructive">IRREVERSÍVEL</span> e removerá todos os dados relacionados:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Informações da empresa</li>
+                <li>Contatos vinculados</li>
+                <li>Histórico de feiras</li>
+                <li>Todas as associações</li>
+              </ul>
+              <div className="space-y-2 pt-4">
+                <Label htmlFor="bulk-delete-confirmation" className="text-foreground font-semibold">
+                  Digite "EXCLUIR TUDO" para confirmar:
+                </Label>
+                <Input
+                  id="bulk-delete-confirmation"
+                  value={bulkDeleteConfirmation}
+                  onChange={(e) => setBulkDeleteConfirmation(e.target.value)}
+                  placeholder="EXCLUIR TUDO"
+                  className="font-mono"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setBulkDeleteConfirmation("")}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteConfirmation !== "EXCLUIR TUDO"}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              Confirmar Exclusão
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
