@@ -393,46 +393,26 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-cyan-500 md:col-span-3">
+        <Card className="border-l-4 border-l-cyan-500">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="h-4 w-4 text-cyan-500" />
-              <p className="text-xs text-muted-foreground font-medium">Feiras Previstas no Mês</p>
-              <Badge variant="secondary" className="text-xs">{upcomingFeiras.length}</Badge>
-            </div>
-            {upcomingFeiras.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-2">
-                Nenhuma feira prevista para este mês
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {upcomingFeiras.slice(0, 3).map((feira) => (
-                  <div key={feira.id} className="flex items-center justify-between text-xs bg-muted/50 p-2 rounded">
-                    <div className="flex-1">
-                      <p className="font-medium">{feira.name}</p>
-                      <p className="text-muted-foreground text-[10px]">
-                        {feira.city && feira.state && `${feira.city}, ${feira.state}`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium text-cyan-600">
-                        {format(parseISO(feira.start_date), "dd/MM")}
-                      </p>
-                      {feira.end_date && (
-                        <p className="text-[10px] text-muted-foreground">
-                          até {format(parseISO(feira.end_date), "dd/MM")}
-                        </p>
-                      )}
-                    </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-cyan-500" />
+                  <p className="text-xs text-muted-foreground">Feiras no Mês</p>
+                </div>
+                <p className="text-2xl font-bold text-cyan-600">{upcomingFeiras.length}</p>
+                {upcomingFeiras.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium truncate">{upcomingFeiras[0].name}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {format(parseISO(upcomingFeiras[0].start_date), "dd/MM")}
+                      {upcomingFeiras[0].end_date && ` até ${format(parseISO(upcomingFeiras[0].end_date), "dd/MM")}`}
+                    </p>
                   </div>
-                ))}
-                {upcomingFeiras.length > 3 && (
-                  <p className="text-[10px] text-muted-foreground text-center pt-1">
-                    +{upcomingFeiras.length - 3} feira{upcomingFeiras.length - 3 > 1 ? 's' : ''}
-                  </p>
                 )}
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
       </div>
