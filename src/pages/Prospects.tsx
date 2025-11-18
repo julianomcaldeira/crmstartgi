@@ -1354,6 +1354,16 @@ const Prospects = () => {
                 <div className="flex items-start justify-between gap-6">
                   {/* Main Client Info */}
                   <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {userRoles.includes('admin') && (
+                      <div className="flex items-center pt-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedProspects.includes(client.id)}
+                          onChange={() => handleSelectProspect(client.id)}
+                          className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </div>
+                    )}
                     <div className="p-3 rounded-lg bg-primary/10">
                       <Building2 className="text-primary" size={24} />
                     </div>
@@ -1589,18 +1599,53 @@ const Prospects = () => {
                         <ChevronLeft size={16} />
                         Anterior
                       </Button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <div className="flex items-center gap-1 overflow-x-auto">
+                        {/* First page */}
+                        <Button
+                          variant={currentPage === 1 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(1)}
+                          className="min-w-[40px]"
+                        >
+                          1
+                        </Button>
+                        
+                        {/* Left ellipsis */}
+                        {currentPage > 3 && <span className="px-2">...</span>}
+                        
+                        {/* Pages around current */}
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => {
+                            // Show current page and one page on each side
+                            return page > 1 && page < totalPages && Math.abs(page - currentPage) <= 1;
+                          })
+                          .map((page) => (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="min-w-[40px]"
+                            >
+                              {page}
+                            </Button>
+                          ))
+                        }
+                        
+                        {/* Right ellipsis */}
+                        {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+                        
+                        {/* Last page */}
+                        {totalPages > 1 && (
                           <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
+                            variant={currentPage === totalPages ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setCurrentPage(page)}
+                            onClick={() => setCurrentPage(totalPages)}
                             className="min-w-[40px]"
                           >
-                            {page}
+                            {totalPages}
                           </Button>
-                        ))}
+                        )}
                       </div>
                       <Button
                         variant="outline"
