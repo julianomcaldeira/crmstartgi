@@ -33,6 +33,12 @@ const SYSTEM_FIELDS = [
   { value: 'seller_name', label: 'Vendedor' },
   { value: 'cnae_principal', label: 'CNAE Principal' },
   { value: 'cnae_description', label: 'CNAE Descrição' },
+  { value: 'registration_status', label: 'Situação Cadastral' },
+  { value: 'foundation_date', label: 'Data de Abertura' },
+  { value: 'legal_nature', label: 'Natureza Jurídica' },
+  { value: 'services', label: 'Serviços' },
+  { value: 'distributor', label: 'Distribuidor' },
+  { value: 'competitors', label: 'Concorrentes' },
   { value: 'ignore', label: '-- Ignorar esta coluna --' }
 ];
 
@@ -128,6 +134,12 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
           else if (lowerHeader.includes('vendedor')) autoMappings[index] = 'seller_name';
           else if (lowerHeader.includes('cnae') && lowerHeader.includes('principal')) autoMappings[index] = 'cnae_principal';
           else if (lowerHeader.includes('cnae') && (lowerHeader.includes('descrição') || lowerHeader.includes('descricao'))) autoMappings[index] = 'cnae_description';
+          else if (lowerHeader.includes('situação') || lowerHeader.includes('situacao')) autoMappings[index] = 'registration_status';
+          else if (lowerHeader.includes('data') && lowerHeader.includes('abertura')) autoMappings[index] = 'foundation_date';
+          else if (lowerHeader.includes('natureza') && lowerHeader.includes('jurídica')) autoMappings[index] = 'legal_nature';
+          else if (lowerHeader.includes('serviço') || lowerHeader.includes('servico')) autoMappings[index] = 'services';
+          else if (lowerHeader.includes('distribuidor')) autoMappings[index] = 'distributor';
+          else if (lowerHeader.includes('concorrente')) autoMappings[index] = 'competitors';
           else autoMappings[index] = 'ignore';
         });
         
