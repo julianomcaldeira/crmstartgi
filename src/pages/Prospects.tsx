@@ -620,26 +620,11 @@ const Prospects = () => {
           <Button 
             variant="outline" 
             className="gap-2"
-            onClick={() => setImportDialogOpen(true)}
+            onClick={() => setQuickImportOpen(true)}
           >
             <Plus size={20} />
             Importar Planilha
           </Button>
-          
-          <Button 
-            variant="default" 
-            className="gap-2"
-            onClick={() => setQuickImportOpen(true)}
-          >
-            <Upload size={20} />
-            Importar Arquivo da Receita
-          </Button>
-          
-          <ImportWizard
-            open={importDialogOpen}
-            onOpenChange={setImportDialogOpen}
-            onSuccess={fetchClients}
-          />
           
           <QuickImportDialog
             open={quickImportOpen}
