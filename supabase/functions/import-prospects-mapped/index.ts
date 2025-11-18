@@ -14,6 +14,9 @@ interface ProspectData {
   phone?: string;
   email?: string;
   address?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
   city?: string;
   state?: string;
   zip_code?: string;
@@ -235,86 +238,107 @@ async function processImport(
 
   console.log(`Prospects parseados: ${prospects.length}`);
 
-  const BATCH_SIZE = 50;
+  const BATCH_SIZE = 200;
   let successCount = 0;
   let errorCount = 0;
   let duplicateCount = 0;
 
   for (let i = 0; i < prospects.length; i += BATCH_SIZE) {
     const batch = prospects.slice(i, i + BATCH_SIZE);
-    
-    for (const prospect of batch) {
-      try {
-        // Check for duplicates using maybeSingle (safer than single)
-        const { data: existing, error: checkError } = await supabase
-          .from("clients")
-          .select("id")
-          .eq("cnpj", prospect.cnpj)
-          .maybeSingle();
 
-        if (checkError) {
-          throw checkError;
-        }
+    try {
+      const batchCnpjs = batch.map((p) => p.cnpj);
+      const { data: existingRows, error: checkError } = await supabase
+        .from("clients")
+        .select("cnpj")
+        .in("cnpj", batchCnpjs);
 
-        if (existing) {
+      if (checkError) {
+        throw checkError;
+      }
+
+      const existingSet = new Set<string>((existingRows || []).map((r: any) => r.cnpj));
+
+      const prospectsToInsert: ProspectData[] = [];
+
+      for (const prospect of batch) {
+        if (existingSet.has(prospect.cnpj)) {
           duplicateCount++;
           console.log(`⚠️ CNPJ duplicado ignorado: ${prospect.cnpj} - ${prospect.company_name}`);
-        } else {
-          // Insert with seller_id or userId as fallback ONLY if seller_id exists
-          // If seller_id is null, use userId so the prospect has an owner
-          const { error: insertError } = await supabase
-            .from("clients")
-            .insert({
-              cnpj: prospect.cnpj,
-              company_name: prospect.company_name,
-              trade_name: prospect.trade_name,
-              phone: prospect.phone,
-              email: prospect.email,
-              address: prospect.address,
-              city: prospect.city,
-              state: prospect.state,
-              zip_code: prospect.zip_code,
-              segment: prospect.segment,
-              company_size: prospect.company_size,
-              region: prospect.region,
-              share_capital: prospect.share_capital,
-              registration_status: prospect.registration_status,
-              foundation_date: prospect.foundation_date,
-              cnae_principal: prospect.cnae_principal,
-              cnae_description: prospect.cnae_description,
-              legal_nature: prospect.legal_nature,
-              services: prospect.services,
-              distributor: prospect.distributor,
-              competitors: prospect.competitors,
-              created_by: prospect.seller_id || userId,
-            });
-
-          if (insertError) {
-            throw insertError;
-          }
-
-          successCount++;
-          const sellerInfo = prospect.seller_id ? `(vendedor: ${prospect.seller_name})` : '(sem vendedor)';
-          console.log(`✅ Importado: ${prospect.company_name} ${sellerInfo}`);
+          continue;
         }
-      } catch (error: any) {
-        errorCount++;
-        errors.push(`${prospect.company_name}: ${error.message}`);
-        console.error(`Erro ao importar ${prospect.company_name}:`, error);
+
+        prospectsToInsert.push(prospect);
       }
+
+      if (prospectsToInsert.length > 0) {
+        const rowsToInsert = prospectsToInsert.map((prospect) => {
+          const addressParts: string[] = [];
+          if (prospect.address) addressParts.push(prospect.address);
+          if (prospect.logradouro) addressParts.push(prospect.logradouro);
+          if (prospect.numero) addressParts.push(prospect.numero);
+          if (prospect.complemento) addressParts.push(prospect.complemento);
+          const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : null;
+
+          return {
+            cnpj: prospect.cnpj,
+            company_name: prospect.company_name,
+            trade_name: prospect.trade_name,
+            phone: prospect.phone,
+            email: prospect.email,
+            address: fullAddress,
+            city: prospect.city,
+            state: prospect.state,
+            zip_code: prospect.zip_code,
+            segment: prospect.segment,
+            company_size: prospect.company_size,
+            region: prospect.region,
+            share_capital: prospect.share_capital,
+            registration_status: prospect.registration_status,
+            foundation_date: prospect.foundation_date,
+            cnae_principal: prospect.cnae_principal,
+            cnae_description: prospect.cnae_description,
+            legal_nature: prospect.legal_nature,
+            services: prospect.services,
+            distributor: prospect.distributor,
+            competitors: prospect.competitors,
+            created_by: prospect.seller_id || userId,
+          };
+        });
+
+        const { error: insertError } = await supabase
+          .from("clients")
+          .insert(rowsToInsert);
+
+        if (insertError) {
+          throw insertError;
+        }
+
+        successCount += prospectsToInsert.length;
+        prospectsToInsert.forEach((prospect) => {
+          const sellerInfo = prospect.seller_id
+            ? `(vendedor: ${prospect.seller_name})`
+            : "(sem vendedor)";
+          console.log(`✅ Importado: ${prospect.company_name} ${sellerInfo}`);
+        });
+      }
+    } catch (error: any) {
+      errorCount += batch.length;
+      errors.push(`Erro ao importar lote começando na linha ${i + 1}: ${error.message}`);
+      console.error(`Erro ao importar lote começando na linha ${i + 1}:`, error);
     }
 
     await supabase
       .from("import_progress")
       .update({
-        processed_rows: Math.min(i + BATCH_SIZE, prospects.length),
+        processed_rows: Math.min(i + batch.length, prospects.length),
         success_count: successCount,
         error_count: errorCount,
         duplicate_count: duplicateCount,
       })
       .eq("session_id", sessionId);
 
-    console.log(`Progresso: ${i + BATCH_SIZE}/${prospects.length}`);
+    console.log(`Progresso: ${Math.min(i + batch.length, prospects.length)}/${prospects.length}`);
   }
 
   await supabase

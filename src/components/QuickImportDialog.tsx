@@ -21,7 +21,10 @@ const SYSTEM_FIELDS = [
   { value: 'trade_name', label: 'Nome Fantasia' },
   { value: 'phone', label: 'Telefone' },
   { value: 'email', label: 'E-mail' },
-  { value: 'address', label: 'Endereço' },
+  { value: 'address', label: 'Endereço (linha única)' },
+  { value: 'logradouro', label: 'Logradouro' },
+  { value: 'numero', label: 'Número' },
+  { value: 'complemento', label: 'Complemento' },
   { value: 'city', label: 'Cidade' },
   { value: 'state', label: 'Estado' },
   { value: 'zip_code', label: 'CEP' },
@@ -38,7 +41,7 @@ const SYSTEM_FIELDS = [
   { value: 'services', label: 'Serviços' },
   { value: 'distributor', label: 'Distribuidor' },
   { value: 'competitors', label: 'Concorrentes' },
-  { value: 'ignore', label: '-- Ignorar esta coluna --' }
+  { value: 'ignore', label: '-- Ignorar esta coluna --' },
 ];
 
 export function QuickImportDialog({ open, onOpenChange, onSuccess }: QuickImportDialogProps) {
@@ -161,24 +164,27 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess }: QuickImport
               else if (lowerHeader.includes('nome fantasia')) autoMappings[index] = 'trade_name';
               else if (lowerHeader.includes('telefone') || lowerHeader.includes('fone')) autoMappings[index] = 'phone';
               else if (lowerHeader.includes('email') || lowerHeader.includes('e-mail')) autoMappings[index] = 'email';
-              else if (lowerHeader.includes('endereço') || lowerHeader.includes('endereco')) autoMappings[index] = 'address';
-              else if (lowerHeader.includes('cidade')) autoMappings[index] = 'city';
-              else if (lowerHeader.includes('estado') || lowerHeader.includes('uf')) autoMappings[index] = 'state';
-              else if (lowerHeader.includes('cep')) autoMappings[index] = 'zip_code';
-              else if (lowerHeader.includes('segmento')) autoMappings[index] = 'segment';
-              else if (lowerHeader.includes('porte')) autoMappings[index] = 'company_size';
-              else if (lowerHeader.includes('região') || lowerHeader.includes('regiao')) autoMappings[index] = 'region';
-              else if (lowerHeader.includes('capital')) autoMappings[index] = 'share_capital';
-              else if (lowerHeader.includes('vendedor')) autoMappings[index] = 'seller_name';
-              else if (lowerHeader.includes('cnae') && lowerHeader.includes('principal')) autoMappings[index] = 'cnae_principal';
-              else if (lowerHeader.includes('cnae') && (lowerHeader.includes('descrição') || lowerHeader.includes('descricao'))) autoMappings[index] = 'cnae_description';
-              else if (lowerHeader.includes('situação') || lowerHeader.includes('situacao')) autoMappings[index] = 'registration_status';
-              else if (lowerHeader.includes('data') && lowerHeader.includes('abertura')) autoMappings[index] = 'foundation_date';
-              else if (lowerHeader.includes('natureza') && lowerHeader.includes('jurídica')) autoMappings[index] = 'legal_nature';
-              else if (lowerHeader.includes('serviço') || lowerHeader.includes('servico')) autoMappings[index] = 'services';
-              else if (lowerHeader.includes('distribuidor')) autoMappings[index] = 'distributor';
-              else if (lowerHeader.includes('concorrente')) autoMappings[index] = 'competitors';
-              else autoMappings[index] = 'ignore';
+               else if (lowerHeader.includes('endereço') || lowerHeader.includes('endereco')) autoMappings[index] = 'address';
+               else if (lowerHeader.includes('logradouro')) autoMappings[index] = 'logradouro';
+               else if (lowerHeader.includes('número') || lowerHeader.includes('numero') || lowerHeader.includes('nº')) autoMappings[index] = 'numero';
+               else if (lowerHeader.includes('complemento')) autoMappings[index] = 'complemento';
+               else if (lowerHeader.includes('cidade')) autoMappings[index] = 'city';
+               else if (lowerHeader.includes('estado') || lowerHeader.includes('uf')) autoMappings[index] = 'state';
+               else if (lowerHeader.includes('cep')) autoMappings[index] = 'zip_code';
+               else if (lowerHeader.includes('segmento')) autoMappings[index] = 'segment';
+               else if (lowerHeader.includes('porte')) autoMappings[index] = 'company_size';
+               else if (lowerHeader.includes('região') || lowerHeader.includes('regiao')) autoMappings[index] = 'region';
+               else if (lowerHeader.includes('capital')) autoMappings[index] = 'share_capital';
+               else if (lowerHeader.includes('vendedor')) autoMappings[index] = 'seller_name';
+               else if (lowerHeader.includes('cnae') && lowerHeader.includes('principal')) autoMappings[index] = 'cnae_principal';
+               else if (lowerHeader.includes('cnae') && (lowerHeader.includes('descrição') || lowerHeader.includes('descricao'))) autoMappings[index] = 'cnae_description';
+               else if (lowerHeader.includes('situação') || lowerHeader.includes('situacao')) autoMappings[index] = 'registration_status';
+               else if (lowerHeader.includes('data') && lowerHeader.includes('abertura')) autoMappings[index] = 'foundation_date';
+               else if (lowerHeader.includes('natureza') && lowerHeader.includes('jurídica')) autoMappings[index] = 'legal_nature';
+               else if (lowerHeader.includes('serviço') || lowerHeader.includes('servico')) autoMappings[index] = 'services';
+               else if (lowerHeader.includes('distribuidor')) autoMappings[index] = 'distributor';
+               else if (lowerHeader.includes('concorrente')) autoMappings[index] = 'competitors';
+               else autoMappings[index] = 'ignore';
             });
             
             setMappings(autoMappings);
