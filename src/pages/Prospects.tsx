@@ -653,298 +653,320 @@ const Prospects = () => {
                 </TabsList>
 
                 <TabsContent value="empresa" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cnpj">CNPJ *</Label>
-                    <div className="relative">
-                      <CNPJInput
-                        id="cnpj"
-                        value={cnpj}
-                        onValueChange={handleCnpjChange}
-                        placeholder="00.000.000/0000-00"
-                        disabled={loadingCnpj}
-                        className={
-                          cnpjValidationStatus === 'valid' 
-                            ? 'border-green-500 pr-10' 
-                            : cnpjValidationStatus === 'invalid' 
-                            ? 'border-red-500 pr-10' 
-                            : ''
-                        }
-                      />
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                        {loadingCnpj && (
-                          <Loader2 className="animate-spin text-primary" size={20} />
-                        )}
-                        {!loadingCnpj && cnpjValidationStatus === 'valid' && (
-                          <CheckCircle2 className="text-green-500" size={20} />
-                        )}
-                        {!loadingCnpj && cnpjValidationStatus === 'invalid' && (
-                          <XCircle className="text-red-500" size={20} />
-                        )}
+                  {/* Seção 1: Dados da Receita Federal */}
+                  <div className="space-y-4 pb-4 border-b border-border">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-sm font-medium text-muted-foreground">Dados da Receita Federal</span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="cnpj">CNPJ *</Label>
+                      <div className="relative">
+                        <CNPJInput
+                          id="cnpj"
+                          value={cnpj}
+                          onValueChange={handleCnpjChange}
+                          placeholder="00.000.000/0000-00"
+                          disabled={loadingCnpj}
+                          className={
+                            cnpjValidationStatus === 'valid' 
+                              ? 'border-green-500 pr-10' 
+                              : cnpjValidationStatus === 'invalid' 
+                              ? 'border-red-500 pr-10' 
+                              : ''
+                          }
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                          {loadingCnpj && (
+                            <Loader2 className="animate-spin text-primary" size={20} />
+                          )}
+                          {!loadingCnpj && cnpjValidationStatus === 'valid' && (
+                            <CheckCircle2 className="text-green-500" size={20} />
+                          )}
+                          {!loadingCnpj && cnpjValidationStatus === 'invalid' && (
+                            <XCircle className="text-red-500" size={20} />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {cnpjValidationStatus === 'invalid' && (
-                      <p className="text-sm text-red-500">CNPJ inválido. Verifique os dígitos.</p>
-                    )}
-                    {cnpjValidationStatus === 'valid' && !loadingCnpj && (
-                      <p className="text-sm text-green-600">CNPJ válido ✓</p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Razão Social *</Label>
-                      <Input
-                        id="companyName"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="tradeName">Nome Fantasia</Label>
-                      <Input
-                        id="tradeName"
-                        value={tradeName}
-                        onChange={(e) => setTradeName(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="segment">Segmento</Label>
-                      <Input
-                        id="segment"
-                        value={segment}
-                        onChange={(e) => setSegment(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shareCapital">Capital Social</Label>
-                      <CurrencyInput
-                        id="shareCapital"
-                        value={shareCapital}
-                        onValueChange={(value) => setShareCapital(value)}
-                        placeholder="R$ 0,00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="legalNature">Natureza Jurídica</Label>
-                    <Input
-                      id="legalNature"
-                      value={legalNature}
-                      onChange={(e) => setLegalNature(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="cnaePrincipal">CNAE Principal</Label>
-                    <Input
-                      id="cnaePrincipal"
-                      value={cnaePrincipal}
-                      onChange={(e) => setCnaePrincipal(e.target.value)}
-                      placeholder="0000-0/00"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="cnaeDescription">CNAE Descrição</Label>
-                    <Input
-                      id="cnaeDescription"
-                      value={cnaeDescription}
-                      onChange={(e) => setCnaeDescription(e.target.value)}
-                      placeholder="Descrição da atividade principal"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="registrationStatus">Situação</Label>
-                      <Input
-                        id="registrationStatus"
-                        value={registrationStatus}
-                        onChange={(e) => setRegistrationStatus(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="foundationDate">Data de Abertura</Label>
-                      <Input
-                        id="foundationDate"
-                        type="date"
-                        value={foundationDate}
-                        onChange={(e) => setFoundationDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="companySize">Porte da Empresa</Label>
-                      <select
-                        id="companySize"
-                        value={companySize}
-                        onChange={(e) => setCompanySize(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Selecione...</option>
-                        <option value="MEI">MEI</option>
-                        <option value="ME">Microempresa (ME)</option>
-                        <option value="EPP">Pequeno Porte (EPP)</option>
-                        <option value="medio">Médio Porte</option>
-                        <option value="grande">Grande Porte</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="region">Região</Label>
-                      <Input
-                        id="region"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        placeholder="Ex: Sudeste, Sul, etc."
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="competitors">Concorrentes</Label>
-                    <Input
-                      id="competitors"
-                      value={competitors}
-                      onChange={(e) => setCompetitors(e.target.value)}
-                      placeholder="Liste os principais concorrentes"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="distributor">Distribuidor</Label>
-                      <Input
-                        id="distributor"
-                        value={distributor}
-                        onChange={(e) => setDistributor(e.target.value)}
-                        placeholder="Nome do distribuidor"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="services">Serviços</Label>
-                      <select
-                        id="services"
-                        value={services}
-                        onChange={(e) => setServices(e.target.value)}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      >
-                        <option value="">Selecione um produto/serviço...</option>
-                        {products.map((product) => (
-                          <option key={product.id} value={product.name}>
-                            {product.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="rating">Avaliação do Prospect</Label>
-                    <div className="flex items-center gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setRating(star)}
-                          className="focus:outline-none transition-colors"
-                        >
-                          <svg
-                            className={`w-8 h-8 ${
-                              star <= rating
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'fill-none text-gray-300'
-                            }`}
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-                            />
-                          </svg>
-                        </button>
-                      ))}
-                      {rating > 0 && (
-                        <span className="text-sm text-muted-foreground ml-2">
-                          {rating} {rating === 1 ? 'estrela' : 'estrelas'}
-                        </span>
+                      {cnpjValidationStatus === 'invalid' && (
+                        <p className="text-sm text-red-500">CNPJ inválido. Verifique os dígitos.</p>
+                      )}
+                      {cnpjValidationStatus === 'valid' && !loadingCnpj && (
+                        <p className="text-sm text-green-600">CNPJ válido ✓</p>
                       )}
                     </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="companyName">Razão Social *</Label>
+                        <Input
+                          id="companyName"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="tradeName">Nome Fantasia</Label>
+                        <Input
+                          id="tradeName"
+                          value={tradeName}
+                          onChange={(e) => setTradeName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cnaePrincipal">CNAE Principal</Label>
+                        <Input
+                          id="cnaePrincipal"
+                          value={cnaePrincipal}
+                          onChange={(e) => setCnaePrincipal(e.target.value)}
+                          placeholder="0000-0/00"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="cnaeDescription">CNAE Descrição</Label>
+                        <Input
+                          id="cnaeDescription"
+                          value={cnaeDescription}
+                          onChange={(e) => setCnaeDescription(e.target.value)}
+                          placeholder="Descrição da atividade principal"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="legalNature">Natureza Jurídica</Label>
+                      <Input
+                        id="legalNature"
+                        value={legalNature}
+                        onChange={(e) => setLegalNature(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="registrationStatus">Situação</Label>
+                        <Input
+                          id="registrationStatus"
+                          value={registrationStatus}
+                          onChange={(e) => setRegistrationStatus(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="foundationDate">Data de Abertura</Label>
+                        <Input
+                          id="foundationDate"
+                          type="date"
+                          value={foundationDate}
+                          onChange={(e) => setFoundationDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shareCapital">Capital Social</Label>
+                        <CurrencyInput
+                          id="shareCapital"
+                          value={shareCapital}
+                          onValueChange={(value) => setShareCapital(value)}
+                          placeholder="R$ 0,00"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="segment">Segmento</Label>
+                        <Input
+                          id="segment"
+                          value={segment}
+                          onChange={(e) => setSegment(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Telefone</Label>
+                        <PhoneInput
+                          id="phone"
+                          value={phone}
+                          onValueChange={(value) => setPhone(value)}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Endereço</Label>
+                      <Input
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Logradouro, número, complemento"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">Cidade</Label>
+                        <Input
+                          id="city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="state">Estado</Label>
+                        <Input
+                          id="state"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          maxLength={2}
+                          placeholder="UF"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="zipCode">CEP</Label>
+                        <CEPInput
+                          id="zipCode"
+                          value={zipCode}
+                          onValueChange={(value) => setZipCode(value)}
+                          placeholder="00000-000"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Seção 2: Informações Adicionais */}
+                  <div className="space-y-4 pt-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-sm font-medium text-muted-foreground">Informações Adicionais</span>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="companySize">Porte da Empresa</Label>
+                        <select
+                          id="companySize"
+                          value={companySize}
+                          onChange={(e) => setCompanySize(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="MEI">MEI - Microempreendedor Individual</option>
+                          <option value="ME">ME - Microempresa</option>
+                          <option value="EPP">EPP - Empresa de Pequeno Porte</option>
+                          <option value="Medio">Médio Porte</option>
+                          <option value="Grande">Grande Porte</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="region">Região</Label>
+                        <Input
+                          id="region"
+                          value={region}
+                          onChange={(e) => setRegion(e.target.value)}
+                          placeholder="Ex: Sudeste, Sul, etc."
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label htmlFor="competitors">Concorrentes</Label>
                       <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        id="competitors"
+                        value={competitors}
+                        onChange={(e) => setCompetitors(e.target.value)}
+                        placeholder="Liste os principais concorrentes"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefone</Label>
-                      <PhoneInput
-                        id="phone"
-                        value={phone}
-                        onValueChange={(value) => setPhone(value)}
-                        placeholder="(00) 00000-0000"
-                      />
-                    </div>
-                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="distributor">Distribuidor</Label>
+                        <Input
+                          id="distributor"
+                          value={distributor}
+                          onChange={(e) => setDistributor(e.target.value)}
+                          placeholder="Nome do distribuidor"
+                        />
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Endereço</Label>
-                    <Input
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">Cidade</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="state">Estado</Label>
-                      <Input
-                        id="state"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        maxLength={2}
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="services">Serviços</Label>
+                        <select
+                          id="services"
+                          value={services}
+                          onChange={(e) => setServices(e.target.value)}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <option value="">Selecione um produto/serviço...</option>
+                          {products.map((product) => (
+                            <option key={product.id} value={product.name}>
+                              {product.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="zipCode">CEP</Label>
-                      <CEPInput
-                        id="zipCode"
-                        value={zipCode}
-                        onValueChange={(value) => setZipCode(value)}
-                        placeholder="00000-000"
-                      />
+                      <Label htmlFor="rating">Avaliação do Prospect</Label>
+                      <div className="flex items-center gap-2">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setRating(star)}
+                            className="focus:outline-none transition-colors"
+                          >
+                            <svg
+                              className={`w-8 h-8 ${
+                                star <= rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'fill-none text-gray-300'
+                              }`}
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                              />
+                            </svg>
+                          </button>
+                        ))}
+                        {rating > 0 && (
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {rating} {rating === 1 ? 'estrela' : 'estrelas'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </TabsContent>
