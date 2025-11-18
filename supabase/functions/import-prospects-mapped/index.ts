@@ -194,9 +194,20 @@ async function processImport(
       }
 
       if (prospect.cnpj && prospect.company_name) {
+        // Map seller name to seller ID if provided
         if (prospect.seller_name) {
           const sellerNameLower = prospect.seller_name.toLowerCase().trim();
-          prospect.seller_id = sellerMap.get(sellerNameLower) || null;
+          const mappedSellerId = sellerMap.get(sellerNameLower);
+          if (mappedSellerId) {
+            prospect.seller_id = mappedSellerId;
+            console.log(`Vendedor mapeado: ${prospect.seller_name} -> ${mappedSellerId}`);
+          } else {
+            console.log(`⚠️ Vendedor não encontrado: ${prospect.seller_name}`);
+            prospect.seller_id = null;
+          }
+        } else {
+          // No seller in spreadsheet = leave null for any seller to claim
+          prospect.seller_id = null;
         }
         prospects.push(prospect);
       } else {
@@ -220,16 +231,23 @@ async function processImport(
     
     for (const prospect of batch) {
       try {
-        const { data: existing } = await supabase
+        // Check for duplicates using maybeSingle (safer than single)
+        const { data: existing, error: checkError } = await supabase
           .from("clients")
           .select("id")
           .eq("cnpj", prospect.cnpj)
-          .single();
+          .maybeSingle();
+
+        if (checkError) {
+          throw checkError;
+        }
 
         if (existing) {
           duplicateCount++;
-          console.log(`⚠️ CNPJ duplicado: ${prospect.cnpj}`);
+          console.log(`⚠️ CNPJ duplicado ignorado: ${prospect.cnpj} - ${prospect.company_name}`);
         } else {
+          // Insert with seller_id or userId as fallback ONLY if seller_id exists
+          // If seller_id is null, use userId so the prospect has an owner
           const { error: insertError } = await supabase
             .from("clients")
             .insert({
@@ -262,7 +280,8 @@ async function processImport(
           }
 
           successCount++;
-          console.log(`✅ Importado: ${prospect.company_name}`);
+          const sellerInfo = prospect.seller_id ? `(vendedor: ${prospect.seller_name})` : '(sem vendedor)';
+          console.log(`✅ Importado: ${prospect.company_name} ${sellerInfo}`);
         }
       } catch (error: any) {
         errorCount++;
