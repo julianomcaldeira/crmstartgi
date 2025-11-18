@@ -271,12 +271,45 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess }: QuickImport
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
+            {step === 'selecting' && 'Importar arquivo de prospects'}
             {step === 'reading' && 'Lendo planilha...'}
             {step === 'mapping' && 'Mapeamento de Campos'}
             {step === 'importing' && 'Importando Prospects'}
             {step === 'complete' && 'Importação Concluída'}
           </DialogTitle>
         </DialogHeader>
+
+        {step === 'selecting' && (
+          <div className="space-y-4 py-4">
+            <div className="border border-dashed rounded-lg p-6 flex flex-col items-center justify-center gap-3">
+              <Upload className="h-8 w-8 text-primary" />
+              <div className="text-sm text-muted-foreground text-center space-y-1">
+                <p>Selecione o arquivo Excel (.xlsx ou .xls) que você deseja importar.</p>
+                <p className="text-xs">A primeira linha da planilha deve conter os cabeçalhos das colunas.</p>
+              </div>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileSelect}
+                className="text-sm"
+              />
+              {selectedFile && (
+                <p className="text-xs text-muted-foreground">
+                  Arquivo selecionado: <span className="font-medium">{selectedFile.name}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handleFileRead} disabled={!selectedFile}>
+                Ler arquivo
+              </Button>
+            </div>
+          </div>
+        )}
 
         {step === 'reading' && (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
