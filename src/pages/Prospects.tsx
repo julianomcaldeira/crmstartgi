@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { ImportWizard } from "@/components/ImportWizard";
+import { QuickImportDialog } from "@/components/QuickImportDialog";
 import { validateCNPJ } from "@/lib/cnpjValidator";
 import {
   Dialog,
@@ -57,6 +58,7 @@ const Prospects = () => {
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [quickImportOpen, setQuickImportOpen] = useState(false);
   const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteConfirmation, setBulkDeleteConfirmation] = useState("");
@@ -624,9 +626,24 @@ const Prospects = () => {
             Importar Planilha
           </Button>
           
+          <Button 
+            variant="default" 
+            className="gap-2"
+            onClick={() => setQuickImportOpen(true)}
+          >
+            <Upload size={20} />
+            Importar Arquivo da Receita
+          </Button>
+          
           <ImportWizard
             open={importDialogOpen}
             onOpenChange={setImportDialogOpen}
+            onSuccess={fetchClients}
+          />
+          
+          <QuickImportDialog
+            open={quickImportOpen}
+            onOpenChange={setQuickImportOpen}
             onSuccess={fetchClients}
           />
         </div>
