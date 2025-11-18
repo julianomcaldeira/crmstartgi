@@ -69,7 +69,9 @@ const Prospects = () => {
   const [tradeName, setTradeName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [logradouro, setLogradouro] = useState("");
+  const [numero, setNumero] = useState("");
+  const [complemento, setComplemento] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [zipCode, setZipCode] = useState("");
@@ -274,7 +276,28 @@ const Prospects = () => {
         setTradeName(data.trade_name || "");
         setEmail(data.email || "");
         setPhone(data.phone?.replace(/\D/g, '') || "");
-        setAddress(data.address || "");
+        
+        // Separar endereço em logradouro, número e complemento
+        const addressParts = (data.address || "").split(',');
+        if (addressParts.length > 0) {
+          const firstPart = addressParts[0].trim();
+          // Tentar extrair número do final do logradouro
+          const numberMatch = firstPart.match(/(.+?)\s+(\d+.*?)$/);
+          if (numberMatch) {
+            setLogradouro(numberMatch[1].trim());
+            setNumero(numberMatch[2].trim());
+          } else {
+            setLogradouro(firstPart);
+            setNumero("");
+          }
+          // Complemento é tudo após a primeira vírgula
+          setComplemento(addressParts.slice(1).join(',').trim());
+        } else {
+          setLogradouro("");
+          setNumero("");
+          setComplemento("");
+        }
+        
         setCity(data.city || "");
         setState(data.state || "");
         setZipCode(data.zip_code?.replace(/\D/g, '') || "");
@@ -330,6 +353,13 @@ const Prospects = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Concatenar endereço completo
+      const fullAddress = [
+        logradouro,
+        numero,
+        complemento
+      ].filter(Boolean).join(', ').trim();
+
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .insert({
@@ -338,7 +368,7 @@ const Prospects = () => {
           trade_name: tradeName,
           email,
           phone,
-          address,
+          address: fullAddress,
           city,
           state,
           zip_code: zipCode,
@@ -409,7 +439,9 @@ const Prospects = () => {
     setTradeName("");
     setEmail("");
     setPhone("");
-    setAddress("");
+    setLogradouro("");
+    setNumero("");
+    setComplemento("");
     setCity("");
     setState("");
     setZipCode("");
@@ -700,7 +732,13 @@ const Prospects = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="companyName">Razão Social *</Label>
+                        <Label htmlFor="companyName" className="flex items-center gap-2">
+                          Razão Social *
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="companyName"
                           value={companyName}
@@ -710,7 +748,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="tradeName">Nome Fantasia</Label>
+                        <Label htmlFor="tradeName" className="flex items-center gap-2">
+                          Nome Fantasia
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="tradeName"
                           value={tradeName}
@@ -721,7 +765,13 @@ const Prospects = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="cnaePrincipal">CNAE Principal</Label>
+                        <Label htmlFor="cnaePrincipal" className="flex items-center gap-2">
+                          CNAE Principal
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="cnaePrincipal"
                           value={cnaePrincipal}
@@ -731,7 +781,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="cnaeDescription">CNAE Descrição</Label>
+                        <Label htmlFor="cnaeDescription" className="flex items-center gap-2">
+                          CNAE Descrição
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="cnaeDescription"
                           value={cnaeDescription}
@@ -742,7 +798,13 @@ const Prospects = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="legalNature">Natureza Jurídica</Label>
+                      <Label htmlFor="legalNature" className="flex items-center gap-2">
+                        Natureza Jurídica
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                          <CheckCircle2 className="w-3 h-3" />
+                          RF
+                        </span>
+                      </Label>
                       <Input
                         id="legalNature"
                         value={legalNature}
@@ -752,7 +814,13 @@ const Prospects = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="registrationStatus">Situação</Label>
+                        <Label htmlFor="registrationStatus" className="flex items-center gap-2">
+                          Situação
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="registrationStatus"
                           value={registrationStatus}
@@ -761,7 +829,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="foundationDate">Data de Abertura</Label>
+                        <Label htmlFor="foundationDate" className="flex items-center gap-2">
+                          Data de Abertura
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="foundationDate"
                           type="date"
@@ -773,7 +847,13 @@ const Prospects = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="shareCapital">Capital Social</Label>
+                        <Label htmlFor="shareCapital" className="flex items-center gap-2">
+                          Capital Social
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <CurrencyInput
                           id="shareCapital"
                           value={shareCapital}
@@ -783,7 +863,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="segment">Segmento</Label>
+                        <Label htmlFor="segment" className="flex items-center gap-2">
+                          Segmento
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="segment"
                           value={segment}
@@ -794,7 +880,13 @@ const Prospects = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="email" className="flex items-center gap-2">
+                          Email
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="email"
                           type="email"
@@ -804,7 +896,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Telefone</Label>
+                        <Label htmlFor="phone" className="flex items-center gap-2">
+                          Telefone
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <PhoneInput
                           id="phone"
                           value={phone}
@@ -815,18 +913,64 @@ const Prospects = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="address">Endereço</Label>
+                      <Label htmlFor="logradouro" className="flex items-center gap-2">
+                        Logradouro
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                          <CheckCircle2 className="w-3 h-3" />
+                          RF
+                        </span>
+                      </Label>
                       <Input
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Logradouro, número, complemento"
+                        id="logradouro"
+                        value={logradouro}
+                        onChange={(e) => setLogradouro(e.target.value)}
+                        placeholder="Rua, Avenida, etc."
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="numero" className="flex items-center gap-2">
+                          Número
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
+                        <Input
+                          id="numero"
+                          value={numero}
+                          onChange={(e) => setNumero(e.target.value)}
+                          placeholder="123"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="complemento" className="flex items-center gap-2">
+                          Complemento
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
+                        <Input
+                          id="complemento"
+                          value={complemento}
+                          onChange={(e) => setComplemento(e.target.value)}
+                          placeholder="Apto, Sala, etc."
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="city">Cidade</Label>
+                        <Label htmlFor="city" className="flex items-center gap-2">
+                          Cidade
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="city"
                           value={city}
@@ -835,7 +979,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="state">Estado</Label>
+                        <Label htmlFor="state" className="flex items-center gap-2">
+                          Estado
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <Input
                           id="state"
                           value={state}
@@ -846,7 +996,13 @@ const Prospects = () => {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="zipCode">CEP</Label>
+                        <Label htmlFor="zipCode" className="flex items-center gap-2">
+                          CEP
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
+                            <CheckCircle2 className="w-3 h-3" />
+                            RF
+                          </span>
+                        </Label>
                         <CEPInput
                           id="zipCode"
                           value={zipCode}
