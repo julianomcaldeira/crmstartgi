@@ -145,20 +145,28 @@ async function processImport(
     
     try {
       const prospect: any = {};
+      let skipRow = false;
       
       for (const [colIndex, fieldName] of Object.entries(mappings)) {
         const value = row[parseInt(colIndex)];
         
         if (fieldName === 'cnpj') {
           const cnpjRaw = String(value || '').replace(/\D/g, '');
-          if (cnpjRaw.length !== 14) {
-            throw new Error("CNPJ inválido");
+          // Apenas pegar o CNPJ se ainda não tiver (evita duplicação de mapeamento)
+          if (!prospect.cnpj && cnpjRaw.length > 0) {
+            if (cnpjRaw.length !== 14) {
+              console.log(`⚠️ CNPJ com tamanho inválido na linha ${i + 1}: ${cnpjRaw} (${cnpjRaw.length} dígitos) - pulando linha`);
+              skipRow = true;
+              break;
+            }
+            prospect.cnpj = cnpjRaw;
           }
-          prospect.cnpj = cnpjRaw;
         } else if (fieldName === 'company_name') {
           const companyName = String(value || '').trim();
           if (!companyName) {
-            throw new Error("Razão Social obrigatória");
+            console.log(`⚠️ Razão Social ausente na linha ${i + 1} - pulando linha`);
+            skipRow = true;
+            break;
           }
           prospect.company_name = companyName;
         } else if (fieldName === 'share_capital') {
@@ -191,6 +199,12 @@ async function processImport(
         } else if (fieldName !== 'ignore' && value !== null && value !== undefined && value !== '') {
           prospect[fieldName] = String(value).trim();
         }
+      }
+
+      // Se devemos pular esta linha devido a erros de validação
+      if (skipRow) {
+        errors.push(`Linha ${i + 1}: dados inválidos ou ausentes`);
+        continue;
       }
 
       if (prospect.cnpj && prospect.company_name) {
