@@ -1,17 +1,30 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase } from "lucide-react";
+import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface TaskViewDialogProps {
   task: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDelete?: (taskId: string) => void;
 }
 
-const TaskViewDialog = ({ task, open, onOpenChange }: TaskViewDialogProps) => {
+const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogProps) => {
   if (!task) return null;
 
   const getTaskTypeLabel = (type: string) => {
@@ -185,6 +198,33 @@ const TaskViewDialog = ({ task, open, onOpenChange }: TaskViewDialogProps) => {
             </div>
           )}
         </div>
+
+        {onDelete && (
+          <DialogFooter>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir Tarefa
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => onDelete(task.id)}>
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -268,6 +268,24 @@ const Tarefas = () => {
     }
   };
 
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      toast.success("Tarefa excluída com sucesso!");
+      setViewDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      toast.error("Erro ao excluir tarefa: " + error.message);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -989,6 +1007,7 @@ const Tarefas = () => {
               fetchData();
             }
           }}
+          onDelete={handleDeleteTask}
         />
       )}
     </div>
