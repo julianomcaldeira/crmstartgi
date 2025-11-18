@@ -184,27 +184,45 @@ const Prospects = () => {
 
   const fetchClients = async () => {
     try {
-      console.log("Fetching clients...");
-      
-      // Buscar clientes com todos os dados relacionados em uma única query otimizada
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select(`
+      console.log("Fetching clients with pagination...");
+
+      const pageSize = 1000;
+      let from = 0;
+      let allClients: any[] = [];
+
+      while (true) {
+        const { data, error } = await supabase
+          .from("clients")
+          .select(`
           *,
           contacts(*),
           created_by_profile:profiles!clients_created_by_fkey(full_name, email),
           client_feiras(feira_id)
         `)
-        .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
 
-      if (clientsError) {
-        console.error("Error fetching clients:", clientsError);
-        throw clientsError;
+        if (error) {
+          console.error("Error fetching clients page:", error);
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          break;
+        }
+
+        allClients = allClients.concat(data);
+
+        // Se retornou menos do que o tamanho da página, não há mais registros
+        if (data.length < pageSize) {
+          break;
+        }
+
+        from += pageSize;
       }
 
-      console.log("Clients data fetched:", clientsData?.length || 0, "records");
-
-      setClients(clientsData || []);
+      console.log("Clients data fetched:", allClients.length, "records");
+      setClients(allClients);
     } catch (error) {
       console.error("Error fetching clients:", error);
       toast.error("Erro ao carregar prospects");

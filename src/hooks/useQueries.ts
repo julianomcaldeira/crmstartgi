@@ -124,18 +124,41 @@ export const useProspects = () => {
   return useQuery({
     queryKey: ["prospects"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select(`
+      const pageSize = 1000;
+      let from = 0;
+      let allProspects: any[] = [];
+
+      while (true) {
+        const { data, error } = await supabase
+          .from("clients")
+          .select(`
           *,
           contacts(*),
           created_by_profile:profiles!clients_created_by_fkey(full_name, email),
           client_feiras(feira_id)
         `)
-        .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
 
-      if (error) throw error;
-      return data || [];
+        if (error) {
+          console.error("Error fetching prospects page:", error);
+          throw error;
+        }
+
+        if (!data || data.length === 0) {
+          break;
+        }
+
+        allProspects = allProspects.concat(data);
+
+        if (data.length < pageSize) {
+          break;
+        }
+
+        from += pageSize;
+      }
+
+      return allProspects;
     },
   });
 };
