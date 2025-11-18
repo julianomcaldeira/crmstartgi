@@ -13,7 +13,6 @@ interface QuickImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  filePath?: string;
 }
 
 const SYSTEM_FIELDS = [
@@ -42,8 +41,9 @@ const SYSTEM_FIELDS = [
   { value: 'ignore', label: '-- Ignorar esta coluna --' }
 ];
 
-export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/empresas_import.xlsx' }: QuickImportDialogProps) {
-  const [step, setStep] = useState<'reading' | 'mapping' | 'importing' | 'complete'>('reading');
+export function QuickImportDialog({ open, onOpenChange, onSuccess }: QuickImportDialogProps) {
+  const [step, setStep] = useState<'selecting' | 'reading' | 'mapping' | 'importing' | 'complete'>('selecting');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState({
@@ -55,11 +55,41 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
   });
   const [sessionId] = useState(() => `import_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
-  useEffect(() => {
-    if (open && step === 'reading') {
-      readExcelFile();
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        toast.error('Por favor, selecione um arquivo Excel (.xlsx ou .xls)');
+        return;
+      }
+      setSelectedFile(file);
     }
-  }, [open, step]);
+  };
+
+  const handleFileRead = () => {
+    if (!selectedFile) {
+      toast.error('Selecione um arquivo primeiro');
+      return;
+    }
+    setStep('reading');
+    readExcelFile();
+  };
+
+  useEffect(() => {
+    if (!open) {
+      setStep('selecting');
+      setSelectedFile(null);
+      setHeaders([]);
+      setMappings({});
+      setProgress({
+        total: 0,
+        processed: 0,
+        success: 0,
+        duplicates: 0,
+        errors: 0
+      });
+    }
+  }, [open]);
 
   useEffect(() => {
     if (step === 'importing') {
@@ -102,53 +132,74 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
   }, [step, sessionId]);
 
   const readExcelFile = async () => {
+    if (!selectedFile) {
+      toast.error('Nenhum arquivo selecionado');
+      return;
+    }
+
     try {
-      const response = await fetch(filePath);
-      const arrayBuffer = await response.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+      const reader = new FileReader();
       
-      if (data.length > 0) {
-        const fileHeaders = data[0].map((h: any) => String(h || '').trim());
-        setHeaders(fileHeaders);
-        
-        // Auto-map headers
-        const autoMappings: Record<string, string> = {};
-        fileHeaders.forEach((header, index) => {
-          const lowerHeader = header.toLowerCase();
-          
-          if (lowerHeader.includes('cnpj')) autoMappings[index] = 'cnpj';
-          else if (lowerHeader.includes('razão social') || lowerHeader.includes('razao social')) autoMappings[index] = 'company_name';
-          else if (lowerHeader.includes('nome fantasia')) autoMappings[index] = 'trade_name';
-          else if (lowerHeader.includes('telefone') || lowerHeader.includes('fone')) autoMappings[index] = 'phone';
-          else if (lowerHeader.includes('email') || lowerHeader.includes('e-mail')) autoMappings[index] = 'email';
-          else if (lowerHeader.includes('endereço') || lowerHeader.includes('endereco')) autoMappings[index] = 'address';
-          else if (lowerHeader.includes('cidade')) autoMappings[index] = 'city';
-          else if (lowerHeader.includes('estado') || lowerHeader.includes('uf')) autoMappings[index] = 'state';
-          else if (lowerHeader.includes('cep')) autoMappings[index] = 'zip_code';
-          else if (lowerHeader.includes('segmento')) autoMappings[index] = 'segment';
-          else if (lowerHeader.includes('porte')) autoMappings[index] = 'company_size';
-          else if (lowerHeader.includes('região') || lowerHeader.includes('regiao')) autoMappings[index] = 'region';
-          else if (lowerHeader.includes('capital')) autoMappings[index] = 'share_capital';
-          else if (lowerHeader.includes('vendedor')) autoMappings[index] = 'seller_name';
-          else if (lowerHeader.includes('cnae') && lowerHeader.includes('principal')) autoMappings[index] = 'cnae_principal';
-          else if (lowerHeader.includes('cnae') && (lowerHeader.includes('descrição') || lowerHeader.includes('descricao'))) autoMappings[index] = 'cnae_description';
-          else if (lowerHeader.includes('situação') || lowerHeader.includes('situacao')) autoMappings[index] = 'registration_status';
-          else if (lowerHeader.includes('data') && lowerHeader.includes('abertura')) autoMappings[index] = 'foundation_date';
-          else if (lowerHeader.includes('natureza') && lowerHeader.includes('jurídica')) autoMappings[index] = 'legal_nature';
-          else if (lowerHeader.includes('serviço') || lowerHeader.includes('servico')) autoMappings[index] = 'services';
-          else if (lowerHeader.includes('distribuidor')) autoMappings[index] = 'distributor';
-          else if (lowerHeader.includes('concorrente')) autoMappings[index] = 'competitors';
-          else autoMappings[index] = 'ignore';
-        });
-        
-        setMappings(autoMappings);
-        setStep('mapping');
-      } else {
-        toast.error('Planilha vazia');
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+      
+          if (jsonData.length > 0) {
+            const fileHeaders = jsonData[0].map((h: any) => String(h || '').trim());
+            setHeaders(fileHeaders);
+            
+            // Auto-map headers
+            const autoMappings: Record<string, string> = {};
+            fileHeaders.forEach((header, index) => {
+              const lowerHeader = header.toLowerCase();
+              
+              if (lowerHeader.includes('cnpj')) autoMappings[index] = 'cnpj';
+              else if (lowerHeader.includes('razão social') || lowerHeader.includes('razao social')) autoMappings[index] = 'company_name';
+              else if (lowerHeader.includes('nome fantasia')) autoMappings[index] = 'trade_name';
+              else if (lowerHeader.includes('telefone') || lowerHeader.includes('fone')) autoMappings[index] = 'phone';
+              else if (lowerHeader.includes('email') || lowerHeader.includes('e-mail')) autoMappings[index] = 'email';
+              else if (lowerHeader.includes('endereço') || lowerHeader.includes('endereco')) autoMappings[index] = 'address';
+              else if (lowerHeader.includes('cidade')) autoMappings[index] = 'city';
+              else if (lowerHeader.includes('estado') || lowerHeader.includes('uf')) autoMappings[index] = 'state';
+              else if (lowerHeader.includes('cep')) autoMappings[index] = 'zip_code';
+              else if (lowerHeader.includes('segmento')) autoMappings[index] = 'segment';
+              else if (lowerHeader.includes('porte')) autoMappings[index] = 'company_size';
+              else if (lowerHeader.includes('região') || lowerHeader.includes('regiao')) autoMappings[index] = 'region';
+              else if (lowerHeader.includes('capital')) autoMappings[index] = 'share_capital';
+              else if (lowerHeader.includes('vendedor')) autoMappings[index] = 'seller_name';
+              else if (lowerHeader.includes('cnae') && lowerHeader.includes('principal')) autoMappings[index] = 'cnae_principal';
+              else if (lowerHeader.includes('cnae') && (lowerHeader.includes('descrição') || lowerHeader.includes('descricao'))) autoMappings[index] = 'cnae_description';
+              else if (lowerHeader.includes('situação') || lowerHeader.includes('situacao')) autoMappings[index] = 'registration_status';
+              else if (lowerHeader.includes('data') && lowerHeader.includes('abertura')) autoMappings[index] = 'foundation_date';
+              else if (lowerHeader.includes('natureza') && lowerHeader.includes('jurídica')) autoMappings[index] = 'legal_nature';
+              else if (lowerHeader.includes('serviço') || lowerHeader.includes('servico')) autoMappings[index] = 'services';
+              else if (lowerHeader.includes('distribuidor')) autoMappings[index] = 'distributor';
+              else if (lowerHeader.includes('concorrente')) autoMappings[index] = 'competitors';
+              else autoMappings[index] = 'ignore';
+            });
+            
+            setMappings(autoMappings);
+            setStep('mapping');
+          } else {
+            toast.error('Planilha vazia');
+            onOpenChange(false);
+          }
+        } catch (error) {
+          console.error('Erro ao processar arquivo:', error);
+          toast.error('Erro ao processar arquivo Excel');
+          onOpenChange(false);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error('Erro ao ler o arquivo');
         onOpenChange(false);
-      }
+      };
+
+      reader.readAsArrayBuffer(selectedFile);
     } catch (error) {
       console.error('Erro ao ler arquivo:', error);
       toast.error('Erro ao ler arquivo Excel');
@@ -157,6 +208,11 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
   };
 
   const startImport = async () => {
+    if (!selectedFile) {
+      toast.error('Nenhum arquivo selecionado');
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -172,13 +228,9 @@ export function QuickImportDialog({ open, onOpenChange, onSuccess, filePath = '/
       }
 
       setStep('importing');
-      
-      const response = await fetch(filePath);
-      const blob = await response.blob();
-      const file = new File([blob], 'import.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', selectedFile);
       formData.append('userId', user.id);
       formData.append('sessionId', sessionId);
       formData.append('mappings', JSON.stringify(mappings));
