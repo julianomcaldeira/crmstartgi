@@ -60,6 +60,7 @@ const Feiras = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [feiraToDelete, setFeiraToDelete] = useState<any>(null);
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
@@ -93,10 +94,24 @@ const Feiras = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setIsAuthenticated(true);
+        
+        // Fetch user roles
+        const { data: rolesData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        
+        if (rolesData) {
+          setUserRoles(rolesData.map(r => r.role));
+        }
       }
     } catch (error) {
       console.error("Error checking user:", error);
     }
+  };
+
+  const canDeleteFeira = () => {
+    return userRoles.includes('admin') || userRoles.includes('gestor');
   };
 
   const fetchFeiras = async () => {
@@ -378,7 +393,7 @@ const Feiras = () => {
 
         {isAuthenticated && (
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-            {selectedFeiras.length > 0 && (
+            {selectedFeiras.length > 0 && canDeleteFeira() && (
               <Button
                 variant="destructive"
                 onClick={handleBulkDelete}
@@ -647,7 +662,7 @@ const Feiras = () => {
             <SwipeableCard
               key={feira.id}
               onEdit={isAuthenticated ? () => openDialog(feira) : undefined}
-              onDelete={isAuthenticated ? () => handleDelete(feira) : undefined}
+              onDelete={canDeleteFeira() ? () => handleDelete(feira) : undefined}
             >
               <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
                 <div className="space-y-4">
@@ -678,14 +693,16 @@ const Feiras = () => {
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => handleDelete(feira)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {canDeleteFeira() && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleDelete(feira)}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -771,7 +788,7 @@ const Feiras = () => {
             <SwipeableCard
               key={feira.id}
               onEdit={isAuthenticated ? () => openDialog(feira) : undefined}
-              onDelete={isAuthenticated ? () => handleDelete(feira) : undefined}
+              onDelete={canDeleteFeira() ? () => handleDelete(feira) : undefined}
             >
               <Card className="p-3 sm:p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between gap-3">
@@ -827,14 +844,16 @@ const Feiras = () => {
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleDelete(feira)}
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {canDeleteFeira() && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(feira)}
+                          className="h-8 w-8"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
