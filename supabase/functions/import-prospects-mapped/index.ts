@@ -83,9 +83,11 @@ serve(async (req) => {
 
     console.log(`Total de linhas: ${totalRows}`);
 
-    // Start background processing without waiting
-    processImport(supabase, jsonData, mappings, userId, sessionId, totalRows).catch(async (error: any) => {
-      console.error("Erro no processamento em background:", error);
+    // Start background processing and wait for it
+    try {
+      await processImport(supabase, jsonData, mappings, userId, sessionId, totalRows);
+    } catch (error: any) {
+      console.error("Erro no processamento:", error);
       await supabase
         .from("import_progress")
         .update({
@@ -93,18 +95,18 @@ serve(async (req) => {
           error_message: error.message,
         })
         .eq("session_id", sessionId);
-    });
+    }
 
-    // Return immediately
+    // Return success
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Importação iniciada",
+        message: "Importação concluída",
         sessionId: sessionId,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 202,
+        status: 200,
       }
     );
   } catch (error: any) {
