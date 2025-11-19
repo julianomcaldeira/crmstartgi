@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertCircle, ChevronDown, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 type ImportType = "prospects" | "feiras" | "knowledge_base" | "contacts" | "opportunities" | "tasks";
 
@@ -78,6 +80,44 @@ const AdminImport = () => {
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [validating, setValidating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [importHistory, setImportHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
+
+  // Load import history on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    const { data, error } = await supabase
+      .from('import_history')
+      .select(`
+        *,
+        profiles!import_history_user_id_fkey(full_name, email)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setImportHistory(data);
+    }
+  };
+
+  const exportErrors = () => {
+    if (!errorDetails || errorDetails.length === 0) {
+      toast.error("Sem erros", { description: "Não há erros para exportar nesta importação." });
+      return;
+    }
+
+    const errorsData = errorDetails.map(err => ({ erro: err }));
+    const ws = XLSX.utils.json_to_sheet(errorsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Erros");
+    XLSX.writeFile(wb, `erros_importacao_${sessionId}_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
+
+    toast.success("Relatório exportado", { description: "O arquivo com os erros foi baixado com sucesso." });
+  };
 
   const downloadTemplate = () => {
     if (!importType) {
@@ -310,11 +350,12 @@ const AdminImport = () => {
         return;
       }
 
-      const sessionId = `import_${Date.now()}`;
+      const newSessionId = `import_${Date.now()}`;
+      setSessionId(newSessionId);
       const formData = new FormData();
       formData.append("file", file);
       formData.append("userId", user.id);
-      formData.append("sessionId", sessionId);
+      formData.append("sessionId", newSessionId);
       formData.append("importType", importType);
 
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
@@ -328,14 +369,14 @@ const AdminImport = () => {
 
       // Subscribe to real-time progress
       const channel = supabase
-        .channel(`import-${sessionId}`)
+        .channel(`import-${newSessionId}`)
         .on(
           "postgres_changes",
           {
             event: "*",
             schema: "public",
             table: "import_progress",
-            filter: `session_id=eq.${sessionId}`,
+            filter: `session_id=eq.${newSessionId}`,
           },
           (payload: any) => {
             const data = payload.new;
@@ -360,6 +401,7 @@ const AdminImport = () => {
               toast.success(`Importação concluída! ${data.success_count} registros importados`);
               setImporting(false);
               channel.unsubscribe();
+              loadHistory(); // Reload history after completion
             }
           }
         )
@@ -654,6 +696,135 @@ const AdminImport = () => {
                 </CollapsibleContent>
               </Collapsible>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Import History Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" />
+              <CardTitle>Histórico de Importações</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+            >
+              {showHistory ? "Ocultar" : "Mostrar"}
+            </Button>
+          </div>
+          <CardDescription>Auditoria completa de todas as importações realizadas</CardDescription>
+        </CardHeader>
+
+        {showHistory && (
+          <CardContent className="space-y-3">
+            {importHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma importação realizada ainda
+              </p>
+            ) : (
+              importHistory.map((record) => (
+                <div
+                  key={record.id}
+                  className="border rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${
+                        record.status === 'completed' ? 'bg-green-500' : 
+                        record.status === 'failed' ? 'bg-red-500' : 'bg-yellow-500'
+                      }`} />
+                      <div>
+                        <p className="font-medium">{record.file_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(record.created_at), "dd/MM/yyyy 'às' HH:mm")}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="capitalize">
+                      {IMPORT_TEMPLATES[record.import_type as ImportType]?.name || record.import_type}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Total</p>
+                      <p className="font-medium">{record.total_rows}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Sucesso</p>
+                      <p className="font-medium text-green-600">{record.success_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Erros</p>
+                      <p className="font-medium text-red-600">{record.error_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Duplicados</p>
+                      <p className="font-medium text-yellow-600">{record.duplicate_count}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Tamanho</p>
+                      <p className="font-medium">{record.file_size ? `${(record.file_size / 1024).toFixed(1)} KB` : '-'}</p>
+                    </div>
+                  </div>
+
+                  {record.profiles && (
+                    <div className="text-sm">
+                      <p className="text-muted-foreground">
+                        Importado por: <span className="font-medium text-foreground">
+                          {record.profiles.full_name} ({record.profiles.email})
+                        </span>
+                      </p>
+                    </div>
+                  )}
+
+                  {record.error_details && record.error_details.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const ws = XLSX.utils.json_to_sheet(record.error_details);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Erros");
+                        XLSX.writeFile(wb, `erros_${record.file_name}_${format(new Date(record.created_at), "yyyyMMdd_HHmm")}.xlsx`);
+                        toast.success("Relatório exportado", { description: "O arquivo com os erros foi baixado." });
+                      }}
+                      className="w-full"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Erros em Excel
+                    </Button>
+                  )}
+                </div>
+              ))
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Export Errors Button for Current Import */}
+      {errorDetails.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">Exportar Erros da Importação Atual</h3>
+                <p className="text-sm text-muted-foreground">
+                  {errorDetails.length} erro(s) encontrado(s)
+                </p>
+              </div>
+              <Button
+                onClick={exportErrors}
+                variant="outline"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar Erros
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
