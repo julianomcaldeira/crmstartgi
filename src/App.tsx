@@ -15,6 +15,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Relatorios from "./pages/Relatorios";
 import PrevisaoVendas from "./pages/PrevisaoVendas";
 import Admin from "./pages/Admin";
+import AdminImport from "./pages/AdminImport";
 import Feiras from "./pages/Feiras";
 import MetricasEquipe from "./pages/MetricasEquipe";
 import Layout from "./components/Layout";
@@ -39,6 +40,7 @@ const App = () => {
         <Route path="/base-conhecimento" element={<Layout><BaseConhecimento /></Layout>} />
         <Route path="/processo-vendas" element={<Layout><ProcessoVendas /></Layout>} />
         <Route path="/admin" element={<Layout><Admin /></Layout>} />
+        <Route path="/admin/importacao" element={<Layout><AdminImport /></Layout>} />
         <Route path="/feiras" element={<Layout><Feiras /></Layout>} />
         <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
