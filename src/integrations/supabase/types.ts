@@ -468,6 +468,57 @@ export type Database = {
           },
         ]
       }
+      import_history: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duplicate_count: number
+          error_count: number
+          error_details: Json | null
+          file_name: string
+          file_size: number | null
+          id: string
+          import_type: string
+          started_at: string
+          status: string
+          success_count: number
+          total_rows: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duplicate_count?: number
+          error_count?: number
+          error_details?: Json | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          import_type: string
+          started_at?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duplicate_count?: number
+          error_count?: number
+          error_details?: Json | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          import_type?: string
+          started_at?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       import_progress: {
         Row: {
           created_at: string

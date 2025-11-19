@@ -80,11 +80,25 @@ serve(async (req) => {
       status: 'processing'
     });
 
+    // Create import history record
+    const { data: historyRecord } = await supabase
+      .from('import_history')
+      .insert({
+        user_id: userId,
+        import_type: importType,
+        file_name: file.name,
+        file_size: file.size,
+        total_rows: data.length,
+        status: 'processing'
+      })
+      .select()
+      .single();
+
     // Start background processing
-    processImport(supabase, data, userId, sessionId, importType);
+    processImport(supabase, data, userId, sessionId, importType, historyRecord?.id);
 
     return new Response(
-      JSON.stringify({ success: true, sessionId, totalRows: data.length }),
+      JSON.stringify({ success: true, sessionId, totalRows: data.length, historyId: historyRecord?.id }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
@@ -101,7 +115,8 @@ async function processImport(
   data: any[],
   userId: string,
   sessionId: string,
-  importType: string
+  importType: string,
+  historyId?: string
 ) {
   let successCount = 0;
   let errorCount = 0;
@@ -169,7 +184,7 @@ async function processImport(
       }
     }
 
-    // Final update
+    // Final update to import_progress
     await supabase.from('import_progress').update({
       status: 'completed',
       processed_rows: data.length,
@@ -180,6 +195,29 @@ async function processImport(
       updated_at: new Date().toISOString()
     }).eq('session_id', sessionId);
 
+    // Update import history
+    if (historyId) {
+      const errorDetails = errors.map((err, idx) => {
+        const parts = err.split(':');
+        return {
+          linha: parts[0]?.replace('Linha ', '').trim(),
+          erro: parts[1]?.trim() || err
+        };
+      });
+
+      await supabase
+        .from('import_history')
+        .update({
+          success_count: successCount,
+          error_count: errorCount,
+          duplicate_count: duplicateCount,
+          error_details: errorDetails.length > 0 ? errorDetails : null,
+          completed_at: new Date().toISOString(),
+          status: 'completed'
+        })
+        .eq('id', historyId);
+    }
+
   } catch (error: any) {
     console.error('Error in processImport:', error);
     await supabase.from('import_progress').update({
@@ -187,6 +225,18 @@ async function processImport(
       error_message: error.message,
       updated_at: new Date().toISOString()
     }).eq('session_id', sessionId);
+
+    // Update history on failure
+    if (historyId) {
+      await supabase
+        .from('import_history')
+        .update({
+          status: 'failed',
+          error_details: [{ erro: error.message }],
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', historyId);
+    }
   }
 }
 
