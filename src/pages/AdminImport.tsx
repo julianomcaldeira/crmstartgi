@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Download, Upload, FileSpreadsheet, CheckCircle, XCircle, AlertCircle, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -18,6 +19,20 @@ interface ImportProgress {
   success: number;
   errors: number;
   duplicates: number;
+}
+
+interface ValidationError {
+  row: number;
+  field: string;
+  value: any;
+  message: string;
+}
+
+interface PreviewData {
+  headers: string[];
+  rows: any[];
+  validationErrors: ValidationError[];
+  isValid: boolean;
 }
 
 const IMPORT_TEMPLATES = {
@@ -60,6 +75,9 @@ const AdminImport = () => {
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const downloadTemplate = () => {
     if (!importType) {
@@ -75,12 +93,195 @@ const AdminImport = () => {
     toast.success("Template baixado com sucesso!");
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const validateCNPJ = (cnpj: string): boolean => {
+    const cleaned = String(cnpj).replace(/\D/g, '');
+    if (cleaned.length !== 14) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1+$/.test(cleaned)) return false;
+    
+    // Validação dos dígitos verificadores
+    let sum = 0;
+    let pos = 5;
+    for (let i = 0; i < 12; i++) {
+      sum += parseInt(cleaned.charAt(i)) * pos;
+      pos = pos === 2 ? 9 : pos - 1;
+    }
+    let digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (parseInt(cleaned.charAt(12)) !== digit) return false;
+    
+    sum = 0;
+    pos = 6;
+    for (let i = 0; i < 13; i++) {
+      sum += parseInt(cleaned.charAt(i)) * pos;
+      pos = pos === 2 ? 9 : pos - 1;
+    }
+    digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return parseInt(cleaned.charAt(13)) === digit;
+  };
+
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateDate = (date: string): boolean => {
+    if (!date) return true; // Campo opcional
+    const dateObj = new Date(date);
+    return !isNaN(dateObj.getTime());
+  };
+
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) return true; // Campo opcional
+    const cleaned = String(phone).replace(/\D/g, '');
+    return cleaned.length >= 10 && cleaned.length <= 11;
+  };
+
+  const validateField = (
+    importType: ImportType,
+    field: string,
+    value: any,
+    row: number
+  ): ValidationError | null => {
+    // Campos obrigatórios por tipo de importação
+    const requiredFields: Record<ImportType, string[]> = {
+      prospects: ['CNPJ', 'Razão Social'],
+      feiras: ['Nome'],
+      knowledge_base: ['Título', 'Conteúdo'],
+      contacts: ['CNPJ Cliente', 'Nome'],
+      opportunities: ['CNPJ Cliente', 'Produto'],
+      tasks: ['Título']
+    };
+
+    const required = requiredFields[importType];
+    
+    // Verifica campo obrigatório
+    if (required.includes(field) && (!value || value === '')) {
+      return {
+        row,
+        field,
+        value,
+        message: `Campo obrigatório não preenchido`
+      };
+    }
+
+    // Validações específicas por campo
+    if (field === 'CNPJ' || field === 'CNPJ Cliente') {
+      if (value && !validateCNPJ(value)) {
+        return {
+          row,
+          field,
+          value,
+          message: 'CNPJ inválido'
+        };
+      }
+    }
+
+    if (field === 'Email' && value && !validateEmail(value)) {
+      return {
+        row,
+        field,
+        value,
+        message: 'Email inválido'
+      };
+    }
+
+    if ((field === 'Data Início' || field === 'Data Fim' || field === 'Data Fechamento' || field === 'Data Vencimento' || field === 'Data Abertura') && value && !validateDate(value)) {
+      return {
+        row,
+        field,
+        value,
+        message: 'Data inválida'
+      };
+    }
+
+    if ((field === 'Telefone' || field === 'Celular') && value && !validatePhone(value)) {
+      return {
+        row,
+        field,
+        value,
+        message: 'Telefone inválido (deve ter 10-11 dígitos)'
+      };
+    }
+
+    if (field === 'Probabilidade' && value) {
+      const validProbabilities = [10, 25, 50, 80, 90];
+      if (!validProbabilities.includes(Number(value))) {
+        return {
+          row,
+          field,
+          value,
+          message: 'Probabilidade deve ser: 10, 25, 50, 80 ou 90'
+        };
+      }
+    }
+
+    return null;
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
       setProgress(null);
       setErrorDetails([]);
+      setPreviewData(null);
+      setShowPreview(false);
+      
+      // Validação automática do arquivo
+      if (importType) {
+        await validateFile(selectedFile);
+      }
+    }
+  };
+
+  const validateFile = async (fileToValidate: File) => {
+    if (!importType) {
+      toast.error("Selecione o tipo de importação primeiro");
+      return;
+    }
+
+    setValidating(true);
+    
+    try {
+      const arrayBuffer = await fileToValidate.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+      
+      const template = IMPORT_TEMPLATES[importType];
+      const headers = Object.keys(data[0] || {});
+      const validationErrors: ValidationError[] = [];
+      
+      // Valida cada linha
+      data.forEach((row: any, index: number) => {
+        template.columns.forEach(column => {
+          const error = validateField(importType, column, row[column], index + 2);
+          if (error) {
+            validationErrors.push(error);
+          }
+        });
+      });
+
+      setPreviewData({
+        headers,
+        rows: data.slice(0, 10), // Mostra primeiras 10 linhas
+        validationErrors,
+        isValid: validationErrors.length === 0
+      });
+
+      setShowPreview(true);
+
+      if (validationErrors.length === 0) {
+        toast.success(`Arquivo validado! ${data.length} registros prontos para importação.`);
+      } else {
+        toast.warning(`${validationErrors.length} erros de validação encontrados. Revise antes de importar.`);
+      }
+    } catch (error: any) {
+      console.error("Erro na validação:", error);
+      toast.error("Erro ao validar arquivo: " + error.message);
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -90,7 +291,15 @@ const AdminImport = () => {
       return;
     }
 
+    if (previewData && !previewData.isValid) {
+      const confirmImport = window.confirm(
+        `Foram encontrados ${previewData.validationErrors.length} erros de validação. Deseja continuar mesmo assim? Alguns registros podem falhar na importação.`
+      );
+      if (!confirmImport) return;
+    }
+
     setImporting(true);
+    setShowPreview(false);
     setProgress({ total: 0, processed: 0, success: 0, errors: 0, duplicates: 0 });
     setErrorDetails([]);
 
@@ -256,15 +465,114 @@ const AdminImport = () => {
               </Alert>
             )}
 
-            <Button
-              onClick={handleImport}
-              disabled={!file || importing}
-              className="w-full"
-              size="lg"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {importing ? "Importando..." : "Iniciar Importação"}
-            </Button>
+            <div className="flex gap-2">
+              {file && !showPreview && (
+                <Button
+                  onClick={() => validateFile(file)}
+                  disabled={validating || importing}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  {validating ? "Validando..." : "Validar Arquivo"}
+                </Button>
+              )}
+              
+              <Button
+                onClick={handleImport}
+                disabled={!file || importing || validating}
+                className="flex-1"
+                size="lg"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {importing ? "Importando..." : showPreview ? "Confirmar Importação" : "Iniciar Importação"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showPreview && previewData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {previewData.isValid ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-yellow-500" />
+              )}
+              Preview e Validação
+            </CardTitle>
+            <CardDescription>
+              {previewData.isValid 
+                ? "Todos os dados foram validados com sucesso!"
+                : `${previewData.validationErrors.length} erros encontrados - revise antes de importar`
+              }
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Erros de Validação */}
+            {previewData.validationErrors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Erros de Validação ({previewData.validationErrors.length}):</strong>
+                  <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
+                    {previewData.validationErrors.slice(0, 20).map((error, i) => (
+                      <div key={i} className="text-xs border-l-2 border-red-500 pl-2 py-1">
+                        <strong>Linha {error.row}, Campo "{error.field}":</strong> {error.message}
+                        {error.value && <span className="text-muted-foreground"> (valor: "{error.value}")</span>}
+                      </div>
+                    ))}
+                    {previewData.validationErrors.length > 20 && (
+                      <p className="text-xs text-muted-foreground italic">
+                        ... e mais {previewData.validationErrors.length - 20} erros
+                      </p>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Preview das Primeiras Linhas */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Preview (primeiras 10 linhas):</h3>
+              <div className="border rounded-lg overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="px-2 py-1 text-left font-medium">#</th>
+                      {previewData.headers.map((header, i) => (
+                        <th key={i} className="px-2 py-1 text-left font-medium">{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewData.rows.map((row: any, i: number) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-2 py-1 text-muted-foreground">{i + 2}</td>
+                        {previewData.headers.map((header, j) => (
+                          <td key={j} className="px-2 py-1 max-w-[200px] truncate">
+                            {row[header] || <span className="text-muted-foreground italic">vazio</span>}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <Alert>
+              <FileSpreadsheet className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Total de registros:</strong> {previewData.rows.length}+ linhas detectadas
+                {!previewData.isValid && (
+                  <div className="mt-2 text-yellow-600">
+                    ⚠️ Registros com erros serão ignorados durante a importação
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       )}
@@ -318,20 +626,33 @@ const AdminImport = () => {
             </div>
 
             {errorDetails.length > 0 && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Erros encontrados:</strong>
-                  <ul className="mt-2 list-disc list-inside text-sm">
-                    {errorDetails.slice(0, 10).map((error, i) => (
-                      <li key={i}>{error}</li>
-                    ))}
-                    {errorDetails.length > 10 && (
-                      <li>... e mais {errorDetails.length - 10} erros</li>
-                    )}
-                  </ul>
-                </AlertDescription>
-              </Alert>
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-500" />
+                      Ver Detalhes dos Erros ({errorDetails.length})
+                    </span>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <Alert variant="destructive">
+                    <XCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>Erros encontrados:</strong>
+                      <ul className="mt-2 list-disc list-inside text-sm max-h-60 overflow-y-auto">
+                        {errorDetails.slice(0, 50).map((error, i) => (
+                          <li key={i}>{error}</li>
+                        ))}
+                        {errorDetails.length > 50 && (
+                          <li>... e mais {errorDetails.length - 50} erros</li>
+                        )}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </CardContent>
         </Card>
