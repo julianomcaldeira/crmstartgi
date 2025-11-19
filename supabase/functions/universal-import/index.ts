@@ -7,6 +7,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Validation functions
+function validateCNPJ(cnpj: string): boolean {
+  const cleaned = String(cnpj).replace(/\D/g, '');
+  if (cleaned.length !== 14) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  let sum = 0;
+  let pos = 5;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(cleaned.charAt(i)) * pos;
+    pos = pos === 2 ? 9 : pos - 1;
+  }
+  let digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (parseInt(cleaned.charAt(12)) !== digit) return false;
+  
+  sum = 0;
+  pos = 6;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(cleaned.charAt(i)) * pos;
+    pos = pos === 2 ? 9 : pos - 1;
+  }
+  digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return parseInt(cleaned.charAt(13)) === digit;
+}
+
+function validateEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+function validateDate(date: string): boolean {
+  if (!date) return true;
+  const dateObj = new Date(date);
+  return !isNaN(dateObj.getTime());
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -157,8 +193,24 @@ async function processImport(
 async function importProspect(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
   const cnpj = String(row['CNPJ'] || '').replace(/\D/g, '');
   
+  // Validações obrigatórias
   if (!cnpj || !row['Razão Social']) {
     return { success: false, error: 'CNPJ ou Razão Social faltando' };
+  }
+
+  // Validação de CNPJ
+  if (!validateCNPJ(cnpj)) {
+    return { success: false, error: `CNPJ inválido: ${cnpj}` };
+  }
+
+  // Validação de email (se fornecido)
+  if (row['Email'] && !validateEmail(row['Email'])) {
+    return { success: false, error: `Email inválido: ${row['Email']}` };
+  }
+
+  // Validação de data (se fornecida)
+  if (row['Data Abertura'] && !validateDate(row['Data Abertura'])) {
+    return { success: false, error: `Data de Abertura inválida: ${row['Data Abertura']}` };
   }
 
   // Check duplicate
@@ -218,8 +270,14 @@ async function importFeira(supabase: any, row: any, userId: string) {
 }
 
 async function importKnowledgeBase(supabase: any, row: any, userId: string) {
+  // Validações obrigatórias
   if (!row['Título'] || !row['Conteúdo']) {
     return { success: false, error: 'Título ou Conteúdo faltando' };
+  }
+
+  // Validação de título (não pode ser vazio ou só espaços)
+  if (row['Título'].trim().length === 0) {
+    return { success: false, error: 'Título não pode ser vazio' };
   }
 
   // Check duplicate
@@ -249,11 +307,22 @@ async function importKnowledgeBase(supabase: any, row: any, userId: string) {
 }
 
 async function importContact(supabase: any, row: any, userId: string) {
+  // Validações obrigatórias
   if (!row['CNPJ Cliente'] || !row['Nome']) {
     return { success: false, error: 'CNPJ Cliente ou Nome faltando' };
   }
 
+  // Validação de CNPJ
   const cnpj = String(row['CNPJ Cliente']).replace(/\D/g, '');
+  if (!validateCNPJ(cnpj)) {
+    return { success: false, error: `CNPJ Cliente inválido: ${row['CNPJ Cliente']}` };
+  }
+
+  // Validação de email (se fornecido)
+  if (row['Email'] && !validateEmail(row['Email'])) {
+    return { success: false, error: `Email inválido: ${row['Email']}` };
+  }
+
   const { data: client } = await supabase
     .from('clients')
     .select('id')
@@ -261,7 +330,7 @@ async function importContact(supabase: any, row: any, userId: string) {
     .single();
 
   if (!client) {
-    return { success: false, error: 'Cliente não encontrado' };
+    return { success: false, error: `Cliente não encontrado para CNPJ: ${row['CNPJ Cliente']}` };
   }
 
   const { error } = await supabase.from('contacts').insert({
@@ -279,15 +348,35 @@ async function importContact(supabase: any, row: any, userId: string) {
 }
 
 async function importOpportunity(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
+  // Validações obrigatórias
   if (!row['CNPJ Cliente'] || !row['Produto']) {
     return { success: false, error: 'CNPJ Cliente ou Produto faltando' };
   }
 
+  // Validação de CNPJ
   const cnpj = String(row['CNPJ Cliente']).replace(/\D/g, '');
+  if (!validateCNPJ(cnpj)) {
+    return { success: false, error: `CNPJ Cliente inválido: ${row['CNPJ Cliente']}` };
+  }
+
+  // Validação de probabilidade
+  if (row['Probabilidade']) {
+    const validProbs = [10, 25, 50, 80, 90];
+    const prob = parseInt(row['Probabilidade']);
+    if (!validProbs.includes(prob)) {
+      return { success: false, error: `Probabilidade inválida: ${row['Probabilidade']}. Use: 10, 25, 50, 80 ou 90` };
+    }
+  }
+
+  // Validação de data (se fornecida)
+  if (row['Data Fechamento'] && !validateDate(row['Data Fechamento'])) {
+    return { success: false, error: `Data de Fechamento inválida: ${row['Data Fechamento']}` };
+  }
+
   const { data: client } = await supabase.from('clients').select('id').eq('cnpj', cnpj).single();
   
   if (!client) {
-    return { success: false, error: 'Cliente não encontrado' };
+    return { success: false, error: `Cliente não encontrado para CNPJ: ${row['CNPJ Cliente']}` };
   }
 
   const { data: product } = await supabase
@@ -297,7 +386,7 @@ async function importOpportunity(supabase: any, row: any, userId: string, seller
     .single();
 
   if (!product) {
-    return { success: false, error: 'Produto não encontrado' };
+    return { success: false, error: `Produto não encontrado: ${row['Produto']}` };
   }
 
   const sellerId = row['Vendedor'] ? sellerMap.get(row['Vendedor'].toLowerCase()) : userId;
@@ -319,15 +408,30 @@ async function importOpportunity(supabase: any, row: any, userId: string, seller
 }
 
 async function importTask(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
+  // Validações obrigatórias
   if (!row['Título']) {
     return { success: false, error: 'Título da tarefa faltando' };
+  }
+
+  // Validação de data de vencimento (se fornecida)
+  if (row['Data Vencimento'] && !validateDate(row['Data Vencimento'])) {
+    return { success: false, error: `Data de Vencimento inválida: ${row['Data Vencimento']}` };
   }
 
   let clientId = null;
   if (row['CNPJ Cliente']) {
     const cnpj = String(row['CNPJ Cliente']).replace(/\D/g, '');
+    
+    // Validação de CNPJ (se fornecido)
+    if (!validateCNPJ(cnpj)) {
+      return { success: false, error: `CNPJ Cliente inválido: ${row['CNPJ Cliente']}` };
+    }
+    
     const { data: client } = await supabase.from('clients').select('id').eq('cnpj', cnpj).single();
-    clientId = client?.id;
+    if (!client) {
+      return { success: false, error: `Cliente não encontrado para CNPJ: ${row['CNPJ Cliente']}` };
+    }
+    clientId = client.id;
   }
 
   const sellerId = row['Vendedor'] ? sellerMap.get(row['Vendedor'].toLowerCase()) : userId;
