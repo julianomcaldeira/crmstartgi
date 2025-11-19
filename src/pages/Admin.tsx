@@ -687,6 +687,46 @@ const Admin = () => {
       {/* Alerts System Tester */}
       <AlertsTester />
 
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card 
+          className="p-6 cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-card to-primary/5 border-primary/20"
+          onClick={() => window.location.href = "/admin/importacao"}
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-lg bg-primary/10">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground mb-1">Importação de Dados</h3>
+              <p className="text-sm text-muted-foreground">
+                Importe dados em massa de prospects, feiras, tarefas e mais
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card 
+          className="p-6 cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-card to-success/5 border-success/20"
+          onClick={() => {
+            const exportTab = document.querySelector('[data-state="inactive"][value="export"]') as HTMLElement;
+            exportTab?.click();
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="p-4 rounded-lg bg-success/10">
+              <Download className="h-8 w-8 text-success" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground mb-1">Exportar Dados</h3>
+              <p className="text-sm text-muted-foreground">
+                Baixe backup completo da base de dados do sistema
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
         <TabsList className="grid w-full grid-cols-6">
