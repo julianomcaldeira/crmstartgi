@@ -706,36 +706,14 @@ const Admin = () => {
           </div>
         </Card>
 
-        <Card 
-          className="p-6 cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-card to-success/5 border-success/20"
-          onClick={() => {
-            const exportTab = document.querySelector('[data-state="inactive"][value="export"]') as HTMLElement;
-            exportTab?.click();
-          }}
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-4 rounded-lg bg-success/10">
-              <Download className="h-8 w-8 text-success" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-foreground mb-1">Exportar Dados</h3>
-              <p className="text-sm text-muted-foreground">
-                Baixe backup completo da base de dados do sistema
-              </p>
-            </div>
-          </div>
-        </Card>
       </div>
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
-          <TabsTrigger value="feiras">Feiras</TabsTrigger>
-          <TabsTrigger value="metrics">Métricas da Equipe</TabsTrigger>
-          <TabsTrigger value="export">Exportar Base</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -1144,98 +1122,6 @@ const Admin = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="feiras" className="space-y-4">
-          <Card className="p-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="mb-4">O módulo de Feiras foi movido para uma página dedicada.</p>
-              <Button onClick={() => window.location.href = "/feiras"}>
-                Ir para Gestão de Feiras
-              </Button>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="metrics" className="space-y-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-6 text-foreground">Performance da Equipe</h2>
-            <div className="text-center py-12 text-muted-foreground">
-              <BarChart3 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-              <p>Métricas detalhadas em desenvolvimento</p>
-              <p className="text-sm mt-2">Em breve: gráficos de performance, ranking de vendedores e muito mais</p>
-            </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="export" className="space-y-4">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-6 text-foreground">Exportar Base de Dados Completa</h2>
-            <div className="text-center py-12">
-              <div className="p-6 rounded-full bg-primary/10 w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <Download className="h-12 w-12 text-primary" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-3">
-                Exportação Completa do Sistema
-              </h3>
-              <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-                Esta funcionalidade permite exportar toda a base de dados do CRM em um único arquivo CSV. 
-                Ideal para backup, migração de plataforma ou análise externa dos dados.
-              </p>
-              <div className="bg-muted/30 rounded-lg p-4 max-w-2xl mx-auto mb-6 text-left">
-                <p className="text-sm font-semibold text-foreground mb-2">O relatório inclui:</p>
-                <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Todos os clientes cadastrados com informações completas</li>
-                  <li>Todas as oportunidades de vendas e seus detalhes</li>
-                  <li>Histórico completo de tarefas e atividades</li>
-                  <li>Contatos vinculados aos clientes</li>
-                  <li>Catálogo de produtos StartGi</li>
-                  <li>Feiras cadastradas e relacionamentos com clientes</li>
-                  <li>Usuários do sistema e seus perfis de acesso</li>
-                </ul>
-              </div>
-              <div className="flex flex-col gap-4">
-                <Button
-                  onClick={handleExportDatabase}
-                  disabled={exportingData}
-                  size="lg"
-                  className="bg-primary hover:bg-primary-dark text-primary-foreground"
-                >
-                  {exportingData ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-foreground mr-2"></div>
-                      Exportando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar Base de Dados (CSV)
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleCleanProspectsDatabase}
-                  disabled={cleaningDatabase}
-                  size="lg"
-                  variant="destructive"
-                >
-                  {cleaningDatabase ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Limpando...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Limpar Base de Prospects
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-4">
-                O arquivo será salvo como: startgi_database_export_AAAA-MM-DD.csv
-              </p>
-            </div>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
