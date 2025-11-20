@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { ImportWizard } from "@/components/ImportWizard";
@@ -43,6 +43,7 @@ const Prospects = () => {
   const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
   const [selectedCompanySize, setSelectedCompanySize] = useState<string>("all");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("name-asc");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -481,7 +482,7 @@ const Prospects = () => {
   };
 
   const filteredClients = useMemo(() => {
-    return clients.filter((client) => {
+    const filtered = clients.filter((client) => {
       const matchesSearch = client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.cnpj?.includes(searchTerm) ||
         (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -514,8 +515,30 @@ const Prospects = () => {
       return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
         matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
     });
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case "name-asc":
+          return (a.company_name || "").localeCompare(b.company_name || "");
+        case "name-desc":
+          return (b.company_name || "").localeCompare(a.company_name || "");
+        case "cnpj-asc":
+          return (a.cnpj || "").localeCompare(b.cnpj || "");
+        case "cnpj-desc":
+          return (b.cnpj || "").localeCompare(a.cnpj || "");
+        case "date-newest":
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        case "date-oldest":
+          return new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
   }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, 
-      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId]);
+      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy]);
 
   // Pagination with memoization
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
@@ -528,7 +551,7 @@ const Prospects = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter, sortBy]);
 
   const canEditClient = (client: any) => {
     if (!currentUserId) return false;
@@ -1398,6 +1421,21 @@ const Prospects = () => {
                     {feira.name}
                   </option>
                 ))}
+              </select>
+            </div>
+            <div className="relative w-full sm:w-64">
+              <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="name-asc">Nome (A-Z)</option>
+                <option value="name-desc">Nome (Z-A)</option>
+                <option value="cnpj-asc">CNPJ (Crescente)</option>
+                <option value="cnpj-desc">CNPJ (Decrescente)</option>
+                <option value="date-newest">Mais Recentes</option>
+                <option value="date-oldest">Mais Antigos</option>
               </select>
             </div>
           </div>
