@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Search } from "lucide-react";
 
 interface ClientEditDialogProps {
   client: any;
@@ -50,6 +50,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [feiras, setFeiras] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [feiraSearchTerm, setFeiraSearchTerm] = useState("");
 
   useEffect(() => {
     if (client && open) {
@@ -534,7 +536,27 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
             </TabsContent>
 
             <TabsContent value="contatos" className="space-y-4 mt-4">
-              {contacts.map((contact, index) => (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Pesquisar por nome, email ou cargo..."
+                  value={contactSearchTerm}
+                  onChange={(e) => setContactSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              {contacts
+                .filter(contact => {
+                  if (!contactSearchTerm) return true;
+                  const searchLower = contactSearchTerm.toLowerCase();
+                  return (
+                    contact.name?.toLowerCase().includes(searchLower) ||
+                    contact.email?.toLowerCase().includes(searchLower) ||
+                    contact.role?.toLowerCase().includes(searchLower)
+                  );
+                })
+                .map((contact, index) => (
                 <Card key={index}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -642,6 +664,20 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                 </Card>
               ))}
 
+              {contacts.filter(contact => {
+                if (!contactSearchTerm) return true;
+                const searchLower = contactSearchTerm.toLowerCase();
+                return (
+                  contact.name?.toLowerCase().includes(searchLower) ||
+                  contact.email?.toLowerCase().includes(searchLower) ||
+                  contact.role?.toLowerCase().includes(searchLower)
+                );
+              }).length === 0 && contactSearchTerm && (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum contato encontrado com "{contactSearchTerm}"
+                </p>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -659,13 +695,32 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                   Selecione as feiras que este cliente participou ou irá participar
                 </p>
                 
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Pesquisar feira por nome ou cidade..."
+                    value={feiraSearchTerm}
+                    onChange={(e) => setFeiraSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                
                 {feiras.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Nenhuma feira cadastrada no sistema
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto p-1">
-                    {feiras.map((feira) => (
+                    {feiras
+                      .filter(feira => {
+                        if (!feiraSearchTerm) return true;
+                        const searchLower = feiraSearchTerm.toLowerCase();
+                        return (
+                          feira.name?.toLowerCase().includes(searchLower) ||
+                          feira.city?.toLowerCase().includes(searchLower)
+                        );
+                      })
+                      .map((feira) => (
                       <Card
                         key={feira.id}
                         className={`p-4 cursor-pointer transition-all ${
@@ -715,6 +770,18 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                         </div>
                       </Card>
                     ))}
+                    {feiras.filter(feira => {
+                      if (!feiraSearchTerm) return true;
+                      const searchLower = feiraSearchTerm.toLowerCase();
+                      return (
+                        feira.name?.toLowerCase().includes(searchLower) ||
+                        feira.city?.toLowerCase().includes(searchLower)
+                      );
+                    }).length === 0 && feiraSearchTerm && (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        Nenhuma feira encontrada com "{feiraSearchTerm}"
+                      </p>
+                    )}
                   </div>
                 )}
                 
