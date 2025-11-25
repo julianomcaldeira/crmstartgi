@@ -28,7 +28,8 @@ import {
   Plus,
   Edit,
   Check,
-  Trash2
+  Trash2,
+  Search
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -59,6 +60,7 @@ const ClienteDetalhes = () => {
   const [editingTask, setEditingTask] = useState<any>(null);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<any>(null);
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [contactFormData, setContactFormData] = useState({
     name: "",
     role: "",
@@ -1262,11 +1264,40 @@ const ClienteDetalhes = () => {
                 </DialogContent>
               </Dialog>
             </div>
+
+            {/* Search Input */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nome ou cargo..."
+                  value={contactSearchTerm}
+                  onChange={(e) => setContactSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
             {contacts.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Nenhum contato registrado</p>
             ) : (
-              <div className="space-y-3">
-                {contacts.map((contact) => (
+              (() => {
+                const filteredContacts = contacts.filter(contact => {
+                  const searchLower = contactSearchTerm.toLowerCase();
+                  return (
+                    contact.name.toLowerCase().includes(searchLower) ||
+                    (contact.role && contact.role.toLowerCase().includes(searchLower))
+                  );
+                });
+
+                return filteredContacts.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhum contato encontrado para "{contactSearchTerm}"
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredContacts.map((contact) => (
                   <div 
                     key={contact.id} 
                     className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
@@ -1329,10 +1360,12 @@ const ClienteDetalhes = () => {
                           </span>
                         </div>
                       )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                );
+              })()
             )}
           </Card>
         </TabsContent>
