@@ -649,10 +649,9 @@ const ClienteDetalhes = () => {
                         onValueChange={(value) => setOppFormData({ ...oppFormData, product_id: value })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione um produto (opcional)" />
+                          <SelectValue placeholder="Selecione um produto" />
                         </SelectTrigger>
                         <SelectContent className="bg-background z-50">
-                          <SelectItem value="">Nenhum produto</SelectItem>
                           {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
                               {product.name}
@@ -752,10 +751,9 @@ const ClienteDetalhes = () => {
                           onValueChange={(value) => setOppFormData({ ...oppFormData, assigned_to: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Atribuir a mim" />
+                            <SelectValue placeholder="Selecione o responsável" />
                           </SelectTrigger>
                           <SelectContent className="bg-background z-50">
-                            <SelectItem value="">Atribuir a mim</SelectItem>
                             {users.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.full_name}
