@@ -651,7 +651,7 @@ const ClienteDetalhes = () => {
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione um produto (opcional)" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-background z-50">
                           <SelectItem value="">Nenhum produto</SelectItem>
                           {products.map((product) => (
                             <SelectItem key={product.id} value={product.id}>
@@ -697,7 +697,7 @@ const ClienteDetalhes = () => {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background z-50">
                             <SelectItem value="10">10%</SelectItem>
                             <SelectItem value="25">25%</SelectItem>
                             <SelectItem value="50">50%</SelectItem>
@@ -715,7 +715,7 @@ const ClienteDetalhes = () => {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background z-50">
                             <SelectItem value="lead">Lead</SelectItem>
                             <SelectItem value="contacted">Contatado</SelectItem>
                             <SelectItem value="qualified">Qualificado</SelectItem>
@@ -739,7 +739,7 @@ const ClienteDetalhes = () => {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background z-50">
                             <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
                             <SelectItem value="venda_na_base">Venda na Base</SelectItem>
                           </SelectContent>
@@ -754,7 +754,7 @@ const ClienteDetalhes = () => {
                           <SelectTrigger>
                             <SelectValue placeholder="Atribuir a mim" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background z-50">
                             <SelectItem value="">Atribuir a mim</SelectItem>
                             {users.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
