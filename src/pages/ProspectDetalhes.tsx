@@ -57,6 +57,17 @@ const ClienteDetalhes = () => {
   const [oppViewDialogOpen, setOppViewDialogOpen] = useState(false);
   const [editTaskDialogOpen, setEditTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<any>(null);
+  const [contactFormData, setContactFormData] = useState({
+    name: "",
+    role: "",
+    email: "",
+    phone: "",
+    mobile: "",
+    rating: 3,
+    is_primary: false,
+  });
   const [taskFormData, setTaskFormData] = useState({
     description: "",
     task_type: "ligacao",
@@ -376,6 +387,120 @@ const ClienteDetalhes = () => {
     }
   };
 
+  const handleCreateContact = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (!contactFormData.name) {
+        toast.error("Preencha o nome do contato");
+        return;
+      }
+
+      const { error } = await supabase.from("contacts").insert([
+        {
+          client_id: id,
+          name: contactFormData.name,
+          role: contactFormData.role || null,
+          email: contactFormData.email || null,
+          phone: contactFormData.phone || null,
+          mobile: contactFormData.mobile || null,
+          rating: contactFormData.rating,
+          is_primary: contactFormData.is_primary,
+          created_by: user.id,
+        },
+      ]);
+
+      if (error) throw error;
+
+      toast.success("Contato criado com sucesso!");
+      setContactDialogOpen(false);
+      resetContactForm();
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error creating contact:", error);
+      toast.error("Erro ao criar contato");
+    }
+  };
+
+  const handleEditContact = (contact: any) => {
+    setEditingContact(contact);
+    setContactFormData({
+      name: contact.name,
+      role: contact.role || "",
+      email: contact.email || "",
+      phone: contact.phone || "",
+      mobile: contact.mobile || "",
+      rating: contact.rating || 3,
+      is_primary: contact.is_primary || false,
+    });
+    setContactDialogOpen(true);
+  };
+
+  const handleUpdateContact = async () => {
+    try {
+      if (!contactFormData.name) {
+        toast.error("Preencha o nome do contato");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("contacts")
+        .update({
+          name: contactFormData.name,
+          role: contactFormData.role || null,
+          email: contactFormData.email || null,
+          phone: contactFormData.phone || null,
+          mobile: contactFormData.mobile || null,
+          rating: contactFormData.rating,
+          is_primary: contactFormData.is_primary,
+        })
+        .eq("id", editingContact.id);
+
+      if (error) throw error;
+
+      toast.success("Contato atualizado com sucesso!");
+      setContactDialogOpen(false);
+      resetContactForm();
+      setEditingContact(null);
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      toast.error("Erro ao atualizar contato");
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este contato?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", contactId);
+
+      if (error) throw error;
+
+      toast.success("Contato excluído com sucesso!");
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error deleting contact:", error);
+      toast.error("Erro ao excluir contato");
+    }
+  };
+
+  const resetContactForm = () => {
+    setContactFormData({
+      name: "",
+      role: "",
+      email: "",
+      phone: "",
+      mobile: "",
+      rating: 3,
+      is_primary: false,
+    });
+  };
+
   const handleDeleteClient = async () => {
     try {
       const { error } = await supabase
@@ -631,11 +756,12 @@ const ClienteDetalhes = () => {
         </Card>
       )}
 
-      {/* Tabs for Opportunities and Tasks */}
+      {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+          <TabsTrigger value="contacts">Contatos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="opportunities" className="space-y-4">
@@ -1007,6 +1133,202 @@ const ClienteDetalhes = () => {
                       <span className="text-muted-foreground">
                         {task.assigned_user?.full_name || "Não atribuído"}
                       </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="contacts" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Contatos</h3>
+              <Dialog open={contactDialogOpen} onOpenChange={(open) => {
+                setContactDialogOpen(open);
+                if (!open) {
+                  setEditingContact(null);
+                  resetContactForm();
+                }
+              }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Novo Contato
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>{editingContact ? "Editar Contato" : "Criar Novo Contato"}</DialogTitle>
+                    <DialogDescription>
+                      {editingContact ? "Atualize as informações do contato" : "Adicione um novo contato para este prospect"}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_name">Nome *</Label>
+                      <Input
+                        id="contact_name"
+                        value={contactFormData.name}
+                        onChange={(e) => setContactFormData({ ...contactFormData, name: e.target.value })}
+                        placeholder="Nome completo"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_role">Cargo</Label>
+                      <Input
+                        id="contact_role"
+                        value={contactFormData.role}
+                        onChange={(e) => setContactFormData({ ...contactFormData, role: e.target.value })}
+                        placeholder="Ex: Gerente de Compras"
+                      />
+                    </div>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_email">E-mail</Label>
+                        <Input
+                          id="contact_email"
+                          type="email"
+                          value={contactFormData.email}
+                          onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+                          placeholder="email@exemplo.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_phone">Telefone</Label>
+                        <Input
+                          id="contact_phone"
+                          value={contactFormData.phone}
+                          onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+                          placeholder="(00) 0000-0000"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_mobile">Celular</Label>
+                        <Input
+                          id="contact_mobile"
+                          value={contactFormData.mobile}
+                          onChange={(e) => setContactFormData({ ...contactFormData, mobile: e.target.value })}
+                          placeholder="(00) 00000-0000"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contact_rating">Avaliação</Label>
+                        <Select
+                          value={String(contactFormData.rating)}
+                          onValueChange={(value) => setContactFormData({ ...contactFormData, rating: parseInt(value) })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="1">⭐ 1 - Baixa</SelectItem>
+                            <SelectItem value="2">⭐⭐ 2 - Média</SelectItem>
+                            <SelectItem value="3">⭐⭐⭐ 3 - Boa</SelectItem>
+                            <SelectItem value="4">⭐⭐⭐⭐ 4 - Muito Boa</SelectItem>
+                            <SelectItem value="5">⭐⭐⭐⭐⭐ 5 - Excelente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is_primary"
+                        checked={contactFormData.is_primary}
+                        onChange={(e) => setContactFormData({ ...contactFormData, is_primary: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label htmlFor="is_primary" className="text-sm font-normal">
+                        Marcar como contato principal
+                      </Label>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => {
+                        setContactDialogOpen(false);
+                        setEditingContact(null);
+                        resetContactForm();
+                      }}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={editingContact ? handleUpdateContact : handleCreateContact}>
+                        {editingContact ? "Salvar Alterações" : "Criar Contato"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {contacts.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">Nenhum contato registrado</p>
+            ) : (
+              <div className="space-y-3">
+                {contacts.map((contact) => (
+                  <div 
+                    key={contact.id} 
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium text-foreground">{contact.name}</h4>
+                          {contact.is_primary && (
+                            <Badge variant="default" className="text-xs">Principal</Badge>
+                          )}
+                        </div>
+                        {contact.role && (
+                          <p className="text-sm text-muted-foreground">{contact.role}</p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => handleEditContact(contact)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteContact(contact.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      {contact.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{contact.email}</span>
+                        </div>
+                      )}
+                      {contact.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{contact.phone}</span>
+                        </div>
+                      )}
+                      {contact.mobile && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">{contact.mobile}</span>
+                        </div>
+                      )}
+                      {contact.rating && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            {"⭐".repeat(contact.rating)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
