@@ -62,6 +62,7 @@ const ClienteDetalhes = () => {
     task_type: "ligacao",
     due_date: "",
     priority: "medium",
+    status: "pending",
   });
   const [oppFormData, setOppFormData] = useState({
     product_id: "",
@@ -78,6 +79,17 @@ const ClienteDetalhes = () => {
     fetchClientDetails();
     checkAdminRole();
   }, [id]);
+
+  // Preencher data/hora atual quando o dialog de tarefa abrir
+  useEffect(() => {
+    if (taskDialogOpen) {
+      const now = new Date();
+      const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setTaskFormData(prev => ({ ...prev, due_date: localDateTime }));
+    }
+  }, [taskDialogOpen]);
 
   const checkAdminRole = async () => {
     try {
@@ -209,7 +221,7 @@ const ClienteDetalhes = () => {
           task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
           due_date: taskFormData.due_date,
           priority: taskFormData.priority as "low" | "medium" | "high",
-          status: "pending",
+          status: taskFormData.status as "pending" | "in_progress" | "completed",
           assigned_to: user.id,
           created_by: user.id,
         },
@@ -268,6 +280,7 @@ const ClienteDetalhes = () => {
       task_type: "ligacao",
       due_date: "",
       priority: "medium",
+      status: "pending",
     });
   };
 
@@ -291,6 +304,7 @@ const ClienteDetalhes = () => {
       task_type: task.task_type,
       due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "",
       priority: task.priority,
+      status: task.status || "pending",
     });
     setEditTaskDialogOpen(true);
   };
@@ -324,6 +338,7 @@ const ClienteDetalhes = () => {
           task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
           due_date: taskFormData.due_date,
           priority: taskFormData.priority as "low" | "medium" | "high",
+          status: taskFormData.status as "pending" | "in_progress" | "completed",
         })
         .eq("id", editingTask.id);
 
@@ -896,13 +911,29 @@ const ClienteDetalhes = () => {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-background z-50">
                             <SelectItem value="low">Baixa</SelectItem>
                             <SelectItem value="medium">Média</SelectItem>
                             <SelectItem value="high">Alta</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Situação</Label>
+                      <Select
+                        value={taskFormData.status}
+                        onValueChange={(value) => setTaskFormData({ ...taskFormData, status: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="pending">Pendente</SelectItem>
+                          <SelectItem value="in_progress">Em Execução</SelectItem>
+                          <SelectItem value="completed">Realizada</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex justify-end gap-2">
                       <Button variant="outline" onClick={() => setTaskDialogOpen(false)}>
@@ -1015,7 +1046,7 @@ const ClienteDetalhes = () => {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
                   <SelectItem value="ligacao">Ligação</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
                   <SelectItem value="whatsapp">WhatsApp</SelectItem>
@@ -1056,13 +1087,29 @@ const ClienteDetalhes = () => {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background z-50">
                     <SelectItem value="low">Baixa</SelectItem>
                     <SelectItem value="medium">Média</SelectItem>
                     <SelectItem value="high">Alta</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Situação</Label>
+              <Select
+                value={taskFormData.status}
+                onValueChange={(value) => setTaskFormData({ ...taskFormData, status: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background z-50">
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="in_progress">Em Execução</SelectItem>
+                  <SelectItem value="completed">Realizada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => {
