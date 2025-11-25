@@ -61,6 +61,7 @@ const ClienteDetalhes = () => {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<any>(null);
   const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [taskSearchTerm, setTaskSearchTerm] = useState("");
   const [contactFormData, setContactFormData] = useState({
     name: "",
     role: "",
@@ -1075,11 +1076,40 @@ const ClienteDetalhes = () => {
                 </DialogContent>
               </Dialog>
             </div>
+
+            {/* Search Input */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por título ou descrição..."
+                  value={taskSearchTerm}
+                  onChange={(e) => setTaskSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
             {tasks.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">Nenhuma tarefa registrada</p>
             ) : (
-              <div className="space-y-3">
-                {tasks.map((task) => (
+              (() => {
+                const filteredTasks = tasks.filter(task => {
+                  const searchLower = taskSearchTerm.toLowerCase();
+                  return (
+                    task.title.toLowerCase().includes(searchLower) ||
+                    (task.description && task.description.toLowerCase().includes(searchLower))
+                  );
+                });
+
+                return filteredTasks.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhuma tarefa encontrada para "{taskSearchTerm}"
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTasks.map((task) => (
                   <div 
                     key={task.id} 
                     className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
@@ -1135,10 +1165,12 @@ const ClienteDetalhes = () => {
                       <span className="text-muted-foreground">
                         {task.assigned_user?.full_name || "Não atribuído"}
                       </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                );
+              })()
             )}
           </Card>
         </TabsContent>
