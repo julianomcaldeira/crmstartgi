@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, User, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, Trash2, User, Clock, History } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface TaskEditDialogProps {
@@ -27,6 +28,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
   const [description, setDescription] = useState("");
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -37,6 +39,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
       setStatus(task.status || "pending");
       setDescription(task.description || "");
       fetchNotes();
+      fetchTaskHistory();
     }
   }, [task]);
 
@@ -58,6 +61,97 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
     } catch (error) {
       console.error("Error fetching notes:", error);
     }
+  };
+
+  const fetchTaskHistory = async () => {
+    if (!task?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("task_history")
+        .select(`
+          *,
+          profiles:changed_by(full_name)
+        `)
+        .eq("task_id", task.id)
+        .order("changed_at", { ascending: false });
+
+      if (error) throw error;
+      setHistory(data || []);
+    } catch (error) {
+      console.error("Error fetching task history:", error);
+    }
+  };
+
+  const renderFieldChange = (field: string, oldValue: any, newValue: any) => {
+    const fieldLabels: any = {
+      title: "Título",
+      description: "Descrição",
+      task_type: "Tipo de Tarefa",
+      due_date: "Data",
+      priority: "Prioridade",
+      status: "Situação",
+      assigned_to: "Responsável"
+    };
+
+    const taskTypeLabels: any = {
+      ligacao: "Ligação",
+      email: "E-mail",
+      whatsapp: "WhatsApp",
+      linkedin: "LinkedIn",
+      visita_presencial: "Visita Presencial",
+      reuniao_online: "Reunião Online",
+      visita_feira: "Visita a Feira",
+      visita_evento: "Visita a Evento"
+    };
+
+    const priorityLabels: any = {
+      high: "Alta",
+      medium: "Média",
+      low: "Baixa"
+    };
+
+    const statusLabels: any = {
+      pending: "Pendente",
+      in_progress: "Em Execução",
+      completed: "Realizada",
+      cancelled: "Cancelada"
+    };
+
+    let oldDisplay = oldValue;
+    let newDisplay = newValue;
+
+    if (field === "task_type") {
+      oldDisplay = taskTypeLabels[oldValue] || oldValue;
+      newDisplay = taskTypeLabels[newValue] || newValue;
+    } else if (field === "priority") {
+      oldDisplay = priorityLabels[oldValue] || oldValue;
+      newDisplay = priorityLabels[newValue] || newValue;
+    } else if (field === "status") {
+      oldDisplay = statusLabels[oldValue] || oldValue;
+      newDisplay = statusLabels[newValue] || newValue;
+    } else if (field === "due_date" && oldValue && newValue) {
+      try {
+        oldDisplay = format(parseISO(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        newDisplay = format(parseISO(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      } catch (e) {
+        // Keep original values if parsing fails
+      }
+    }
+
+    return (
+      <div className="text-sm">
+        <span className="font-medium text-foreground">{fieldLabels[field] || field}:</span>
+        <div className="mt-1 pl-4">
+          <div className="text-muted-foreground line-through">
+            {oldDisplay || "(vazio)"}
+          </div>
+          <div className="text-foreground font-medium">
+            {newDisplay || "(vazio)"}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleAddNote = async () => {
@@ -140,8 +234,13 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
       if (error) throw error;
 
       toast.success("Tarefa atualizada!");
+      
+      // Wait a moment for the trigger to process, then refresh history
+      setTimeout(() => {
+        fetchTaskHistory();
+      }, 500);
+      
       onSuccess();
-      onOpenChange(false);
     } catch (error: any) {
       console.error("Error updating task:", error);
       toast.error(error.message || "Erro ao atualizar tarefa");
@@ -302,6 +401,58 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
               )}
             </div>
           </div>
+
+          {/* Task History */}
+          {history.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <History className="h-4 w-4" />
+                  Histórico de Alterações
+                </div>
+                <ScrollArea className="h-[300px] rounded-lg border border-border p-4">
+                  <div className="space-y-4">
+                    {history.map((record) => {
+                      const oldData = record.old_data || {};
+                      const newData = record.new_data || {};
+                      const changedFields = Object.keys(newData).filter(
+                        key => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+                      );
+
+                      return (
+                        <div
+                          key={record.id}
+                          className="pb-4 border-b border-border last:border-0 last:pb-0"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium text-foreground">
+                                {record.profiles?.full_name || "Usuário"}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
+                                locale: ptBR,
+                              })}
+                            </span>
+                          </div>
+                          <div className="space-y-3 pl-5">
+                            {changedFields.map((field) => (
+                              <div key={field}>
+                                {renderFieldChange(field, oldData[field], newData[field])}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            </>
+          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-4 border-t">

@@ -1,10 +1,13 @@
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase, Trash2 } from "lucide-react";
+import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase, Trash2, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +28,38 @@ interface TaskViewDialogProps {
 }
 
 const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogProps) => {
+  const [history, setHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  useEffect(() => {
+    if (task?.id && open) {
+      fetchTaskHistory();
+    }
+  }, [task?.id, open]);
+
+  const fetchTaskHistory = async () => {
+    if (!task?.id) return;
+    
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from("task_history")
+        .select(`
+          *,
+          profiles:changed_by(full_name)
+        `)
+        .eq("task_id", task.id)
+        .order("changed_at", { ascending: false });
+
+      if (error) throw error;
+      setHistory(data || []);
+    } catch (error) {
+      console.error("Error fetching task history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   if (!task) return null;
 
   const getTaskTypeLabel = (type: string) => {
@@ -68,7 +103,83 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
   };
 
   const getStatusVariant = (status: string) => {
-    return status === "completed" ? "default" : "secondary";
+    switch (status) {
+      case "completed": return "default";
+      case "in_progress": return "secondary";
+      case "pending": return "outline";
+      default: return "secondary";
+    }
+  };
+
+  const renderFieldChange = (field: string, oldValue: any, newValue: any) => {
+    const fieldLabels: any = {
+      title: "Título",
+      description: "Descrição",
+      task_type: "Tipo de Tarefa",
+      due_date: "Data",
+      priority: "Prioridade",
+      status: "Situação",
+      assigned_to: "Responsável"
+    };
+
+    const taskTypeLabels: any = {
+      ligacao: "Ligação",
+      email: "E-mail",
+      whatsapp: "WhatsApp",
+      linkedin: "LinkedIn",
+      visita_presencial: "Visita Presencial",
+      reuniao_online: "Reunião Online",
+      visita_feira: "Visita a Feira",
+      visita_evento: "Visita a Evento"
+    };
+
+    const priorityLabels: any = {
+      high: "Alta",
+      medium: "Média",
+      low: "Baixa"
+    };
+
+    const statusLabels: any = {
+      pending: "Pendente",
+      in_progress: "Em Execução",
+      completed: "Realizada",
+      cancelled: "Cancelada"
+    };
+
+    let oldDisplay = oldValue;
+    let newDisplay = newValue;
+
+    if (field === "task_type") {
+      oldDisplay = taskTypeLabels[oldValue] || oldValue;
+      newDisplay = taskTypeLabels[newValue] || newValue;
+    } else if (field === "priority") {
+      oldDisplay = priorityLabels[oldValue] || oldValue;
+      newDisplay = priorityLabels[newValue] || newValue;
+    } else if (field === "status") {
+      oldDisplay = statusLabels[oldValue] || oldValue;
+      newDisplay = statusLabels[newValue] || newValue;
+    } else if (field === "due_date" && oldValue && newValue) {
+      try {
+        oldDisplay = format(parseISO(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        newDisplay = format(parseISO(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      } catch (e) {
+        // Keep original values if parsing fails
+      }
+    }
+
+    return (
+      <div className="text-sm">
+        <span className="font-medium text-foreground">{fieldLabels[field] || field}:</span>
+        <div className="mt-1 pl-4">
+          <div className="text-muted-foreground line-through">
+            {oldDisplay || "(vazio)"}
+          </div>
+          <div className="text-foreground font-medium">
+            {newDisplay || "(vazio)"}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -196,6 +307,58 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                 {format(parseISO(task.completed_at), "PPP 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
+          )}
+
+          {/* Task History */}
+          {history.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <History className="h-4 w-4" />
+                  Histórico de Alterações
+                </div>
+                <ScrollArea className="h-[300px] rounded-lg border border-border p-4">
+                  <div className="space-y-4">
+                    {history.map((record) => {
+                      const oldData = record.old_data || {};
+                      const newData = record.new_data || {};
+                      const changedFields = Object.keys(newData).filter(
+                        key => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+                      );
+
+                      return (
+                        <div
+                          key={record.id}
+                          className="pb-4 border-b border-border last:border-0 last:pb-0"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium text-foreground">
+                                {record.profiles?.full_name || "Usuário"}
+                              </span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
+                                locale: ptBR,
+                              })}
+                            </span>
+                          </div>
+                          <div className="space-y-3 pl-5">
+                            {changedFields.map((field) => (
+                              <div key={field}>
+                                {renderFieldChange(field, oldData[field], newData[field])}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            </>
           )}
         </div>
 
