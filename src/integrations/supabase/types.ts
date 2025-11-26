@@ -1125,6 +1125,47 @@ export type Database = {
         }
         Relationships: []
       }
+      task_history: {
+        Row: {
+          change_type: string
+          changed_at: string | null
+          changed_by: string
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          task_id: string
+        }
+        Insert: {
+          change_type: string
+          changed_at?: string | null
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          task_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_at?: string | null
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_history_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_notes: {
         Row: {
           created_at: string | null
