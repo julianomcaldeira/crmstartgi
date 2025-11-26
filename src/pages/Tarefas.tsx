@@ -17,6 +17,7 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import { DraggableCard } from "@/components/DraggableCard";
 import { DroppableColumn } from "@/components/DroppableColumn";
 import TaskViewDialog from "@/components/TaskViewDialog";
+import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 
@@ -34,6 +35,7 @@ const Tarefas = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
@@ -793,14 +795,14 @@ const Tarefas = () => {
                   key={task.id}
                   onEdit={() => {
                     setSelectedTask(task);
-                    setViewDialogOpen(true);
+                    setEditDialogOpen(true);
                   }}
                 >
                 <Card 
                   className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
                   onClick={() => {
                     setSelectedTask(task);
-                    setViewDialogOpen(true);
+                    setEditDialogOpen(true);
                   }}
                 >
                   <CardContent className="p-4">
@@ -1009,17 +1011,26 @@ const Tarefas = () => {
       </Tabs>
 
       {selectedTask && (
-        <TaskViewDialog
-          task={selectedTask}
-          open={viewDialogOpen}
-          onOpenChange={(open) => {
-            setViewDialogOpen(open);
-            if (!open) {
-              fetchData();
-            }
-          }}
-          onDelete={handleDeleteTask}
-        />
+        <>
+          <TaskViewDialog
+            task={selectedTask}
+            open={viewDialogOpen}
+            onOpenChange={(open) => {
+              setViewDialogOpen(open);
+              if (!open) {
+                fetchData();
+              }
+            }}
+            onDelete={handleDeleteTask}
+          />
+          
+          <TaskEditDialog
+            task={selectedTask}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            onSuccess={fetchData}
+          />
+        </>
       )}
     </div>
   );
