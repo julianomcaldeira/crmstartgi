@@ -1484,13 +1484,13 @@ const ClienteDetalhes = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-description">Descrição</Label>
+              <Label htmlFor="edit-description">Notas / Descrição</Label>
               <Textarea
                 id="edit-description"
                 value={taskFormData.description}
                 onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                placeholder="Detalhes da tarefa..."
-                rows={3}
+                placeholder="Adicione notas sobre esta tarefa..."
+                rows={4}
               />
             </div>
             <div className="grid gap-4 grid-cols-2">
