@@ -62,6 +62,7 @@ const ClienteDetalhes = () => {
   const [editingContact, setEditingContact] = useState<any>(null);
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [taskSearchTerm, setTaskSearchTerm] = useState("");
+  const [taskSortBy, setTaskSortBy] = useState<"date" | "priority" | "status">("date");
   const [contactFormData, setContactFormData] = useState({
     name: "",
     role: "",
@@ -1012,13 +1013,13 @@ const ClienteDetalhes = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="description">Descrição</Label>
+                      <Label htmlFor="description">Notas / Descrição</Label>
                       <Textarea
                         id="description"
                         value={taskFormData.description}
                         onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                        placeholder="Detalhes da tarefa..."
-                        rows={3}
+                        placeholder="Adicione notas sobre esta tarefa..."
+                        rows={4}
                       />
                     </div>
                     <div className="grid gap-4 grid-cols-2">
@@ -1077,9 +1078,9 @@ const ClienteDetalhes = () => {
               </Dialog>
             </div>
 
-            {/* Search Input */}
-            <div className="mb-4">
-              <div className="relative">
+            {/* Search and Sort Controls */}
+            <div className="mb-4 flex gap-3 flex-col sm:flex-row">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
@@ -1089,6 +1090,16 @@ const ClienteDetalhes = () => {
                   className="pl-10"
                 />
               </div>
+              <Select value={taskSortBy} onValueChange={(value: any) => setTaskSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Data</SelectItem>
+                  <SelectItem value="priority">Prioridade</SelectItem>
+                  <SelectItem value="status">Situação</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {tasks.length === 0 ? (
@@ -1103,13 +1114,31 @@ const ClienteDetalhes = () => {
                   );
                 });
 
-                return filteredTasks.length === 0 ? (
+                // Sort tasks
+                const sortedTasks = [...filteredTasks].sort((a, b) => {
+                  if (taskSortBy === "date") {
+                    const dateA = a.due_date ? new Date(a.due_date).getTime() : 0;
+                    const dateB = b.due_date ? new Date(b.due_date).getTime() : 0;
+                    return dateB - dateA;
+                  } else if (taskSortBy === "priority") {
+                    const priorityOrder = { high: 3, medium: 2, low: 1 };
+                    return (priorityOrder[b.priority as keyof typeof priorityOrder] || 0) - 
+                           (priorityOrder[a.priority as keyof typeof priorityOrder] || 0);
+                  } else if (taskSortBy === "status") {
+                    const statusOrder = { pending: 1, in_progress: 2, completed: 3, cancelled: 4 };
+                    return (statusOrder[a.status as keyof typeof statusOrder] || 0) - 
+                           (statusOrder[b.status as keyof typeof statusOrder] || 0);
+                  }
+                  return 0;
+                });
+
+                return sortedTasks.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
                     Nenhuma tarefa encontrada para "{taskSearchTerm}"
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {filteredTasks.map((task) => (
+                    {sortedTasks.map((task) => (
                   <div 
                     key={task.id} 
                     className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
@@ -1166,6 +1195,15 @@ const ClienteDetalhes = () => {
                         {task.assigned_user?.full_name || "Não atribuído"}
                       </span>
                       </div>
+                      
+                      {task.description && (
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <span className="text-sm font-medium block mb-2">Notas:</span>
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {task.description}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
