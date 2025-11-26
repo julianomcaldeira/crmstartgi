@@ -36,6 +36,8 @@ const Tarefas = () => {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
@@ -68,6 +70,7 @@ const Tarefas = () => {
   useEffect(() => {
     fetchData();
     checkUpcomingTasks();
+    checkUserRole();
     
     // Check for upcoming tasks every 5 minutes
     const interval = setInterval(checkUpcomingTasks, 5 * 60 * 1000);
@@ -283,6 +286,34 @@ const Tarefas = () => {
     }
   };
 
+  const checkUserRole = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setCurrentUserId(user.id);
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserRole(roleData?.role || null);
+    } catch (error) {
+      console.error("Error checking user role:", error);
+    }
+  };
+
+  const canDeleteTask = (task: any) => {
+    if (!currentUserId) return false;
+    // Admin ou gestor podem deletar qualquer tarefa
+    if (userRole === "admin" || userRole === "gestor") return true;
+    // O criador da tarefa pode deletar
+    if (task.created_by === currentUserId) return true;
+    return false;
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       const { error } = await supabase
@@ -294,6 +325,7 @@ const Tarefas = () => {
 
       toast.success("Tarefa excluída com sucesso!");
       setViewDialogOpen(false);
+      setEditDialogOpen(false);
       fetchData();
     } catch (error: any) {
       console.error("Error deleting task:", error);
@@ -1049,7 +1081,7 @@ const Tarefas = () => {
                 fetchData();
               }
             }}
-            onDelete={handleDeleteTask}
+            onDelete={canDeleteTask(selectedTask) ? handleDeleteTask : undefined}
           />
           
           <TaskEditDialog
