@@ -201,6 +201,7 @@ const Prospects = () => {
           client_feiras(feira_id)
         `)
           .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, from + pageSize - 1);
 
         if (error) {
