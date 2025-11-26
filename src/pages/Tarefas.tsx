@@ -493,18 +493,7 @@ const Tarefas = () => {
               <DialogTitle className="text-2xl">Nova Tarefa</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Detalhes da tarefa..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="taskType">Tipo de Tarefa *</Label>
                   <Select value={taskType} onValueChange={setTaskType}>
@@ -525,17 +514,6 @@ const Tarefas = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Notas / Descrição</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Adicione notas sobre esta tarefa..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="dueDate">Data de Vencimento</Label>
                   <Input
                     id="dueDate"
@@ -544,20 +522,31 @@ const Tarefas = () => {
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="priority">Prioridade</Label>
-                  <Select value={priority} onValueChange={setPriority}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50">
-                      <SelectItem value="low">Baixa</SelectItem>
-                      <SelectItem value="medium">Média</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Notas / Descrição</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Adicione notas sobre esta tarefa..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="priority">Prioridade</Label>
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="low">Baixa</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="high">Alta</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
