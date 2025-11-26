@@ -481,9 +481,26 @@ const Prospects = () => {
     setContacts([{ name: "", role: "", email: "", phone: "", mobile: "", is_primary: true }]);
   };
 
+  const hasActiveFilters = searchTerm !== "" || selectedSeller !== "all" || selectedFeiraFilter !== "all" || 
+    selectedCompanySize !== "all" || selectedRegion !== "" || quickRatingFilter !== null || 
+    quickRegionFilter !== "all" || quickSegmentFilter !== "all";
+
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setSelectedSeller("all");
+    setSelectedFeiraFilter("all");
+    setSelectedCompanySize("all");
+    setSelectedRegion("");
+    setQuickRatingFilter(null);
+    setQuickRegionFilter("all");
+    setQuickSegmentFilter("all");
+    toast.success("Todos os filtros foram limpos");
+  };
+
   const filteredClients = useMemo(() => {
     const filtered = clients.filter((client) => {
-      const matchesSearch = client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = searchTerm === "" || 
+        client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.cnpj?.includes(searchTerm) ||
         (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
       
@@ -504,7 +521,7 @@ const Prospects = () => {
       
       const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
       
-      const matchesRegion = selectedRegion === "all" || 
+      const matchesRegion = selectedRegion === "" || selectedRegion === "all" || 
         (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
       
       // Quick filters for compact view
@@ -1470,7 +1487,7 @@ const Prospects = () => {
 
       {/* Results Counter */}
       <div className="flex items-center justify-between px-1 flex-wrap gap-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="px-4 py-2 bg-primary/10 rounded-lg">
             <p className="text-sm font-medium text-foreground">
               <span className="text-2xl font-bold text-primary">{filteredClients.length}</span>
@@ -1483,6 +1500,17 @@ const Prospects = () => {
             <p className="text-xs text-muted-foreground">
               (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
+          )}
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearAllFilters}
+              className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20"
+            >
+              <XCircle size={16} />
+              Limpar Filtros
+            </Button>
           )}
           {userRoles.includes('admin') && filteredClients.length > 0 && (
             <Button
