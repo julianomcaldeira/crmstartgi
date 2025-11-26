@@ -51,7 +51,11 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
         .eq("task_id", task.id)
         .order("changed_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching task history:", error);
+        throw error;
+      }
+      console.log("Task history fetched:", data);
       setHistory(data || []);
     } catch (error) {
       console.error("Error fetching task history:", error);
@@ -310,14 +314,16 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
           )}
 
           {/* Task History */}
-          {history.length > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <History className="h-4 w-4" />
-                  Histórico de Alterações
-                </div>
+          <>
+            <Separator />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <History className="h-4 w-4" />
+                Histórico de Alterações
+              </div>
+              {loadingHistory ? (
+                <div className="text-sm text-muted-foreground">Carregando histórico...</div>
+              ) : history.length > 0 ? (
                 <ScrollArea className="h-[300px] rounded-lg border border-border p-4">
                   <div className="space-y-4">
                     {history.map((record) => {
@@ -357,9 +363,13 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                     })}
                   </div>
                 </ScrollArea>
-              </div>
-            </>
-          )}
+              ) : (
+                <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
+                  Nenhuma alteração registrada ainda. As alterações serão registradas quando você editar esta tarefa.
+                </div>
+              )}
+            </div>
+          </>
         </div>
 
         {onDelete && (
