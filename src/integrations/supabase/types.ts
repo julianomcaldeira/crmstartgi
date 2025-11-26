@@ -1158,6 +1158,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "task_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_history_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
