@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -20,6 +20,8 @@ import TaskViewDialog from "@/components/TaskViewDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -36,6 +38,7 @@ const Tarefas = () => {
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
   
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
@@ -554,25 +557,72 @@ const Tarefas = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente (Opcional)</Label>
-                  <Select 
-                    value={clientId} 
-                    onValueChange={(value) => {
-                      setClientId(value);
-                      setContactId("");
-                      fetchContactsByClient(value);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um cliente" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.trade_name || client.company_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={clientSearchOpen}
+                        className="w-full justify-between"
+                      >
+                        {clientId
+                          ? clients.find((client) => client.id === clientId)?.trade_name || 
+                            clients.find((client) => client.id === clientId)?.company_name || 
+                            "Cliente selecionado"
+                          : "Selecione um cliente"}
+                        {clientId ? (
+                          <X
+                            className="ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClientId("");
+                              setContactId("");
+                            }}
+                          />
+                        ) : (
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[400px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar cliente..." />
+                        <CommandList>
+                          <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                          <CommandGroup>
+                            {clients.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={`${client.trade_name || ""} ${client.company_name} ${client.cnpj || ""}`}
+                                onSelect={() => {
+                                  setClientId(client.id);
+                                  setContactId("");
+                                  fetchContactsByClient(client.id);
+                                  setClientSearchOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={`mr-2 h-4 w-4 ${
+                                    clientId === client.id ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {client.trade_name || client.company_name}
+                                  </span>
+                                  {client.cnpj && (
+                                    <span className="text-xs text-muted-foreground">
+                                      CNPJ: {client.cnpj}
+                                    </span>
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
