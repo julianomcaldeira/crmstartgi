@@ -24,6 +24,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
+  const [description, setDescription] = useState("");
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,6 +35,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
       setDueDate(task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "");
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
+      setDescription(task.description || "");
       fetchNotes();
     }
   }, [task]);
@@ -131,6 +133,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
           due_date: dueDate,
           priority: priority as any,
           status: status as any,
+          description: description.trim() || null,
         })
         .eq("id", task.id);
 
@@ -214,6 +217,20 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Description Section */}
+          <div className="space-y-2">
+            <Label>Descrição da Tarefa</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Descreva os detalhes da tarefa..."
+              rows={4}
+              className="resize-none"
+            />
           </div>
 
           <Separator />
