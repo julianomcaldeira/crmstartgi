@@ -160,7 +160,7 @@ const Tarefas = () => {
 
       const [tasksResponse, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
         tasksQuery,
-        supabase.from("clients").select("id, company_name, trade_name"),
+        supabase.from("clients").select("id, company_name, trade_name, cnpj"),
         supabase.from("opportunities").select("id, title"),
         supabase.from("profiles").select("id, full_name"),
       ]);
