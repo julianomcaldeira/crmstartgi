@@ -71,6 +71,17 @@ const Tarefas = () => {
     return () => clearInterval(interval);
   }, [currentDate, viewMode]);
 
+  // Auto-preencher data e hora atual quando abrir o dialog de criar tarefa
+  useEffect(() => {
+    if (dialogOpen) {
+      const now = new Date();
+      const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setDueDate(localDateTime);
+    }
+  }, [dialogOpen]);
+
   const checkUpcomingTasks = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -511,6 +522,17 @@ const Tarefas = () => {
                       <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Notas / Descrição</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Adicione notas sobre esta tarefa..."
+                    rows={4}
+                  />
                 </div>
 
                 <div className="space-y-2">
