@@ -49,6 +49,8 @@ const ClienteDetalhes = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editClientDialogOpen, setEditClientDialogOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -112,13 +114,17 @@ const ClienteDetalhes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      setCurrentUserId(user.id);
+
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .single();
 
-      setIsAdmin(roleData?.role === "admin");
+      const role = roleData?.role || null;
+      setUserRole(role);
+      setIsAdmin(role === "admin");
     } catch (error) {
       console.error("Error checking admin role:", error);
     }
@@ -337,6 +343,33 @@ const ClienteDetalhes = () => {
       console.error("Error completing task:", error);
       toast.error("Erro ao concluir tarefa");
     }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      toast.success("Tarefa excluída com sucesso!");
+      setTaskViewDialogOpen(false);
+      fetchClientDetails();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Erro ao excluir tarefa");
+    }
+  };
+
+  const canDeleteTask = (task: any) => {
+    if (!currentUserId) return false;
+    // Admin ou gestor podem deletar qualquer tarefa
+    if (userRole === "admin" || userRole === "gestor") return true;
+    // O criador da tarefa pode deletar
+    if (task.created_by === currentUserId) return true;
+    return false;
   };
 
   const handleCreateContact = async () => {
@@ -1393,6 +1426,7 @@ const ClienteDetalhes = () => {
         task={selectedTask}
         open={taskViewDialogOpen}
         onOpenChange={setTaskViewDialogOpen}
+        onDelete={selectedTask && canDeleteTask(selectedTask) ? handleDeleteTask : undefined}
       />
       
       <OpportunityViewDialog
