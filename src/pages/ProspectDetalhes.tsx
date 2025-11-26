@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
+import { TaskEditDialog } from "@/components/TaskEditDialog";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -46,8 +47,6 @@ const ClienteDetalhes = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
-  const [notes, setNotes] = useState<any[]>([]);
-  const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -145,17 +144,6 @@ const ClienteDetalhes = () => {
         .select("*")
         .eq("client_id", id);
       setContacts(contactsData || []);
-
-      // Fetch notes
-      const { data: notesData } = await supabase
-        .from("client_notes")
-        .select(`
-          *,
-          profiles:user_id(full_name)
-        `)
-        .eq("client_id", id)
-        .order("created_at", { ascending: false });
-      setNotes(notesData || []);
 
       // Fetch opportunities with all related data
       const { data: opportunitiesData } = await supabase
@@ -327,60 +315,7 @@ const ClienteDetalhes = () => {
 
   const handleEditTask = (task: any) => {
     setEditingTask(task);
-    setTaskFormData({
-      description: task.description || "",
-      task_type: task.task_type,
-      due_date: task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "",
-      priority: task.priority,
-      status: task.status || "pending",
-    });
     setEditTaskDialogOpen(true);
-  };
-
-  const handleUpdateTask = async () => {
-    try {
-      if (!taskFormData.due_date) {
-        toast.error("Preencha a data de vencimento");
-        return;
-      }
-
-      // Generate title from task type
-      const taskTypeLabels: Record<string, string> = {
-        ligacao: "Ligação",
-        email: "E-mail",
-        whatsapp: "WhatsApp",
-        linkedin: "LinkedIn",
-        visita_presencial: "Visita Presencial",
-        reuniao_online: "Reunião Online",
-        visita_feira: "Visita a Feira",
-        visita_evento: "Visita a Evento"
-      };
-      
-      const title = taskTypeLabels[taskFormData.task_type] || "Tarefa";
-
-      const { error } = await supabase
-        .from("tasks")
-        .update({
-          title,
-          description: taskFormData.description,
-          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
-          due_date: taskFormData.due_date,
-          priority: taskFormData.priority as "low" | "medium" | "high",
-          status: taskFormData.status as "pending" | "in_progress" | "completed",
-        })
-        .eq("id", editingTask.id);
-
-      if (error) throw error;
-
-      toast.success("Tarefa atualizada com sucesso!");
-      setEditTaskDialogOpen(false);
-      resetTaskForm();
-      setEditingTask(null);
-      fetchClientDetails();
-    } catch (error) {
-      console.error("Error updating task:", error);
-      toast.error("Erro ao atualizar tarefa");
-    }
   };
 
   const handleCompleteTask = async (taskId: string, e: React.MouseEvent) => {
@@ -516,52 +451,6 @@ const ClienteDetalhes = () => {
       rating: 3,
       is_primary: false,
     });
-  };
-
-  const handleAddNote = async () => {
-    if (!newNote.trim()) {
-      toast.error("Digite uma nota");
-      return;
-    }
-
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { error } = await supabase.from("client_notes").insert({
-        client_id: id,
-        user_id: user.id,
-        note: newNote.trim(),
-      });
-
-      if (error) throw error;
-
-      toast.success("Nota adicionada!");
-      setNewNote("");
-      fetchClientDetails();
-    } catch (error: any) {
-      console.error("Error adding note:", error);
-      toast.error(error.message || "Erro ao adicionar nota");
-    }
-  };
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta nota?")) return;
-
-    try {
-      const { error } = await supabase
-        .from("client_notes")
-        .delete()
-        .eq("id", noteId);
-
-      if (error) throw error;
-
-      toast.success("Nota removida!");
-      fetchClientDetails();
-    } catch (error: any) {
-      console.error("Error deleting note:", error);
-      toast.error("Erro ao remover nota");
-    }
   };
 
   const handleDeleteClient = async () => {
@@ -747,80 +636,6 @@ const ClienteDetalhes = () => {
               <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
             </div>
           </div>
-        </div>
-      </Card>
-
-      {/* Notas do Prospect */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4 text-foreground">Notas do Prospect</h2>
-        
-        {/* Add Note */}
-        <div className="space-y-2 mb-6">
-          <Label>Adicionar Nova Nota</Label>
-          <div className="flex gap-2">
-            <Textarea
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              placeholder="Digite sua nota aqui..."
-              rows={3}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              onClick={handleAddNote}
-              className="self-end"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        <Separator className="my-4" />
-
-        {/* Notes List */}
-        <div className="space-y-3">
-          {notes.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Nenhuma nota adicionada ainda
-            </p>
-          ) : (
-            notes.map((note) => (
-              <div
-                key={note.id}
-                className="p-3 bg-muted/50 rounded-lg border border-border space-y-2"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm flex-1 whitespace-pre-wrap">{note.note}</p>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteNote(note.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    <span>{note.profiles?.full_name || "Usuário"}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    <span>
-                      {new Date(note.created_at).toLocaleString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </Card>
 
@@ -1586,104 +1401,19 @@ const ClienteDetalhes = () => {
         onOpenChange={setOppViewDialogOpen}
       />
 
-      <Dialog open={editTaskDialogOpen} onOpenChange={setEditTaskDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Tarefa</DialogTitle>
-            <DialogDescription>
-              Atualize as informações da tarefa
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-task_type">Tipo de Tarefa *</Label>
-              <Select
-                value={taskFormData.task_type}
-                onValueChange={(value) => setTaskFormData({ ...taskFormData, task_type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  <SelectItem value="ligacao">Ligação</SelectItem>
-                  <SelectItem value="email">E-mail</SelectItem>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="linkedin">LinkedIn</SelectItem>
-                  <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
-                  <SelectItem value="reuniao_online">Reunião Online</SelectItem>
-                  <SelectItem value="visita_feira">Visita a Feira</SelectItem>
-                  <SelectItem value="visita_evento">Visita a Evento</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Notas / Descrição</Label>
-              <Textarea
-                id="edit-description"
-                value={taskFormData.description}
-                onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                placeholder="Adicione notas sobre esta tarefa..."
-                rows={4}
-              />
-            </div>
-            <div className="grid gap-4 grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-due_date">Data e Hora *</Label>
-                <Input
-                  id="edit-due_date"
-                  type="datetime-local"
-                  value={taskFormData.due_date}
-                  onChange={(e) => setTaskFormData({ ...taskFormData, due_date: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-priority">Prioridade</Label>
-                <Select
-                  value={taskFormData.priority}
-                  onValueChange={(value) => setTaskFormData({ ...taskFormData, priority: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="medium">Média</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Situação</Label>
-              <Select
-                value={taskFormData.status}
-                onValueChange={(value) => setTaskFormData({ ...taskFormData, status: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-background z-50">
-                  <SelectItem value="pending">Pendente</SelectItem>
-                  <SelectItem value="in_progress">Em Execução</SelectItem>
-                  <SelectItem value="completed">Realizada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => {
-                setEditTaskDialogOpen(false);
-                resetTaskForm();
-                setEditingTask(null);
-              }}>
-                Cancelar
-              </Button>
-              <Button onClick={handleUpdateTask}>
-                Salvar Alterações
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {editingTask && (
+        <TaskEditDialog
+          task={editingTask}
+          open={editTaskDialogOpen}
+          onOpenChange={(open) => {
+            setEditTaskDialogOpen(open);
+            if (!open) {
+              setEditingTask(null);
+            }
+          }}
+          onSuccess={fetchClientDetails}
+        />
+      )}
 
       <ClientEditDialog
         client={client}
