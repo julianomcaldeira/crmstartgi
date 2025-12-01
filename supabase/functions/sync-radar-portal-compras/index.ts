@@ -11,14 +11,23 @@ async function fetchPortalComprasData() {
   
   try {
     // API de Compras Governamentais
-    const apiUrl = 'https://api.compras.dados.gov.br/contratos/v1/contratos';
+    // Documentação: https://compras.dados.gov.br/docs/home.html
+    const apiUrl = 'http://compras.dados.gov.br/contratos/v1/contratos.json';
     
     // Buscar contratos recentes (últimos 30 dias)
     const dataInicio = new Date();
     dataInicio.setDate(dataInicio.getDate() - 30);
+    const dataFim = new Date();
+    
+    const params = new URLSearchParams({
+      data_assinatura_min: dataInicio.toISOString().split('T')[0],
+      data_assinatura_max: dataFim.toISOString().split('T')[0],
+      offset: '0',
+      limit: '100',
+    });
     
     const response = await fetch(
-      `${apiUrl}?dataInicio=${dataInicio.toISOString().split('T')[0]}&offset=0&limit=100`,
+      `${apiUrl}?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -34,18 +43,19 @@ async function fetchPortalComprasData() {
     }
     
     const data = await response.json();
-    console.log(`[Portal Compras] ${data._embedded?.contratos?.length || 0} contratos encontrados`);
+    const contratos = data._embedded?.contratos || data.contratos || [];
+    console.log(`[Portal Compras] ${contratos.length} contratos encontrados`);
     
-    const leads = (data._embedded?.contratos || []).map((contrato: any) => ({
-      cnpj: contrato.fornecedor?.cpfCnpj || '',
-      company_name: contrato.fornecedor?.nome || '',
+    const leads = contratos.map((contrato: any) => ({
+      cnpj: contrato.cnpj_contratada || contrato.cnpjContratada || '',
+      company_name: contrato.nome_contratada || contrato.nomeContratada || '',
       source: 'portal_compras',
       source_data: contrato,
-      contract_value: parseFloat(contrato.valorInicial || 0),
-      contract_date: contrato.dataAssinatura || null,
-      segment: contrato.objeto?.substring(0, 100) || null,
-      city: contrato.unidadeGestora?.municipio?.nome || null,
-      state: contrato.unidadeGestora?.uf?.sigla || null,
+      contract_value: parseFloat(contrato.valor_inicial || contrato.valorInicial || 0),
+      contract_date: contrato.data_assinatura || contrato.dataAssinatura || null,
+      segment: (contrato.objeto || '')?.substring(0, 100) || null,
+      city: null,
+      state: null,
     })).filter((lead: any) => lead.cnpj && lead.company_name);
     
     return { success: true, leads, error: null };
@@ -61,11 +71,17 @@ async function fetchSICAFData() {
   console.log('[SICAF] Iniciando busca de dados...');
   
   try {
-    // SICAF está integrado na API de Compras
-    const apiUrl = 'https://api.compras.dados.gov.br/fornecedores/v1/fornecedores';
+    // SICAF/Fornecedores está na API de Compras Governamentais
+    // Documentação: https://compras.dados.gov.br/docs/lista-metodos-fornecedores.html
+    const apiUrl = 'http://compras.dados.gov.br/fornecedores/v1/fornecedores.json';
+    
+    const params = new URLSearchParams({
+      offset: '0',
+      limit: '100',
+    });
     
     const response = await fetch(
-      `${apiUrl}?offset=0&limit=100`,
+      `${apiUrl}?${params.toString()}`,
       {
         method: 'GET',
         headers: {
@@ -81,17 +97,18 @@ async function fetchSICAFData() {
     }
     
     const data = await response.json();
-    console.log(`[SICAF] ${data._embedded?.fornecedores?.length || 0} fornecedores encontrados`);
+    const fornecedores = data._embedded?.fornecedores || data.fornecedores || [];
+    console.log(`[SICAF] ${fornecedores.length} fornecedores encontrados`);
     
-    const leads = (data._embedded?.fornecedores || []).map((fornecedor: any) => ({
-      cnpj: fornecedor.cpfCnpj || '',
-      company_name: fornecedor.nome || '',
+    const leads = fornecedores.map((fornecedor: any) => ({
+      cnpj: fornecedor.cnpj || fornecedor.cpfCnpj || '',
+      company_name: fornecedor.nome || fornecedor.razao_social || '',
       source: 'sicaf',
       source_data: fornecedor,
       email: fornecedor.email || null,
       phone: fornecedor.telefone || null,
-      city: fornecedor.municipio?.nome || null,
-      state: fornecedor.uf?.sigla || null,
+      city: fornecedor.municipio || fornecedor.cidade || null,
+      state: fornecedor.uf || fornecedor.estado || null,
     })).filter((lead: any) => lead.cnpj && lead.company_name);
     
     return { success: true, leads, error: null };

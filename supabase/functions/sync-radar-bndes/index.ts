@@ -6,47 +6,21 @@ const corsHeaders = {
 };
 
 // Busca dados do BNDES - operações de financiamento recentes
+// NOTA: BNDES não possui API REST pública. Os dados estão disponíveis em datasets
+// no portal de dados abertos que precisam ser baixados manualmente.
+// Por enquanto, retornamos lista vazia até implementar scraping ou download de datasets.
 async function fetchBNDESData() {
   console.log('[BNDES] Iniciando busca de dados...');
+  console.log('[BNDES] API REST não disponível - usando fonte alternativa futura');
   
   try {
-    // BNDES disponibiliza dados via portal de dados abertos
-    // URL base: https://dadosabertos.bndes.gov.br/dataset/
-    const bndesApiUrl = 'https://dadosabertos.bndes.gov.br/api/3/action/datastore_search';
+    // TODO: Implementar download/scraping de datasets do portal de dados abertos
+    // Portal: https://dadosabertos.bndes.gov.br/
+    // Os dados de operações de financiamento estão disponíveis como datasets para download
+    // não como endpoints REST
     
-    // Dataset de operações de financiamento (exemplo)
-    const response = await fetch(
-      `${bndesApiUrl}?resource_id=operacoes-financiamento&limit=100`,
-      {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'StartGi-CRM/1.0',
-          'Accept': 'application/json',
-        },
-      }
-    );
-    
-    if (!response.ok) {
-      console.error('[BNDES] Erro na requisição:', response.status);
-      return { success: false, leads: [], error: `HTTP ${response.status}` };
-    }
-    
-    const data = await response.json();
-    console.log(`[BNDES] ${data.result?.records?.length || 0} registros encontrados`);
-    
-    const leads = (data.result?.records || []).map((record: any) => ({
-      cnpj: record.cnpj || record.CNPJ || '',
-      company_name: record.cliente || record.nome_empresa || '',
-      source: 'bndes',
-      source_data: record,
-      contract_value: parseFloat(record.valor_contratado || record.valor || 0),
-      contract_date: record.data_contratacao || null,
-      segment: record.setor || record.segmento || null,
-      city: record.municipio || null,
-      state: record.uf || null,
-    })).filter((lead: any) => lead.cnpj && lead.company_name);
-    
-    return { success: true, leads, error: null };
+    console.log('[BNDES] Retornando lista vazia - implementação futura necessária');
+    return { success: true, leads: [], error: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('[BNDES] Erro ao buscar dados:', error);
@@ -104,9 +78,10 @@ Deno.serve(async (req) => {
     let leadsNew = 0;
     let leadsUpdated = 0;
 
-    // Processar cada lead
-    for (const lead of leads) {
-      if (!lead.cnpj) continue;
+    // Processar cada lead (array pode estar vazio, cast para any para evitar erro TypeScript)
+    const typedLeads = leads as any[];
+    for (const lead of typedLeads) {
+      if (!lead || typeof lead !== 'object' || !lead.cnpj) continue;
 
       // Verificar se já existe
       const { data: existing } = await supabase
