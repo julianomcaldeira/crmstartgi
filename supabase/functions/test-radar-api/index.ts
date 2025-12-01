@@ -34,9 +34,18 @@ serve(async (req) => {
       const sicafUrl = `https://api.comprasnet.gov.br/sicaf/v1/fornecedor/${cnpj}`;
       console.log(`[Test API] URL SICAF: ${sicafUrl}`);
       
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
       const sicafRes = await fetch(sicafUrl, {
-        headers: { 'User-Agent': 'StartGI-CRM/1.0' }
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       results.tests.sicaf = {
         url: sicafUrl,
@@ -68,9 +77,18 @@ serve(async (req) => {
       const fornecedorUrl = `https://compras.dados.gov.br/fornecedores/v1/fornecedores/${cnpj}.json`;
       console.log(`[Test API] URL Fornecedor: ${fornecedorUrl}`);
       
+      const controller2 = new AbortController();
+      const timeoutId2 = setTimeout(() => controller2.abort(), 10000);
+      
       const fornecedorRes = await fetch(fornecedorUrl, {
-        headers: { 'User-Agent': 'StartGI-CRM/1.0' }
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        },
+        signal: controller2.signal
       });
+      
+      clearTimeout(timeoutId2);
       
       results.tests.fornecedor = {
         url: fornecedorUrl,
@@ -102,9 +120,18 @@ serve(async (req) => {
       const contratosUrl = `https://compras.dados.gov.br/contratos/v1/contratos.json?cnpj_contratada=${cnpj}`;
       console.log(`[Test API] URL Contratos: ${contratosUrl}`);
       
+      const controller3 = new AbortController();
+      const timeoutId3 = setTimeout(() => controller3.abort(), 10000);
+      
       const contratosRes = await fetch(contratosUrl, {
-        headers: { 'User-Agent': 'StartGI-CRM/1.0' }
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        },
+        signal: controller3.signal
       });
+      
+      clearTimeout(timeoutId3);
       
       results.tests.contratos = {
         url: contratosUrl,
@@ -139,9 +166,18 @@ serve(async (req) => {
       const participacoesUrl = `https://compras.dados.gov.br/licitacoes/v1/itens_licitacao.json?cnpj_contratada=${cnpj}`;
       console.log(`[Test API] URL Participações: ${participacoesUrl}`);
       
+      const controller4 = new AbortController();
+      const timeoutId4 = setTimeout(() => controller4.abort(), 10000);
+      
       const participacoesRes = await fetch(participacoesUrl, {
-        headers: { 'User-Agent': 'StartGI-CRM/1.0' }
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        },
+        signal: controller4.signal
       });
+      
+      clearTimeout(timeoutId4);
       
       results.tests.participacoes = {
         url: participacoesUrl,
