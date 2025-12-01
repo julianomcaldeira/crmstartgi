@@ -19,6 +19,7 @@ import {
   GitBranch,
   TrendingUp,
   Upload,
+  Radar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,6 +99,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
     { icon: TrendingUp, label: "Previsão Vendas", path: "/previsao-vendas" },
     { icon: Building2, label: "Feiras", path: "/feiras" },
+    { icon: Radar, label: "Radar de Leads", path: "/radar-leads" },
     { icon: Upload, label: "Importação", path: "/importacao" },
     { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" },
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },

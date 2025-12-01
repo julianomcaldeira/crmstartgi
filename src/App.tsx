@@ -18,6 +18,7 @@ import Admin from "./pages/Admin";
 import AdminImport from "./pages/AdminImport";
 import Feiras from "./pages/Feiras";
 import MetricasEquipe from "./pages/MetricasEquipe";
+import RadarLeads from "./pages/RadarLeads";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ const App = () => {
         <Route path="/importacao" element={<Layout><AdminImport /></Layout>} />
         <Route path="/feiras" element={<Layout><Feiras /></Layout>} />
         <Route path="/metricas-equipe" element={<Layout><MetricasEquipe /></Layout>} />
+        <Route path="/radar-leads" element={<Layout><RadarLeads /></Layout>} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
