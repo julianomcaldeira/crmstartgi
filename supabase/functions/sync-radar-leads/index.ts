@@ -46,26 +46,38 @@ Deno.serve(async (req) => {
 
     // Processar resultado BNDES
     if (results[0].status === 'fulfilled') {
-      try {
-        summary.bndes.data = await results[0].value.json();
-        summary.bndes.status = 'success';
-      } catch (error) {
-        summary.bndes.status = 'error';
-        console.error('[Radar] Erro ao processar resposta BNDES:', error);
+      const res = results[0].value;
+      if (!res.ok) {
+        summary.bndes.status = 'http_error';
+        console.error('[Radar] BNDES sync retornou HTTP', res.status);
+      } else {
+        try {
+          summary.bndes.data = await res.json();
+          summary.bndes.status = 'success';
+        } catch (error) {
+          summary.bndes.status = 'error';
+          console.error('[Radar] Erro ao processar resposta BNDES:', error);
+        }
       }
     } else {
       summary.bndes.status = 'failed';
       console.error('[Radar] BNDES sync falhou:', results[0].reason);
     }
-
+ 
     // Processar resultado Portal de Compras
     if (results[1].status === 'fulfilled') {
-      try {
-        summary.portal_compras.data = await results[1].value.json();
-        summary.portal_compras.status = 'success';
-      } catch (error) {
-        summary.portal_compras.status = 'error';
-        console.error('[Radar] Erro ao processar resposta Portal Compras:', error);
+      const res = results[1].value;
+      if (!res.ok) {
+        summary.portal_compras.status = 'http_error';
+        console.error('[Radar] Portal Compras sync retornou HTTP', res.status);
+      } else {
+        try {
+          summary.portal_compras.data = await res.json();
+          summary.portal_compras.status = 'success';
+        } catch (error) {
+          summary.portal_compras.status = 'error';
+          console.error('[Radar] Erro ao processar resposta Portal Compras:', error);
+        }
       }
     } else {
       summary.portal_compras.status = 'failed';
