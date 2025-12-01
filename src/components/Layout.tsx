@@ -17,7 +17,6 @@ import {
   Building2,
   BookOpen,
   GitBranch,
-  TrendingUp,
   Upload,
   Radar,
 } from "lucide-react";
@@ -97,7 +96,6 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: CheckSquare, label: "Tarefas", path: "/tarefas" },
     { icon: BarChart3, label: "Metas", path: "/metas" },
     { icon: BarChart3, label: "Relatórios", path: "/relatorios" },
-    { icon: TrendingUp, label: "Previsão Vendas", path: "/previsao-vendas" },
     { icon: Building2, label: "Feiras", path: "/feiras" },
     { icon: Radar, label: "Radar de Leads", path: "/radar-leads" },
     { icon: Upload, label: "Importação", path: "/importacao" },
