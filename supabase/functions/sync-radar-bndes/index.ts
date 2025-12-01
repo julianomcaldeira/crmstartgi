@@ -5,19 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Busca dados do BNDES - operações de financiamento do último ano
-// Usa a API CKAN do portal de dados abertos + download de CSV
+// Busca dados do BNDES - operações de financiamento
+// Usa a API CKAN do portal de dados abertos + download de CSV como fallback
 async function fetchBNDESData() {
-  console.log('[BNDES] Iniciando busca de dados do último ano...');
+  console.log('[BNDES] Iniciando busca de dados...');
   
   try {
     // Resource ID do dataset "Operações não automáticas" (mais completo)
     const resourceId = '6f56b78c-510f-44b6-8274-78a5b7e931f4';
     
-    // URL para buscar via CKAN API com filtro de data
+    // URL para buscar via CKAN API
     const ckanApiUrl = 'https://dadosabertos.bndes.gov.br/api/3/action/datastore_search';
     
-    // Calcular data de 1 ano atrás
+    // Calcular ano de referência (último ano completo)
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const yearFilter = oneYearAgo.getFullYear().toString();
@@ -65,19 +65,8 @@ async function fetchBNDESData() {
     const records = data.result?.records || [];
     console.log(`[BNDES] ${records.length} registros encontrados via CKAN`);
     
-    // Filtrar por ano e mapear dados
-    const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
-    
+    // Mapear dados diretamente (sem descartar por ano ainda, para garantir base robusta)
     const leads = records
-      .filter((record: any) => {
-        const dataContratacao = record['Data da Contratação'] || record['Data de Contratação'] || 
-                                record.data_contratacao || record.DataContratacao || '';
-        
-        // Aceitar qualquer formato que contenha 2024 ou 2025
-        return dataContratacao.includes(String(currentYear)) || 
-               dataContratacao.includes(String(lastYear));
-      })
       .map((record: any) => {
         // Extrair CNPJ com diferentes possíveis formatos
         const cnpj = (record.CNPJ || record.cnpj || record['CNPJ do Cliente'] || '')
@@ -134,14 +123,7 @@ function parseCSVBNDES(csvText: string, yearFilter: string): any[] {
       record[header] = values[index] || '';
     });
     
-    // Filtrar por ano
-    const currentYear = new Date().getFullYear();
-    const lastYear = currentYear - 1;
     const dataContratacao = record['Data da Contratação'] || record['Data de Contratação'] || '';
-    
-    // Aceitar registros de 2024 ou 2025
-    if (!dataContratacao.includes(String(currentYear)) && 
-        !dataContratacao.includes(String(lastYear))) continue;
     
     const cnpj = (record.CNPJ || '').toString().replace(/\D/g, '');
     const cliente = record.Cliente || '';
