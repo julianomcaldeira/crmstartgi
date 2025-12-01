@@ -1125,6 +1125,119 @@ export type Database = {
         }
         Relationships: []
       }
+      radar_leads: {
+        Row: {
+          assigned_to: string | null
+          city: string | null
+          cnpj: string
+          company_name: string
+          contract_date: string | null
+          contract_value: number | null
+          created_at: string | null
+          email: string | null
+          id: string
+          last_sync_at: string | null
+          notes: string | null
+          phone: string | null
+          segment: string | null
+          source: string
+          source_data: Json | null
+          state: string | null
+          status: string | null
+          trade_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          city?: string | null
+          cnpj: string
+          company_name: string
+          contract_date?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_sync_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          segment?: string | null
+          source: string
+          source_data?: Json | null
+          state?: string | null
+          status?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          city?: string | null
+          cnpj?: string
+          company_name?: string
+          contract_date?: string | null
+          contract_value?: number | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_sync_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          segment?: string | null
+          source?: string
+          source_data?: Json | null
+          state?: string | null
+          status?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "radar_leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      radar_sync_history: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          leads_found: number | null
+          leads_new: number | null
+          leads_updated: number | null
+          source: string
+          status: string
+          sync_completed_at: string | null
+          sync_started_at: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          leads_found?: number | null
+          leads_new?: number | null
+          leads_updated?: number | null
+          source: string
+          status: string
+          sync_completed_at?: string | null
+          sync_started_at: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          leads_found?: number | null
+          leads_new?: number | null
+          leads_updated?: number | null
+          source?: string
+          status?: string
+          sync_completed_at?: string | null
+          sync_started_at?: string
+        }
+        Relationships: []
+      }
       task_history: {
         Row: {
           change_type: string

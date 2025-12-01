@@ -15,5 +15,11 @@ verify_jwt = false
 [functions.import-prospects-complete]
 verify_jwt = false
 
-[functions.check-opportunity-alerts]
+[functions.sync-radar-bndes]
+verify_jwt = false
+
+[functions.sync-radar-portal-compras]
+verify_jwt = false
+
+[functions.sync-radar-leads]
 verify_jwt = false
