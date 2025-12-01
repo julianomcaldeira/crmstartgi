@@ -133,7 +133,7 @@ async function fetchPortalComprasData() {
   console.log('[Portal Compras] Iniciando busca de contratos...');
   
   try {
-    const apiUrl = 'http://compras.dados.gov.br/contratos/v1/contratos.json';
+    const apiUrl = 'https://compras.dados.gov.br/contratos/v1/contratos.json';
     
     // Definir período dinâmico: últimos 30 dias para evitar respostas gigantes
     const today = new Date();
@@ -141,11 +141,9 @@ async function fetchPortalComprasData() {
     startDate.setMonth(today.getMonth() - 1);
     const dataAssinaturaMin = startDate.toISOString().slice(0, 10);
     
-    // Filtra por contratos mais recentes e limita a quantidade para evitar timeouts
+    // Filtra por contratos mais recentes usando ordenação oficial da API
     const params = new URLSearchParams({
       data_assinatura_min: dataAssinaturaMin,
-      offset: '0',
-      limit: '100',
       order_by: 'data_assinatura',
       order: 'desc',
     });
