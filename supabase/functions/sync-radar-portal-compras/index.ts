@@ -5,25 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Busca dados do Portal de Compras Governamentais (inclui SICAF)
+// Busca dados do Portal de Compras Governamentais - Contratos a partir de 2021
 async function fetchPortalComprasData() {
-  console.log('[Portal Compras] Iniciando busca de dados...');
+  console.log('[Portal Compras] Iniciando busca de contratos...');
   
   try {
-    // API de Compras Governamentais
-    // Documentação: https://compras.dados.gov.br/docs/home.html
-    const apiUrl = 'http://compras.dados.gov.br/contratos/v1/contratos.json';
+    // Nova API de Compras Governamentais - Contratos a partir de 2021
+    const apiUrl = 'https://compras.dados.gov.br/comprasContratos/v1/contratos';
     
-    // Buscar contratos recentes (últimos 30 dias)
-    const dataInicio = new Date();
-    dataInicio.setDate(dataInicio.getDate() - 30);
-    const dataFim = new Date();
-    
+    // Buscar contratos recentes (offset 0, limit 200 para ter uma base)
     const params = new URLSearchParams({
-      data_assinatura_min: dataInicio.toISOString().split('T')[0],
-      data_assinatura_max: dataFim.toISOString().split('T')[0],
       offset: '0',
-      limit: '100',
+      limit: '200',
     });
     
     const response = await fetch(
@@ -43,21 +36,43 @@ async function fetchPortalComprasData() {
     }
     
     const data = await response.json();
-    const contratos = data._embedded?.contratos || data.contratos || [];
+    
+    // A resposta pode vir como objeto com _embedded ou diretamente como array
+    let contratos = [];
+    if (data._embedded && data._embedded.contratos) {
+      contratos = data._embedded.contratos;
+    } else if (Array.isArray(data)) {
+      contratos = data;
+    } else if (data.contratos) {
+      contratos = data.contratos;
+    }
+    
     console.log(`[Portal Compras] ${contratos.length} contratos encontrados`);
     
-    const leads = contratos.map((contrato: any) => ({
-      cnpj: contrato.cnpj_contratada || contrato.cnpjContratada || '',
-      company_name: contrato.nome_contratada || contrato.nomeContratada || '',
-      source: 'portal_compras',
-      source_data: contrato,
-      contract_value: parseFloat(contrato.valor_inicial || contrato.valorInicial || 0),
-      contract_date: contrato.data_assinatura || contrato.dataAssinatura || null,
-      segment: (contrato.objeto || '')?.substring(0, 100) || null,
-      city: null,
-      state: null,
-    })).filter((lead: any) => lead.cnpj && lead.company_name);
+    const leads = contratos
+      .map((contrato: any) => {
+        // Extrair CNPJ removendo formatação
+        const cnpj = (contrato.fornecedor?.cpfCnpj || contrato.cnpj_contratada || 
+                     contrato.cnpjContratada || '')
+          .toString()
+          .replace(/\D/g, '');
+        
+        return {
+          cnpj,
+          company_name: contrato.fornecedor?.nome || contrato.nome_contratada || 
+                       contrato.nomeContratada || '',
+          source: 'portal_compras',
+          source_data: contrato,
+          contract_value: parseFloat(contrato.valorInicial || contrato.valor_inicial || 0) || null,
+          contract_date: contrato.dataAssinatura || contrato.data_assinatura || null,
+          segment: (contrato.objeto || '')?.substring(0, 200) || null,
+          city: contrato.fornecedor?.municipio || null,
+          state: contrato.fornecedor?.uf || null,
+        };
+      })
+      .filter((lead: any) => lead.cnpj && lead.cnpj.length >= 14 && lead.company_name);
     
+    console.log(`[Portal Compras] ${leads.length} leads válidos após filtros`);
     return { success: true, leads, error: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -68,16 +83,15 @@ async function fetchPortalComprasData() {
 
 // Busca dados do SICAF (Sistema de Cadastramento de Fornecedores)
 async function fetchSICAFData() {
-  console.log('[SICAF] Iniciando busca de dados...');
+  console.log('[SICAF] Iniciando busca de fornecedores...');
   
   try {
-    // SICAF/Fornecedores está na API de Compras Governamentais
-    // Documentação: https://compras.dados.gov.br/docs/lista-metodos-fornecedores.html
-    const apiUrl = 'http://compras.dados.gov.br/fornecedores/v1/fornecedores.json';
+    // API de Fornecedores
+    const apiUrl = 'https://compras.dados.gov.br/fornecedores/v1/fornecedores';
     
     const params = new URLSearchParams({
       offset: '0',
-      limit: '100',
+      limit: '200',
     });
     
     const response = await fetch(
@@ -97,20 +111,41 @@ async function fetchSICAFData() {
     }
     
     const data = await response.json();
-    const fornecedores = data._embedded?.fornecedores || data.fornecedores || [];
+    
+    // A resposta pode vir como objeto com _embedded ou diretamente como array
+    let fornecedores = [];
+    if (data._embedded && data._embedded.fornecedores) {
+      fornecedores = data._embedded.fornecedores;
+    } else if (Array.isArray(data)) {
+      fornecedores = data;
+    } else if (data.fornecedores) {
+      fornecedores = data.fornecedores;
+    }
+    
     console.log(`[SICAF] ${fornecedores.length} fornecedores encontrados`);
     
-    const leads = fornecedores.map((fornecedor: any) => ({
-      cnpj: fornecedor.cnpj || fornecedor.cpfCnpj || '',
-      company_name: fornecedor.nome || fornecedor.razao_social || '',
-      source: 'sicaf',
-      source_data: fornecedor,
-      email: fornecedor.email || null,
-      phone: fornecedor.telefone || null,
-      city: fornecedor.municipio || fornecedor.cidade || null,
-      state: fornecedor.uf || fornecedor.estado || null,
-    })).filter((lead: any) => lead.cnpj && lead.company_name);
+    const leads = fornecedores
+      .map((fornecedor: any) => {
+        // Extrair CNPJ removendo formatação
+        const cnpj = (fornecedor.cpfCnpj || fornecedor.cnpj || '')
+          .toString()
+          .replace(/\D/g, '');
+        
+        return {
+          cnpj,
+          company_name: fornecedor.nome || fornecedor.razaoSocial || fornecedor.razao_social || '',
+          trade_name: fornecedor.nomeFantasia || fornecedor.nome_fantasia || null,
+          source: 'sicaf',
+          source_data: fornecedor,
+          email: fornecedor.email || null,
+          phone: fornecedor.telefone || fornecedor.telefoneComercial || null,
+          city: fornecedor.municipio || fornecedor.cidade || null,
+          state: fornecedor.uf || fornecedor.estado || null,
+        };
+      })
+      .filter((lead: any) => lead.cnpj && lead.cnpj.length >= 14 && lead.company_name);
     
+    console.log(`[SICAF] ${leads.length} leads válidos após filtros`);
     return { success: true, leads, error: null };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -131,7 +166,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar dados do Portal de Compras e SICAF
+    // Buscar dados do Portal de Compras e SICAF em paralelo
     const [comprasResult, sicafResult] = await Promise.all([
       fetchPortalComprasData(),
       fetchSICAFData(),
@@ -193,6 +228,7 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[Portal Compras Sync] Concluído: ${leadsNew} novos, ${leadsUpdated} atualizados`);
+    console.log(`[Portal Compras Sync] Detalhes - Portal: ${comprasResult.leads.length}, SICAF: ${sicafResult.leads.length}`);
 
     return new Response(
       JSON.stringify({
