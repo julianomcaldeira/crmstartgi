@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, RefreshCw, Database, TrendingUp, Clock, Filter } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Loader2, RefreshCw, Database, TrendingUp, Clock, Filter, TestTube, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -19,6 +20,9 @@ export default function RadarLeads() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testCnpj, setTestCnpj] = useState("");
+  const [testResults, setTestResults] = useState<any>(null);
 
   // Buscar leads usando hook customizado
   const { data: leads, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm);
@@ -126,6 +130,42 @@ export default function RadarLeads() {
     },
   });
 
+  // Mutation para testar APIs
+  const testApiMutation = useMutation({
+    mutationFn: async (cnpj: string) => {
+      const { data, error } = await supabase.functions.invoke("test-radar-api", {
+        body: { cnpj },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      setTestResults(data);
+      toast.success("Teste concluído! Verifique os resultados abaixo.");
+    },
+    onError: (error: any) => {
+      toast.error(`Erro no teste: ${error.message}`);
+    },
+  });
+
+  // Mutation para enriquecer leads
+  const enrichMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("enrich-radar-leads");
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Enriquecimento concluído! ${data.sicaf_leads} leads SICAF e ${data.portal_leads} leads Portal criados.`
+      );
+      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
+    },
+    onError: (error: any) => {
+      toast.error(`Erro no enriquecimento: ${error.message}`);
+    },
+  });
+
   const getSourceBadgeColor = (source: string) => {
     switch (source) {
       case "bndes":
@@ -157,30 +197,163 @@ export default function RadarLeads() {
   return (
     <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Radar de Leads</h1>
           <p className="text-muted-foreground">
             Empresas que vendem ao governo - BNDES, SICAF e Portal de Compras
           </p>
         </div>
-        <Button
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-          className="gap-2"
-        >
-          {syncMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Sincronizando...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="h-4 w-4" />
-              Sincronizar Agora
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <TestTube className="h-4 w-4" />
+                Testar APIs
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Testar APIs SICAF e Portal de Compras</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">CNPJ para Teste</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Digite o CNPJ (apenas números)"
+                      value={testCnpj}
+                      onChange={(e) => setTestCnpj(e.target.value.replace(/\D/g, ""))}
+                      maxLength={14}
+                    />
+                    <Button
+                      onClick={() => testApiMutation.mutate(testCnpj)}
+                      disabled={testApiMutation.isPending || testCnpj.length !== 14}
+                    >
+                      {testApiMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Testar"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {testResults && (
+                  <div className="space-y-4">
+                    <div className="grid gap-4">
+                      {/* SICAF */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">SICAF</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="text-sm">
+                            <strong>Status HTTP:</strong> {testResults.tests.sicaf?.status || "N/A"}
+                          </div>
+                          <div className="text-sm">
+                            <strong>Sucesso:</strong>{" "}
+                            {testResults.tests.sicaf?.ok ? "✅ Sim" : "❌ Não"}
+                          </div>
+                          {testResults.tests.sicaf?.data && (
+                            <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
+                              {JSON.stringify(testResults.tests.sicaf.data, null, 2)}
+                            </pre>
+                          )}
+                          {testResults.tests.sicaf?.error && (
+                            <div className="text-xs text-destructive">
+                              {testResults.tests.sicaf.error}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Portal Fornecedor */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Portal - Fornecedor</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="text-sm">
+                            <strong>Status HTTP:</strong>{" "}
+                            {testResults.tests.fornecedor?.status || "N/A"}
+                          </div>
+                          <div className="text-sm">
+                            <strong>Sucesso:</strong>{" "}
+                            {testResults.tests.fornecedor?.ok ? "✅ Sim" : "❌ Não"}
+                          </div>
+                          {testResults.tests.fornecedor?.data && (
+                            <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-40">
+                              {JSON.stringify(testResults.tests.fornecedor.data, null, 2)}
+                            </pre>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      {/* Portal Contratos */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base">Portal - Contratos</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="text-sm">
+                            <strong>Status HTTP:</strong>{" "}
+                            {testResults.tests.contratos?.status || "N/A"}
+                          </div>
+                          <div className="text-sm">
+                            <strong>Sucesso:</strong>{" "}
+                            {testResults.tests.contratos?.ok ? "✅ Sim" : "❌ Não"}
+                          </div>
+                          <div className="text-sm">
+                            <strong>Contratos encontrados:</strong>{" "}
+                            {testResults.tests.contratos?.count || 0}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Button
+            onClick={() => enrichMutation.mutate()}
+            disabled={enrichMutation.isPending}
+            className="gap-2"
+            variant="secondary"
+          >
+            {enrichMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Enriquecendo...
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4" />
+                Enriquecer com SICAF/Portal
+              </>
+            )}
+          </Button>
+
+          <Button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="gap-2"
+          >
+            {syncMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sincronizando...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Sincronizar Agora
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Estatísticas */}
