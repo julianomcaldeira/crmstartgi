@@ -240,7 +240,7 @@ const Layout = ({ children }: LayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="px-4 py-4 md:px-6 md:py-6">{children}</main>
       </div>
     </div>
   );
