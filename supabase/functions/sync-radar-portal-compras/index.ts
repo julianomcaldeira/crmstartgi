@@ -133,11 +133,11 @@ async function fetchPortalComprasData() {
   console.log('[Portal Compras] Iniciando busca de contratos...');
   
   try {
-    const apiUrl = 'https://compras.dados.gov.br/contratos/v1/contratos.json';
+    const apiUrl = 'http://compras.dados.gov.br/contratos/v1/contratos.json';
     
+    // Filtra por contratos mais recentes para evitar sobrecarga e erros 500
     const params = new URLSearchParams({
-      offset: '0',
-      limit: '100',
+      data_assinatura_min: '2024-01-01',
     });
     
     const response = await fetch(
@@ -152,44 +152,68 @@ async function fetchPortalComprasData() {
     );
     
     if (!response.ok) {
-      console.error('[Portal Compras] Erro na requisição:', response.status);
+      let errorText: string | null = null;
+      try {
+        errorText = await response.text();
+      } catch (_) {
+        errorText = null;
+      }
+      console.error('[Portal Compras] Erro na requisição:', response.status, errorText);
       return { success: false, leads: [], error: `HTTP ${response.status}` };
     }
     
     const data = await response.json();
     
+    // A API retorna array direto ou objeto com _embedded
     let contratos = [];
-    if (data._embedded && data._embedded.contratos) {
-      contratos = data._embedded.contratos;
-    } else if (Array.isArray(data)) {
+    if (Array.isArray(data)) {
       contratos = data;
+    } else if (data._embedded?.contratos) {
+      contratos = data._embedded.contratos;
+    } else if (data.contratos) {
+      contratos = data.contratos;
     }
     
     console.log(`[Portal Compras] ${contratos.length} contratos encontrados`);
+    
+    // Limitar a 200 contratos para evitar timeout
+    contratos = contratos.slice(0, 200);
     
     const leads = [];
     
     // Processar cada contrato e enriquecer com dados do SICAF
     for (const contrato of contratos) {
-      const cnpj = (contrato.fornecedor?.cnpj || contrato.cnpj_contratada || '')
+      const cnpj = (contrato.cnpj_contratada || contrato.fornecedor?.cnpj || contrato.cnpjContratada || '')
         .toString()
         .replace(/\D/g, '');
       
-      if (!cnpj || cnpj.length < 14) continue;
+      if (!cnpj || cnpj.length !== 14) {
+        console.log(`[Portal Compras] CNPJ inválido ou ausente:`, contrato);
+        continue;
+      }
+      
+      console.log(`[Portal Compras] Processando CNPJ ${cnpj}...`);
       
       // Buscar dados complementares do SICAF
       const sicafData = await buscarSituacaoSICAF(cnpj);
       
+      const companyName = sicafData?.nome || contrato.nome_contratada || contrato.fornecedor?.nome || contrato.nomeContratada || '';
+      
+      if (!companyName) {
+        console.log(`[Portal Compras] Nome da empresa não encontrado para CNPJ ${cnpj}`);
+        continue;
+      }
+      
       leads.push({
         cnpj,
-        company_name: sicafData?.nome || contrato.fornecedor?.nome || '',
+        company_name: companyName,
         source: 'portal_compras',
         source_data: {
-          ...contrato,
+          contrato,
           sicaf: sicafData,
         },
-        contract_value: parseFloat(contrato.valorInicial || contrato.valor || 0) || null,
-        contract_date: contrato.dataAssinatura || contrato.dataVigenciaInicio || null,
+        contract_value: parseFloat(contrato.valor_inicial || contrato.valorInicial || contrato.valor || 0) || null,
+        contract_date: contrato.data_assinatura || contrato.dataAssinatura || contrato.data_inicio_vigencia || null,
         segment: (contrato.objeto || '')?.substring(0, 200) || null,
         city: sicafData?.endereco?.municipio || null,
         state: sicafData?.endereco?.uf || null,
