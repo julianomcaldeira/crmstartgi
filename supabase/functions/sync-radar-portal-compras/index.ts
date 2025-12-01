@@ -135,9 +135,19 @@ async function fetchPortalComprasData() {
   try {
     const apiUrl = 'http://compras.dados.gov.br/contratos/v1/contratos.json';
     
-    // Filtra por contratos mais recentes para evitar sobrecarga e erros 500
+    // Definir período dinâmico: últimos 30 dias para evitar respostas gigantes
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setMonth(today.getMonth() - 1);
+    const dataAssinaturaMin = startDate.toISOString().slice(0, 10);
+    
+    // Filtra por contratos mais recentes e limita a quantidade para evitar timeouts
     const params = new URLSearchParams({
-      data_assinatura_min: '2024-01-01',
+      data_assinatura_min: dataAssinaturaMin,
+      offset: '0',
+      limit: '100',
+      order_by: 'data_assinatura',
+      order: 'desc',
     });
     
     const response = await fetch(
@@ -176,8 +186,8 @@ async function fetchPortalComprasData() {
     
     console.log(`[Portal Compras] ${contratos.length} contratos encontrados`);
     
-    // Limitar a 200 contratos para evitar timeout
-    contratos = contratos.slice(0, 200);
+    // Limitar a 50 contratos para evitar timeout e excesso de chamadas ao SICAF
+    contratos = contratos.slice(0, 50);
     
     const leads = [];
     
