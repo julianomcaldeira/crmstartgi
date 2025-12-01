@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import Layout from "@/components/Layout";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -155,226 +155,224 @@ export default function RadarLeads() {
   };
 
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Radar de Leads</h1>
-            <p className="text-muted-foreground">
-              Empresas que vendem ao governo - BNDES, SICAF e Portal de Compras
-            </p>
-          </div>
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="gap-2"
-          >
-            {syncMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Sincronizando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4" />
-                Sincronizar Agora
-              </>
-            )}
-          </Button>
+    <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Radar de Leads</h1>
+          <p className="text-muted-foreground">
+            Empresas que vendem ao governo - BNDES, SICAF e Portal de Compras
+          </p>
         </div>
+        <Button
+          onClick={() => syncMutation.mutate()}
+          disabled={syncMutation.isPending}
+          className="gap-2"
+        >
+          {syncMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Sincronizando...
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4" />
+              Sincronizar Agora
+            </>
+          )}
+        </Button>
+      </div>
 
-        {/* Estatísticas */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{leads?.length || 0}</div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Leads Novos</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {leads?.filter((l) => l.status === "novo").length || 0}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Última Sincronização</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm">
-                {syncHistory?.[0]?.sync_completed_at
-                  ? formatDistanceToNow(new Date(syncHistory[0].sync_completed_at), {
-                      addSuffix: true,
-                      locale: ptBR,
-                    })
-                  : "Nunca sincronizado"}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filtros */}
+      {/* Estatísticas */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Total de Leads</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Buscar</label>
-                <Input
-                  placeholder="Nome ou CNPJ..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Fonte</label>
-                <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as fontes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as fontes</SelectItem>
-                    <SelectItem value="bndes">BNDES</SelectItem>
-                    <SelectItem value="portal_compras">Portal de Compras</SelectItem>
-                    <SelectItem value="sicaf">SICAF</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Status</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos os status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os status</SelectItem>
-                    <SelectItem value="novo">Novo</SelectItem>
-                    <SelectItem value="contatado">Contatado</SelectItem>
-                    <SelectItem value="qualificado">Qualificado</SelectItem>
-                    <SelectItem value="descartado">Descartado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="text-2xl font-bold">{leads?.length || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Leads Novos</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {leads?.filter((l) => l.status === "novo").length || 0}
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabela de Leads */}
         <Card>
-          <CardHeader>
-            <CardTitle>Leads Capturados</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Última Sincronização</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>CNPJ</TableHead>
-                    <TableHead>Fonte</TableHead>
-                    <TableHead>Valor do Contrato</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Localização</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads?.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell className="font-medium">{lead.company_name}</TableCell>
-                      <TableCell>{lead.cnpj}</TableCell>
-                      <TableCell>
-                        <Badge className={getSourceBadgeColor(lead.source)}>
-                          {lead.source.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {lead.contract_value
-                          ? new Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            }).format(lead.contract_value)
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Select
-                          value={lead.status}
-                          onValueChange={(value) =>
-                            updateStatusMutation.mutate({ leadId: lead.id, status: value })
-                          }
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <Badge className={getStatusBadgeColor(lead.status)}>
-                              {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="novo">Novo</SelectItem>
-                            <SelectItem value="contatado">Contatado</SelectItem>
-                            <SelectItem value="qualificado">Qualificado</SelectItem>
-                            <SelectItem value="descartado">Descartado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {lead.status === "novo" && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => convertToProspectMutation.mutate(lead)}
-                              disabled={convertToProspectMutation.isPending}
-                            >
-                              Converter em Prospect
-                            </Button>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              assignMutation.mutate({
-                                leadId: lead.id,
-                                userId: lead.assigned_to ? null : "current-user-id",
-                              })
-                            }
-                          >
-                            {lead.assigned_to ? "Remover" : "Atribuir"}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+            <div className="text-sm">
+              {syncHistory?.[0]?.sync_completed_at
+                ? formatDistanceToNow(new Date(syncHistory[0].sync_completed_at), {
+                    addSuffix: true,
+                    locale: ptBR,
+                  })
+                : "Nunca sincronizado"}
+            </div>
           </CardContent>
         </Card>
       </div>
-    </Layout>
+
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Buscar</label>
+              <Input
+                placeholder="Nome ou CNPJ..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Fonte</label>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as fontes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as fontes</SelectItem>
+                  <SelectItem value="bndes">BNDES</SelectItem>
+                  <SelectItem value="portal_compras">Portal de Compras</SelectItem>
+                  <SelectItem value="sicaf">SICAF</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="novo">Novo</SelectItem>
+                  <SelectItem value="contatado">Contatado</SelectItem>
+                  <SelectItem value="qualificado">Qualificado</SelectItem>
+                  <SelectItem value="descartado">Descartado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabela de Leads */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Leads Capturados</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>CNPJ</TableHead>
+                  <TableHead>Fonte</TableHead>
+                  <TableHead>Valor do Contrato</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leads?.map((lead) => (
+                  <TableRow key={lead.id}>
+                    <TableCell className="font-medium">{lead.company_name}</TableCell>
+                    <TableCell>{lead.cnpj}</TableCell>
+                    <TableCell>
+                      <Badge className={getSourceBadgeColor(lead.source)}>
+                        {lead.source.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {lead.contract_value
+                        ? new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(lead.contract_value)
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={lead.status}
+                        onValueChange={(value) =>
+                          updateStatusMutation.mutate({ leadId: lead.id, status: value })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <Badge className={getStatusBadgeColor(lead.status)}>
+                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                          </Badge>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="novo">Novo</SelectItem>
+                          <SelectItem value="contatado">Contatado</SelectItem>
+                          <SelectItem value="qualificado">Qualificado</SelectItem>
+                          <SelectItem value="descartado">Descartado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        {lead.status === "novo" && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => convertToProspectMutation.mutate(lead)}
+                            disabled={convertToProspectMutation.isPending}
+                          >
+                            Converter em Prospect
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            assignMutation.mutate({
+                              leadId: lead.id,
+                              userId: lead.assigned_to ? null : "current-user-id",
+                            })
+                          }
+                        >
+                          {lead.assigned_to ? "Remover" : "Atribuir"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
