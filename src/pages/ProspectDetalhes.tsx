@@ -29,7 +29,8 @@ import {
   Edit,
   Check,
   Trash2,
-  Search
+  Search,
+  Copy
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -68,6 +69,18 @@ const ClienteDetalhes = () => {
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [taskSearchTerm, setTaskSearchTerm] = useState("");
   const [taskSortBy, setTaskSortBy] = useState<"date" | "priority" | "status">("date");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = async (value: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      toast.success("Copiado!");
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      toast.error("Erro ao copiar");
+    }
+  };
   const [contactFormData, setContactFormData] = useState({
     name: "",
     role: "",
@@ -553,7 +566,18 @@ const ClienteDetalhes = () => {
           <ArrowLeft />
         </Button>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold text-foreground">{client.company_name}</h1>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleCopy(client.company_name, "companyName")}
+              title="Copiar Razão Social"
+            >
+              {copiedField === "companyName" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
         <Button 
@@ -584,7 +608,18 @@ const ClienteDetalhes = () => {
             <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">CNPJ</p>
-              <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => handleCopy(client.cnpj, "cnpj")}
+                  title="Copiar CNPJ"
+                >
+                  {copiedField === "cnpj" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                </Button>
+              </div>
             </div>
           </div>
           
