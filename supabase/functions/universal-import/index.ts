@@ -458,14 +458,25 @@ async function importOpportunity(supabase: any, row: any, userId: string, seller
 }
 
 async function importTask(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
+  // Helper para normalizar strings (minúsculas, sem acentos)
+  const normalize = (value: any) =>
+    String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
   // Validações obrigatórias
   if (!row['Título']) {
     return { success: false, error: 'Título da tarefa faltando' };
   }
 
+  // Aceita tanto "Data Vencimento" quanto "Data do Vencimento" no header
+  const rawDueDate = row['Data Vencimento'] || row['Data do Vencimento'] || null;
+
   // Validação de data de vencimento (se fornecida)
-  if (row['Data Vencimento'] && !validateDate(row['Data Vencimento'])) {
-    return { success: false, error: `Data de Vencimento inválida: ${row['Data Vencimento']}` };
+  if (rawDueDate && !validateDate(rawDueDate)) {
+    return { success: false, error: `Data de Vencimento inválida: ${rawDueDate}` };
   }
 
   let clientId = null;
@@ -484,15 +495,48 @@ async function importTask(supabase: any, row: any, userId: string, sellerMap: Ma
     clientId = client.id;
   }
 
-  const sellerId = row['Vendedor'] ? sellerMap.get(row['Vendedor'].toLowerCase()) : userId;
+  const sellerId = row['Vendedor'] ? sellerMap.get(normalize(row['Vendedor'])) : userId;
+
+  // Mapeia tipos de tarefa amigáveis para os enums do banco
+  const rawType = normalize(row['Tipo']);
+  let taskType: string = 'ligacao';
+  if (rawType.includes('whatsapp')) {
+    taskType = 'whatsapp';
+  } else if (rawType.includes('visita feira')) {
+    taskType = 'visita_feira';
+  } else if (rawType.includes('visita evento')) {
+    taskType = 'visita_evento';
+  } else if (rawType.includes('visita') || rawType.includes('presencial')) {
+    taskType = 'visita_presencial';
+  } else if (rawType.includes('reuniao') || rawType.includes('reunião')) {
+    taskType = 'reuniao_online';
+  } else if (rawType.includes('linkedin')) {
+    taskType = 'linkedin';
+  } else if (rawType.includes('email') || rawType.includes('e-mail')) {
+    taskType = 'email';
+  } else if (rawType) {
+    // Qualquer outro valor vira ligação por padrão
+    taskType = 'ligacao';
+  }
+
+  // Mapeia prioridade em PT-BR para o enum (low/medium/high)
+  const rawPriority = normalize(row['Prioridade']);
+  let priority: 'low' | 'medium' | 'high' = 'medium';
+  if (rawPriority === 'alta' || rawPriority === 'alto' || rawPriority === 'high') {
+    priority = 'high';
+  } else if (rawPriority === 'baixa' || rawPriority === 'baixo' || rawPriority === 'low') {
+    priority = 'low';
+  } else if (rawPriority === 'media' || rawPriority === 'média' || rawPriority === 'medium') {
+    priority = 'medium';
+  }
 
   const { error } = await supabase.from('tasks').insert({
     title: row['Título'],
     description: row['Descrição'],
     client_id: clientId,
-    task_type: row['Tipo'] || 'ligacao',
-    due_date: row['Data Vencimento'] || null,
-    priority: row['Prioridade'] || 'medium',
+    task_type: taskType,
+    due_date: rawDueDate || null,
+    priority,
     assigned_to: sellerId,
     created_by: userId
   });
