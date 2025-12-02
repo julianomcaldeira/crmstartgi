@@ -610,15 +610,11 @@ const ClienteDetalhes = () => {
               <p className="text-xs text-muted-foreground mb-1">CNPJ</p>
               <div className="flex items-center gap-2">
                 <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => handleCopy(client.cnpj, "cnpj")}
-                  title="Copiar CNPJ"
-                >
-                  {copiedField === "cnpj" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                </Button>
+                {client.cnpj && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.cnpj, "cnpj")} title="Copiar">
+                    {copiedField === "cnpj" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -627,9 +623,16 @@ const ClienteDetalhes = () => {
             <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Endereço</p>
-              <p className="text-sm font-medium text-foreground">
-                {client.address ? `${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? ` - ${client.state}` : ''}` : "-"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">
+                  {client.address ? `${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? ` - ${client.state}` : ''}` : "-"}
+                </p>
+                {client.address && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(`${client.address}${client.city ? `, ${client.city}` : ''}${client.state ? ` - ${client.state}` : ''}`, "address")} title="Copiar">
+                    {copiedField === "address" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -637,7 +640,14 @@ const ClienteDetalhes = () => {
             <Mail className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Email</p>
-              <p className="text-sm font-medium text-foreground break-all">{client.email || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground break-all">{client.email || "-"}</p>
+                {client.email && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.email, "email")} title="Copiar">
+                    {copiedField === "email" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -645,7 +655,14 @@ const ClienteDetalhes = () => {
             <TrendingUp className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Segmento</p>
-              <p className="text-sm font-medium text-foreground">{client.segment || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.segment || "-"}</p>
+                {client.segment && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.segment, "segment")} title="Copiar">
+                    {copiedField === "segment" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -653,7 +670,14 @@ const ClienteDetalhes = () => {
             <Phone className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Telefone</p>
-              <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
+                {client.phone && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.phone, "phone")} title="Copiar">
+                    {copiedField === "phone" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -661,9 +685,16 @@ const ClienteDetalhes = () => {
             <DollarSign className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Capital Social</p>
-              <p className="text-sm font-medium text-foreground">
-                {client.share_capital ? `R$ ${Number(client.share_capital).toLocaleString('pt-BR')}` : "-"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">
+                  {client.share_capital ? `R$ ${Number(client.share_capital).toLocaleString('pt-BR')}` : "-"}
+                </p>
+                {client.share_capital && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(`R$ ${Number(client.share_capital).toLocaleString('pt-BR')}`, "capital")} title="Copiar">
+                    {copiedField === "capital" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -671,7 +702,14 @@ const ClienteDetalhes = () => {
             <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Porte da Empresa</p>
-              <p className="text-sm font-medium text-foreground">{client.company_size || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.company_size || "-"}</p>
+                {client.company_size && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.company_size, "size")} title="Copiar">
+                    {copiedField === "size" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -679,7 +717,14 @@ const ClienteDetalhes = () => {
             <MapPin className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Região</p>
-              <p className="text-sm font-medium text-foreground">{client.region || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.region || "-"}</p>
+                {client.region && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.region, "region")} title="Copiar">
+                    {copiedField === "region" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -687,7 +732,14 @@ const ClienteDetalhes = () => {
             <Target className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Concorrentes</p>
-              <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.competitors || "-"}</p>
+                {client.competitors && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.competitors, "competitors")} title="Copiar">
+                    {copiedField === "competitors" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -695,7 +747,14 @@ const ClienteDetalhes = () => {
             <Building2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Distribuidor</p>
-              <p className="text-sm font-medium text-foreground">{client.distributor || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.distributor || "-"}</p>
+                {client.distributor && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.distributor, "distributor")} title="Copiar">
+                    {copiedField === "distributor" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -703,7 +762,14 @@ const ClienteDetalhes = () => {
             <CheckCircle2 className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Serviços</p>
-              <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-foreground">{client.services || "-"}</p>
+                {client.services && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.services, "services")} title="Copiar">
+                    {copiedField === "services" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -714,23 +780,47 @@ const ClienteDetalhes = () => {
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4 text-foreground">Contatos</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {contacts.map((contact) => (
+            {contacts.map((contact, idx) => (
               <div key={contact.id} className="p-4 bg-muted/30 rounded-lg border border-border">
                 <div className="flex items-start gap-3">
                   <User className="h-5 w-5 text-muted-foreground mt-0.5" />
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2">
                       <p className="font-medium text-foreground">{contact.name}</p>
                       {contact.is_primary && (
                         <Badge variant="secondary" className="text-xs">Principal</Badge>
                       )}
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(contact.name, `contact-name-${idx}`)} title="Copiar nome">
+                        {copiedField === `contact-name-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                      </Button>
                     </div>
                     <p className="text-sm text-muted-foreground">{contact.role || "Contato"}</p>
                     {contact.email && (
-                      <p className="text-sm text-foreground mt-1">{contact.email}</p>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-sm text-foreground">{contact.email}</p>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.email, `contact-email-${idx}`)} title="Copiar email">
+                          {copiedField === `contact-email-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
                     )}
                     {contact.phone && (
-                      <p className="text-sm text-foreground">{contact.phone}</p>
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-sm text-foreground">{contact.phone}</p>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.phone, `contact-phone-${idx}`)} title="Copiar telefone">
+                          {copiedField === `contact-phone-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
+                    )}
+                    {contact.mobile && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <p className="text-sm text-foreground">{contact.mobile}</p>
+                        <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.mobile, `contact-mobile-${idx}`)} title="Copiar celular">
+                          {copiedField === `contact-mobile-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
