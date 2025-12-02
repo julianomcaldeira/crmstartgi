@@ -36,6 +36,7 @@ import TaskViewDialog from "@/components/TaskViewDialog";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
+import TaskQuickMessages from "@/components/TaskQuickMessages";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -995,6 +996,13 @@ const ClienteDetalhes = () => {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="description">Notas / Descrição</Label>
+                      <TaskQuickMessages 
+                        taskType={taskFormData.task_type} 
+                        onSelect={(msg) => setTaskFormData({ 
+                          ...taskFormData, 
+                          description: taskFormData.description ? `${taskFormData.description}\n${msg}` : msg 
+                        })} 
+                      />
                       <Textarea
                         id="description"
                         value={taskFormData.description}

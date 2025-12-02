@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2, Upload, User } from "lucide-react";
 import { PhoneInput } from "@/components/ui/masked-input";
+import TaskMessageTemplates from "@/components/TaskMessageTemplates";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
@@ -321,6 +322,7 @@ const Configuracoes = () => {
         </CardContent>
       </Card>
 
+      <TaskMessageTemplates />
     </div>
   );
 };

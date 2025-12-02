@@ -1286,6 +1286,33 @@ export type Database = {
           },
         ]
       }
+      task_message_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          message: string
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          message: string
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          message?: string
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       task_notes: {
         Row: {
           created_at: string | null
