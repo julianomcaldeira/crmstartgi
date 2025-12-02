@@ -20,6 +20,7 @@ import TaskViewDialog from "@/components/TaskViewDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
+import TaskQuickMessages from "@/components/TaskQuickMessages";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -562,6 +563,10 @@ const Tarefas = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Notas / Descrição</Label>
+                <TaskQuickMessages 
+                  taskType={taskType} 
+                  onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 
+                />
                 <Textarea
                   id="description"
                   value={description}

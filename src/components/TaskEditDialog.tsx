@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Plus, Trash2, User, Clock, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import TaskQuickMessages from "@/components/TaskQuickMessages";
 
 interface TaskEditDialogProps {
   task: any;
@@ -323,6 +324,10 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
           {/* Description Section */}
           <div className="space-y-2">
             <Label>Descrição da Tarefa</Label>
+            <TaskQuickMessages 
+              taskType={taskType} 
+              onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 
+            />
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
