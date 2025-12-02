@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Search } from "lucide-react";
+import { Plus, Loader2, Search, Copy, Check } from "lucide-react";
 
 interface ClientEditDialogProps {
   client: any;
@@ -52,6 +52,18 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [contacts, setContacts] = useState<any[]>([]);
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [feiraSearchTerm, setFeiraSearchTerm] = useState("");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleCopy = async (value: string, field: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedField(field);
+      toast.success("Copiado!");
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      toast.error("Erro ao copiar");
+    }
+  };
 
   useEffect(() => {
     if (client && open) {
@@ -255,24 +267,48 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-cnpj">CNPJ *</Label>
-                  <CNPJInput
-                    id="edit-cnpj"
-                    value={cnpj}
-                    onValueChange={(value) => setCnpj(value)}
-                    placeholder="00.000.000/0000-00"
-                    disabled
-                  />
+                  <div className="flex gap-2">
+                    <CNPJInput
+                      id="edit-cnpj"
+                      value={cnpj}
+                      onValueChange={(value) => setCnpj(value)}
+                      placeholder="00.000.000/0000-00"
+                      disabled
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleCopy(cnpj, "cnpj")}
+                      title="Copiar CNPJ"
+                    >
+                      {copiedField === "cnpj" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="edit-companyName">Razão Social *</Label>
-                    <Input
-                      id="edit-companyName"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="edit-companyName"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        required
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleCopy(companyName, "companyName")}
+                        title="Copiar Razão Social"
+                      >
+                        {copiedField === "companyName" ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
