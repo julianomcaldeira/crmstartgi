@@ -37,6 +37,7 @@ import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
+import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -973,6 +974,18 @@ const ClienteDetalhes = () => {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <div className="flex justify-end">
+                      <TaskTemplateSelector 
+                        onSelect={(template) => {
+                          setTaskFormData({
+                            ...taskFormData,
+                            task_type: template.task_type,
+                            priority: template.priority,
+                            description: template.description,
+                          });
+                        }} 
+                      />
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="task_type">Tipo de Tarefa *</Label>
                       <Select

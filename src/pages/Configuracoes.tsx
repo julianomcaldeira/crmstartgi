@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, User } from "lucide-react";
 import { PhoneInput } from "@/components/ui/masked-input";
 import TaskMessageTemplates from "@/components/TaskMessageTemplates";
+import TaskTemplatesManager from "@/components/TaskTemplatesManager";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
@@ -323,6 +324,8 @@ const Configuracoes = () => {
       </Card>
 
       <TaskMessageTemplates />
+
+      <TaskTemplatesManager />
     </div>
   );
 };
