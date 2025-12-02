@@ -6,14 +6,18 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Trash2, MessageSquare, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase } from "lucide-react";
+import { Plus, Trash2, MessageSquare, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase, Globe, User } from "lucide-react";
 
 interface Template {
   id: string;
   task_type: string;
   message: string;
   created_by: string;
+  usage_count: number;
+  is_personal: boolean;
 }
 
 const taskTypes = [
@@ -32,19 +36,41 @@ const TaskMessageTemplates = () => {
   const [loading, setLoading] = useState(true);
   const [newMessage, setNewMessage] = useState("");
   const [newTaskType, setNewTaskType] = useState("ligacao");
+  const [isPersonal, setIsPersonal] = useState(false);
   const [filterType, setFilterType] = useState("all");
+  const [activeTab, setActiveTab] = useState("global");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchTemplates();
+    fetchCurrentUser();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchTemplates();
+    }
+  }, [currentUserId, activeTab]);
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id || null);
+  };
 
   const fetchTemplates = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("task_message_templates")
         .select("*")
-        .order("task_type")
+        .order("usage_count", { ascending: false })
         .order("message");
+
+      if (activeTab === "personal") {
+        query = query.eq("is_personal", true).eq("created_by", currentUserId);
+      } else {
+        query = query.eq("is_personal", false);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTemplates(data || []);
@@ -70,6 +96,7 @@ const TaskMessageTemplates = () => {
         task_type: newTaskType,
         message: newMessage.trim(),
         created_by: user.id,
+        is_personal: activeTab === "personal",
       });
 
       if (error) throw error;
@@ -133,103 +160,125 @@ const TaskMessageTemplates = () => {
           Mensagens Padrão para Tarefas
         </CardTitle>
         <CardDescription>
-          Configure atalhos de mensagens rápidas por tipo de tarefa
+          Configure atalhos de mensagens rápidas por tipo de tarefa. Mensagens globais são visíveis para todos, pessoais são só suas.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Add new template */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="sm:w-48">
-            <Select value={newTaskType} onValueChange={setNewTaskType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {taskTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    <div className="flex items-center gap-2">
-                      <type.icon size={14} />
-                      {type.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1">
-            <Input
-              placeholder="Digite a mensagem padrão..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
-          </div>
-          <Button onClick={handleCreate}>
-            <Plus className="h-4 w-4 mr-1" />
-            Adicionar
-          </Button>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="global" className="gap-2">
+              <Globe size={14} />
+              Globais
+            </TabsTrigger>
+            <TabsTrigger value="personal" className="gap-2">
+              <User size={14} />
+              Pessoais
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Filter */}
-        <div className="flex items-center gap-2">
-          <Label className="text-sm text-muted-foreground">Filtrar por tipo:</Label>
-          <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              {taskTypes.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  <div className="flex items-center gap-2">
-                    <type.icon size={14} />
-                    {type.label}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Templates list */}
-        {loading ? (
-          <p className="text-center text-muted-foreground py-4">Carregando...</p>
-        ) : Object.keys(groupedTemplates).length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">
-            Nenhuma mensagem cadastrada
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {Object.entries(groupedTemplates).map(([type, msgs]) => (
-              <div key={type} className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  {getTaskTypeIcon(type)}
-                  {getTaskTypeLabel(type)}
-                  <Badge variant="secondary" className="text-xs">
-                    {msgs.length}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {msgs.map((template) => (
-                    <Badge
-                      key={template.id}
-                      variant="outline"
-                      className="px-3 py-1.5 text-sm cursor-default group hover:bg-destructive/10"
-                    >
-                      {template.message}
-                      <button
-                        onClick={() => handleDelete(template.id)}
-                        className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
+          <TabsContent value={activeTab} className="space-y-4 mt-4">
+            {/* Add new template */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="sm:w-48">
+                <Select value={newTaskType} onValueChange={setNewTaskType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {taskTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        <div className="flex items-center gap-2">
+                          <type.icon size={14} />
+                          {type.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="flex-1">
+                <Input
+                  placeholder="Digite a mensagem padrão..."
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                />
+              </div>
+              <Button onClick={handleCreate}>
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+            </div>
+
+            {/* Filter */}
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground">Filtrar:</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {taskTypes.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      <div className="flex items-center gap-2">
+                        <type.icon size={14} />
+                        {type.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Templates list */}
+            {loading ? (
+              <p className="text-center text-muted-foreground py-4">Carregando...</p>
+            ) : Object.keys(groupedTemplates).length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">
+                {activeTab === "personal" 
+                  ? "Nenhuma mensagem pessoal cadastrada" 
+                  : "Nenhuma mensagem global cadastrada"}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(groupedTemplates).map(([type, msgs]) => (
+                  <div key={type} className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      {getTaskTypeIcon(type)}
+                      {getTaskTypeLabel(type)}
+                      <Badge variant="secondary" className="text-xs">
+                        {msgs.length}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {msgs.map((template) => (
+                        <Badge
+                          key={template.id}
+                          variant="outline"
+                          className="px-3 py-1.5 text-sm cursor-default group hover:bg-destructive/10"
+                        >
+                          {template.message}
+                          {template.usage_count > 0 && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({template.usage_count})
+                            </span>
+                          )}
+                          <button
+                            onClick={() => handleDelete(template.id)}
+                            className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

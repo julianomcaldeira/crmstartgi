@@ -21,6 +21,7 @@ import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
+import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -530,6 +531,15 @@ const Tarefas = () => {
               <DialogTitle className="text-2xl">Nova Tarefa</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4 mt-4">
+              <div className="flex justify-end">
+                <TaskTemplateSelector 
+                  onSelect={(template) => {
+                    setTaskType(template.task_type);
+                    setPriority(template.priority);
+                    setDescription(template.description);
+                  }} 
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="taskType">Tipo de Tarefa *</Label>

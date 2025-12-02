@@ -1291,25 +1291,31 @@ export type Database = {
           created_at: string | null
           created_by: string
           id: string
+          is_personal: boolean
           message: string
           task_type: string
           updated_at: string | null
+          usage_count: number
         }
         Insert: {
           created_at?: string | null
           created_by: string
           id?: string
+          is_personal?: boolean
           message: string
           task_type: string
           updated_at?: string | null
+          usage_count?: number
         }
         Update: {
           created_at?: string | null
           created_by?: string
           id?: string
+          is_personal?: boolean
           message?: string
           task_type?: string
           updated_at?: string | null
+          usage_count?: number
         }
         Relationships: []
       }
@@ -1354,6 +1360,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      task_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_global: boolean
+          name: string
+          priority: string
+          task_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          name: string
+          priority?: string
+          task_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          name?: string
+          priority?: string
+          task_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       tasks: {
         Row: {
