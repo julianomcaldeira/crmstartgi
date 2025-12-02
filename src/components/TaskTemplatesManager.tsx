@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase, Globe, User, Edit } from "lucide-react";
+import { Plus, Trash2, FileText, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase, Globe, User, Edit, FolderOpen, Tag } from "lucide-react";
 
 interface TaskTemplate {
   id: string;
@@ -21,7 +21,19 @@ interface TaskTemplate {
   description: string | null;
   is_global: boolean;
   created_by: string;
+  category: string | null;
 }
+
+const defaultCategories = [
+  "geral",
+  "prospecção",
+  "qualificação",
+  "apresentação",
+  "proposta",
+  "negociação",
+  "pós-venda",
+  "suporte",
+];
 
 const taskTypes = [
   { value: "ligacao", label: "Ligação", icon: Phone },
@@ -55,6 +67,9 @@ const TaskTemplatesManager = () => {
   const [priority, setPriority] = useState("medium");
   const [description, setDescription] = useState("");
   const [isGlobal, setIsGlobal] = useState(false);
+  const [category, setCategory] = useState("geral");
+  const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [availableCategories, setAvailableCategories] = useState<string[]>(defaultCategories);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -85,6 +100,7 @@ const TaskTemplatesManager = () => {
       let query = supabase
         .from("task_templates")
         .select("*")
+        .order("category")
         .order("name");
 
       if (activeTab === "personal") {
@@ -97,6 +113,13 @@ const TaskTemplatesManager = () => {
 
       if (error) throw error;
       setTemplates(data || []);
+      
+      // Extract unique categories
+      const categories = new Set(defaultCategories);
+      data?.forEach(t => {
+        if (t.category) categories.add(t.category);
+      });
+      setAvailableCategories(Array.from(categories).sort());
     } catch (error) {
       console.error("Error fetching templates:", error);
       toast.error("Erro ao carregar templates");
@@ -122,6 +145,7 @@ const TaskTemplatesManager = () => {
         description: description.trim() || null,
         is_global: activeTab === "global" && (userRole === "admin" || userRole === "gestor"),
         created_by: user.id,
+        category: category.trim() || "geral",
       };
 
       if (editingTemplate) {
@@ -155,6 +179,7 @@ const TaskTemplatesManager = () => {
     setPriority(template.priority);
     setDescription(template.description || "");
     setIsGlobal(template.is_global);
+    setCategory(template.category || "geral");
     setDialogOpen(true);
   };
 
@@ -182,6 +207,7 @@ const TaskTemplatesManager = () => {
     setPriority("medium");
     setDescription("");
     setIsGlobal(false);
+    setCategory("geral");
   };
 
   const getTaskTypeLabel = (type: string) => {
@@ -233,7 +259,23 @@ const TaskTemplatesManager = () => {
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4 mt-4">
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <FolderOpen size={16} className="text-muted-foreground" />
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filtrar por categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    {availableCategories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        <span className="capitalize">{cat}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <Dialog open={dialogOpen} onOpenChange={(open) => {
                 setDialogOpen(open);
                 if (!open) resetForm();
@@ -307,6 +349,25 @@ const TaskTemplatesManager = () => {
                       />
                     </div>
 
+                    <div className="space-y-2">
+                      <Label>Categoria</Label>
+                      <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione uma categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              <div className="flex items-center gap-2 capitalize">
+                                <FolderOpen size={14} />
+                                {cat}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {activeTab === "global" && !canCreateGlobal && (
                       <p className="text-sm text-muted-foreground">
                         Apenas administradores e gestores podem criar templates globais. Este template será salvo como pessoal.
@@ -336,50 +397,76 @@ const TaskTemplatesManager = () => {
                   : "Nenhum template global cadastrado"}
               </p>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="p-4 border rounded-lg bg-card hover:border-primary/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {getTaskTypeIcon(template.task_type)}
-                        <h4 className="font-medium">{template.name}</h4>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => handleEdit(template)}
-                        >
-                          <Edit size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(template.id)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
+              <>
+                {/* Group templates by category */}
+                {Object.entries(
+                  templates
+                    .filter(t => filterCategory === "all" || t.category === filterCategory)
+                    .reduce((acc, template) => {
+                      const cat = template.category || "geral";
+                      if (!acc[cat]) acc[cat] = [];
+                      acc[cat].push(template);
+                      return acc;
+                    }, {} as Record<string, TaskTemplate[]>)
+                ).sort(([a], [b]) => a.localeCompare(b)).map(([categoryName, categoryTemplates]) => (
+                  <div key={categoryName} className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <FolderOpen size={14} />
+                      <span className="capitalize">{categoryName}</span>
+                      <Badge variant="secondary" className="text-xs">{categoryTemplates.length}</Badge>
                     </div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        {getTaskTypeLabel(template.task_type)}
-                      </Badge>
-                      {getPriorityBadge(template.priority)}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {categoryTemplates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="p-4 border rounded-lg bg-card hover:border-primary/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {getTaskTypeIcon(template.task_type)}
+                              <h4 className="font-medium">{template.name}</h4>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => handleEdit(template)}
+                              >
+                                <Edit size={14} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => handleDelete(template.id)}
+                              >
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs">
+                              {getTaskTypeLabel(template.task_type)}
+                            </Badge>
+                            {getPriorityBadge(template.priority)}
+                          </div>
+                          {template.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {template.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    {template.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {template.description}
-                      </p>
-                    )}
                   </div>
                 ))}
-              </div>
+                {templates.filter(t => filterCategory === "all" || t.category === filterCategory).length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    Nenhum template encontrado para esta categoria
+                  </p>
+                )}
+              </>
             )}
           </TabsContent>
         </Tabs>
