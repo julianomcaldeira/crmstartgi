@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { FileText, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileText, Phone, Mail, MessageCircle, Users, MapPin, Video, Briefcase, FolderOpen } from "lucide-react";
 
 interface TaskTemplate {
   id: string;
@@ -12,6 +13,7 @@ interface TaskTemplate {
   priority: string;
   description: string | null;
   is_global: boolean;
+  category: string | null;
 }
 
 interface TaskTemplateSelectorProps {
@@ -51,6 +53,7 @@ const TaskTemplateSelector = ({ onSelect }: TaskTemplateSelectorProps) => {
         .from("task_templates")
         .select("*")
         .or(`is_global.eq.true,created_by.eq.${user?.id}`)
+        .order("category")
         .order("name");
 
       if (error) throw error;
@@ -71,6 +74,14 @@ const TaskTemplateSelector = ({ onSelect }: TaskTemplateSelectorProps) => {
 
   if (templates.length === 0) return null;
 
+  // Group templates by category
+  const groupedTemplates = templates.reduce((acc, template) => {
+    const cat = template.category || "geral";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(template);
+    return acc;
+  }, {} as Record<string, TaskTemplate[]>);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -80,42 +91,52 @@ const TaskTemplateSelector = ({ onSelect }: TaskTemplateSelectorProps) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-2" align="start">
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground px-2 py-1">
-            Selecione um template para preencher automaticamente
-          </p>
-          {templates.map((template) => {
-            const Icon = taskTypeIcons[template.task_type] || FileText;
-            const priority = priorityLabels[template.priority];
-            return (
-              <button
-                key={template.id}
-                className="w-full flex items-start gap-3 p-2 rounded-md hover:bg-muted text-left transition-colors"
-                onClick={() => handleSelect(template)}
-              >
-                <Icon size={16} className="mt-0.5 text-muted-foreground" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm truncate">{template.name}</span>
-                    {template.is_global && (
-                      <Badge variant="secondary" className="text-[10px] px-1">Global</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge className={`text-[10px] px-1.5 ${priority?.color}`}>
-                      {priority?.label}
-                    </Badge>
-                  </div>
-                  {template.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                      {template.description}
-                    </p>
-                  )}
+        <ScrollArea className="max-h-[300px]">
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground px-2 py-1">
+              Selecione um template para preencher automaticamente
+            </p>
+            {Object.entries(groupedTemplates).sort(([a], [b]) => a.localeCompare(b)).map(([categoryName, categoryTemplates]) => (
+              <div key={categoryName} className="space-y-1">
+                <div className="flex items-center gap-2 px-2 text-xs font-medium text-muted-foreground">
+                  <FolderOpen size={12} />
+                  <span className="capitalize">{categoryName}</span>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+                {categoryTemplates.map((template) => {
+                  const Icon = taskTypeIcons[template.task_type] || FileText;
+                  const priority = priorityLabels[template.priority];
+                  return (
+                    <button
+                      key={template.id}
+                      className="w-full flex items-start gap-3 p-2 rounded-md hover:bg-muted text-left transition-colors"
+                      onClick={() => handleSelect(template)}
+                    >
+                      <Icon size={16} className="mt-0.5 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{template.name}</span>
+                          {template.is_global && (
+                            <Badge variant="secondary" className="text-[10px] px-1">Global</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge className={`text-[10px] px-1.5 ${priority?.color}`}>
+                            {priority?.label}
+                          </Badge>
+                        </div>
+                        {template.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {template.description}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
       </PopoverContent>
     </Popover>
   );
