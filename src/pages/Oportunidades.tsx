@@ -59,6 +59,7 @@ const Oportunidades = () => {
   const [lossReasonDialogOpen, setLossReasonDialogOpen] = useState(false);
   const [selectedLossReason, setSelectedLossReason] = useState<string>("");
   const [pendingStatus, setPendingStatus] = useState<string>("");
+  const [pendingOpportunityId, setPendingOpportunityId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -381,6 +382,14 @@ const Oportunidades = () => {
   };
 
   const updateOpportunityStatus = async (oppId: string, newStatus: string, showToast = true) => {
+    // Check if changing to "lost" status - show loss reason dialog
+    if (newStatus === "lost") {
+      setPendingOpportunityId(oppId);
+      setPendingStatus(newStatus);
+      setLossReasonDialogOpen(true);
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -726,13 +735,60 @@ const Oportunidades = () => {
     }
   };
 
-  const handleLossReasonSelected = (reasonId: string) => {
+  const handleLossReasonSelected = async (reasonId: string) => {
     setSelectedLossReason(reasonId);
     setLossReasonDialogOpen(false);
     
-    // Now submit the form with the loss reason
-    const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-    handleUpdateOpportunity(fakeEvent);
+    // Check if this is from drag-and-drop
+    if (pendingOpportunityId) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("Usuário não autenticado");
+
+        // Get current status
+        const { data: currentOpp } = await supabase
+          .from("opportunities")
+          .select("status")
+          .eq("id", pendingOpportunityId)
+          .single();
+
+        const { error } = await supabase
+          .from("opportunities")
+          .update({ 
+            status: "lost" as any,
+            loss_reason_id: reasonId 
+          })
+          .eq("id", pendingOpportunityId);
+
+        if (error) throw error;
+
+        // Log activity
+        if (currentOpp) {
+          await supabase.from("opportunity_activities").insert({
+            opportunity_id: pendingOpportunityId,
+            activity_type: "status_change",
+            description: "Estágio da oportunidade alterado",
+            old_value: stages.find(s => s.key === currentOpp.status)?.label,
+            new_value: "Perdido",
+            created_by: user.id,
+          });
+        }
+
+        toast.success("Fase atualizada com sucesso!");
+        fetchData();
+      } catch (error) {
+        console.error("Error updating opportunity:", error);
+        toast.error("Erro ao atualizar fase");
+      } finally {
+        setPendingOpportunityId(null);
+        setPendingStatus("");
+        setSelectedLossReason("");
+      }
+    } else {
+      // From edit form - submit the form with the loss reason
+      const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+      handleUpdateOpportunity(fakeEvent);
+    }
   };
 
   return (
@@ -1712,7 +1768,14 @@ const Oportunidades = () => {
 
       <LossReasonDialog
         open={lossReasonDialogOpen}
-        onOpenChange={setLossReasonDialogOpen}
+        onOpenChange={(open) => {
+          setLossReasonDialogOpen(open);
+          if (!open) {
+            // Reset pending states when dialog is closed
+            setPendingOpportunityId(null);
+            setPendingStatus("");
+          }
+        }}
         onReasonSelected={handleLossReasonSelected}
       />
 
