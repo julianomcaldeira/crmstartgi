@@ -40,15 +40,17 @@ export const NotificationSystem = () => {
         });
       }
 
-      // Check opportunities closing soon
+      // Check opportunities closing soon (only for current user)
       const { data: closingOpportunities } = await supabase
         .from("opportunities")
         .select("title, expected_close_date, clients(company_name)")
+        .eq("assigned_to", user.id)
         .in("status", ["proposal", "negotiation"])
         .lte("expected_close_date", threeDaysFromNow.toISOString())
         .gte("expected_close_date", now.toISOString());
 
-      if (closingOpportunities && closingOpportunities.length > 0) {
+      if (closingOpportunities && closingOpportunities.length > 0 && closingOpportunities.length <= 3) {
+        // Only show notification if there are few opportunities to avoid spam
         closingOpportunities.forEach((opp: any) => {
           toast.warning("Oportunidade próxima do fechamento", {
             description: `${opp.clients?.company_name} - ${new Date(opp.expected_close_date).toLocaleDateString("pt-BR")}`,
