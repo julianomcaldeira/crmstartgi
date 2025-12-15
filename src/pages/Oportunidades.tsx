@@ -1318,8 +1318,8 @@ const Oportunidades = () => {
           <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
-              const stageValue = stageOpps.reduce(
-                (sum, opp) => sum + (Number(opp.value) || 0),
+              const stageAnnualizedValue = stageOpps.reduce(
+                (sum, opp) => sum + calculateAnnualizedValue(opp.monthly_value, opp.implementation_value),
                 0
               );
               const metrics = calculateStageMetrics(stage.key);
@@ -1414,10 +1414,10 @@ const Oportunidades = () => {
                         </span>
                       </div>
                       
-                      <div className="flex items-center justify-between pt-1.5 border-t border-border/30">
-                        <span className="text-[10px] font-medium text-muted-foreground">Total</span>
-                        <p className="text-xs font-bold text-primary">
-                          {formatCurrency(stageValue)}
+                      <div className="flex items-center justify-between pt-1.5 border-t border-border/30 bg-gradient-to-r from-emerald-500/10 to-transparent rounded px-1.5 py-1">
+                        <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400">Total Anualizado</span>
+                        <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                          {formatCurrency(stageAnnualizedValue)}
                         </p>
                       </div>
                       
