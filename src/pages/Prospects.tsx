@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { ImportWizard } from "@/components/ImportWizard";
@@ -104,6 +105,8 @@ const Prospects = () => {
     name: "", role: "", email: "", phone: "", mobile: "", is_primary: true
   }]);
 
+  const [initialFilterApplied, setInitialFilterApplied] = useState(false);
+
   useEffect(() => {
     const initialize = async () => {
       // Executar fetches independentes em paralelo para maior velocidade
@@ -120,6 +123,14 @@ const Prospects = () => {
     
     initialize();
   }, []);
+
+  // Aplicar filtro automático para vendedor
+  useEffect(() => {
+    if (currentUserId && userRoles.includes('vendedor') && !userRoles.includes('admin') && !userRoles.includes('gestor') && !initialFilterApplied) {
+      setSelectedSeller("my_portfolio");
+      setInitialFilterApplied(true);
+    }
+  }, [currentUserId, userRoles, initialFilterApplied]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -1530,6 +1541,12 @@ const Prospects = () => {
             <p className="text-xs text-muted-foreground">
               (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
+          )}
+          {userRoles.includes('vendedor') && !userRoles.includes('admin') && !userRoles.includes('gestor') && selectedSeller === "my_portfolio" && (
+            <Badge variant="secondary" className="gap-1">
+              <User size={12} />
+              Minha Carteira
+            </Badge>
           )}
           {hasActiveFilters && (
             <Button
