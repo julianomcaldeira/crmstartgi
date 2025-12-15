@@ -55,7 +55,13 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       const files = Array.from(e.target.files);
       
       for (const file of files) {
-        const fileName = `${user.id}/${Date.now()}_${file.name}`;
+        // Sanitize filename to remove special characters and spaces
+        const sanitizedName = file.name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+          .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace special chars with underscore
+          .replace(/_{2,}/g, '_'); // Replace multiple underscores with single
+        const fileName = `${user.id}/${Date.now()}_${sanitizedName}`;
         
         const { error: uploadError } = await supabase.storage
           .from("opportunity-attachments")
