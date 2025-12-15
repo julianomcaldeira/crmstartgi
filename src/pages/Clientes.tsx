@@ -16,14 +16,47 @@ const Clientes = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [viewMode, setViewMode] = useViewMode("clientes-view-mode", "cards");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [filterSeller, setFilterSeller] = useState<string>("all");
+  const [initialFilterApplied, setInitialFilterApplied] = useState(false);
   
   // Quick filters for compact view
   const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
   const [quickRegionFilter, setQuickRegionFilter] = useState("all");
 
   useEffect(() => {
-    fetchClientes();
+    checkUserRoleAndFetch();
   }, []);
+
+  // Apply initial filter for vendedor role
+  useEffect(() => {
+    if (currentUserId && userRole === "vendedor" && !initialFilterApplied) {
+      setFilterSeller(currentUserId);
+      setInitialFilterApplied(true);
+    }
+  }, [currentUserId, userRole, initialFilterApplied]);
+
+  const checkUserRoleAndFetch = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setCurrentUserId(user.id);
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserRole(roleData?.role || null);
+      
+      await fetchClientes();
+    } catch (error) {
+      console.error("Error checking user role:", error);
+    }
+  };
 
   const fetchClientes = async () => {
     try {
@@ -33,7 +66,7 @@ const Clientes = () => {
         .select(`
           *,
           opportunities!inner(id, status, value, created_at),
-          profiles:created_by(full_name, email)
+          profiles:created_by(id, full_name, email)
         `)
         .eq("opportunities.status", "won")
         .order("company_name");
@@ -81,7 +114,8 @@ const Clientes = () => {
   const filteredClientes = clientes.filter((cliente) => {
     const matchesQuickRating = quickRatingFilter === null || cliente.rating === quickRatingFilter;
     const matchesQuickRegion = quickRegionFilter === "all" || cliente.region === quickRegionFilter;
-    return matchesQuickRating && matchesQuickRegion;
+    const matchesSeller = filterSeller === "all" || cliente.profiles?.id === filterSeller;
+    return matchesQuickRating && matchesQuickRegion && matchesSeller;
   });
 
   return (
@@ -93,6 +127,21 @@ const Clientes = () => {
             Empresas com oportunidades ganhas - Total de {filteredClientes.length} cliente
             {filteredClientes.length !== 1 ? "s" : ""}
           </p>
+          {filterSeller !== "all" && userRole === "vendedor" && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="secondary" className="text-xs">
+                Exibindo apenas suas oportunidades
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => setFilterSeller("all")}
+              >
+                Ver todos
+              </Button>
+            </div>
+          )}
         </div>
         
         {clientes.length > 0 && (
