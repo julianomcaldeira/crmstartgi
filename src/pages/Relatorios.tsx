@@ -663,7 +663,7 @@ const Relatorios = () => {
                             >
                               <div>
                                 <p className="font-medium text-foreground">
-                                  {clientFeira.client?.trade_name || clientFeira.client?.company_name}
+                                  {clientFeira.client?.company_name || clientFeira.client?.trade_name}
                                 </p>
                                 <p className="text-sm text-muted-foreground">
                                   Cadastrado em {new Date(clientFeira.created_at).toLocaleDateString('pt-BR')}

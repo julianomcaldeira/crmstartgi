@@ -287,7 +287,7 @@ const ClienteDetalhes = () => {
 
       const { error } = await supabase.from("opportunities").insert([
         {
-          title: `Oportunidade - ${client?.trade_name || client?.company_name}`,
+          title: `Oportunidade - ${client?.company_name || client?.trade_name}`,
           client_id: id,
           product_id: oppFormData.product_id || null,
           implementation_value: oppFormData.implementation_value ? parseFloat(oppFormData.implementation_value) : null,

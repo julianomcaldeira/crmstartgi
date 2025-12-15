@@ -636,7 +636,7 @@ const Tarefas = () => {
                       setContactId("");
                       fetchContactsByClient(value);
                       const selected = clients.find(c => c.id === value);
-                      setClientSearchTerm(selected ? (selected.trade_name || selected.company_name) : "");
+                      setClientSearchTerm(selected ? (selected.company_name || selected.trade_name) : "");
                     }}
                   >
                     <SelectTrigger className="bg-background z-50">
@@ -655,7 +655,7 @@ const Tarefas = () => {
                         })
                         .map((client) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.trade_name || client.company_name}
+                            {client.company_name || client.trade_name}
                             {client.cnpj && (
                               <span className="text-xs text-muted-foreground ml-2">
                                 • {client.cnpj}
@@ -844,7 +844,7 @@ const Tarefas = () => {
                   <SelectItem value="all">Todos os clientes</SelectItem>
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.trade_name || client.company_name}
+                      {client.company_name || client.trade_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -941,7 +941,7 @@ const Tarefas = () => {
                             {task.client && (
                               <div className="flex items-center gap-1">
                                 <Building2 size={14} />
-                                <span>{task.client.trade_name || task.client.company_name}</span>
+                                <span>{task.client.company_name || task.client.trade_name}</span>
                               </div>
                             )}
                             {task.contact && (
@@ -1084,7 +1084,7 @@ const Tarefas = () => {
                                   {task.client && (
                                     <div className="flex items-center gap-1 text-muted-foreground mt-1">
                                       <Building2 size={12} />
-                                      <span className="truncate">{task.client.trade_name || task.client.company_name}</span>
+                                      <span className="truncate">{task.client.company_name || task.client.trade_name}</span>
                                     </div>
                                   )}
                                 </div>

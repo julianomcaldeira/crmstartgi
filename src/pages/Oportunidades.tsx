@@ -245,7 +245,7 @@ const Oportunidades = () => {
       if (!user) throw new Error("Usuário não autenticado");
 
       const { error } = await supabase.from("opportunities").insert([{
-        title: `Oportunidade - ${clients.find(c => c.id === clientId)?.trade_name || clients.find(c => c.id === clientId)?.company_name || 'Cliente'}`,
+        title: `Oportunidade - ${clients.find(c => c.id === clientId)?.company_name || clients.find(c => c.id === clientId)?.trade_name || 'Cliente'}`,
         client_id: clientId,
         product_id: productId || null,
         implementation_value: implementationValue ? parseFloat(implementationValue) : null,
@@ -951,7 +951,7 @@ const Oportunidades = () => {
                     <SelectContent>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.trade_name || client.company_name}
+                          {client.company_name || client.trade_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1470,7 +1470,7 @@ const Oportunidades = () => {
                             <div className="flex items-center gap-1">
                               <Building2 size={10} className="text-muted-foreground flex-shrink-0" />
                               <p className="text-[9px] font-medium text-foreground line-clamp-1 flex-1">
-                                {opp.client?.trade_name || opp.client?.company_name}
+                                {opp.client?.company_name || opp.client?.trade_name}
                               </p>
                             </div>
                             
@@ -1542,7 +1542,7 @@ const Oportunidades = () => {
                               <div className="flex items-center gap-1.5">
                                 <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
                                 <p className="text-[10px] font-medium text-foreground line-clamp-1">
-                                  {opp.client?.trade_name || opp.client?.company_name}
+                                  {opp.client?.company_name || opp.client?.trade_name}
                                 </p>
                               </div>
                               
@@ -1660,7 +1660,7 @@ const Oportunidades = () => {
                     <div className="flex-1">
                       <CardTitle className="mb-2">{opp.title}</CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        {opp.client?.trade_name || opp.client?.company_name}
+                        {opp.client?.company_name || opp.client?.trade_name}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

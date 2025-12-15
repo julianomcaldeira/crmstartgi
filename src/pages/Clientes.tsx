@@ -232,7 +232,7 @@ const Clientes = () => {
                       <Building2 className="h-6 w-6 text-green-600" />
                       <div>
                         <CardTitle className="text-xl">
-                          {cliente.trade_name || cliente.company_name}
+                          {cliente.company_name || cliente.trade_name}
                         </CardTitle>
                         {cliente.trade_name && (
                           <p className="text-sm text-muted-foreground">

@@ -743,7 +743,7 @@ const Dashboard = () => {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-xs truncate">
-                      {opp.clients?.trade_name || opp.clients?.company_name}
+                      {opp.clients?.company_name || opp.clients?.trade_name}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <Badge variant="outline" className="text-xs px-1 py-0">
