@@ -35,16 +35,23 @@ export const AlertsPanel = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
   useEffect(() => {
-    fetchAlerts();
-    subscribeToAlerts();
+    initializeAlerts();
   }, []);
 
-  const fetchAlerts = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+  const initializeAlerts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
+      await fetchAlerts(user.id);
+      subscribeToAlerts(user.id);
+    }
+  };
 
+  const fetchAlerts = async (userId: string) => {
+    try {
       const { data, error } = await supabase
         .from("opportunity_alerts")
         .select(`
@@ -53,7 +60,7 @@ export const AlertsPanel = () => {
             client:clients(company_name, trade_name)
           )
         `)
-        .eq("assigned_to", user.id)
+        .eq("assigned_to", userId)
         .is("dismissed_at", null)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -69,7 +76,7 @@ export const AlertsPanel = () => {
     }
   };
 
-  const subscribeToAlerts = () => {
+  const subscribeToAlerts = (userId: string) => {
     const channel = supabase
       .channel('opportunity-alerts-changes')
       .on(
@@ -77,13 +84,16 @@ export const AlertsPanel = () => {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'opportunity_alerts'
+          table: 'opportunity_alerts',
+          filter: `assigned_to=eq.${userId}`
         },
         (payload) => {
-          console.log('New alert:', payload);
-          fetchAlerts();
+          console.log('New alert for current user:', payload);
+          if (currentUserId) {
+            fetchAlerts(currentUserId);
+          }
           toast.info("Nova notificação recebida", {
-            description: payload.new.title
+            description: (payload.new as any).title
           });
         }
       )
