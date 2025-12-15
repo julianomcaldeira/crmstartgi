@@ -1586,12 +1586,64 @@ const Prospects = () => {
               (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
           )}
-          {userRoles.includes('vendedor') && !userRoles.includes('admin') && !userRoles.includes('gestor') && selectedSeller === "my_portfolio" && (
-            <Badge variant="secondary" className="gap-1">
-              <User size={12} />
-              Minha Carteira
-            </Badge>
-          )}
+          
+          {/* Active filter badges */}
+          <div className="flex flex-wrap gap-2">
+            {searchTerm && (
+              <Badge variant="secondary" className="gap-1 bg-blue-500/10 text-blue-700 border border-blue-500/30">
+                <Search size={12} />
+                Busca: "{searchTerm.length > 15 ? searchTerm.substring(0, 15) + '...' : searchTerm}"
+                <button onClick={() => setSearchTerm("")} className="ml-1 hover:text-blue-900">
+                  <XCircle size={12} />
+                </button>
+              </Badge>
+            )}
+            {selectedSeller !== "all" && (
+              <Badge variant="secondary" className="gap-1 bg-purple-500/10 text-purple-700 border border-purple-500/30">
+                <User size={12} />
+                {selectedSeller === "my_portfolio" ? "Minha Carteira" : 
+                 selectedSeller === "no_seller" ? "Sem Vendedor" :
+                 sellers.find(s => s.id === selectedSeller)?.full_name || "Vendedor"}
+                <button onClick={() => setSelectedSeller("all")} className="ml-1 hover:text-purple-900">
+                  <XCircle size={12} />
+                </button>
+              </Badge>
+            )}
+            {selectedFeiraFilter !== "all" && (
+              <Badge variant="secondary" className="gap-1 bg-green-500/10 text-green-700 border border-green-500/30">
+                <Building2 size={12} />
+                {feiras.find(f => f.id === selectedFeiraFilter)?.name || "Feira"}
+                <button onClick={() => setSelectedFeiraFilter("all")} className="ml-1 hover:text-green-900">
+                  <XCircle size={12} />
+                </button>
+              </Badge>
+            )}
+            {selectedCompanySize !== "all" && (
+              <Badge variant="secondary" className="gap-1 bg-amber-500/10 text-amber-700 border border-amber-500/30">
+                <Building2 size={12} />
+                Porte: {selectedCompanySize === "MEI" ? "MEI" : 
+                        selectedCompanySize === "ME" ? "Microempresa" :
+                        selectedCompanySize === "EPP" ? "Pequeno Porte" :
+                        selectedCompanySize === "medio" ? "Médio Porte" :
+                        selectedCompanySize === "grande" ? "Grande Porte" : selectedCompanySize}
+                <button onClick={() => setSelectedCompanySize("all")} className="ml-1 hover:text-amber-900">
+                  <XCircle size={12} />
+                </button>
+              </Badge>
+            )}
+            {(dateFilterStart || dateFilterEnd) && (
+              <Badge variant="secondary" className="gap-1 bg-cyan-500/10 text-cyan-700 border border-cyan-500/30">
+                <Calendar size={12} />
+                Cadastrado: {dateFilterStart && format(new Date(dateFilterStart + 'T00:00:00'), 'dd/MM/yy', { locale: ptBR })}
+                {dateFilterStart && dateFilterEnd && ' - '}
+                {dateFilterEnd && format(new Date(dateFilterEnd + 'T00:00:00'), 'dd/MM/yy', { locale: ptBR })}
+                <button onClick={() => { setDateFilterStart(""); setDateFilterEnd(""); }} className="ml-1 hover:text-cyan-900">
+                  <XCircle size={12} />
+                </button>
+              </Badge>
+            )}
+          </div>
+          
           {hasActiveFilters && (
             <Button
               variant="outline"
@@ -1600,7 +1652,7 @@ const Prospects = () => {
               className="gap-2 bg-orange-500/10 border-orange-500/30 text-orange-600 hover:bg-orange-500/20"
             >
               <XCircle size={16} />
-              Limpar Filtros
+              Limpar Tudo
             </Button>
           )}
           {userRoles.includes('admin') && filteredClients.length > 0 && (
