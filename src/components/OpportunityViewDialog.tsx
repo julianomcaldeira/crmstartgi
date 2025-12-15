@@ -3,12 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
+import OpportunityHistoryLog from "./OpportunityHistoryLog";
 interface OpportunityViewDialogProps {
   opportunity: any;
   open: boolean;
@@ -213,230 +214,252 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
           <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Status and Business Type Badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={getStatusVariant(opportunity.status)}>
-              {getStatusLabel(opportunity.status)}
-            </Badge>
-            {opportunity.business_type && (
-              <Badge variant="outline">
-                <Briefcase className="h-3 w-3 mr-1" />
-                {getBusinessTypeLabel(opportunity.business_type)}
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="attachments">
+              Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-1" />
+              Histórico
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details" className="space-y-6 mt-4">
+            {/* Status and Business Type Badges */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant={getStatusVariant(opportunity.status)}>
+                {getStatusLabel(opportunity.status)}
               </Badge>
-            )}
-            <Badge variant="secondary">
-              <Target className="h-3 w-3 mr-1" />
-              {opportunity.probability}% de chance
-            </Badge>
-            {opportunity.status === "won" && opportunity.close_cycle_days && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                <Clock className="h-3 w-3 mr-1" />
-                Fechado em {opportunity.close_cycle_days} {opportunity.close_cycle_days === 1 ? 'dia' : 'dias'}
+              {opportunity.business_type && (
+                <Badge variant="outline">
+                  <Briefcase className="h-3 w-3 mr-1" />
+                  {getBusinessTypeLabel(opportunity.business_type)}
+                </Badge>
+              )}
+              <Badge variant="secondary">
+                <Target className="h-3 w-3 mr-1" />
+                {opportunity.probability}% de chance
               </Badge>
+              {opportunity.status === "won" && opportunity.close_cycle_days && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Fechado em {opportunity.close_cycle_days} {opportunity.close_cycle_days === 1 ? 'dia' : 'dias'}
+                </Badge>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Description */}
+            {opportunity.description && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <TrendingUp className="h-4 w-4" />
+                  Descrição
+                </div>
+                <p className="text-foreground pl-6">{opportunity.description}</p>
+              </div>
             )}
-          </div>
 
-          <Separator />
+            {/* Client */}
+            {opportunity.client && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Building2 className="h-4 w-4" />
+                  Cliente
+                </div>
+                <p className="text-foreground pl-6">
+                  {opportunity.client.trade_name || opportunity.client.company_name}
+                </p>
+              </div>
+            )}
 
-          {/* Description */}
-          {opportunity.description && (
+            {/* Product */}
+            {opportunity.product && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Package className="h-4 w-4" />
+                  Produto
+                </div>
+                <div className="pl-6">
+                  <p className="text-foreground font-medium">{opportunity.product.name}</p>
+                  {opportunity.product.description && (
+                    <p className="text-sm text-muted-foreground mt-1">{opportunity.product.description}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Values */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <TrendingUp className="h-4 w-4" />
-                Descrição
+                <DollarSign className="h-4 w-4" />
+                Valores
               </div>
-              <p className="text-foreground pl-6">{opportunity.description}</p>
-            </div>
-          )}
-
-          {/* Client */}
-          {opportunity.client && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Building2 className="h-4 w-4" />
-                Cliente
-              </div>
-              <p className="text-foreground pl-6">
-                {opportunity.client.trade_name || opportunity.client.company_name}
-              </p>
-            </div>
-          )}
-
-          {/* Product */}
-          {opportunity.product && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Package className="h-4 w-4" />
-                Produto
-              </div>
-              <div className="pl-6">
-                <p className="text-foreground font-medium">{opportunity.product.name}</p>
-                {opportunity.product.description && (
-                  <p className="text-sm text-muted-foreground mt-1">{opportunity.product.description}</p>
+              <div className="pl-6 space-y-2">
+                {opportunity.implementation_value && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Implantação:</span>
+                    <span className="text-foreground font-medium">
+                      R$ {Number(opportunity.implementation_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {opportunity.monthly_value && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Mensalidade:</span>
+                    <span className="text-foreground font-medium">
+                      R$ {Number(opportunity.monthly_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+                {totalValue > 0 && (
+                  <>
+                    <Separator className="my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-semibold text-foreground">Total:</span>
+                      <span className="text-foreground font-bold text-lg">
+                        R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-          )}
 
-          {/* Values */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-              <DollarSign className="h-4 w-4" />
-              Valores
-            </div>
-            <div className="pl-6 space-y-2">
-              {opportunity.implementation_value && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Implantação:</span>
-                  <span className="text-foreground font-medium">
-                    R$ {Number(opportunity.implementation_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+            {/* Expected Close Date */}
+            {opportunity.expected_close_date && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  Data Prevista de Fechamento
                 </div>
-              )}
-              {opportunity.monthly_value && (
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">Mensalidade:</span>
-                  <span className="text-foreground font-medium">
-                    R$ {Number(opportunity.monthly_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-              )}
-              {totalValue > 0 && (
-                <>
-                  <Separator className="my-2" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-foreground">Total:</span>
-                    <span className="text-foreground font-bold text-lg">
-                      R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Expected Close Date */}
-          {opportunity.expected_close_date && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Data Prevista de Fechamento
-              </div>
-              <p className="text-foreground pl-6">
-                {format(parseISO(opportunity.expected_close_date), "PPP", { locale: ptBR })}
-              </p>
-            </div>
-          )}
-
-          {/* Assigned To */}
-          {opportunity.assigned && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <User className="h-4 w-4" />
-                Responsável
-              </div>
-              <p className="text-foreground pl-6">{opportunity.assigned.full_name}</p>
-            </div>
-          )}
-
-          {/* Created Date */}
-          {opportunity.created_at && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                Criada em
-              </div>
-              <p className="text-foreground pl-6">
-                {format(parseISO(opportunity.created_at), "PPP 'às' HH:mm", { locale: ptBR })}
-              </p>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Attachments Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                <Paperclip className="h-4 w-4" />
-                Anexos ({attachments.length})
-              </div>
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={uploadingFiles}
-                  asChild
-                >
-                  <span>
-                    <Upload className="h-4 w-4 mr-2" />
-                    {uploadingFiles ? "Enviando..." : "Adicionar"}
-                  </span>
-                </Button>
-                <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
-
-            {attachments.length > 0 && (
-              <div className="space-y-2 pl-6">
-                {attachments.map((attachment) => {
-                  const isImage = attachment.file_type?.startsWith('image/');
-                  const isPDF = attachment.file_type === 'application/pdf';
-                  const canPreview = isImage || isPDF;
-
-                  return (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div 
-                        className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
-                        onClick={() => canPreview && handlePreview(attachment)}
-                      >
-                        <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate hover:underline">{attachment.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(attachment.file_size)} • {format(parseISO(attachment.created_at), "dd/MM/yyyy HH:mm")}
-                            {canPreview && " • Clique para visualizar"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownload(attachment)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteAttachment(attachment)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
+                <p className="text-foreground pl-6">
+                  {format(parseISO(opportunity.expected_close_date), "PPP", { locale: ptBR })}
+                </p>
               </div>
             )}
-          </div>
-        </div>
+
+            {/* Assigned To */}
+            {opportunity.assigned && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  Responsável
+                </div>
+                <p className="text-foreground pl-6">{opportunity.assigned.full_name}</p>
+              </div>
+            )}
+
+            {/* Created Date */}
+            {opportunity.created_at && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  Criada em
+                </div>
+                <p className="text-foreground pl-6">
+                  {format(parseISO(opportunity.created_at), "PPP 'às' HH:mm", { locale: ptBR })}
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="attachments" className="mt-4">
+            {/* Attachments Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Paperclip className="h-4 w-4" />
+                  Anexos ({attachments.length})
+                </div>
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingFiles}
+                    asChild
+                  >
+                    <span>
+                      <Upload className="h-4 w-4 mr-2" />
+                      {uploadingFiles ? "Enviando..." : "Adicionar"}
+                    </span>
+                  </Button>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  {attachments.map((attachment) => {
+                    const isImage = attachment.file_type?.startsWith('image/');
+                    const isPDF = attachment.file_type === 'application/pdf';
+                    const canPreview = isImage || isPDF;
+
+                    return (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between p-2 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <div 
+                          className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
+                          onClick={() => canPreview && handlePreview(attachment)}
+                        >
+                          <Paperclip className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate hover:underline">{attachment.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(attachment.file_size)} • {format(parseISO(attachment.created_at), "dd/MM/yyyy HH:mm")}
+                              {canPreview && " • Clique para visualizar"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDownload(attachment)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteAttachment(attachment)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Paperclip className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum anexo adicionado</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-4">
+            <OpportunityHistoryLog opportunityId={opportunity.id} />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
 
       {/* Preview Dialog */}

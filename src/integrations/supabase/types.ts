@@ -1059,6 +1059,47 @@ export type Database = {
           },
         ]
       }
+      opportunity_history: {
+        Row: {
+          change_type: string
+          changed_at: string | null
+          changed_by: string
+          created_at: string | null
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          opportunity_id: string
+        }
+        Insert: {
+          change_type: string
+          changed_at?: string | null
+          changed_by: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          opportunity_id: string
+        }
+        Update: {
+          change_type?: string
+          changed_at?: string | null
+          changed_by?: string
+          created_at?: string | null
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          opportunity_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_history_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
