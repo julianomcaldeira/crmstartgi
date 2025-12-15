@@ -75,6 +75,7 @@ const Dashboard = () => {
   const fetchTodayTasks = async () => {
     const today = format(new Date(), "yyyy-MM-dd");
     
+    // Buscar tarefas pendentes de hoje E tarefas atrasadas (data passada)
     let query = supabase
       .from("tasks")
       .select(`
@@ -83,9 +84,8 @@ const Dashboard = () => {
         contacts(name)
       `)
       .eq("status", "pending")
-      .gte("due_date", `${today}T00:00:00`)
       .lte("due_date", `${today}T23:59:59`)
-      .order("due_date");
+      .order("due_date", { ascending: true });
 
     if (userRole === "vendedor") {
       query = query.eq("assigned_to", userId);
@@ -473,7 +473,7 @@ const Dashboard = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground">Tarefas Hoje</p>
+                <p className="text-xs text-muted-foreground">Tarefas Pendentes</p>
                 <p className="text-2xl font-bold text-blue-600">{todayTasks.length}</p>
               </div>
               <CheckSquare className="h-8 w-8 text-blue-500/30" />
