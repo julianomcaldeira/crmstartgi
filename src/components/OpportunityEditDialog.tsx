@@ -114,7 +114,7 @@ export function OpportunityEditDialog({
                     <SelectContent className="bg-background z-50">
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.trade_name || client.company_name}
+                          {client.company_name || client.trade_name}
                         </SelectItem>
                       ))}
                     </SelectContent>

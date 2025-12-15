@@ -401,7 +401,7 @@ const Prospects = () => {
       if (existingClient) {
         const responsibleName = existingClient.created_by_profile?.full_name || "Usuário desconhecido";
         const responsibleEmail = existingClient.created_by_profile?.email || "";
-        const companyDisplayName = existingClient.trade_name || existingClient.company_name;
+        const companyDisplayName = existingClient.company_name || existingClient.trade_name;
         
         toast.error(
           `Este CNPJ já está cadastrado!`,
@@ -1684,11 +1684,11 @@ const Prospects = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-xl font-bold text-foreground mb-1 truncate">
-                        {client.trade_name || client.company_name}
+                        {client.company_name}
                       </h3>
                       {client.trade_name && (
                         <p className="text-sm text-muted-foreground mb-2 truncate">
-                          {client.company_name}
+                          {client.trade_name}
                         </p>
                       )}
                       
@@ -1836,7 +1836,7 @@ const Prospects = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 flex-1 min-w-0">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-sm truncate">
-                          {client.trade_name || client.company_name}
+                          {client.company_name || client.trade_name}
                         </h3>
                         <p className="text-xs text-muted-foreground truncate">
                           {client.cnpj}
@@ -1994,7 +1994,7 @@ const Prospects = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o prospect <strong>{prospectToDelete?.trade_name || prospectToDelete?.company_name}</strong>?
+              Tem certeza que deseja excluir o prospect <strong>{prospectToDelete?.company_name || prospectToDelete?.trade_name}</strong>?
               <br /><br />
               Esta ação é irreversível e excluirá permanentemente:
               <ul className="list-disc pl-6 mt-2">
@@ -2072,7 +2072,7 @@ const Prospects = () => {
             <div className="space-y-2">
               <Label>Prospect</Label>
               <p className="text-sm font-medium">
-                {prospectToTransfer?.trade_name || prospectToTransfer?.company_name}
+                {prospectToTransfer?.company_name || prospectToTransfer?.trade_name}
               </p>
             </div>
             

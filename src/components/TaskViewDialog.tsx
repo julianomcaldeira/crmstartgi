@@ -244,7 +244,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                 Cliente
               </div>
               <p className="text-foreground pl-6">
-                {task.clients.trade_name || task.clients.company_name}
+                {task.clients.company_name || task.clients.trade_name}
               </p>
             </div>
           )}

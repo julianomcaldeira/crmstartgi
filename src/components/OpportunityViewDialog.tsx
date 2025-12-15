@@ -271,7 +271,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
                   Cliente
                 </div>
                 <p className="text-foreground pl-6">
-                  {opportunity.client.trade_name || opportunity.client.company_name}
+                  {opportunity.client.company_name || opportunity.client.trade_name}
                 </p>
               </div>
             )}
