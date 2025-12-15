@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -1396,21 +1397,21 @@ const ClienteDetalhes = () => {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="contact_phone">Telefone</Label>
-                        <Input
+                        <PhoneInput
                           id="contact_phone"
                           value={contactFormData.phone}
-                          onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
-                          placeholder="(00) 0000-0000"
+                          onValueChange={(value) => setContactFormData({ ...contactFormData, phone: value })}
+                          placeholder="(00) 00000-0000"
                         />
                       </div>
                     </div>
                     <div className="grid gap-4 grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="contact_mobile">Celular</Label>
-                        <Input
+                        <PhoneInput
                           id="contact_mobile"
                           value={contactFormData.mobile}
-                          onChange={(e) => setContactFormData({ ...contactFormData, mobile: e.target.value })}
+                          onValueChange={(value) => setContactFormData({ ...contactFormData, mobile: value })}
                           placeholder="(00) 00000-0000"
                         />
                       </div>
