@@ -1477,14 +1477,15 @@ const Oportunidades = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-4 w-4 p-0 text-primary hover:text-primary/80"
+                                className="h-4 px-1 text-[8px] font-semibold text-primary hover:text-primary/80"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/prospect/${opp.client_id}`);
+                                  navigate(`/prospects/${opp.client_id}`);
                                 }}
                                 title="Ver Prospect"
                               >
-                                <ExternalLink size={8} />
+                                <ExternalLink size={8} className="mr-0.5" />
+                                Ver
                               </Button>
                             </div>
                             
@@ -1561,16 +1562,17 @@ const Oportunidades = () => {
                                   </p>
                                 </div>
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
-                                  className="h-5 w-5 p-0 text-primary hover:text-primary/80"
+                                  className="h-6 px-2 text-[10px] font-semibold whitespace-nowrap"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/prospect/${opp.client_id}`);
+                                    navigate(`/prospects/${opp.client_id}`);
                                   }}
                                   title="Ver Prospect"
                                 >
-                                  <ExternalLink size={10} />
+                                  <ExternalLink size={12} className="mr-1" />
+                                  Ver Prospect
                                 </Button>
                               </div>
                               
@@ -1697,7 +1699,7 @@ const Oportunidades = () => {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/prospect/${opp.client_id}`);
+                          navigate(`/prospects/${opp.client_id}`);
                         }}
                       >
                         <ExternalLink size={16} className="mr-1" />
