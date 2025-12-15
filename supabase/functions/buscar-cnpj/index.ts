@@ -141,7 +141,7 @@ serve(async (req) => {
       share_capital: parseFloat(data.capital_social || "0"),
       legal_nature: data.natureza_juridica || "",
       registration_status: data.situacao || "",
-      foundation_date: data.data_situacao || null,
+      foundation_date: data.abertura || null,
       cnae_principal: data.atividade_principal?.[0]?.code || "",
       cnae_description: data.atividade_principal?.[0]?.text || "",
     };
