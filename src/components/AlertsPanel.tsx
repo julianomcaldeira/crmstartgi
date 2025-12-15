@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, X, AlertCircle, Clock, TrendingDown, AlertTriangle } from "lucide-react";
+import { Bell, X, AlertCircle, Clock, TrendingDown, AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -139,6 +139,27 @@ export const AlertsPanel = () => {
     }
   };
 
+  const dismissAllAlerts = async () => {
+    if (!currentUserId || alerts.length === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from("opportunity_alerts")
+        .update({ dismissed_at: new Date().toISOString() })
+        .eq("assigned_to", currentUserId)
+        .is("dismissed_at", null);
+
+      if (error) throw error;
+
+      setAlerts([]);
+      setUnreadCount(0);
+      toast.success("Todas as notificações foram limpas");
+    } catch (error) {
+      console.error("Error dismissing all alerts:", error);
+      toast.error("Erro ao limpar notificações");
+    }
+  };
+
   const handleAlertClick = (alert: Alert) => {
     markAsRead(alert.id);
     navigate(`/oportunidades`);
@@ -191,13 +212,26 @@ export const AlertsPanel = () => {
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            Alertas Inteligentes
-            {unreadCount > 0 && (
-              <Badge variant="secondary">{unreadCount} não lidas</Badge>
+          <div className="flex items-center justify-between">
+            <SheetTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Alertas Inteligentes
+              {unreadCount > 0 && (
+                <Badge variant="secondary">{unreadCount} não lidas</Badge>
+              )}
+            </SheetTitle>
+            {alerts.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={dismissAllAlerts}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Limpar todas
+              </Button>
             )}
-          </SheetTitle>
+          </div>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-100px)] mt-4">
