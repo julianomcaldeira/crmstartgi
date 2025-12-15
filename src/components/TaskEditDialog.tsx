@@ -356,17 +356,22 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                 <Textarea
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Digite sua nota aqui..."
+                  placeholder="Digite sua nota ou grave um áudio..."
                   rows={3}
                   className="flex-1"
                 />
-                <Button
-                  type="button"
-                  onClick={handleAddNote}
-                  className="self-end"
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+                <div className="flex flex-col gap-2 self-end">
+                  <AudioRecorder
+                    onTranscription={(text) => setNewNote(prev => prev ? `${prev}\n${text}` : text)}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddNote}
+                    size="icon"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
 
