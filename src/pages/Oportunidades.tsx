@@ -1421,19 +1421,19 @@ const Oportunidades = () => {
                         </p>
                       </div>
                       
-                      {/* Performance Metrics */}
-                      {stage.key !== "won" && stage.key !== "lost" && (
-                        <div className="pt-2 space-y-1 border-t border-border/30">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-[9px] text-muted-foreground">Tempo médio</span>
+                      {/* Performance Metrics - Fixed height for symmetry */}
+                      <div className="pt-2 space-y-1 border-t border-border/30 min-h-[44px]">
+                        {stage.key !== "won" && stage.key !== "lost" && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-[9px] text-muted-foreground">Tempo médio</span>
+                              </div>
+                              <span className={`text-[10px] font-bold ${metrics.daysColor}`}>
+                                {metrics.avgDays}d
+                              </span>
                             </div>
-                            <span className={`text-[10px] font-bold ${metrics.daysColor}`}>
-                              {metrics.avgDays}d
-                            </span>
-                          </div>
-                          {metrics.conversionRate > 0 && (
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-1">
                                 <TrendingUpIcon className="h-3 w-3 text-muted-foreground" />
@@ -1443,9 +1443,9 @@ const Oportunidades = () => {
                                 {metrics.conversionRate}%
                               </span>
                             </div>
-                          )}
-                        </div>
-                      )}
+                          </>
+                        )}
+                      </div>
                     </CardHeader>
                   </Card>
 
