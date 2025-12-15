@@ -95,7 +95,7 @@ export const AudioRecorder = ({ onTranscription, disabled }: AudioRecorderProps)
       onClick={handleClick}
       disabled={disabled || isProcessing}
       title={isRecording ? "Parar gravação" : "Gravar áudio"}
-      className="shrink-0"
+      className={`shrink-0 ${isRecording ? "animate-pulse ring-2 ring-destructive ring-offset-2 ring-offset-background" : ""}`}
     >
       {isProcessing ? (
         <Loader2 className="h-4 w-4 animate-spin" />
