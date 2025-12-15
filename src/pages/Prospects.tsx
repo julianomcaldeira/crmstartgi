@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { ImportWizard } from "@/components/ImportWizard";
 import { QuickImportDialog } from "@/components/QuickImportDialog";
@@ -99,7 +101,10 @@ const Prospects = () => {
   const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
   const [quickRegionFilter, setQuickRegionFilter] = useState("all");
   const [quickSegmentFilter, setQuickSegmentFilter] = useState("all");
-
+  
+  // Date filter for creation date
+  const [dateFilterStart, setDateFilterStart] = useState("");
+  const [dateFilterEnd, setDateFilterEnd] = useState("");
   // Contacts
   const [contacts, setContacts] = useState<any[]>([{
     name: "", role: "", email: "", phone: "", mobile: "", is_primary: true
@@ -524,7 +529,7 @@ const Prospects = () => {
 
   const hasActiveFilters = searchTerm !== "" || selectedSeller !== "all" || selectedFeiraFilter !== "all" || 
     selectedCompanySize !== "all" || selectedRegion !== "" || quickRatingFilter !== null || 
-    quickRegionFilter !== "all" || quickSegmentFilter !== "all";
+    quickRegionFilter !== "all" || quickSegmentFilter !== "all" || dateFilterStart !== "" || dateFilterEnd !== "";
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -535,6 +540,8 @@ const Prospects = () => {
     setQuickRatingFilter(null);
     setQuickRegionFilter("all");
     setQuickSegmentFilter("all");
+    setDateFilterStart("");
+    setDateFilterEnd("");
     toast.success("Todos os filtros foram limpos");
   };
 
@@ -574,8 +581,28 @@ const Prospects = () => {
       const matchesQuickRegion = quickRegionFilter === "all" || client.region === quickRegionFilter;
       const matchesQuickSegment = quickSegmentFilter === "all" || client.segment === quickSegmentFilter;
       
+      // Date filter
+      let matchesDateFilter = true;
+      if (dateFilterStart || dateFilterEnd) {
+        const clientDate = client.created_at ? new Date(client.created_at) : null;
+        if (clientDate) {
+          if (dateFilterStart) {
+            const startDate = new Date(dateFilterStart);
+            startDate.setHours(0, 0, 0, 0);
+            if (clientDate < startDate) matchesDateFilter = false;
+          }
+          if (dateFilterEnd) {
+            const endDate = new Date(dateFilterEnd);
+            endDate.setHours(23, 59, 59, 999);
+            if (clientDate > endDate) matchesDateFilter = false;
+          }
+        } else {
+          matchesDateFilter = false;
+        }
+      }
+      
       return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
-        matchesQuickRating && matchesQuickRegion && matchesQuickSegment;
+        matchesQuickRating && matchesQuickRegion && matchesQuickSegment && matchesDateFilter;
     });
 
     // Apply sorting
@@ -600,7 +627,7 @@ const Prospects = () => {
 
     return sorted;
   }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, 
-      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy]);
+      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy, dateFilterStart, dateFilterEnd]);
 
   // Pagination with memoization
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
@@ -613,7 +640,7 @@ const Prospects = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter, sortBy]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter, sortBy, dateFilterStart, dateFilterEnd]);
 
   const canEditClient = (client: any) => {
     if (!currentUserId) return false;
@@ -1526,6 +1553,28 @@ const Prospects = () => {
                 className="pl-10"
               />
             </div>
+            <div className="relative w-full sm:w-48">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <Input
+                type="date"
+                placeholder="Data início"
+                value={dateFilterStart}
+                onChange={(e) => setDateFilterStart(e.target.value)}
+                className="pl-10"
+                title="Data de cadastro - início"
+              />
+            </div>
+            <div className="relative w-full sm:w-48">
+              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+              <Input
+                type="date"
+                placeholder="Data fim"
+                value={dateFilterEnd}
+                onChange={(e) => setDateFilterEnd(e.target.value)}
+                className="pl-10"
+                title="Data de cadastro - fim"
+              />
+            </div>
           </div>
         </CardHeader>
       </Card>
@@ -1709,6 +1758,13 @@ const Prospects = () => {
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <MapPin size={16} />
                             <span>{[client.city, client.state].filter(Boolean).join(", ")}</span>
+                          </div>
+                        )}
+
+                        {client.created_at && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar size={16} />
+                            <span>Cadastrado em {format(new Date(client.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                           </div>
                         )}
                       </div>
