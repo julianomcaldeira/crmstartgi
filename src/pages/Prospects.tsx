@@ -45,7 +45,7 @@ const Prospects = () => {
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
   const [selectedCompanySize, setSelectedCompanySize] = useState<string>("all");
-  const [selectedRegion, setSelectedRegion] = useState<string>("all");
+  const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
