@@ -819,6 +819,7 @@ export type Database = {
         Row: {
           assigned_to: string
           business_type: Database["public"]["Enums"]["business_type"] | null
+          charge_commission: boolean | null
           client_id: string
           close_cycle_days: number | null
           created_at: string | null
@@ -839,6 +840,7 @@ export type Database = {
         Insert: {
           assigned_to: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
+          charge_commission?: boolean | null
           client_id: string
           close_cycle_days?: number | null
           created_at?: string | null
@@ -859,6 +861,7 @@ export type Database = {
         Update: {
           assigned_to?: string
           business_type?: Database["public"]["Enums"]["business_type"] | null
+          charge_commission?: boolean | null
           client_id?: string
           close_cycle_days?: number | null
           created_at?: string | null
