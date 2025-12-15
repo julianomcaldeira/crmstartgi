@@ -1,11 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { History, User, Calendar, ArrowRight, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { History, User, Calendar, ArrowRight, Loader2, Filter, X } from "lucide-react";
+import { format, isAfter, isBefore, startOfDay, endOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface OpportunityHistoryLogProps {
@@ -56,6 +60,12 @@ const businessTypeLabels: Record<string, string> = {
   venda_na_base: "Venda na Base",
 };
 
+const changeTypeLabels: Record<string, string> = {
+  UPDATE: "Alteração",
+  INSERT: "Criação",
+  DELETE: "Exclusão",
+};
+
 const formatValue = (key: string, value: any): string => {
   if (value === null || value === undefined) return "-";
   
@@ -94,6 +104,13 @@ export const OpportunityHistoryLog = ({ opportunityId }: OpportunityHistoryLogPr
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<Record<string, string>>({});
+  
+  // Filters
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedChangeType, setSelectedChangeType] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -154,6 +171,57 @@ export const OpportunityHistoryLog = ({ opportunityId }: OpportunityHistoryLogPr
     }
   };
 
+  // Filter history entries
+  const filteredHistory = useMemo(() => {
+    return history.filter((entry) => {
+      // Filter by date range
+      if (startDate) {
+        const entryDate = parseISO(entry.changed_at);
+        const filterStart = startOfDay(parseISO(startDate));
+        if (isBefore(entryDate, filterStart)) return false;
+      }
+      
+      if (endDate) {
+        const entryDate = parseISO(entry.changed_at);
+        const filterEnd = endOfDay(parseISO(endDate));
+        if (isAfter(entryDate, filterEnd)) return false;
+      }
+      
+      // Filter by user
+      if (selectedUser !== "all" && entry.changed_by !== selectedUser) {
+        return false;
+      }
+      
+      // Filter by change type
+      if (selectedChangeType !== "all" && entry.change_type !== selectedChangeType) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [history, startDate, endDate, selectedUser, selectedChangeType]);
+
+  // Get unique users from history for filter
+  const historyUsers = useMemo(() => {
+    const uniqueUsers = new Set(history.map((entry) => entry.changed_by));
+    return Array.from(uniqueUsers);
+  }, [history]);
+
+  // Get unique change types from history
+  const changeTypes = useMemo(() => {
+    const uniqueTypes = new Set(history.map((entry) => entry.change_type));
+    return Array.from(uniqueTypes);
+  }, [history]);
+
+  const clearFilters = () => {
+    setStartDate("");
+    setEndDate("");
+    setSelectedUser("all");
+    setSelectedChangeType("all");
+  };
+
+  const hasActiveFilters = startDate || endDate || selectedUser !== "all" || selectedChangeType !== "all";
+
   const getChangedFields = (entry: HistoryEntry) => {
     const changes: { field: string; oldValue: any; newValue: any }[] = [];
     
@@ -209,67 +277,169 @@ export const OpportunityHistoryLog = ({ opportunityId }: OpportunityHistoryLogPr
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <History className="h-5 w-5" />
-          Histórico de Alterações
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <History className="h-5 w-5" />
+            Histórico de Alterações
+            <Badge variant="secondary" className="ml-2">
+              {filteredHistory.length} de {history.length}
+            </Badge>
+          </CardTitle>
+          <Button
+            variant={showFilters ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filtros
+            {hasActiveFilters && (
+              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                !
+              </Badge>
+            )}
+          </Button>
+        </div>
+        
+        {showFilters && (
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border/50 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate" className="text-sm">Data Início</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="endDate" className="text-sm">Data Fim</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="userFilter" className="text-sm">Usuário</Label>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                  <SelectTrigger id="userFilter" className="h-9">
+                    <SelectValue placeholder="Todos os usuários" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os usuários</SelectItem>
+                    {historyUsers.map((userId) => (
+                      <SelectItem key={userId} value={userId}>
+                        {users[userId] || "Usuário"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="changeTypeFilter" className="text-sm">Tipo de Alteração</Label>
+                <Select value={selectedChangeType} onValueChange={setSelectedChangeType}>
+                  <SelectTrigger id="changeTypeFilter" className="h-9">
+                    <SelectValue placeholder="Todos os tipos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {changeTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {changeTypeLabels[type] || type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {hasActiveFilters && (
+              <div className="flex justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="gap-2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar filtros
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-4">
-            {history.map((entry, index) => {
-              const changes = getChangedFields(entry);
-              
-              return (
-                <div key={entry.id}>
-                  <div className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-foreground">
-                          {users[entry.changed_by] || "Usuário"}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {entry.change_type === "UPDATE" ? "Alteração" : entry.change_type}
-                        </Badge>
+          {filteredHistory.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhuma alteração encontrada com os filtros selecionados</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredHistory.map((entry, index) => {
+                const changes = getChangedFields(entry);
+                
+                return (
+                  <div key={entry.id}>
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-5 w-5 text-primary" />
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(entry.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                      </div>
-                      
-                      <div className="mt-3 space-y-2">
-                        {changes.map((change, idx) => (
-                          <div 
-                            key={idx} 
-                            className="text-sm bg-muted/30 rounded-lg p-3 border border-border/50"
-                          >
-                            <span className="font-medium text-foreground">
-                              {fieldLabels[change.field] || change.field}:
-                            </span>
-                            <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                              <span className="line-through opacity-70">
-                                {formatFieldValue(change.field, change.oldValue)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-foreground">
+                            {users[entry.changed_by] || "Usuário"}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {changeTypeLabels[entry.change_type] || entry.change_type}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(entry.changed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </div>
+                        
+                        <div className="mt-3 space-y-2">
+                          {changes.map((change, idx) => (
+                            <div 
+                              key={idx} 
+                              className="text-sm bg-muted/30 rounded-lg p-3 border border-border/50"
+                            >
+                              <span className="font-medium text-foreground">
+                                {fieldLabels[change.field] || change.field}:
                               </span>
-                              <ArrowRight className="h-3 w-3 flex-shrink-0" />
-                              <span className="text-foreground font-medium">
-                                {formatFieldValue(change.field, change.newValue)}
-                              </span>
+                              <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                                <span className="line-through opacity-70">
+                                  {formatFieldValue(change.field, change.oldValue)}
+                                </span>
+                                <ArrowRight className="h-3 w-3 flex-shrink-0" />
+                                <span className="text-foreground font-medium">
+                                  {formatFieldValue(change.field, change.newValue)}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
                     </div>
+                    {index < filteredHistory.length - 1 && (
+                      <Separator className="my-4" />
+                    )}
                   </div>
-                  {index < history.length - 1 && (
-                    <Separator className="my-4" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
       </CardContent>
     </Card>
