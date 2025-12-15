@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.sync-radar-leads]
 verify_jwt = false
+
+[functions.transcribe-audio]
+verify_jwt = false
+
+[functions.ocr-business-card]
+verify_jwt = false
