@@ -13,6 +13,7 @@ import { Plus, Trash2, User, Clock, History } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
+import AudioRecorder from "@/components/AudioRecorder";
 
 interface TaskEditDialogProps {
   task: any;
@@ -323,7 +324,12 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
 
           {/* Description Section */}
           <div className="space-y-2">
-            <Label>Descrição da Tarefa</Label>
+            <div className="flex items-center justify-between">
+              <Label>Descrição da Tarefa</Label>
+              <AudioRecorder 
+                onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
+              />
+            </div>
             <TaskQuickMessages 
               taskType={taskType} 
               onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 
@@ -331,7 +337,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva os detalhes da tarefa..."
+              placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
               rows={4}
               className="resize-none"
             />
