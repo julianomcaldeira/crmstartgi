@@ -70,6 +70,8 @@ const Tarefas = () => {
     })
   );
 
+  const [initialFilterApplied, setInitialFilterApplied] = useState(false);
+
   useEffect(() => {
     fetchData();
     checkUpcomingTasks();
@@ -90,6 +92,14 @@ const Tarefas = () => {
       setDueDate(localDateTime);
     }
   }, [dialogOpen]);
+
+  // Apply initial filter for vendedor role - tasks are already filtered by assigned_to in fetchData
+  // but we keep this for consistency
+  useEffect(() => {
+    if (currentUserId && userRole === "vendedor" && !initialFilterApplied) {
+      setInitialFilterApplied(true);
+    }
+  }, [currentUserId, userRole, initialFilterApplied]);
 
   const checkUpcomingTasks = async () => {
     try {

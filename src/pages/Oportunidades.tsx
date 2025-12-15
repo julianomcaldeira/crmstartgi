@@ -60,6 +60,9 @@ const Oportunidades = () => {
   const [selectedLossReason, setSelectedLossReason] = useState<string>("");
   const [pendingStatus, setPendingStatus] = useState<string>("");
   const [pendingOpportunityId, setPendingOpportunityId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [initialFilterApplied, setInitialFilterApplied] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -167,8 +170,38 @@ const Oportunidades = () => {
   ];
 
   useEffect(() => {
-    fetchData();
+    checkUserRoleAndFetch();
   }, []);
+
+  // Apply initial filter for vendedor role
+  useEffect(() => {
+    if (currentUserId && userRole === "vendedor" && !initialFilterApplied) {
+      setQuickFilterSeller(currentUserId);
+      setFilterAssignedTo(currentUserId);
+      setInitialFilterApplied(true);
+    }
+  }, [currentUserId, userRole, initialFilterApplied]);
+
+  const checkUserRoleAndFetch = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      setCurrentUserId(user.id);
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      setUserRole(roleData?.role || null);
+      
+      await fetchData();
+    } catch (error) {
+      console.error("Error checking user role:", error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -806,6 +839,24 @@ const Oportunidades = () => {
           <p className="text-muted-foreground">
             Acompanhe suas oportunidades em cada fase
           </p>
+          {quickFilterSeller && userRole === "vendedor" && (
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="secondary" className="text-xs">
+                Exibindo apenas suas oportunidades
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-xs"
+                onClick={() => {
+                  setQuickFilterSeller("");
+                  setFilterAssignedTo("");
+                }}
+              >
+                Ver todas
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">

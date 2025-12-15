@@ -373,6 +373,35 @@ const Prospects = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      const cleanedCnpj = cnpj.replace(/\D/g, "");
+
+      // Check if CNPJ already exists with responsible user info
+      const { data: existingClient, error: checkError } = await supabase
+        .from("clients")
+        .select(`
+          id, company_name, trade_name,
+          created_by_profile:profiles!clients_created_by_fkey(full_name, email)
+        `)
+        .eq("cnpj", cleanedCnpj)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingClient) {
+        const responsibleName = existingClient.created_by_profile?.full_name || "Usuário desconhecido";
+        const responsibleEmail = existingClient.created_by_profile?.email || "";
+        const companyDisplayName = existingClient.trade_name || existingClient.company_name;
+        
+        toast.error(
+          `Este CNPJ já está cadastrado!`,
+          {
+            description: `A empresa "${companyDisplayName}" já existe na base e está sob responsabilidade de ${responsibleName}${responsibleEmail ? ` (${responsibleEmail})` : ''}.`,
+            duration: 8000,
+          }
+        );
+        return;
+      }
+
       // Concatenar endereço completo
       const fullAddress = [
         logradouro,
@@ -383,7 +412,7 @@ const Prospects = () => {
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .insert({
-          cnpj: cnpj.replace(/\D/g, ""),
+          cnpj: cleanedCnpj,
           company_name: companyName,
           trade_name: tradeName,
           email,
