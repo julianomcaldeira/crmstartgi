@@ -35,6 +35,8 @@ interface OpportunityEditDialogProps {
   setExpectedCloseDate: (value: string) => void;
   businessType: string;
   setBusinessType: (value: string) => void;
+  chargeCommission: boolean;
+  setChargeCommission: (value: boolean) => void;
   // Attachments
   attachments: any[];
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -69,6 +71,8 @@ export function OpportunityEditDialog({
   setExpectedCloseDate,
   businessType,
   setBusinessType,
+  chargeCommission,
+  setChargeCommission,
   attachments,
   onFileUpload,
   onDownloadAttachment,
@@ -229,6 +233,19 @@ export function OpportunityEditDialog({
                     onChange={(e) => setExpectedCloseDate(e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-chargeCommission"
+                  checked={chargeCommission}
+                  onChange={(e) => setChargeCommission(e.target.checked)}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <Label htmlFor="edit-chargeCommission" className="text-sm font-normal cursor-pointer">
+                  Cobrar comissão do cliente
+                </Label>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
