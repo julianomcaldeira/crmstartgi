@@ -40,6 +40,8 @@ import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
 import TaskTemplateSelector from "@/components/TaskTemplateSelector";
+import AudioRecorder from "@/components/AudioRecorder";
+import BusinessCardScanner from "@/components/BusinessCardScanner";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -1142,13 +1144,22 @@ const ClienteDetalhes = () => {
                           description: taskFormData.description ? `${taskFormData.description}\n${msg}` : msg 
                         })} 
                       />
-                      <Textarea
-                        id="description"
-                        value={taskFormData.description}
-                        onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
-                        placeholder="Adicione notas sobre esta tarefa..."
-                        rows={4}
-                      />
+                      <div className="flex gap-2">
+                        <Textarea
+                          id="description"
+                          value={taskFormData.description}
+                          onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
+                          placeholder="Adicione notas sobre esta tarefa..."
+                          rows={4}
+                          className="flex-1"
+                        />
+                        <AudioRecorder
+                          onTranscription={(text) => setTaskFormData({
+                            ...taskFormData,
+                            description: taskFormData.description ? `${taskFormData.description}\n${text}` : text
+                          })}
+                        />
+                      </div>
                     </div>
                     <div className="grid gap-4 grid-cols-2">
                       <div className="space-y-2">
@@ -1366,6 +1377,20 @@ const ClienteDetalhes = () => {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {!editingContact && (
+                      <BusinessCardScanner
+                        onContactExtracted={(contact) => {
+                          setContactFormData({
+                            ...contactFormData,
+                            name: contact.name || contactFormData.name,
+                            role: contact.role || contactFormData.role,
+                            email: contact.email || contactFormData.email,
+                            phone: contact.phone || contactFormData.phone,
+                            mobile: contact.mobile || contactFormData.mobile,
+                          });
+                        }}
+                      />
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="contact_name">Nome *</Label>
                       <Input
