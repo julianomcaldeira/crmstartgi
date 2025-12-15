@@ -22,6 +22,7 @@ import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
 import TaskTemplateSelector from "@/components/TaskTemplateSelector";
+import AudioRecorder from "@/components/AudioRecorder";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -577,13 +578,19 @@ const Tarefas = () => {
                   taskType={taskType} 
                   onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 
                 />
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Adicione notas sobre esta tarefa..."
-                  rows={4}
-                />
+                <div className="flex gap-2">
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Adicione notas ou grave um áudio..."
+                    rows={4}
+                    className="flex-1"
+                  />
+                  <AudioRecorder
+                    onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
