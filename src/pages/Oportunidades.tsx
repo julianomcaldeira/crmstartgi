@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { CurrencyInput, formatCurrency, calculateAnnualizedValue, formatAnnualizedValue } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -37,6 +38,7 @@ import {
 } from "@dnd-kit/core";
 
 const Oportunidades = () => {
+  const navigate = useNavigate();
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -1472,6 +1474,18 @@ const Oportunidades = () => {
                               <p className="text-[9px] font-medium text-foreground line-clamp-1 flex-1">
                                 {opp.client?.company_name || opp.client?.trade_name}
                               </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/prospect/${opp.client_id}`);
+                                }}
+                                title="Ver Prospect"
+                              >
+                                <ExternalLink size={8} />
+                              </Button>
                             </div>
                             
                             {/* Valor Anualizado Destacado */}
@@ -1539,11 +1553,25 @@ const Oportunidades = () => {
                               </div>
                             </CardHeader>
                             <CardContent className="p-3 pt-0 space-y-2">
-                              <div className="flex items-center gap-1.5">
-                                <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
-                                <p className="text-[10px] font-medium text-foreground line-clamp-1">
-                                  {opp.client?.company_name || opp.client?.trade_name}
-                                </p>
+                              <div className="flex items-center justify-between gap-1">
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <Building2 size={12} className="text-muted-foreground flex-shrink-0" />
+                                  <p className="text-[10px] font-medium text-foreground line-clamp-1">
+                                    {opp.client?.company_name || opp.client?.trade_name}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/prospect/${opp.client_id}`);
+                                  }}
+                                  title="Ver Prospect"
+                                >
+                                  <ExternalLink size={10} />
+                                </Button>
                               </div>
                               
                               {opp.product && (
@@ -1664,6 +1692,17 @@ const Oportunidades = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/prospect/${opp.client_id}`);
+                        }}
+                      >
+                        <ExternalLink size={16} className="mr-1" />
+                        Ver Prospect
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
