@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { CurrencyInput } from "@/components/ui/masked-input";
+import { CurrencyInput, formatCurrency, calculateAnnualizedValue, formatAnnualizedValue } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -1474,14 +1474,15 @@ const Oportunidades = () => {
                               </p>
                             </div>
                             
-                            {opp.value && (
-                              <div className="flex items-center justify-between p-1.5 bg-gradient-to-r from-primary/10 to-primary/5 rounded">
-                                <span className="text-[8px] font-medium text-muted-foreground">Valor</span>
-                                <p className="text-[10px] font-bold text-primary">
-                                  {formatCurrency(opp.value)}
+                            {/* Valor Anualizado Destacado */}
+                            <div className="p-1.5 bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 rounded border border-emerald-500/30">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[8px] font-medium text-emerald-700 dark:text-emerald-400">Anualizado</span>
+                                <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
                                 </p>
                               </div>
-                            )}
+                            </div>
                             
                             <div className="flex items-center justify-center pt-1">
                               <Badge variant="outline" className="text-[9px] font-semibold h-4">
@@ -1560,14 +1561,21 @@ const Oportunidades = () => {
                                 </div>
                               )}
                               
-                              {opp.value && (
-                                <div className="flex items-center justify-between p-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded border border-primary/20">
-                                  <span className="text-[10px] font-medium text-muted-foreground">Valor</span>
-                                  <p className="text-xs font-bold text-primary">
-                                    {formatCurrency(opp.value)}
-                                  </p>
+                              {/* Valor Anualizado Destacado */}
+                              <div className="p-2 bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent rounded-lg border border-emerald-500/30">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Valor Anualizado</span>
                                 </div>
-                              )}
+                                <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
+                                </p>
+                                {(opp.monthly_value || opp.implementation_value) && (
+                                  <div className="flex gap-2 mt-1 text-[8px] text-muted-foreground">
+                                    {opp.monthly_value && <span>Mensal: {formatCurrency(opp.monthly_value)}</span>}
+                                    {opp.implementation_value && <span>Impl: {formatCurrency(opp.implementation_value)}</span>}
+                                  </div>
+                                )}
+                              </div>
                               
                               <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-border/30">
                                 <Badge variant="outline" className="text-[10px] font-semibold h-4">
