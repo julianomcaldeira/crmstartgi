@@ -178,3 +178,15 @@ export const formatCurrency = (value: number | string) => {
     currency: 'BRL',
   }).format(numValue);
 };
+
+// Calculate annualized value: (monthly * 12) + implementation
+export const calculateAnnualizedValue = (monthlyValue?: number | null, implementationValue?: number | null): number => {
+  const monthly = monthlyValue || 0;
+  const implementation = implementationValue || 0;
+  return (monthly * 12) + implementation;
+};
+
+export const formatAnnualizedValue = (monthlyValue?: number | null, implementationValue?: number | null): string => {
+  const annualized = calculateAnnualizedValue(monthlyValue, implementationValue);
+  return formatCurrency(annualized);
+};

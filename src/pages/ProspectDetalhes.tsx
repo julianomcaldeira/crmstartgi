@@ -1019,6 +1019,19 @@ const ClienteDetalhes = () => {
                       </div>
                     </div>
 
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="charge_commission"
+                        checked={oppFormData.charge_commission}
+                        onChange={(e) => setOppFormData({ ...oppFormData, charge_commission: e.target.checked })}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                      <Label htmlFor="charge_commission" className="text-sm font-normal cursor-pointer">
+                        Cobrar comissão do cliente
+                      </Label>
+                    </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="expected_close_date">Data Prevista de Fechamento</Label>
                       <Input
