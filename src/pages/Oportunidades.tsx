@@ -1715,7 +1715,7 @@ const Oportunidades = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Produto</p>
                       {opp.product ? (
@@ -1733,11 +1733,18 @@ const Oportunidades = () => {
                         <p className="text-sm font-medium">-</p>
                       )}
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Valor</p>
-                      <p className="font-semibold text-primary">
-                        {formatCurrency(opp.value)}
+                    <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 rounded-lg border border-emerald-500/30">
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-1 font-medium">Valor Anualizado</p>
+                      <p className="font-bold text-emerald-700 dark:text-emerald-400">
+                        {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
                       </p>
+                      {(opp.monthly_value || opp.implementation_value) && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {opp.monthly_value ? `M: ${formatCurrency(opp.monthly_value)}` : ''} 
+                          {opp.monthly_value && opp.implementation_value ? ' • ' : ''}
+                          {opp.implementation_value ? `I: ${formatCurrency(opp.implementation_value)}` : ''}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Probabilidade</p>
@@ -1755,6 +1762,12 @@ const Oportunidades = () => {
                           : "-"
                         }
                       </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+                      <Badge variant={opp.business_type === 'cliente_novo' ? 'default' : 'secondary'} className="text-xs">
+                        {opp.business_type === 'cliente_novo' ? 'Cliente Novo' : 'Venda na Base'}
+                      </Badge>
                     </div>
                   </div>
                   {opp.description && (
