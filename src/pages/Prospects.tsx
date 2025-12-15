@@ -539,10 +539,14 @@ const Prospects = () => {
   };
 
   const filteredClients = useMemo(() => {
+    // Remove máscara do CNPJ se o usuário digitar com formatação
+    const cleanedSearchTerm = searchTerm.replace(/\D/g, '');
+    const isSearchingByCnpj = cleanedSearchTerm.length > 0 && /^\d+$/.test(cleanedSearchTerm);
+    
     const filtered = clients.filter((client) => {
       const matchesSearch = searchTerm === "" || 
         client.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.cnpj?.includes(searchTerm) ||
+        (isSearchingByCnpj ? client.cnpj?.includes(cleanedSearchTerm) : client.cnpj?.includes(searchTerm)) ||
         (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
       
       // Enhanced seller filter with "my_portfolio" and "no_seller" options
