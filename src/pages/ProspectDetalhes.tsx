@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
-import { PhoneInput } from "@/components/ui/masked-input";
+import { PhoneInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -109,6 +109,7 @@ const ClienteDetalhes = () => {
     assigned_to: "",
     expected_close_date: "",
     business_type: "cliente_novo",
+    charge_commission: false,
   });
 
   useEffect(() => {
@@ -299,6 +300,7 @@ const ClienteDetalhes = () => {
           expected_close_date: oppFormData.expected_close_date || null,
           created_by: user.id,
           business_type: oppFormData.business_type as any,
+          charge_commission: oppFormData.charge_commission,
         },
       ]);
 
@@ -334,6 +336,7 @@ const ClienteDetalhes = () => {
       assigned_to: "",
       expected_close_date: "",
       business_type: "cliente_novo",
+      charge_commission: false,
     });
   };
 
@@ -920,24 +923,20 @@ const ClienteDetalhes = () => {
                     <div className="grid gap-4 grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="implementation_value">Valor de Implantação</Label>
-                        <Input
+                        <CurrencyInput
                           id="implementation_value"
-                          type="number"
-                          step="0.01"
                           value={oppFormData.implementation_value}
-                          onChange={(e) => setOppFormData({ ...oppFormData, implementation_value: e.target.value })}
-                          placeholder="0.00"
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, implementation_value: value })}
+                          placeholder="R$ 0,00"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="monthly_value">Valor Mensal</Label>
-                        <Input
+                        <CurrencyInput
                           id="monthly_value"
-                          type="number"
-                          step="0.01"
                           value={oppFormData.monthly_value}
-                          onChange={(e) => setOppFormData({ ...oppFormData, monthly_value: e.target.value })}
-                          placeholder="0.00"
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, monthly_value: value })}
+                          placeholder="R$ 0,00"
                         />
                       </div>
                     </div>
