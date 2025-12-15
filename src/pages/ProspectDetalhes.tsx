@@ -1303,7 +1303,6 @@ const ClienteDetalhes = () => {
                         }}
                       >
                         <h4 className="font-medium text-foreground">{task.title}</h4>
-                        <p className="text-sm text-muted-foreground">{task.description}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(task.status)}
