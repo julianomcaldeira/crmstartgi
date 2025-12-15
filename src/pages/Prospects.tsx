@@ -45,7 +45,6 @@ const Prospects = () => {
   const [selectedSeller, setSelectedSeller] = useState<string>("all");
   const [selectedFeiraFilter, setSelectedFeiraFilter] = useState<string>("all");
   const [selectedCompanySize, setSelectedCompanySize] = useState<string>("all");
-  const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("name-asc");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
@@ -528,7 +527,7 @@ const Prospects = () => {
   };
 
   const hasActiveFilters = searchTerm !== "" || selectedSeller !== "all" || selectedFeiraFilter !== "all" || 
-    selectedCompanySize !== "all" || selectedRegion !== "" || quickRatingFilter !== null || 
+    selectedCompanySize !== "all" || quickRatingFilter !== null || 
     quickRegionFilter !== "all" || quickSegmentFilter !== "all" || dateFilterStart !== "" || dateFilterEnd !== "";
 
   const clearAllFilters = () => {
@@ -536,7 +535,6 @@ const Prospects = () => {
     setSelectedSeller("all");
     setSelectedFeiraFilter("all");
     setSelectedCompanySize("all");
-    setSelectedRegion("");
     setQuickRatingFilter(null);
     setQuickRegionFilter("all");
     setQuickSegmentFilter("all");
@@ -573,9 +571,6 @@ const Prospects = () => {
       
       const matchesCompanySize = selectedCompanySize === "all" || client.company_size === selectedCompanySize;
       
-      const matchesRegion = selectedRegion === "" || selectedRegion === "all" || 
-        (client.region && client.region.toLowerCase().includes(selectedRegion.toLowerCase()));
-      
       // Quick filters for compact view
       const matchesQuickRating = quickRatingFilter === null || client.rating === quickRatingFilter;
       const matchesQuickRegion = quickRegionFilter === "all" || client.region === quickRegionFilter;
@@ -601,7 +596,7 @@ const Prospects = () => {
         }
       }
       
-      return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize && matchesRegion &&
+      return matchesSearch && matchesSeller && matchesFeira && matchesCompanySize &&
         matchesQuickRating && matchesQuickRegion && matchesQuickSegment && matchesDateFilter;
     });
 
@@ -626,7 +621,7 @@ const Prospects = () => {
     });
 
     return sorted;
-  }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, 
+  }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, 
       quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy, dateFilterStart, dateFilterEnd]);
 
   // Pagination with memoization
@@ -640,7 +635,7 @@ const Prospects = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, selectedRegion, quickRatingFilter, quickRegionFilter, quickSegmentFilter, sortBy, dateFilterStart, dateFilterEnd]);
+  }, [searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, quickRatingFilter, quickRegionFilter, quickSegmentFilter, sortBy, dateFilterStart, dateFilterEnd]);
 
   const canEditClient = (client: any) => {
     if (!currentUserId) return false;
@@ -1528,7 +1523,7 @@ const Prospects = () => {
               </select>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <div className="flex flex-col sm:flex-row gap-4 mt-4 items-end">
             <div className="relative w-full sm:w-64">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
               <select
@@ -1544,36 +1539,32 @@ const Prospects = () => {
                 <option value="grande">Grande Porte</option>
               </select>
             </div>
-            <div className="relative w-full sm:w-64">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <Input
-                placeholder="Filtrar por região..."
-                value={selectedRegion}
-                onChange={(e) => setSelectedRegion(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="relative w-full sm:w-48">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <Input
-                type="date"
-                placeholder="Data início"
-                value={dateFilterStart}
-                onChange={(e) => setDateFilterStart(e.target.value)}
-                className="pl-10"
-                title="Data de cadastro - início"
-              />
-            </div>
-            <div className="relative w-full sm:w-48">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <Input
-                type="date"
-                placeholder="Data fim"
-                value={dateFilterEnd}
-                onChange={(e) => setDateFilterEnd(e.target.value)}
-                className="pl-10"
-                title="Data de cadastro - fim"
-              />
+            <div className="flex flex-col gap-1 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground font-medium">Cadastrado em</span>
+              <div className="flex gap-2">
+                <div className="relative w-full sm:w-40">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+                  <Input
+                    type="date"
+                    placeholder="De"
+                    value={dateFilterStart}
+                    onChange={(e) => setDateFilterStart(e.target.value)}
+                    className="pl-10"
+                    title="Data de cadastro - início"
+                  />
+                </div>
+                <div className="relative w-full sm:w-40">
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
+                  <Input
+                    type="date"
+                    placeholder="Até"
+                    value={dateFilterEnd}
+                    onChange={(e) => setDateFilterEnd(e.target.value)}
+                    className="pl-10"
+                    title="Data de cadastro - fim"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -1590,7 +1581,7 @@ const Prospects = () => {
               </span>
             </p>
           </div>
-          {(searchTerm || selectedSeller !== "all" || selectedFeiraFilter !== "all" || selectedCompanySize !== "all" || selectedRegion) && (
+          {(searchTerm || selectedSeller !== "all" || selectedFeiraFilter !== "all" || selectedCompanySize !== "all" || dateFilterStart || dateFilterEnd) && (
             <p className="text-xs text-muted-foreground">
               (de {clients.length} {clients.length === 1 ? 'prospect total' : 'prospects totais'})
             </p>
