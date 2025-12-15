@@ -1477,7 +1477,7 @@ const Oportunidades = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-4 w-4 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="h-4 w-4 p-0 text-primary hover:text-primary/80"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/prospect/${opp.client_id}`);
@@ -1563,7 +1563,7 @@ const Oportunidades = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-5 w-5 p-0 text-primary hover:text-primary/80"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigate(`/prospect/${opp.client_id}`);
