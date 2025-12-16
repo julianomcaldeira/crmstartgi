@@ -169,6 +169,7 @@ export type Database = {
           state: string | null
           trade_name: string | null
           updated_at: string | null
+          website: string | null
           zip_code: string | null
         }
         Insert: {
@@ -197,6 +198,7 @@ export type Database = {
           state?: string | null
           trade_name?: string | null
           updated_at?: string | null
+          website?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -225,6 +227,7 @@ export type Database = {
           state?: string | null
           trade_name?: string | null
           updated_at?: string | null
+          website?: string | null
           zip_code?: string | null
         }
         Relationships: [
