@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
+import { AudioRecorder } from "@/components/AudioRecorder";
 
 interface FeiraVisitsDialogProps {
   feiraId: string;
@@ -184,7 +185,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     }
   };
 
-  const handleToggleVisited = async (visitId: string, currentVisited: boolean) => {
+  const handleToggleVisited = async (visitId: string, currentVisited: boolean, clientData: { id: string; company_name: string }) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -208,11 +209,57 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
       if (error) throw error;
 
-      toast.success(currentVisited ? "Marcado como não visitado" : "Marcado como visitado");
+      // Create task when marking as visited
+      if (!currentVisited) {
+        const visit = visits.find(v => v.id === visitId);
+        const taskDescription = visit?.notes 
+          ? `Visita realizada na feira ${feiraName}.\n\nAnotações da visita:\n${visit.notes}`
+          : `Visita realizada na feira ${feiraName}.`;
+
+        const { error: taskError } = await supabase
+          .from("tasks")
+          .insert({
+            title: `Visita Feira: ${clientData.company_name}`,
+            description: taskDescription,
+            task_type: "visita_feira",
+            status: "completed",
+            priority: "medium",
+            client_id: clientData.id,
+            assigned_to: user.id,
+            created_by: user.id,
+            due_date: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+          });
+
+        if (taskError) {
+          console.error("Error creating task:", taskError);
+          toast.error("Visita marcada, mas erro ao criar tarefa");
+        } else {
+          toast.success("Visita marcada e tarefa criada no prospect!");
+        }
+      } else {
+        toast.success("Marcado como não visitado");
+      }
+      
       fetchVisits();
     } catch (error) {
       console.error("Error updating visit:", error);
       toast.error("Erro ao atualizar visita");
+    }
+  };
+
+  const handleAudioTranscription = (visitId: string, text: string) => {
+    const visit = visits.find(v => v.id === visitId);
+    const currentNotes = visit?.notes || "";
+    const newNotes = currentNotes ? `${currentNotes}\n\n${text}` : text;
+    
+    // If editing, append to current text
+    if (editingNotes === visitId) {
+      setNotesText(prev => prev ? `${prev}\n\n${text}` : text);
+    } else {
+      // Open editing mode and set the text
+      setEditingNotes(visitId);
+      setNotesText(newNotes);
     }
   };
 
@@ -389,7 +436,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                     <div className="pt-1">
                       <Checkbox
                         checked={visit.visited}
-                        onCheckedChange={() => handleToggleVisited(visit.id, visit.visited)}
+                        onCheckedChange={() => handleToggleVisited(visit.id, visit.visited, { id: visit.clients.id, company_name: visit.clients.company_name })}
                       />
                     </div>
                     
@@ -435,12 +482,17 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                       <div className="space-y-2">
                         {editingNotes === visit.id ? (
                           <div className="space-y-2">
-                            <Textarea
-                              value={notesText}
-                              onChange={(e) => setNotesText(e.target.value)}
-                              placeholder="Digite suas anotações sobre a visita..."
-                              className="min-h-[80px]"
-                            />
+                            <div className="flex items-start gap-2">
+                              <Textarea
+                                value={notesText}
+                                onChange={(e) => setNotesText(e.target.value)}
+                                placeholder="Digite suas anotações sobre a visita..."
+                                className="min-h-[80px] flex-1"
+                              />
+                              <AudioRecorder 
+                                onTranscription={(text) => setNotesText(prev => prev ? `${prev}\n\n${text}` : text)}
+                              />
+                            </div>
                             <div className="flex gap-2">
                               <Button size="sm" onClick={() => handleSaveNotes(visit.id)}>
                                 Salvar
@@ -468,14 +520,18 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                                 Sem anotações
                               </p>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="mt-1"
-                              onClick={() => startEditingNotes(visit.id, visit.notes)}
-                            >
-                              {visit.notes ? "Editar anotações" : "Adicionar anotações"}
-                            </Button>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingNotes(visit.id, visit.notes)}
+                              >
+                                {visit.notes ? "Editar anotações" : "Adicionar anotações"}
+                              </Button>
+                              <AudioRecorder 
+                                onTranscription={(text) => handleAudioTranscription(visit.id, text)}
+                              />
+                            </div>
                           </div>
                         )}
                       </div>
