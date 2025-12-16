@@ -22,6 +22,27 @@ interface ClientEditDialogProps {
   onSuccess: () => void;
 }
 
+// Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
+const convertDateToISO = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  
+  // Check if already in ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Convert from DD/MM/YYYY to YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    if (day && month && year && !isNaN(Number(day)) && !isNaN(Number(month)) && !isNaN(Number(year))) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  return "";
+};
+
 export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: ClientEditDialogProps) => {
   const [loadingCnpj, setLoadingCnpj] = useState(false);
   const [cnpj, setCnpj] = useState("");
@@ -86,7 +107,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setServices(client.services || "");
       setRating(client.rating || 0);
       setRegistrationStatus(client.registration_status || "");
-      setFoundationDate(client.foundation_date || "");
+      setFoundationDate(convertDateToISO(client.foundation_date));
       setCnaePrincipal(client.cnae_principal || "");
       setCnaeDescription(client.cnae_description || "");
       
@@ -175,7 +196,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           services: services,
           rating: rating > 0 ? rating : null,
           registration_status: registrationStatus,
-          foundation_date: foundationDate || null,
+          foundation_date: convertDateToISO(foundationDate) || null,
           cnae_principal: cnaePrincipal,
           cnae_description: cnaeDescription,
         })
