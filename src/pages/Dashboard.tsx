@@ -268,6 +268,7 @@ const Dashboard = () => {
       reuniao_online: "Reunião Online",
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
+      proposta: "Proposta",
     };
     return labels[type] || type;
   };

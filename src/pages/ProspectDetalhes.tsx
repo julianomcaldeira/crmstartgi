@@ -1144,6 +1144,7 @@ const ClienteDetalhes = () => {
                           <SelectItem value="reuniao_online">Reunião Online</SelectItem>
                           <SelectItem value="visita_feira">Visita a Feira</SelectItem>
                           <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                          <SelectItem value="proposta">Proposta</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

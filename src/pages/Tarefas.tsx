@@ -413,6 +413,7 @@ const Tarefas = () => {
       case "reuniao_online": return <Video size={16} />;
       case "visita_feira": return <Briefcase size={16} />;
       case "visita_evento": return <Users size={16} />;
+      case "proposta": return <Briefcase size={16} />;
       default: return <Circle size={16} />;
     }
   };
@@ -427,6 +428,7 @@ const Tarefas = () => {
       case "reuniao_online": return "Reunião Online";
       case "visita_feira": return "Visita a Feira";
       case "visita_evento": return "Visita a Evento";
+      case "proposta": return "Proposta";
       default: return type;
     }
   };
@@ -567,6 +569,7 @@ const Tarefas = () => {
                       <SelectItem value="reuniao_online">Reunião Online</SelectItem>
                       <SelectItem value="visita_feira">Visita a Feira</SelectItem>
                       <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                      <SelectItem value="proposta">Proposta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -799,6 +802,7 @@ const Tarefas = () => {
                     <option value="reuniao_online">Reunião Online</option>
                     <option value="visita_feira">Visita a Feira</option>
                     <option value="visita_evento">Visita a Evento</option>
+                    <option value="proposta">Proposta</option>
                   </select>
                   <select 
                     value={quickPriorityFilter} 
