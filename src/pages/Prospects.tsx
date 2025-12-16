@@ -36,6 +36,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 
+// Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
+const convertDateToISO = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return "";
+  
+  // Check if already in ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Convert from DD/MM/YYYY to YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    // Validate that we have valid numbers
+    if (day && month && year && !isNaN(Number(day)) && !isNaN(Number(month)) && !isNaN(Number(year))) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  // Return empty string if format is unrecognized
+  return "";
+};
+
 const Prospects = () => {
   const navigate = useNavigate();
   const [clients, setClients] = useState<any[]>([]);
@@ -340,7 +363,7 @@ const Prospects = () => {
         setShareCapital(data.share_capital?.toString() || "");
         setLegalNature(data.legal_nature || "");
         setRegistrationStatus(data.registration_status || "");
-        setFoundationDate(data.foundation_date || "");
+        setFoundationDate(convertDateToISO(data.foundation_date));
         setCnaePrincipal(data.cnae_principal || "");
         setCnaeDescription(data.cnae_description || "");
         
@@ -446,7 +469,7 @@ const Prospects = () => {
           services: services,
           rating: rating > 0 ? rating : null,
           registration_status: registrationStatus,
-          foundation_date: foundationDate || null,
+          foundation_date: convertDateToISO(foundationDate) || null,
           cnae_principal: cnaePrincipal,
           cnae_description: cnaeDescription,
           created_by: user.id,

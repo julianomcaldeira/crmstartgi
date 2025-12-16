@@ -6,6 +6,26 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+// Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
+function convertDateToISO(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  
+  // Check if already in ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Convert from DD/MM/YYYY to YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    if (day && month && year && !isNaN(Number(day)) && !isNaN(Number(month)) && !isNaN(Number(year))) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -169,7 +189,7 @@ serve(async (req) => {
                 share_capital: data.capital_social || "",
                 legal_nature: data.natureza_juridica || "",
                 registration_status: data.situacao || "",
-                foundation_date: data.abertura || null,
+                foundation_date: convertDateToISO(data.abertura),
               };
 
               // Save to cache

@@ -43,6 +43,27 @@ function validateDate(date: string): boolean {
   return !isNaN(dateObj.getTime());
 }
 
+// Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
+function convertDateToISO(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null;
+  
+  // Check if already in ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  
+  // Convert from DD/MM/YYYY to YYYY-MM-DD
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    if (day && month && year && !isNaN(Number(day)) && !isNaN(Number(month)) && !isNaN(Number(year))) {
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -293,7 +314,7 @@ async function importProspect(supabase: any, row: any, userId: string, sellerMap
     cnae_principal: row['CNAE Principal'],
     cnae_description: row['CNAE Descrição'],
     registration_status: row['Situação'],
-    foundation_date: row['Data Abertura'] || null,
+    foundation_date: convertDateToISO(row['Data Abertura']),
     legal_nature: row['Natureza Jurídica'],
     created_by: sellerId || userId
   });
