@@ -125,6 +125,17 @@ serve(async (req) => {
 
     console.log("✅ Dados obtidos da ReceitaWS com sucesso");
 
+    // Convert foundation date from DD/MM/YYYY to YYYY-MM-DD format for database
+    let foundationDateISO = null;
+    if (data.abertura) {
+      const dateParts = data.abertura.split('/');
+      if (dateParts.length === 3) {
+        // Format: DD/MM/YYYY -> YYYY-MM-DD
+        foundationDateISO = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+        console.log("Data de abertura convertida:", data.abertura, "->", foundationDateISO);
+      }
+    }
+
     // Transform the response to match our database structure
     const transformedData = {
       source: "api",
@@ -141,7 +152,7 @@ serve(async (req) => {
       share_capital: parseFloat(data.capital_social || "0"),
       legal_nature: data.natureza_juridica || "",
       registration_status: data.situacao || "",
-      foundation_date: data.abertura || null,
+      foundation_date: foundationDateISO,
       cnae_principal: data.atividade_principal?.[0]?.code || "",
       cnae_description: data.atividade_principal?.[0]?.text || "",
     };
