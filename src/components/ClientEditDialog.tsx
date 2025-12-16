@@ -48,6 +48,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [cnpj, setCnpj] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [tradeName, setTradeName] = useState("");
+  const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
@@ -91,6 +92,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
       setCnpj(client.cnpj || "");
       setCompanyName(client.company_name || "");
       setTradeName(client.trade_name || "");
+      setWebsite(client.website || "");
       setEmail(client.email || "");
       setPhone(client.phone || "");
       setAddress(client.address || "");
@@ -180,6 +182,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           cnpj: cnpj.replace(/\D/g, ""),
           company_name: companyName,
           trade_name: tradeName,
+          website,
           email,
           phone,
           address,
@@ -340,6 +343,17 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                       onChange={(e) => setTradeName(e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-website">Site</Label>
+                  <Input
+                    id="edit-website"
+                    type="url"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    placeholder="https://www.exemplo.com.br"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

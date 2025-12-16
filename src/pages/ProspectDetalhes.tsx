@@ -31,7 +31,8 @@ import {
   Check,
   Trash2,
   Search,
-  Copy
+  Copy,
+  Globe
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -681,6 +682,32 @@ const ClienteDetalhes = () => {
                 {client.phone && (
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.phone, "phone")} title="Copiar">
                     {copiedField === "phone" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <Globe className="h-5 w-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground mb-1">Site</p>
+              <div className="flex items-center gap-2">
+                {client.website ? (
+                  <a 
+                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    {client.website}
+                  </a>
+                ) : (
+                  <p className="text-sm font-medium text-foreground">-</p>
+                )}
+                {client.website && (
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.website, "website")} title="Copiar">
+                    {copiedField === "website" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                   </Button>
                 )}
               </div>

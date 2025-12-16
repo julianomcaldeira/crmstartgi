@@ -116,6 +116,7 @@ const Prospects = () => {
   const [cnaeDescription, setCnaeDescription] = useState("");
   const [selectedFeiras, setSelectedFeiras] = useState<string[]>([]);
   const [feiras, setFeiras] = useState<any[]>([]);
+  const [website, setWebsite] = useState("");
   const [products, setProducts] = useState<any[]>([]);
   const [viewMode, setViewMode] = useViewMode("prospects-view-mode", "cards");
   
@@ -453,6 +454,7 @@ const Prospects = () => {
           cnpj: cleanedCnpj,
           company_name: companyName,
           trade_name: tradeName,
+          website,
           email,
           phone,
           address: fullAddress,
@@ -524,6 +526,7 @@ const Prospects = () => {
     setCnpj("");
     setCompanyName("");
     setTradeName("");
+    setWebsite("");
     setEmail("");
     setPhone("");
     setLogradouro("");
@@ -909,6 +912,17 @@ const Prospects = () => {
                           onChange={(e) => setTradeName(e.target.value)}
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Site</Label>
+                      <Input
+                        id="website"
+                        type="url"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        placeholder="https://www.exemplo.com.br"
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
