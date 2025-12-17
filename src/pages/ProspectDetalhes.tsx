@@ -81,6 +81,7 @@ const ClienteDetalhes = () => {
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [taskSearchTerm, setTaskSearchTerm] = useState("");
   const [taskSortBy, setTaskSortBy] = useState<"date" | "priority" | "status">("date");
+  const [taskStatusFilter, setTaskStatusFilter] = useState<"all" | "pending" | "in_progress" | "completed">("all");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [taskNotesDialogOpen, setTaskNotesDialogOpen] = useState(false);
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
@@ -1268,6 +1269,54 @@ const ClienteDetalhes = () => {
               </Dialog>
             </div>
 
+            {/* Quick Status Filter */}
+            <div className="mb-4 flex flex-wrap gap-2">
+              <Button
+                variant={taskStatusFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTaskStatusFilter("all")}
+                className="h-8"
+              >
+                Todas
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {tasks.length}
+                </Badge>
+              </Button>
+              <Button
+                variant={taskStatusFilter === "pending" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTaskStatusFilter("pending")}
+                className="h-8"
+              >
+                Pendentes
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {tasks.filter(t => t.status === "pending").length}
+                </Badge>
+              </Button>
+              <Button
+                variant={taskStatusFilter === "in_progress" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTaskStatusFilter("in_progress")}
+                className="h-8"
+              >
+                Em Execução
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {tasks.filter(t => t.status === "in_progress").length}
+                </Badge>
+              </Button>
+              <Button
+                variant={taskStatusFilter === "completed" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTaskStatusFilter("completed")}
+                className="h-8"
+              >
+                Realizadas
+                <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                  {tasks.filter(t => t.status === "completed").length}
+                </Badge>
+              </Button>
+            </div>
+
             {/* Search and Sort Controls */}
             <div className="mb-4 flex gap-3 flex-col sm:flex-row">
               <div className="relative flex-1">
@@ -1297,6 +1346,11 @@ const ClienteDetalhes = () => {
             ) : (
               (() => {
                 const filteredTasks = tasks.filter(task => {
+                  // Status filter
+                  if (taskStatusFilter !== "all" && task.status !== taskStatusFilter) {
+                    return false;
+                  }
+                  // Search filter
                   const searchLower = taskSearchTerm.toLowerCase();
                   return (
                     task.title.toLowerCase().includes(searchLower) ||
@@ -1324,7 +1378,7 @@ const ClienteDetalhes = () => {
 
                 return sortedTasks.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">
-                    Nenhuma tarefa encontrada para "{taskSearchTerm}"
+                    Nenhuma tarefa encontrada {taskSearchTerm && `para "${taskSearchTerm}"`} {taskStatusFilter !== "all" && `com status "${taskStatusFilter === 'pending' ? 'Pendente' : taskStatusFilter === 'in_progress' ? 'Em Execução' : 'Realizada'}"`}
                   </p>
                 ) : (
                   <div className="space-y-3">
