@@ -342,8 +342,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
               rows={4}
-              className="resize-y min-h-[100px]"
-              style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+              className="resize-y min-h-[100px] overflow-x-hidden"
             />
           </div>
 
@@ -362,8 +361,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Digite sua nota ou grave um áudio..."
                   rows={3}
-                  className="flex-1 resize-y min-h-[80px]"
-                  style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden"
                 />
                 <div className="flex flex-col gap-2 self-end">
                   <AudioRecorder

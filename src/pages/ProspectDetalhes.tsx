@@ -1202,8 +1202,7 @@ const ClienteDetalhes = () => {
                           onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                           placeholder="Adicione notas sobre esta tarefa..."
                           rows={4}
-                          className="flex-1 resize-y min-h-[100px]"
-                          style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                          className="flex-1 resize-y min-h-[100px] overflow-x-hidden"
                         />
                         <AudioRecorder
                           onTranscription={(text) => setTaskFormData({
