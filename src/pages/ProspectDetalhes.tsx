@@ -32,7 +32,14 @@ import {
   Trash2,
   Search,
   Copy,
-  Globe
+  Globe,
+  PhoneCall,
+  MessageSquare,
+  Video,
+  MapPinned,
+  Linkedin,
+  Briefcase,
+  Flag
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -1317,74 +1324,128 @@ const ClienteDetalhes = () => {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {sortedTasks.map((task) => (
-                  <div 
-                    key={task.id} 
-                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors overflow-hidden"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div 
-                        className="flex-1 cursor-pointer"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setTaskViewDialogOpen(true);
-                        }}
-                      >
-                        <h4 className="font-medium text-foreground">{task.title}</h4>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(task.status)}
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditTask(task);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {task.status !== "completed" && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-success hover:text-success"
-                              onClick={(e) => handleCompleteTask(task.id, e)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-4">
-                        {task.due_date && (
-                          <span className="text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(task.due_date).toLocaleDateString('pt-BR')}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-muted-foreground">
-                        {task.assigned_user?.full_name || "Não atribuído"}
-                      </span>
-                      </div>
+                    {sortedTasks.map((task) => {
+                      const taskTypeConfig: Record<string, { icon: any; label: string; color: string }> = {
+                        ligacao: { icon: PhoneCall, label: "Ligação", color: "text-blue-500" },
+                        email: { icon: Mail, label: "E-mail", color: "text-amber-500" },
+                        whatsapp: { icon: MessageSquare, label: "WhatsApp", color: "text-green-500" },
+                        visita_presencial: { icon: MapPinned, label: "Visita", color: "text-purple-500" },
+                        reuniao_online: { icon: Video, label: "Reunião Online", color: "text-cyan-500" },
+                        visita_feira: { icon: Flag, label: "Visita Feira", color: "text-orange-500" },
+                        visita_evento: { icon: Flag, label: "Visita Evento", color: "text-pink-500" },
+                        linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-blue-600" },
+                        proposta: { icon: Briefcase, label: "Proposta", color: "text-emerald-500" },
+                      };
                       
-                      {task.description && (
-                        <div className="mt-3 pt-3 border-t border-border overflow-hidden">
-                          <span className="text-sm font-medium block mb-2">Notas:</span>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words overflow-hidden max-h-32 line-clamp-5">
-                            {task.description}
-                          </p>
+                      const priorityConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {
+                        high: { label: "Alta", bgColor: "bg-destructive/10", textColor: "text-destructive" },
+                        medium: { label: "Média", bgColor: "bg-warning/10", textColor: "text-warning" },
+                        low: { label: "Baixa", bgColor: "bg-muted", textColor: "text-muted-foreground" },
+                      };
+                      
+                      const typeInfo = taskTypeConfig[task.task_type || ""] || { icon: Clock, label: "Tarefa", color: "text-muted-foreground" };
+                      const priorityInfo = priorityConfig[task.priority || "medium"];
+                      const TaskIcon = typeInfo.icon;
+                      
+                      const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+                      
+                      return (
+                        <div 
+                          key={task.id} 
+                          className={`group relative p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                            task.status === "completed" ? "opacity-70" : ""
+                          } ${isOverdue ? "border-destructive/50" : "border-border hover:border-primary/30"}`}
+                        >
+                          {/* Priority indicator bar */}
+                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                            task.priority === "high" ? "bg-destructive" : 
+                            task.priority === "medium" ? "bg-warning" : "bg-muted-foreground/30"
+                          }`} />
+                          
+                          <div className="pl-3">
+                            {/* Header */}
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div 
+                                className="flex items-start gap-3 flex-1 cursor-pointer min-w-0"
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setTaskViewDialogOpen(true);
+                                }}
+                              >
+                                <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color} shrink-0`}>
+                                  <TaskIcon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className={`font-semibold text-foreground leading-tight ${task.status === "completed" ? "line-through" : ""}`}>
+                                    {task.title}
+                                  </h4>
+                                  <span className={`text-xs ${typeInfo.color}`}>{typeInfo.label}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 shrink-0">
+                                {getStatusBadge(task.status)}
+                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-7 w-7"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditTask(task);
+                                    }}
+                                  >
+                                    <Edit className="h-3.5 w-3.5" />
+                                  </Button>
+                                  {task.status !== "completed" && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
+                                      onClick={(e) => handleCompleteTask(task.id, e)}
+                                    >
+                                      <Check className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Meta info */}
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                              {task.due_date && (
+                                <span className={`flex items-center gap-1.5 ${isOverdue ? "text-destructive font-medium" : ""}`}>
+                                  <Calendar className="h-3.5 w-3.5" />
+                                  {new Date(task.due_date).toLocaleDateString('pt-BR')} às {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  {isOverdue && <span className="text-[10px] bg-destructive/10 px-1.5 py-0.5 rounded">Atrasada</span>}
+                                </span>
+                              )}
+                              {priorityInfo && (
+                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${priorityInfo.bgColor} ${priorityInfo.textColor}`}>
+                                  {priorityInfo.label}
+                                </span>
+                              )}
+                              {task.assigned_user?.full_name && (
+                                <span className="flex items-center gap-1.5">
+                                  <User className="h-3.5 w-3.5" />
+                                  {task.assigned_user.full_name}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {/* Description */}
+                            {task.description && (
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words line-clamp-3">
+                                  {task.description}
+                                </p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
                 );
               })()
             )}
