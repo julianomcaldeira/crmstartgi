@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Plus, Trash2, User, Clock, History } from "lucide-react";
@@ -342,7 +342,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
               rows={4}
-              className="resize-y min-h-[100px] overflow-x-hidden [overflow-wrap:anywhere]"
+              className="resize-y min-h-[100px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
             />
           </div>
 
@@ -361,7 +361,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Digite sua nota ou grave um áudio..."
                   rows={3}
-                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden [overflow-wrap:anywhere]"
+                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
                 />
                 <div className="flex flex-col gap-2 self-end">
                   <AudioRecorder
@@ -379,7 +379,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
             </div>
 
             {/* Notes List */}
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            <div className="space-y-3 max-h-[300px] overflow-y-auto overflow-x-hidden no-scrollbar">
               {notes.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   Nenhuma nota adicionada ainda
@@ -430,7 +430,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                   <History className="h-4 w-4" />
                   Histórico de Alterações
                 </div>
-                <ScrollArea className="h-[300px] rounded-lg border border-border p-4 overflow-x-hidden">
+                <div className="h-[300px] rounded-lg border border-border p-4 overflow-y-auto overflow-x-hidden no-scrollbar">
                   <div className="space-y-4">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
@@ -468,7 +468,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
             </>
           )}

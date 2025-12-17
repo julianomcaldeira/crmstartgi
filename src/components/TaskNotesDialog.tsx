@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,7 +109,7 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
             placeholder="Escreva uma nova nota..."
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
-            className="min-h-[80px] resize-none"
+            className="min-h-[80px] resize-none overflow-y-auto overflow-x-hidden no-scrollbar [overflow-wrap:anywhere]"
           />
           <div className="flex justify-end">
             <Button
@@ -138,7 +138,7 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
               <p className="text-sm">Nenhuma nota registrada para esta tarefa</p>
             </div>
           ) : (
-            <ScrollArea className="max-h-[300px] pr-4">
+            <div className="max-h-[300px] pr-4 overflow-y-auto no-scrollbar">
               <div className="space-y-3">
                 <Badge variant="secondary" className="mb-2">
                   {notes.length} {notes.length === 1 ? "nota" : "notas"}
@@ -162,13 +162,13 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
                         })}
                       </div>
                     </div>
-                    <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                    <p className="text-sm text-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                       {note.note}
                     </p>
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </div>
       </DialogContent>

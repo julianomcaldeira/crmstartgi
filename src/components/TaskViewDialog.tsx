@@ -7,7 +7,7 @@ import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcas
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -324,7 +324,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
               {loadingHistory ? (
                 <div className="text-sm text-muted-foreground">Carregando histórico...</div>
               ) : history.length > 0 ? (
-                <ScrollArea className="h-[300px] rounded-lg border border-border p-4 overflow-x-hidden">
+                <div className="h-[300px] rounded-lg border border-border p-4 overflow-y-auto overflow-x-hidden no-scrollbar">
                   <div className="space-y-4">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
@@ -362,8 +362,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                       );
                     })}
                   </div>
-                </ScrollArea>
-              ) : (
+                </div>
                 <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
                   Nenhuma alteração registrada ainda. As alterações serão registradas quando você editar esta tarefa.
                 </div>
