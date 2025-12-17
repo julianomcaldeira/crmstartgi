@@ -1320,7 +1320,7 @@ const ClienteDetalhes = () => {
                     {sortedTasks.map((task) => (
                   <div 
                     key={task.id} 
-                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                    className="p-4 bg-muted/20 rounded-lg border border-border hover:border-primary/50 transition-colors overflow-hidden"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div 
@@ -1375,9 +1375,9 @@ const ClienteDetalhes = () => {
                       </div>
                       
                       {task.description && (
-                        <div className="mt-3 pt-3 border-t border-border">
+                        <div className="mt-3 pt-3 border-t border-border overflow-hidden">
                           <span className="text-sm font-medium block mb-2">Notas:</span>
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words overflow-hidden max-h-32 line-clamp-5">
                             {task.description}
                           </p>
                         </div>
