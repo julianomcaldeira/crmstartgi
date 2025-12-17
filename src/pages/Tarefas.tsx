@@ -598,7 +598,7 @@ const Tarefas = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Adicione notas ou grave um áudio..."
                     rows={4}
-                    className="flex-1 resize-y min-h-[100px] overflow-x-hidden [overflow-wrap:anywhere]"
+                    className="flex-1 resize-y min-h-[100px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
                   />
                   <AudioRecorder
                     onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
