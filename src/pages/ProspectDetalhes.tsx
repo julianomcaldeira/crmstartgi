@@ -39,9 +39,7 @@ import {
   MapPinned,
   Linkedin,
   Briefcase,
-  Flag,
-  Maximize2,
-  Minimize2
+  Flag
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -86,7 +84,7 @@ const ClienteDetalhes = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [taskNotesDialogOpen, setTaskNotesDialogOpen] = useState(false);
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
-  const [taskDescriptionExpanded, setTaskDescriptionExpanded] = useState(false);
+  
 
   const handleCopy = async (value: string, field: string) => {
     try {
@@ -1189,28 +1187,7 @@ const ClienteDetalhes = () => {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="description">Notas / Descrição</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setTaskDescriptionExpanded(!taskDescriptionExpanded)}
-                          className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                        >
-                          {taskDescriptionExpanded ? (
-                            <>
-                              <Minimize2 className="h-4 w-4 mr-1" />
-                              Reduzir
-                            </>
-                          ) : (
-                            <>
-                              <Maximize2 className="h-4 w-4 mr-1" />
-                              Expandir
-                            </>
-                          )}
-                        </Button>
-                      </div>
+                      <Label htmlFor="description">Notas / Descrição</Label>
                       <TaskQuickMessages 
                         taskType={taskFormData.task_type} 
                         onSelect={(msg) => setTaskFormData({ 
@@ -1224,8 +1201,9 @@ const ClienteDetalhes = () => {
                           value={taskFormData.description}
                           onChange={(e) => setTaskFormData({ ...taskFormData, description: e.target.value })}
                           placeholder="Adicione notas sobre esta tarefa..."
-                          rows={taskDescriptionExpanded ? 12 : 4}
-                          className={`flex-1 resize-y transition-all ${taskDescriptionExpanded ? 'min-h-[250px]' : 'min-h-[80px]'}`}
+                          rows={4}
+                          className="flex-1 resize-y min-h-[100px]"
+                          style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
                         />
                         <AudioRecorder
                           onTranscription={(text) => setTaskFormData({
