@@ -539,7 +539,7 @@ const Tarefas = () => {
               Nova Tarefa
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
             <DialogHeader>
               <DialogTitle className="text-2xl">Nova Tarefa</DialogTitle>
             </DialogHeader>
@@ -598,7 +598,7 @@ const Tarefas = () => {
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Adicione notas ou grave um áudio..."
                     rows={4}
-                    className="flex-1 resize-y min-h-[100px] overflow-x-hidden"
+                    className="flex-1 resize-y min-h-[100px] overflow-x-hidden [overflow-wrap:anywhere]"
                   />
                   <AudioRecorder
                     onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}

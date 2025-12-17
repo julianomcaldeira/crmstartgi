@@ -257,7 +257,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl">Editar Tarefa</DialogTitle>
         </DialogHeader>
@@ -342,7 +342,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
               rows={4}
-              className="resize-y min-h-[100px] overflow-x-hidden"
+              className="resize-y min-h-[100px] overflow-x-hidden [overflow-wrap:anywhere]"
             />
           </div>
 
@@ -361,7 +361,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                   onChange={(e) => setNewNote(e.target.value)}
                   placeholder="Digite sua nota ou grave um áudio..."
                   rows={3}
-                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden"
+                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden [overflow-wrap:anywhere]"
                 />
                 <div className="flex flex-col gap-2 self-end">
                   <AudioRecorder
@@ -430,7 +430,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                   <History className="h-4 w-4" />
                   Histórico de Alterações
                 </div>
-                <ScrollArea className="h-[300px] rounded-lg border border-border p-4">
+                <ScrollArea className="h-[300px] rounded-lg border border-border p-4 overflow-x-hidden">
                   <div className="space-y-4">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
