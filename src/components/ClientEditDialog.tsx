@@ -235,26 +235,43 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
         if (contactsError) throw contactsError;
       }
 
-      // Update client-feira relationships
-      const { error: deleteFeirasError } = await (supabase as any)
-        .from("client_feiras")
-        .delete()
-        .eq("client_id", client.id);
+      // Update client-feira relationships - use smart diff approach
+      const currentFeiraIds = client.client_feiras?.map((cf: any) => cf.feira_id) || [];
+      
+      // Calculate feiras to add and remove
+      const feirasToAdd = selectedFeiras.filter(id => !currentFeiraIds.includes(id));
+      const feirasToRemove = currentFeiraIds.filter((id: string) => !selectedFeiras.includes(id));
+      
+      // Remove feiras that are no longer selected
+      if (feirasToRemove.length > 0) {
+        const { error: deleteFeirasError } = await supabase
+          .from("client_feiras")
+          .delete()
+          .eq("client_id", client.id)
+          .in("feira_id", feirasToRemove);
 
-      if (deleteFeirasError) throw deleteFeirasError;
+        if (deleteFeirasError) {
+          console.error("Error deleting feiras:", deleteFeirasError);
+          // Continue even if delete fails (RLS might prevent it)
+        }
+      }
 
-      if (selectedFeiras.length > 0) {
-        const clientFeirasData = selectedFeiras.map(feiraId => ({
+      // Add new feiras
+      if (feirasToAdd.length > 0) {
+        const clientFeirasData = feirasToAdd.map(feiraId => ({
           client_id: client.id,
           feira_id: feiraId,
           created_by: user.id,
         }));
 
-        const { error: feirasError } = await (supabase as any)
+        const { error: feirasError } = await supabase
           .from("client_feiras")
           .insert(clientFeirasData);
 
-        if (feirasError) throw feirasError;
+        if (feirasError) {
+          console.error("Error adding feiras:", feirasError);
+          throw feirasError;
+        }
       }
 
       toast.success("Cliente atualizado com sucesso!");
