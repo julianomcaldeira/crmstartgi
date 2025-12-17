@@ -11,7 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { Plus, TrendingUp, LayoutGrid, List, ChevronRight, ChevronLeft, Search, Calendar as CalendarIcon, Edit, Paperclip, Upload, X, Download, FileText, Building2, Maximize2, Minimize2, Filter, Clock, TrendingUp as TrendingUpIcon, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { CurrencyInput, formatCurrency, calculateAnnualizedValue, formatAnnualizedValue } from "@/components/ui/masked-input";
 import { 
   DropdownMenu,
@@ -65,6 +66,8 @@ const Oportunidades = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [initialFilterApplied, setInitialFilterApplied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [opportunityToDelete, setOpportunityToDelete] = useState<any>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -831,6 +834,35 @@ const Oportunidades = () => {
     }
   };
 
+  const handleDeleteOpportunity = async () => {
+    if (!opportunityToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("opportunities")
+        .delete()
+        .eq("id", opportunityToDelete.id);
+
+      if (error) throw error;
+
+      toast.success("Oportunidade excluída com sucesso!");
+      setDeleteDialogOpen(false);
+      setOpportunityToDelete(null);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting opportunity:", error);
+      toast.error(error.message || "Erro ao excluir oportunidade");
+    }
+  };
+
+  const canDeleteOpportunity = (opp: any) => {
+    // Admin and gestor can delete any opportunity
+    if (userRole === "admin" || userRole === "gestor") return true;
+    // Vendedor can only delete opportunities they created
+    if (userRole === "vendedor" && opp.created_by === currentUserId) return true;
+    return false;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -1548,6 +1580,19 @@ const Oportunidades = () => {
                                             Mover para {stage.label}
                                           </DropdownMenuItem>
                                         ))}
+                                      {canDeleteOpportunity(opp) && (
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setOpportunityToDelete(opp);
+                                            setDeleteDialogOpen(true);
+                                          }}
+                                        >
+                                          <Trash2 size={14} className="mr-2" />
+                                          Excluir
+                                        </DropdownMenuItem>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </div>
@@ -1727,6 +1772,21 @@ const Oportunidades = () => {
                         <FileText size={16} className="mr-1" />
                         Proposta
                       </Button>
+                      {canDeleteOpportunity(opp) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpportunityToDelete(opp);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 size={16} className="mr-1" />
+                          Excluir
+                        </Button>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Badge 
@@ -1932,6 +1992,33 @@ const Oportunidades = () => {
         open={viewDialogOpen}
         onOpenChange={setViewDialogOpen}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Oportunidade</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta oportunidade? Esta ação não pode ser desfeita.
+              {opportunityToDelete && (
+                <div className="mt-2 p-2 bg-muted rounded text-sm">
+                  <strong>{opportunityToDelete.title}</strong>
+                  <br />
+                  Cliente: {opportunityToDelete.client?.company_name || opportunityToDelete.client?.trade_name}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteOpportunity}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
