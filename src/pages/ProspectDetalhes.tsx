@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
+import TaskNotesDialog from "@/components/TaskNotesDialog";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { ClientEditDialog } from "@/components/ClientEditDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
@@ -81,6 +82,8 @@ const ClienteDetalhes = () => {
   const [taskSearchTerm, setTaskSearchTerm] = useState("");
   const [taskSortBy, setTaskSortBy] = useState<"date" | "priority" | "status">("date");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [taskNotesDialogOpen, setTaskNotesDialogOpen] = useState(false);
+  const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
 
   const handleCopy = async (value: string, field: string) => {
     try {
@@ -1389,6 +1392,19 @@ const ClienteDetalhes = () => {
                                   <Button
                                     size="icon"
                                     variant="ghost"
+                                    className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedTaskForNotes(task);
+                                      setTaskNotesDialogOpen(true);
+                                    }}
+                                    title="Ver notas"
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
                                     className="h-7 w-7"
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -1754,6 +1770,14 @@ const ClienteDetalhes = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Task Notes Dialog */}
+      <TaskNotesDialog
+        taskId={selectedTaskForNotes?.id || ""}
+        taskTitle={selectedTaskForNotes?.title || ""}
+        open={taskNotesDialogOpen}
+        onOpenChange={setTaskNotesDialogOpen}
+      />
     </div>
   );
 };
