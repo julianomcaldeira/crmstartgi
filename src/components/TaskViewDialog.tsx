@@ -330,7 +330,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                       const oldData = record.old_data || {};
                       const newData = record.new_data || {};
                       const changedFields = Object.keys(newData).filter(
-                        key => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+                        (key) => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key]),
                       );
 
                       return (
@@ -363,6 +363,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                     })}
                   </div>
                 </div>
+              ) : (
                 <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
                   Nenhuma alteração registrada ainda. As alterações serão registradas quando você editar esta tarefa.
                 </div>
