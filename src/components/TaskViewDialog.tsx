@@ -188,7 +188,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl">{task.title}</DialogTitle>
         </DialogHeader>
@@ -219,7 +219,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                 <FileText className="h-4 w-4" />
                 Descrição
               </div>
-              <p className="text-foreground pl-6">{task.description}</p>
+              <p className="text-foreground pl-6 whitespace-pre-wrap [overflow-wrap:anywhere]">{task.description}</p>
             </div>
           )}
 
@@ -324,7 +324,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
               {loadingHistory ? (
                 <div className="text-sm text-muted-foreground">Carregando histórico...</div>
               ) : history.length > 0 ? (
-                <ScrollArea className="h-[300px] rounded-lg border border-border p-4">
+                <ScrollArea className="h-[300px] rounded-lg border border-border p-4 overflow-x-hidden">
                   <div className="space-y-4">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
