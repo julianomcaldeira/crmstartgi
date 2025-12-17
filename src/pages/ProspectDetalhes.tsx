@@ -1133,8 +1133,8 @@ const ClienteDetalhes = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="tasks" className="space-y-4">
-          <Card className="p-6">
+        <TabsContent value="tasks" className="space-y-4 overflow-x-hidden">
+          <Card className="p-6 overflow-x-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Tarefas</h3>
               <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
@@ -1144,7 +1144,7 @@ const ClienteDetalhes = () => {
                     Nova Tarefa
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
                   <DialogHeader>
                     <DialogTitle>Criar Nova Tarefa</DialogTitle>
                     <DialogDescription>
@@ -1411,15 +1411,35 @@ const ClienteDetalhes = () => {
                                       e.stopPropagation();
                                       handleEditTask(task);
                                     }}
+                                    title="Editar tarefa"
                                   >
                                     <Edit className="h-3.5 w-3.5" />
                                   </Button>
+
+                                  {canDeleteTask(task) && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
+                                          handleDeleteTask(task.id);
+                                        }
+                                      }}
+                                      title="Excluir tarefa"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
+
                                   {task.status !== "completed" && (
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
                                       onClick={(e) => handleCompleteTask(task.id, e)}
+                                      title="Marcar como realizada"
                                     >
                                       <Check className="h-3.5 w-3.5" />
                                     </Button>
@@ -1429,7 +1449,7 @@ const ClienteDetalhes = () => {
                             </div>
                             
                             {/* Meta info */}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap min-w-0 [overflow-wrap:anywhere]">
                               {task.due_date && (
                                 <span className={`flex items-center gap-1.5 ${isOverdue ? "text-destructive font-medium" : ""}`}>
                                   <Calendar className="h-3.5 w-3.5" />
@@ -1453,7 +1473,7 @@ const ClienteDetalhes = () => {
                             {/* Description */}
                             {task.description && (
                               <div className="mt-3 pt-3 border-t border-border/50">
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words line-clamp-3">
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden line-clamp-3">
                                   {task.description}
                                 </p>
                               </div>
