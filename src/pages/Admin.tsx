@@ -241,11 +241,43 @@ const Admin = () => {
         return;
       }
 
+      // Check if user has tasks assigned
+      const { count: tasksCount } = await supabase
+        .from("tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("assigned_to", userToDelete.id);
+      
+      if (tasksCount && tasksCount > 0) {
+        toast.error(`Este usuário possui ${tasksCount} tarefas. Transfira as tarefas antes de excluir.`);
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        setProcessingUser(false);
+        return;
+      }
+
+      // Check if user has opportunities assigned
+      const { count: opportunitiesCount } = await supabase
+        .from("opportunities")
+        .select("*", { count: "exact", head: true })
+        .eq("assigned_to", userToDelete.id);
+      
+      if (opportunitiesCount && opportunitiesCount > 0) {
+        toast.error(`Este usuário possui ${opportunitiesCount} oportunidades. Transfira as oportunidades antes de excluir.`);
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        setProcessingUser(false);
+        return;
+      }
+
       // Delete user role first
-      await supabase
+      const { error: roleError } = await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", userToDelete.id);
+
+      if (roleError) {
+        console.error("Erro ao deletar role:", roleError);
+      }
 
       // Delete profile
       const { error: profileError } = await supabase
@@ -253,12 +285,21 @@ const Admin = () => {
         .delete()
         .eq("id", userToDelete.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // If we can't delete profile due to RLS or constraints, just remove the role
+        console.error("Erro ao deletar profile:", profileError);
+        toast.error("Não foi possível excluir o usuário completamente. O acesso foi cancelado.");
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        fetchUsers();
+        return;
+      }
 
       toast.success("Usuário excluído com sucesso!");
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-      fetchUsers();
+      // Remove user from local state immediately for better UX
+      setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
     } catch (error: any) {
       toast.error("Erro ao excluir usuário: " + error.message);
     } finally {
