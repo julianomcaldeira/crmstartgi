@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Trophy, XCircle } from "lucide-react";
 
 interface FunnelStage {
   key: string;
   label: string;
   color: string;
+  bgColor: string;
   count: number;
   value: number;
 }
@@ -16,14 +17,14 @@ const SalesFunnelChart = () => {
   const [loading, setLoading] = useState(true);
 
   const stageConfig = [
-    { key: "lead", label: "Lead", color: "from-blue-400 to-blue-500" },
-    { key: "contacted", label: "Contactado", color: "from-cyan-400 to-cyan-500" },
-    { key: "qualified", label: "Qualificado", color: "from-indigo-400 to-indigo-500" },
-    { key: "apresentacao", label: "Apresentação", color: "from-violet-400 to-violet-500" },
-    { key: "proposal", label: "Proposta", color: "from-purple-400 to-purple-500" },
-    { key: "negotiation", label: "Negociação", color: "from-amber-400 to-amber-500" },
-    { key: "won", label: "Ganho", color: "from-emerald-400 to-emerald-500" },
-    { key: "lost", label: "Perdido", color: "from-red-400 to-red-500" },
+    { key: "lead", label: "Lead", color: "#3B82F6", bgColor: "bg-blue-500" },
+    { key: "contacted", label: "Contactado", color: "#06B6D4", bgColor: "bg-cyan-500" },
+    { key: "qualified", label: "Qualificado", color: "#6366F1", bgColor: "bg-indigo-500" },
+    { key: "apresentacao", label: "Apresentação", color: "#8B5CF6", bgColor: "bg-violet-500" },
+    { key: "proposal", label: "Proposta", color: "#A855F7", bgColor: "bg-purple-500" },
+    { key: "negotiation", label: "Negociação", color: "#F59E0B", bgColor: "bg-amber-500" },
+    { key: "won", label: "Ganho", color: "#10B981", bgColor: "bg-emerald-500" },
+    { key: "lost", label: "Perdido", color: "#EF4444", bgColor: "bg-red-500" },
   ];
 
   useEffect(() => {
@@ -69,16 +70,12 @@ const SalesFunnelChart = () => {
     return `R$ ${value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
   };
 
-  // Filter out won and lost for funnel view (they are results, not pipeline stages)
-  const pipelineStages = stages.filter(
-    (s) => s.key !== "won" && s.key !== "lost"
-  );
-  const resultStages = stages.filter(
-    (s) => s.key === "won" || s.key === "lost"
-  );
+  const pipelineStages = stages.filter((s) => s.key !== "won" && s.key !== "lost");
+  const wonStage = stages.find((s) => s.key === "won");
+  const lostStage = stages.find((s) => s.key === "lost");
 
-  // Calculate max count for scaling
-  const maxCount = Math.max(...pipelineStages.map((s) => s.count), 1);
+  const totalPipeline = pipelineStages.reduce((sum, s) => sum + s.count, 0);
+  const totalPipelineValue = pipelineStages.reduce((sum, s) => sum + s.value, 0);
 
   if (loading) {
     return (
@@ -99,67 +96,57 @@ const SalesFunnelChart = () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
           Funil de Vendas
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {/* Funnel Visualization */}
-        <div className="flex flex-col items-center space-y-1 py-4">
+      <CardContent className="pb-6">
+        {/* Funnel Container */}
+        <div className="relative max-w-3xl mx-auto">
           {pipelineStages.map((stage, index) => {
-            // Calculate width percentage based on funnel shape (wider at top, narrower at bottom)
-            const baseWidth = 100 - index * (60 / pipelineStages.length);
-            // Adjust slightly by count to show relative volumes
-            const countFactor = stage.count > 0 ? 0.9 + (stage.count / maxCount) * 0.1 : 0.9;
-            const width = Math.max(baseWidth * countFactor, 20);
-
+            const totalStages = pipelineStages.length;
+            // Width decreases from 100% to 30%
+            const widthPercent = 100 - (index * 70) / (totalStages - 1);
+            
             return (
               <div
                 key={stage.key}
-                className="relative group transition-all duration-300 hover:scale-105"
-                style={{ width: `${width}%` }}
+                className="flex items-center justify-center mb-1 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                {/* Funnel segment */}
                 <div
-                  className={`relative h-12 bg-gradient-to-r ${stage.color} rounded-sm shadow-md flex items-center justify-center cursor-default`}
-                  style={{
-                    clipPath:
-                      index === pipelineStages.length - 1
-                        ? "polygon(5% 0%, 95% 0%, 100% 100%, 0% 100%)"
-                        : "polygon(0% 0%, 100% 0%, 95% 100%, 5% 100%)",
-                  }}
+                  className="relative h-11 flex items-center transition-all duration-300 hover:brightness-110"
+                  style={{ width: `${widthPercent}%` }}
                 >
+                  {/* Trapezoid Shape using SVG */}
+                  <svg
+                    className="absolute inset-0 w-full h-full"
+                    viewBox="0 0 100 100"
+                    preserveAspectRatio="none"
+                  >
+                    <polygon
+                      points="2,0 98,0 95,100 5,100"
+                      fill={stage.color}
+                      className="transition-all duration-300"
+                    />
+                  </svg>
+                  
                   {/* Content */}
-                  <div className="flex items-center justify-between w-full px-4 text-white">
-                    <span className="font-medium text-sm truncate">{stage.label}</span>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="bg-white/20 px-2 py-0.5 rounded font-bold">
+                  <div className="relative z-10 flex items-center justify-between w-full px-4">
+                    <span className="font-medium text-white text-sm drop-shadow-sm">
+                      {stage.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
                         {stage.count}
                       </span>
-                      <span className="font-medium hidden sm:inline">
+                      <span className="text-white/90 text-xs font-medium min-w-[60px] text-right">
                         {formatCurrency(stage.value)}
                       </span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Tooltip on hover */}
-                <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 opacity-0 group-hover:opacity-100 group-hover:translate-y-full transition-all duration-200 z-10 pointer-events-none">
-                  <div className="bg-popover text-popover-foreground border shadow-lg rounded-lg px-3 py-2 text-xs whitespace-nowrap mt-2">
-                    <p className="font-semibold">{stage.label}</p>
-                    <p>
-                      <span className="text-muted-foreground">Quantidade:</span>{" "}
-                      <span className="font-medium">{stage.count}</span>
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Valor:</span>{" "}
-                      <span className="font-medium">
-                        R$ {stage.value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                      </span>
-                    </p>
                   </div>
                 </div>
               </div>
@@ -167,71 +154,59 @@ const SalesFunnelChart = () => {
           })}
         </div>
 
-        {/* Results section (Won/Lost) */}
-        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
-          {resultStages.map((stage) => (
-            <div
-              key={stage.key}
-              className={`p-3 rounded-lg bg-gradient-to-br ${
-                stage.key === "won"
-                  ? "from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20"
-                  : "from-red-500/10 to-red-500/5 border border-red-500/20"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span
-                  className={`text-sm font-medium ${
-                    stage.key === "won" ? "text-emerald-600" : "text-red-600"
-                  }`}
-                >
-                  {stage.label}
-                </span>
-                <span
-                  className={`text-lg font-bold ${
-                    stage.key === "won" ? "text-emerald-600" : "text-red-600"
-                  }`}
-                >
-                  {stage.count}
-                </span>
-              </div>
-              <p
-                className={`text-xs ${
-                  stage.key === "won" ? "text-emerald-600/80" : "text-red-600/80"
-                }`}
-              >
-                {formatCurrency(stage.value)}
-              </p>
+        {/* Results Row */}
+        <div className="grid grid-cols-2 gap-4 mt-6 max-w-xl mx-auto">
+          {/* Won */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+            <div className="p-2 rounded-lg bg-emerald-500/20">
+              <Trophy className="h-5 w-5 text-emerald-600" />
             </div>
-          ))}
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Ganhos</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-emerald-600">{wonStage?.count || 0}</span>
+                <span className="text-sm text-emerald-600/80">{formatCurrency(wonStage?.value || 0)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Lost */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-red-500/10 to-red-500/5 border border-red-500/20">
+            <div className="p-2 rounded-lg bg-red-500/20">
+              <XCircle className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground">Perdidos</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xl font-bold text-red-600">{lostStage?.count || 0}</span>
+                <span className="text-sm text-red-600/80">{formatCurrency(lostStage?.value || 0)}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Summary */}
-        <div className="mt-4 pt-4 border-t border-border">
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground">Total Pipeline</p>
-              <p className="text-lg font-bold text-primary">
-                {pipelineStages.reduce((sum, s) => sum + s.count, 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Valor Pipeline</p>
-              <p className="text-lg font-bold text-primary">
-                {formatCurrency(pipelineStages.reduce((sum, s) => sum + s.value, 0))}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Taxa Conversão</p>
-              <p className="text-lg font-bold text-emerald-600">
-                {(() => {
-                  const totalClosed = resultStages.reduce((sum, s) => sum + s.count, 0);
-                  const won = resultStages.find((s) => s.key === "won")?.count || 0;
-                  return totalClosed > 0
-                    ? `${Math.round((won / totalClosed) * 100)}%`
-                    : "0%";
-                })()}
-              </p>
-            </div>
+        {/* Summary Stats */}
+        <div className="flex items-center justify-center gap-8 mt-6 pt-6 border-t border-border">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground mb-1">Total no Pipeline</p>
+            <p className="text-2xl font-bold text-foreground">{totalPipeline}</p>
+          </div>
+          <div className="w-px h-10 bg-border" />
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground mb-1">Valor Total</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(totalPipelineValue)}</p>
+          </div>
+          <div className="w-px h-10 bg-border" />
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground mb-1">Taxa de Conversão</p>
+            <p className="text-2xl font-bold text-emerald-600">
+              {(() => {
+                const totalClosed = (wonStage?.count || 0) + (lostStage?.count || 0);
+                return totalClosed > 0
+                  ? `${Math.round(((wonStage?.count || 0) / totalClosed) * 100)}%`
+                  : "0%";
+              })()}
+            </p>
           </div>
         </div>
       </CardContent>
