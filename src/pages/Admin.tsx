@@ -40,10 +40,12 @@ import {
   Image as ImageIcon,
   Download,
   X,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AlertsTester } from "@/components/AlertsTester";
+import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -710,8 +712,9 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
+          <TabsTrigger value="transfer">Transferir Prospects</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
         </TabsList>
@@ -851,6 +854,10 @@ const Admin = () => {
               ))}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="transfer" className="space-y-4">
+          <BulkTransferProspects />
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
