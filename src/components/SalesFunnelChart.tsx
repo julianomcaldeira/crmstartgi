@@ -118,34 +118,67 @@ const SalesFunnelChart = () => {
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div
-                  className="relative h-11 flex items-center transition-all duration-300 hover:brightness-110"
+                  className="group relative h-11 flex items-center transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:z-10"
                   style={{ width: `${widthPercent}%` }}
                 >
                   {/* Trapezoid Shape using SVG */}
                   <svg
-                    className="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 w-full h-full drop-shadow-sm transition-all duration-300 group-hover:drop-shadow-lg"
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
                   >
                     <polygon
                       points="2,0 98,0 95,100 5,100"
                       fill={stage.color}
-                      className="transition-all duration-300"
+                      className="transition-all duration-300 group-hover:brightness-110"
                     />
                   </svg>
                   
+                  {/* Glow effect on hover */}
+                  <div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-md -z-10"
+                    style={{ backgroundColor: stage.color, transform: 'scale(1.05)' }}
+                  />
+                  
                   {/* Content */}
                   <div className="relative z-10 flex items-center justify-between w-full px-4">
-                    <span className="font-medium text-white text-sm drop-shadow-sm">
+                    <span className="font-medium text-white text-sm drop-shadow-sm group-hover:font-semibold transition-all duration-200">
                       {stage.label}
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center">
+                      <span className="bg-white/25 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[24px] text-center group-hover:bg-white/40 group-hover:scale-110 transition-all duration-200">
                         {stage.count}
                       </span>
-                      <span className="text-white/90 text-xs font-medium min-w-[60px] text-right">
+                      <span className="text-white/90 text-xs font-medium min-w-[60px] text-right group-hover:text-white transition-colors duration-200">
                         {formatCurrency(stage.value)}
                       </span>
+                    </div>
+                  </div>
+
+                  {/* Tooltip on hover */}
+                  <div className="absolute left-1/2 -translate-x-1/2 -bottom-2 translate-y-full opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 z-20">
+                    <div className="bg-popover text-popover-foreground border shadow-xl rounded-lg px-4 py-3 text-sm whitespace-nowrap mt-2">
+                      <p className="font-semibold text-foreground mb-2">{stage.label}</p>
+                      <div className="space-y-1 text-xs">
+                        <p className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Quantidade:</span>
+                          <span className="font-bold">{stage.count} oportunidades</span>
+                        </p>
+                        <p className="flex justify-between gap-4">
+                          <span className="text-muted-foreground">Valor total:</span>
+                          <span className="font-bold text-primary">
+                            R$ {stage.value.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                          </span>
+                        </p>
+                        {stage.count > 0 && (
+                          <p className="flex justify-between gap-4">
+                            <span className="text-muted-foreground">Ticket médio:</span>
+                            <span className="font-medium">
+                              R$ {Math.round(stage.value / stage.count).toLocaleString("pt-BR")}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
