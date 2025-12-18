@@ -41,7 +41,27 @@ import {
   Download,
   X,
   ArrowLeftRight,
+  Ban,
+  UserX,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AlertsTester } from "@/components/AlertsTester";
@@ -81,6 +101,13 @@ const Admin = () => {
   
   // Export state
   const [exportingData, setExportingData] = useState(false);
+  
+  // User management state
+  const [userToDelete, setUserToDelete] = useState<any>(null);
+  const [userToDeactivate, setUserToDeactivate] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
+  const [processingUser, setProcessingUser] = useState(false);
   
   // Clean database state
   const [cleaningDatabase, setCleaningDatabase] = useState(false);
@@ -192,6 +219,89 @@ const Admin = () => {
       fetchUsers();
     } catch (error: any) {
       toast.error("Erro ao atualizar role: " + error.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setProcessingUser(true);
+    try {
+      // First check if user has prospects
+      const { count: prospectsCount } = await supabase
+        .from("clients")
+        .select("*", { count: "exact", head: true })
+        .eq("created_by", userToDelete.id);
+      
+      if (prospectsCount && prospectsCount > 0) {
+        toast.error(`Este usuário possui ${prospectsCount} prospects. Transfira os prospects antes de excluir.`);
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        setProcessingUser(false);
+        return;
+      }
+
+      // Delete user role first
+      await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userToDelete.id);
+
+      // Delete profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userToDelete.id);
+
+      if (profileError) throw profileError;
+
+      toast.success("Usuário excluído com sucesso!");
+      setDeleteDialogOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Erro ao excluir usuário: " + error.message);
+    } finally {
+      setProcessingUser(false);
+    }
+  };
+
+  const handleDeactivateUser = async () => {
+    if (!userToDeactivate) return;
+    
+    setProcessingUser(true);
+    try {
+      // Remove user role to deactivate access
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userToDeactivate.id);
+
+      if (error) throw error;
+
+      toast.success("Acesso do usuário cancelado com sucesso!");
+      setDeactivateDialogOpen(false);
+      setUserToDeactivate(null);
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Erro ao cancelar acesso: " + error.message);
+    } finally {
+      setProcessingUser(false);
+    }
+  };
+
+  const handleReactivateUser = async (userId: string) => {
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: "vendedor" as any });
+
+      if (error) throw error;
+
+      toast.success("Acesso do usuário reativado com sucesso!");
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Erro ao reativar acesso: " + error.message);
     }
   };
 
@@ -835,25 +945,120 @@ const Admin = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <Select
-                        value={user.user_roles?.[0]?.role || "vendedor"}
-                        onValueChange={(value) => handleRoleChange(user.id, value)}
-                      >
-                        <SelectTrigger className="w-[150px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="vendedor">Vendedor</SelectItem>
-                          <SelectItem value="gestor">Gestor</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      {user.user_roles?.[0]?.role ? (
+                        <Select
+                          value={user.user_roles[0].role}
+                          onValueChange={(value) => handleRoleChange(user.id, value)}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="vendedor">Vendedor</SelectItem>
+                            <SelectItem value="gestor">Gestor</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className="text-destructive border-destructive">
+                          <Ban className="h-3 w-3 mr-1" />
+                          Desativado
+                        </Badge>
+                      )}
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {!user.user_roles?.[0]?.role ? (
+                            <DropdownMenuItem onClick={() => handleReactivateUser(user.id)}>
+                              <Users className="h-4 w-4 mr-2" />
+                              Reativar Acesso
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setUserToDeactivate(user);
+                                setDeactivateDialogOpen(true);
+                              }}
+                              className="text-amber-600"
+                            >
+                              <Ban className="h-4 w-4 mr-2" />
+                              Cancelar Acesso
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setUserToDelete(user);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="text-destructive"
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            Excluir Usuário
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
+
+          {/* Delete User Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir o usuário <strong>{userToDelete?.full_name}</strong>?
+                  <br /><br />
+                  Esta ação irá remover permanentemente o perfil do usuário. 
+                  Se o usuário possuir prospects vinculados, você precisará transferi-los antes de excluir.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={processingUser}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteUser}
+                  disabled={processingUser}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {processingUser ? "Excluindo..." : "Excluir Usuário"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          {/* Deactivate User Dialog */}
+          <AlertDialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancelar Acesso</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja cancelar o acesso do usuário <strong>{userToDeactivate?.full_name}</strong>?
+                  <br /><br />
+                  O usuário não poderá mais acessar o sistema, mas seus dados e prospects permanecerão intactos.
+                  Você poderá reativar o acesso posteriormente.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={processingUser}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeactivateUser}
+                  disabled={processingUser}
+                  className="bg-amber-600 text-white hover:bg-amber-700"
+                >
+                  {processingUser ? "Processando..." : "Cancelar Acesso"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         <TabsContent value="transfer" className="space-y-4">
