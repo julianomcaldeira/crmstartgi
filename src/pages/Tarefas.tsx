@@ -458,7 +458,11 @@ const Tarefas = () => {
       return <CheckCircle2 className="h-4 w-4 text-success" />;
     }
     
-    const taskDate = new Date(task.due_date);
+    if (!task.due_date) {
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+    
+    const taskDate = parseISO(task.due_date);
     if (isPast(taskDate)) {
       return <AlertCircle className="h-4 w-4 text-destructive" />;
     }
@@ -472,15 +476,16 @@ const Tarefas = () => {
   };
 
   const filteredTasks = tasks.filter((task) => {
+    const taskDate = task.due_date ? parseISO(task.due_date) : null;
+    
     const matchesStatus = 
       filter === "all" ? true :
-      filter === "pending" ? task.status !== "completed" && (!task.due_date || !isPast(new Date(task.due_date))) :
-      filter === "overdue" ? task.status !== "completed" && task.due_date && isPast(new Date(task.due_date)) :
+      filter === "pending" ? task.status !== "completed" && (!taskDate || !isPast(taskDate)) :
+      filter === "overdue" ? task.status !== "completed" && taskDate && isPast(taskDate) :
       task.status === "completed";
     
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
     
-    const taskDate = task.due_date ? new Date(task.due_date) : null;
     const matchesStartDate = !startDate || !taskDate || taskDate >= new Date(startDate);
     const matchesEndDate = !endDate || !taskDate || taskDate <= new Date(endDate);
     
@@ -509,9 +514,9 @@ const Tarefas = () => {
       if (filter === "completed") {
         return task.status === "completed";
       } else if (filter === "pending") {
-        return task.status === "pending" && !isPast(new Date(task.due_date));
+        return task.status === "pending" && !isPast(taskDate);
       } else if (filter === "overdue") {
-        return task.status !== "completed" && isPast(new Date(task.due_date));
+        return task.status !== "completed" && isPast(taskDate);
       }
       
       return true;
@@ -938,7 +943,7 @@ const Tarefas = () => {
                               <div className="flex items-center gap-1">
                                 {getTaskStatusIcon(task)}
                                 <span>
-                                  {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  {format(parseISO(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                 </span>
                               </div>
                             )}
@@ -1082,7 +1087,7 @@ const Tarefas = () => {
                                   {task.due_date && (
                                     <div className="flex items-center gap-1 text-muted-foreground">
                                       {getTaskStatusIcon(task)}
-                                      <span>{format(new Date(task.due_date), "HH:mm")}</span>
+                                      <span>{format(parseISO(task.due_date), "HH:mm")}</span>
                                     </div>
                                   )}
                                   {task.client && (
