@@ -66,6 +66,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { AlertsTester } from "@/components/AlertsTester";
 import { BulkTransferProspects } from "@/components/BulkTransferProspects";
+import SalesFunnelChart from "@/components/SalesFunnelChart";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -836,6 +837,9 @@ const Admin = () => {
           </div>
         </Card>
       </div>
+
+      {/* Sales Funnel Chart */}
+      <SalesFunnelChart />
 
       {/* Alerts System Tester */}
       <AlertsTester />
