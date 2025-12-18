@@ -36,7 +36,15 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
   useEffect(() => {
     if (task) {
       setTaskType(task.task_type || "ligacao");
-      setDueDate(task.due_date ? new Date(task.due_date).toISOString().slice(0, 16) : "");
+      // Converter UTC do banco para formato local para o input datetime-local
+      if (task.due_date) {
+        const utcDate = new Date(task.due_date);
+        // Ajusta para o timezone local subtraindo o offset
+        const localDate = new Date(utcDate.getTime() - utcDate.getTimezoneOffset() * 60000);
+        setDueDate(localDate.toISOString().slice(0, 16));
+      } else {
+        setDueDate("");
+      }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
       setDescription(task.description || "");
@@ -135,8 +143,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
       newDisplay = statusLabels[newValue] || newValue;
     } else if (field === "due_date" && oldValue && newValue) {
       try {
-        oldDisplay = format(parseISO(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-        newDisplay = format(parseISO(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        oldDisplay = format(new Date(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        newDisplay = format(new Date(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
       } catch (e) {
         // Keep original values if parsing fails
       }
@@ -223,12 +231,15 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
       
       const title = taskTypeLabels[taskType] || "Tarefa";
 
+      // Converter o valor local do input para UTC antes de salvar
+      const dueDateUTC = dueDate ? new Date(dueDate).toISOString() : null;
+
       const { error } = await supabase
         .from("tasks")
         .update({
           title,
           task_type: taskType as any,
-          due_date: dueDate,
+          due_date: dueDateUTC,
           priority: priority as any,
           status: status as any,
           description: description.trim() || null,
@@ -452,7 +463,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
                               </span>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {format(parseISO(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
+                              {format(new Date(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
                                 locale: ptBR,
                               })}
                             </span>
