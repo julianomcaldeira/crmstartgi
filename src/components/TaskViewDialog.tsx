@@ -164,8 +164,8 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
       newDisplay = statusLabels[newValue] || newValue;
     } else if (field === "due_date" && oldValue && newValue) {
       try {
-        oldDisplay = format(parseISO(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-        newDisplay = format(parseISO(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        oldDisplay = format(new Date(oldValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        newDisplay = format(new Date(newValue), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
       } catch (e) {
         // Keep original values if parsing fails
       }
@@ -231,7 +231,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                 Data e Hora
               </div>
               <p className="text-foreground pl-6">
-                {format(parseISO(task.due_date), "PPP 'às' HH:mm", { locale: ptBR })}
+                {format(new Date(task.due_date), "PPP 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
           )}
@@ -308,7 +308,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                 Concluída em
               </div>
               <p className="text-foreground pl-6">
-                {format(parseISO(task.completed_at), "PPP 'às' HH:mm", { locale: ptBR })}
+                {format(new Date(task.completed_at), "PPP 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
           )}
@@ -346,7 +346,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                               </span>
                             </div>
                             <span className="text-xs text-muted-foreground">
-                              {format(parseISO(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
+                              {format(new Date(record.changed_at), "dd/MM/yyyy 'às' HH:mm", {
                                 locale: ptBR,
                               })}
                             </span>

@@ -358,8 +358,8 @@ const Tarefas = () => {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
       
-      const oldDueDate = parseISO(task.due_date);
-      const newDate = parseISO(newDateStr);
+      const oldDueDate = new Date(task.due_date);
+      const newDate = new Date(newDateStr);
       
       const newDueDate = new Date(
         newDate.getFullYear(),
@@ -506,7 +506,7 @@ const Tarefas = () => {
     return tasks.filter((task) => {
       if (!task.due_date) return false;
       
-      const taskDate = startOfDay(parseISO(task.due_date));
+      const taskDate = startOfDay(new Date(task.due_date));
       const matchesDay = isSameDay(taskDate, day);
       
       if (!matchesDay) return false;
