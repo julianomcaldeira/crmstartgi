@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import logo from "@/assets/logo-startgi.jpg";
+import logo from "@/assets/logo-evolua-crm.png";
 import { NotificationSystem } from "./NotificationSystem";
 import { AlertsPanel } from "./AlertsPanel";
 
@@ -130,7 +130,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-center p-6 border-b border-sidebar-border bg-sidebar">
-            <img src={logo} alt="StartGi" className="h-20 w-auto object-contain" />
+            <img src={logo} alt="Evolua CRM" className="h-28 w-auto object-contain" />
             <button
               className="lg:hidden text-sidebar-foreground absolute right-4"
               onClick={() => setSidebarOpen(false)}
@@ -200,7 +200,7 @@ const Layout = ({ children }: LayoutProps) => {
             <Menu size={24} />
           </button>
           <div className="lg:hidden">
-            <img src={logo} alt="StartGi" className="h-10 w-auto object-contain" />
+            <img src={logo} alt="Evolua CRM" className="h-12 w-auto object-contain" />
           </div>
           
           {/* User Profile */}
