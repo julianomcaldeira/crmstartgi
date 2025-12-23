@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
@@ -785,14 +786,18 @@ const Metas = () => {
       </Card>
 
       <Tabs defaultValue="lista" className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="lista" className="gap-2">
             <Target className="h-4 w-4" />
-            Lista de Metas
+            Cards
+          </TabsTrigger>
+          <TabsTrigger value="tabela" className="gap-2">
+            <List className="h-4 w-4" />
+            Lista
           </TabsTrigger>
           <TabsTrigger value="dashboard" className="gap-2">
             <BarChart3 className="h-4 w-4" />
-            Dashboard Visual
+            Dashboard
           </TabsTrigger>
         </TabsList>
 
@@ -998,6 +1003,143 @@ const Metas = () => {
           })}
         </div>
       )}
+        </TabsContent>
+
+        {/* Nova aba de Lista/Tabela */}
+        <TabsContent value="tabela" className="space-y-6">
+          {loading ? (
+            <p className="text-center text-muted-foreground">Carregando...</p>
+          ) : goalsProgress.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Target className="mx-auto mb-4 text-muted-foreground" size={48} />
+                <p className="text-muted-foreground">
+                  Nenhuma meta definida ainda
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <List className="h-5 w-5" />
+                  Visão em Lista
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Todas as metas com progresso atual e projeção
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Meta</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Responsável</TableHead>
+                        <TableHead>Período</TableHead>
+                        <TableHead className="text-right">Valor Alvo</TableHead>
+                        <TableHead className="text-right">Atual</TableHead>
+                        <TableHead className="text-right">Progresso</TableHead>
+                        <TableHead className="text-right">Projeção</TableHead>
+                        <TableHead>Status</TableHead>
+                        {isAdmin && <TableHead className="text-center">Ações</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {goalsProgress
+                        .filter(goal => {
+                          if (filterSeller !== "all") {
+                            if (filterSeller === "unassigned") return !goal.assigned_to;
+                            return goal.assigned_to === filterSeller;
+                          }
+                          if (filterGoalType !== "all") return goal.goal_type === filterGoalType;
+                          if (filterPeriod !== "all") return goal.period === filterPeriod;
+                          return true;
+                        })
+                        .map((goal) => {
+                          const Icon = getGoalIcon(goal.goal_type);
+                          return (
+                            <TableRow key={goal.id} className="hover:bg-muted/50">
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="p-1.5 bg-primary/10 rounded">
+                                    <Icon className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <span className="font-medium">{goal.title}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {getGoalTypeLabel(goal.goal_type)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {goal.profiles?.full_name || goal.assigned_user?.full_name || "Não atribuído"}
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-xs">
+                                  {new Date(goal.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - {new Date(goal.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                {formatValue(goal.target_value, goal.goal_type)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatValue(goal.currentValue, goal.goal_type)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <Progress value={goal.progress} className="w-16 h-2" />
+                                  <span className="text-xs font-medium w-10">{goal.progress.toFixed(0)}%</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {formatValue(goal.projection, goal.goal_type)}
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant={goal.isOnTrack ? "default" : "destructive"}
+                                  className="text-xs"
+                                >
+                                  {goal.isOnTrack ? (
+                                    <><TrendingUp className="h-3 w-3 mr-1" /> No caminho</>
+                                  ) : (
+                                    <><TrendingDown className="h-3 w-3 mr-1" /> Atenção</>
+                                  )}
+                                </Badge>
+                              </TableCell>
+                              {isAdmin && (
+                                <TableCell className="text-center">
+                                  <div className="flex justify-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => openEditDialog(goal)}
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handleDeleteGoal(goal.id)}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              )}
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="dashboard" className="space-y-6">
