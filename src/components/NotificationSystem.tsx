@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, Target, CheckCircle } from "lucide-react";
+import { AlertCircle, Target, CheckCircle, Trophy } from "lucide-react";
+import { checkGoalAchievements } from "@/hooks/useGoalProgress";
 
 const NOTIFICATION_STORAGE_KEY = "crm_notified_items";
 const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -108,17 +109,28 @@ export const NotificationSystem = () => {
         }
       }
 
-      // Check goals achieved (only notify once per goal)
-      const { data: goals } = await supabase
-        .from("goals")
-        .select("id, title, target_value")
-        .eq("assigned_to", user.id);
+      // Check goals achieved using real progress calculation
+      const goalProgress = await checkGoalAchievements(user.id);
+      const achievedGoals = goalProgress.filter(g => g.isAchieved);
 
-      if (goals && goals.length > 0) {
-        // For goals, we need to calculate current_value - but since goals table 
-        // doesn't have current_value, we skip this notification for now
-        // The original code was comparing goal.current_value which doesn't exist
-        // This would need proper implementation with actual progress calculation
+      if (achievedGoals.length > 0) {
+        const newAchievedGoals = achievedGoals.filter(
+          goal => !notifiedItems.goals.includes(goal.goalId)
+        );
+
+        if (newAchievedGoals.length > 0) {
+          hasNewNotifications = true;
+          newAchievedGoals.forEach((goal) => {
+            toast.success("Meta atingida!", {
+              description: `${goal.title} - ${goal.currentValue.toLocaleString("pt-BR")} de ${goal.targetValue.toLocaleString("pt-BR")}`,
+              icon: <Trophy className="h-5 w-5" />,
+              duration: 8000,
+            });
+          });
+
+          // Mark these goals as notified
+          notifiedItems.goals.push(...newAchievedGoals.map(g => g.goalId));
+        }
       }
 
       if (hasNewNotifications) {
