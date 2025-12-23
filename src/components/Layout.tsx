@@ -151,7 +151,7 @@ const Layout = ({ children }: LayoutProps) => {
           {/* Menu Items */}
           <ScrollArea className="flex-1 px-3">
             <nav className="py-4 space-y-1">
-              {menuItems.map((item) => {
+              {menuItems.map((item, index) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
                 
@@ -162,13 +162,17 @@ const Layout = ({ children }: LayoutProps) => {
                       navigate(item.path);
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 animate-fade-in opacity-0 ${
                       isActive
                         ? "bg-primary text-white shadow-md shadow-primary/30"
                         : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
+                    style={{
+                      animationDelay: `${index * 50}ms`,
+                      animationFillMode: 'forwards'
+                    }}
                   >
-                    <Icon size={18} className={isActive ? "text-white" : ""} />
+                    <Icon size={18} className={`${isActive ? "text-white" : ""} transition-transform duration-200 group-hover:scale-110`} />
                     <span className="font-medium text-sm">{item.label}</span>
                   </button>
                 );
