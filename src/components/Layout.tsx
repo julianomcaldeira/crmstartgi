@@ -123,16 +123,25 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-sidebar z-50 transform transition-transform duration-300 shadow-xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-center p-6 border-b border-sidebar-border bg-sidebar">
-            <img src={logo} alt="Evolua CRM" className="h-28 w-auto object-contain" />
+          {/* Logo Section - Clean dark design with gradient accent */}
+          <div className="relative flex items-center justify-center p-5 border-b border-sidebar-border/50">
+            {/* Subtle gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-sidebar via-sidebar to-primary/10" />
+            
+            <div className="relative flex flex-col items-center gap-2">
+              {/* Logo with rounded container */}
+              <div className="bg-white/95 rounded-xl p-3 shadow-lg">
+                <img src={logo} alt="Evolua CRM" className="h-16 w-auto object-contain" />
+              </div>
+            </div>
+            
             <button
-              className="lg:hidden text-sidebar-foreground absolute right-4"
+              className="lg:hidden text-sidebar-foreground absolute right-4 top-4 hover:text-primary transition-colors"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={24} />
@@ -140,8 +149,8 @@ const Layout = ({ children }: LayoutProps) => {
           </div>
 
           {/* Menu Items */}
-          <ScrollArea className="flex-1 px-4">
-            <nav className="py-4 space-y-2">
+          <ScrollArea className="flex-1 px-3">
+            <nav className="py-4 space-y-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = location.pathname === item.path;
@@ -153,14 +162,14 @@ const Layout = ({ children }: LayoutProps) => {
                       navigate(item.path);
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-200 ${
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+                        ? "bg-primary text-white shadow-md shadow-primary/30"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     }`}
                   >
-                    <Icon size={20} />
-                    <span className="font-medium">{item.label}</span>
+                    <Icon size={18} className={isActive ? "text-white" : ""} />
+                    <span className="font-medium text-sm">{item.label}</span>
                   </button>
                 );
               })}
@@ -168,18 +177,18 @@ const Layout = ({ children }: LayoutProps) => {
           </ScrollArea>
 
           {/* User Info & Logout */}
-          <div className="p-4 border-t border-sidebar-border space-y-3">
-            <div className="px-4 py-2 bg-sidebar-accent rounded-lg">
+          <div className="p-3 border-t border-sidebar-border/50 space-y-3">
+            <div className="px-3 py-2.5 bg-sidebar-accent/50 rounded-lg border border-sidebar-border/30">
               <p className="text-sm font-medium text-sidebar-foreground">
                 {userProfile?.full_name || "Usuário"}
               </p>
-              <p className="text-xs text-sidebar-foreground/70">
+              <p className="text-xs text-sidebar-foreground/60 truncate">
                 {userProfile?.email}
               </p>
             </div>
             <Button
               variant="outline"
-              className="w-full justify-center gap-2 bg-black text-white hover:bg-black/90 hover:text-white border-black"
+              className="w-full justify-center gap-2 bg-sidebar-accent/50 text-sidebar-foreground hover:bg-destructive hover:text-white border-sidebar-border/30 hover:border-destructive transition-all duration-200"
               onClick={handleLogout}
             >
               <LogOut size={16} />
