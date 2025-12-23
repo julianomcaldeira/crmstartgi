@@ -6,6 +6,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,9 +31,10 @@ interface TaskEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  onDelete?: (taskId: string) => void;
 }
 
-export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEditDialogProps) => {
+export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }: TaskEditDialogProps) => {
   const [taskType, setTaskType] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [priority, setPriority] = useState("");
@@ -32,6 +44,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
   const [newNote, setNewNote] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -265,6 +278,32 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
     }
   };
 
+  const handleDelete = async () => {
+    if (!task?.id) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      toast.success("Tarefa excluída com sucesso!");
+      onOpenChange(false);
+      if (onDelete) {
+        onDelete(task.id);
+      }
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      toast.error(error.message || "Erro ao excluir tarefa");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!task) return null;
 
   return (
@@ -487,17 +526,46 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess }: TaskEdit
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleUpdate} disabled={loading}>
-              {loading ? "Salvando..." : "Salvar Alterações"}
-            </Button>
+          <div className="flex justify-between gap-2 pt-4 border-t">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={deleting}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  {deleting ? "Excluindo..." : "Excluir"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Sim, Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleUpdate} disabled={loading}>
+                {loading ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
