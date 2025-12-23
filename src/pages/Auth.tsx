@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
-import logo from "@/assets/logo-startgi.jpg";
+import logo from "@/assets/logo-evolua-crm.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -71,7 +71,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       <Card className="w-full max-w-md p-8 shadow-lg">
         <div className="flex flex-col items-center mb-8">
-          <img src={logo} alt="StartGi Logo" className="h-20 mb-4" />
+          <img src={logo} alt="Evolua CRM" className="h-32 mb-4" />
           <h1 className="text-2xl font-bold text-foreground">
             {isLogin ? "Bem-vindo de volta" : "Crie sua conta"}
           </h1>
