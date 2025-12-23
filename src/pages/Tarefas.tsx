@@ -59,6 +59,7 @@ const Tarefas = () => {
   const [clientId, setClientId] = useState("");
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
+  const [opportunitySearchTerm, setOpportunitySearchTerm] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
   
@@ -705,16 +706,38 @@ const Tarefas = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="opportunity">Oportunidade (Opcional)</Label>
-                <Select value={opportunityId} onValueChange={setOpportunityId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma oportunidade" />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
+                  <Input
+                    placeholder="Buscar oportunidade..."
+                    value={opportunitySearchTerm}
+                    onChange={(e) => setOpportunitySearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select 
+                  value={opportunityId} 
+                  onValueChange={(value) => {
+                    setOpportunityId(value);
+                    const selected = opportunities.find(o => o.id === value);
+                    setOpportunitySearchTerm(selected ? selected.title : "");
+                  }}
+                >
+                  <SelectTrigger className="bg-background z-50">
+                    <SelectValue placeholder="Selecione uma oportunidade da lista" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {opportunities.map((opp) => (
-                      <SelectItem key={opp.id} value={opp.id}>
-                        {opp.title}
-                      </SelectItem>
-                    ))}
+                  <SelectContent className="bg-background z-50 max-h-[300px]">
+                    {opportunities
+                      .filter(opp => {
+                        if (!opportunitySearchTerm) return true;
+                        const searchLower = opportunitySearchTerm.toLowerCase();
+                        return opp.title?.toLowerCase().includes(searchLower);
+                      })
+                      .map((opp) => (
+                        <SelectItem key={opp.id} value={opp.id}>
+                          {opp.title}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
