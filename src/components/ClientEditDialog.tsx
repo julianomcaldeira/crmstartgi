@@ -252,7 +252,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
 
         if (deleteFeirasError) {
           console.error("Error deleting feiras:", deleteFeirasError);
-          // Continue even if delete fails (RLS might prevent it)
+          throw new Error("Erro ao remover feiras vinculadas");
         }
       }
 
