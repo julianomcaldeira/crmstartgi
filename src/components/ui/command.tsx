@@ -6,12 +6,30 @@ import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
+// Custom filter function for better Portuguese search
+const customFilter = (value: string, search: string) => {
+  const normalizedValue = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  // Check if search term is found anywhere in the value
+  if (normalizedValue.includes(normalizedSearch)) {
+    return 1;
+  }
+  
+  // Check each word in the search against the value
+  const searchWords = normalizedSearch.split(/\s+/).filter(Boolean);
+  const allWordsFound = searchWords.every(word => normalizedValue.includes(word));
+  
+  return allWordsFound ? 1 : 0;
+};
+
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, ref) => (
+>(({ className, filter, ...props }, ref) => (
   <CommandPrimitive
     ref={ref}
+    filter={filter ?? customFilter}
     className={cn(
       "flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground",
       className,
