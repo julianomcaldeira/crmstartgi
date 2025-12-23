@@ -9,118 +9,122 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 98%;
-    --foreground: 0 0% 33%;
+    --foreground: 210 10% 23%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 33%;
+    --card-foreground: 210 10% 23%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 33%;
+    --popover-foreground: 210 10% 23%;
 
-    --primary: 158 100% 50%;
-    --primary-foreground: 0 0% 10%;
+    /* Evolua CRM Green - #22c55e */
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
     
-    --primary-light: 158 100% 70%;
-    --primary-dark: 158 100% 35%;
+    --primary-light: 142 71% 55%;
+    --primary-dark: 142 71% 35%;
 
-    --secondary: 0 0% 33%;
+    /* Dark Gray for secondary elements */
+    --secondary: 210 10% 35%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 95%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 210 10% 95%;
+    --muted-foreground: 210 10% 45%;
 
-    --accent: 158 95% 45%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 158 100% 50%;
+    --border: 210 10% 90%;
+    --input: 210 10% 90%;
+    --ring: 142 71% 45%;
 
     --radius: 0.75rem;
     
-    --success: 142 76% 36%;
+    --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
 
-    --sidebar-background: 0 0% 15%;
+    /* Sidebar with dark gray theme */
+    --sidebar-background: 210 15% 18%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 158 100% 50%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 158 100% 70%;
-    --sidebar-border: 0 0% 25%;
-    --sidebar-ring: 158 100% 50%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 25%;
+    --sidebar-accent-foreground: 142 71% 55%;
+    --sidebar-border: 210 15% 25%;
+    --sidebar-ring: 142 71% 45%;
     
-    --chart-1: 158 100% 50%;
-    --chart-2: 220 70% 50%;
+    --chart-1: 142 71% 45%;
+    --chart-2: 199 89% 48%;
     --chart-3: 280 65% 60%;
-    --chart-4: 40 90% 55%;
+    --chart-4: 38 92% 50%;
     --chart-5: 340 75% 55%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(158 100% 50%) 0%, hsl(158 100% 35%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(142 71% 50%) 0%, hsl(142 71% 35%) 100%);
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(158 100% 50%) 0%, hsl(158 95% 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 55%) 100%);
     
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-    --shadow-primary: 0 10px 30px -10px hsl(158 100% 50% / 0.3);
-    --shadow-glow: 0 0 40px hsl(158 100% 50% / 0.2);
+    --shadow-primary: 0 10px 30px -10px hsl(142 71% 45% / 0.3);
+    --shadow-glow: 0 0 40px hsl(142 71% 45% / 0.2);
     
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .dark {
-    --background: 0 0% 8%;
+    --background: 210 15% 8%;
     --foreground: 0 0% 95%;
 
-    --card: 0 0% 12%;
+    --card: 210 15% 12%;
     --card-foreground: 0 0% 95%;
 
-    --popover: 0 0% 12%;
+    --popover: 210 15% 12%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 158 100% 50%;
-    --primary-foreground: 0 0% 10%;
+    /* Evolua CRM Green - #22c55e */
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
     
-    --primary-light: 158 100% 70%;
-    --primary-dark: 158 100% 35%;
+    --primary-light: 142 71% 55%;
+    --primary-dark: 142 71% 35%;
 
-    --secondary: 0 0% 25%;
+    --secondary: 210 10% 25%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 18%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 210 15% 18%;
+    --muted-foreground: 210 10% 60%;
 
-    --accent: 158 95% 45%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 142 71% 45%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 158 100% 50%;
+    --border: 210 15% 20%;
+    --input: 210 15% 20%;
+    --ring: 142 71% 45%;
     
-    --success: 142 76% 36%;
+    --success: 142 71% 45%;
     --warning: 38 92% 50%;
     --info: 199 89% 48%;
 
-    --sidebar-background: 0 0% 10%;
+    --sidebar-background: 210 15% 10%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 158 100% 50%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 15%;
-    --sidebar-accent-foreground: 158 100% 70%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 158 100% 50%;
+    --sidebar-primary: 142 71% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 15% 15%;
+    --sidebar-accent-foreground: 142 71% 55%;
+    --sidebar-border: 210 15% 18%;
+    --sidebar-ring: 142 71% 45%;
     
-    --shadow-primary: 0 10px 30px -10px hsl(158 100% 50% / 0.5);
-    --shadow-glow: 0 0 40px hsl(158 100% 50% / 0.3);
+    --shadow-primary: 0 10px 30px -10px hsl(142 71% 45% / 0.5);
+    --shadow-glow: 0 0 40px hsl(142 71% 45% / 0.3);
   }
 }
 
