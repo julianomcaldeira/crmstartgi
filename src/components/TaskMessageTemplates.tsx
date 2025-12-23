@@ -29,6 +29,7 @@ const taskTypes = [
   { value: "reuniao_online", label: "Reunião Online", icon: Video },
   { value: "visita_feira", label: "Visita a Feira", icon: Briefcase },
   { value: "visita_evento", label: "Visita a Evento", icon: Users },
+  { value: "apresentacao", label: "Apresentação", icon: Briefcase },
   { value: "proposta", label: "Proposta", icon: Briefcase },
 ];
 

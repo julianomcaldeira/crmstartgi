@@ -75,7 +75,9 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
       visita_presencial: "Visita Presencial",
       reuniao_online: "Reunião Online",
       visita_feira: "Visita a Feira",
-      visita_evento: "Visita a Evento"
+      visita_evento: "Visita a Evento",
+      apresentacao: "Apresentação",
+      proposta: "Proposta"
     };
     return types[type] || type;
   };
@@ -134,7 +136,9 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
       visita_presencial: "Visita Presencial",
       reuniao_online: "Reunião Online",
       visita_feira: "Visita a Feira",
-      visita_evento: "Visita a Evento"
+      visita_evento: "Visita a Evento",
+      apresentacao: "Apresentação",
+      proposta: "Proposta"
     };
 
     const priorityLabels: any = {
