@@ -23,6 +23,7 @@ import { useViewMode } from "@/hooks/useViewMode";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
 import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 import AudioRecorder from "@/components/AudioRecorder";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -57,9 +58,7 @@ const Tarefas = () => {
   const [priority, setPriority] = useState("medium");
   const [taskType, setTaskType] = useState("ligacao");
   const [clientId, setClientId] = useState("");
-  const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [opportunityId, setOpportunityId] = useState("");
-  const [opportunitySearchTerm, setOpportunitySearchTerm] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
   
@@ -272,7 +271,6 @@ const Tarefas = () => {
     setPriority("medium");
     setTaskType("ligacao");
     setClientId("");
-    setClientSearchTerm("");
     setContactId("");
     setOpportunityId("");
     setAssignedTo("");
@@ -632,51 +630,23 @@ const Tarefas = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="client">Cliente (Opcional)</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                    <Input
-                      placeholder="Buscar cliente por nome ou CNPJ..."
-                      value={clientSearchTerm}
-                      onChange={(e) => setClientSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <Select 
-                    value={clientId} 
+                  <SearchableCombobox
+                    items={clients.map((c) => ({
+                      value: c.id,
+                      label: c.company_name || c.trade_name,
+                      subLabel: c.cnpj ? c.cnpj : undefined,
+                      searchText: `${c.company_name ?? ""} ${c.trade_name ?? ""} ${c.cnpj ?? ""}`.trim(),
+                    }))}
+                    value={clientId}
                     onValueChange={(value) => {
                       setClientId(value);
                       setContactId("");
                       fetchContactsByClient(value);
-                      const selected = clients.find(c => c.id === value);
-                      setClientSearchTerm(selected ? (selected.company_name || selected.trade_name) : "");
                     }}
-                  >
-                    <SelectTrigger className="bg-background z-50">
-                      <SelectValue placeholder="Selecione um cliente da lista" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background z-50 max-h-[300px]">
-                      {clients
-                        .filter(client => {
-                          if (!clientSearchTerm) return true;
-                          const searchLower = clientSearchTerm.toLowerCase();
-                          return (
-                            client.company_name?.toLowerCase().includes(searchLower) ||
-                            client.trade_name?.toLowerCase().includes(searchLower) ||
-                            client.cnpj?.includes(clientSearchTerm)
-                          );
-                        })
-                        .map((client) => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.company_name || client.trade_name}
-                            {client.cnpj && (
-                              <span className="text-xs text-muted-foreground ml-2">
-                                • {client.cnpj}
-                              </span>
-                            )}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                    placeholder="Selecione um cliente"
+                    searchPlaceholder="Buscar cliente por nome ou CNPJ..."
+                    emptyText="Nenhum cliente encontrado."
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -706,40 +676,18 @@ const Tarefas = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="opportunity">Oportunidade (Opcional)</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={16} />
-                  <Input
-                    placeholder="Buscar oportunidade..."
-                    value={opportunitySearchTerm}
-                    onChange={(e) => setOpportunitySearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select 
-                  value={opportunityId} 
-                  onValueChange={(value) => {
-                    setOpportunityId(value);
-                    const selected = opportunities.find(o => o.id === value);
-                    setOpportunitySearchTerm(selected ? selected.title : "");
-                  }}
-                >
-                  <SelectTrigger className="bg-background z-50">
-                    <SelectValue placeholder="Selecione uma oportunidade da lista" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50 max-h-[300px]">
-                    {opportunities
-                      .filter(opp => {
-                        if (!opportunitySearchTerm) return true;
-                        const searchLower = opportunitySearchTerm.toLowerCase();
-                        return opp.title?.toLowerCase().includes(searchLower);
-                      })
-                      .map((opp) => (
-                        <SelectItem key={opp.id} value={opp.id}>
-                          {opp.title}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                <SearchableCombobox
+                  items={opportunities.map((o) => ({
+                    value: o.id,
+                    label: o.title,
+                    searchText: o.title,
+                  }))}
+                  value={opportunityId}
+                  onValueChange={setOpportunityId}
+                  placeholder="Selecione uma oportunidade"
+                  searchPlaceholder="Buscar oportunidade..."
+                  emptyText="Nenhuma oportunidade encontrada."
+                />
               </div>
 
               <div className="space-y-2">
