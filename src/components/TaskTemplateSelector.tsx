@@ -29,6 +29,8 @@ const taskTypeIcons: Record<string, any> = {
   reuniao_online: Video,
   visita_feira: Briefcase,
   visita_evento: Users,
+  apresentacao: Briefcase,
+  proposta: Briefcase,
 };
 
 const priorityLabels: Record<string, { label: string; color: string }> = {
