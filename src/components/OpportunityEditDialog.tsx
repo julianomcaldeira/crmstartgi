@@ -154,7 +154,9 @@ export function OpportunityEditDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-monthlyValue">Valor Mensal</Label>
+                  <Label htmlFor="edit-monthlyValue">
+                    {billingType === 'pontual' ? 'Valor Pontual' : 'Valor Mensal'}
+                  </Label>
                   <CurrencyInput
                     id="edit-monthlyValue"
                     value={monthlyValue}

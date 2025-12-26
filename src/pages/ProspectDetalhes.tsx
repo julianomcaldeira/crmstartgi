@@ -973,7 +973,9 @@ const ClienteDetalhes = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="monthly_value">Valor Mensal</Label>
+                        <Label htmlFor="monthly_value">
+                          {oppFormData.billing_type === 'pontual' ? 'Valor Pontual' : 'Valor Mensal'}
+                        </Label>
                         <CurrencyInput
                           id="monthly_value"
                           value={oppFormData.monthly_value}
