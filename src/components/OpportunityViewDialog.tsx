@@ -211,6 +211,14 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     return types[type] || type;
   };
 
+  const getBillingTypeLabel = (type: string) => {
+    const types: any = {
+      recorrente: "Recorrente",
+      pontual: "Pontual"
+    };
+    return types[type] || "Recorrente";
+  };
+
   const totalValue = (Number(opportunity.implementation_value || 0) + Number(opportunity.monthly_value || 0));
 
   return (
@@ -247,6 +255,10 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
               <Badge variant="secondary">
                 <Target className="h-3 w-3 mr-1" />
                 {opportunity.probability}% de chance
+              </Badge>
+              <Badge variant="outline" className={opportunity.billing_type === 'pontual' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-blue-50 text-blue-700 border-blue-200'}>
+                <DollarSign className="h-3 w-3 mr-1" />
+                {getBillingTypeLabel(opportunity.billing_type)}
               </Badge>
               {opportunity.status === "won" && opportunity.close_cycle_days && (
                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">

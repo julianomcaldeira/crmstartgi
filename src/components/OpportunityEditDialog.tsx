@@ -37,6 +37,8 @@ interface OpportunityEditDialogProps {
   setBusinessType: (value: string) => void;
   chargeCommission: boolean;
   setChargeCommission: (value: boolean) => void;
+  billingType: string;
+  setBillingType: (value: string) => void;
   // Attachments
   attachments: any[];
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -73,6 +75,8 @@ export function OpportunityEditDialog({
   setBusinessType,
   chargeCommission,
   setChargeCommission,
+  billingType,
+  setBillingType,
   attachments,
   onFileUpload,
   onDownloadAttachment,
@@ -194,17 +198,37 @@ export function OpportunityEditDialog({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-businessType">Tipo de Negócio</Label>
-                <Select value={businessType} onValueChange={setBusinessType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
-                    <SelectItem value="venda_na_base">Venda na Base</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-businessType">Tipo de Negócio</Label>
+                  <Select value={businessType} onValueChange={setBusinessType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                      <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-billingType">Tipo de Cobrança</Label>
+                  <Select value={billingType} onValueChange={setBillingType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background z-50">
+                      <SelectItem value="recorrente">Recorrente (Mensal x 12)</SelectItem>
+                      <SelectItem value="pontual">Pontual (Valor Único)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {billingType === 'pontual' 
+                      ? 'Valor único, sem mensalidade' 
+                      : 'Valor mensal multiplicado por 12 meses'}
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

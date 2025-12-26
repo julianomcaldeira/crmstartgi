@@ -123,6 +123,7 @@ const ClienteDetalhes = () => {
     expected_close_date: "",
     business_type: "cliente_novo",
     charge_commission: false,
+    billing_type: "recorrente",
   });
 
   useEffect(() => {
@@ -314,6 +315,7 @@ const ClienteDetalhes = () => {
           created_by: user.id,
           business_type: oppFormData.business_type as any,
           charge_commission: oppFormData.charge_commission,
+          billing_type: oppFormData.billing_type,
         },
       ]);
 
@@ -350,6 +352,7 @@ const ClienteDetalhes = () => {
       expected_close_date: "",
       business_type: "cliente_novo",
       charge_commission: false,
+      billing_type: "recorrente",
     });
   };
 
@@ -1058,17 +1061,40 @@ const ClienteDetalhes = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="charge_commission"
-                        checked={oppFormData.charge_commission}
-                        onChange={(e) => setOppFormData({ ...oppFormData, charge_commission: e.target.checked })}
-                        className="h-4 w-4 rounded border-border"
-                      />
-                      <Label htmlFor="charge_commission" className="text-sm font-normal cursor-pointer">
-                        Cobrar comissão do cliente
-                      </Label>
+                    <div className="grid gap-4 grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="billing_type">Tipo de Cobrança</Label>
+                        <Select
+                          value={oppFormData.billing_type}
+                          onValueChange={(value) => setOppFormData({ ...oppFormData, billing_type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            <SelectItem value="recorrente">Recorrente (Mensal x 12)</SelectItem>
+                            <SelectItem value="pontual">Pontual (Valor Único)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {oppFormData.billing_type === 'pontual' 
+                            ? 'Valor único, sem mensalidade' 
+                            : 'Valor mensal multiplicado por 12 meses'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-6">
+                        <input
+                          type="checkbox"
+                          id="charge_commission"
+                          checked={oppFormData.charge_commission}
+                          onChange={(e) => setOppFormData({ ...oppFormData, charge_commission: e.target.checked })}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor="charge_commission" className="text-sm font-normal cursor-pointer">
+                          Cobrar comissão do cliente
+                        </Label>
+                      </div>
                     </div>
 
                     <div className="space-y-2">

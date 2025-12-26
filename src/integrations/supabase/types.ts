@@ -821,6 +821,7 @@ export type Database = {
       opportunities: {
         Row: {
           assigned_to: string
+          billing_type: string | null
           business_type: Database["public"]["Enums"]["business_type"] | null
           charge_commission: boolean | null
           client_id: string
@@ -842,6 +843,7 @@ export type Database = {
         }
         Insert: {
           assigned_to: string
+          billing_type?: string | null
           business_type?: Database["public"]["Enums"]["business_type"] | null
           charge_commission?: boolean | null
           client_id: string
@@ -863,6 +865,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string
+          billing_type?: string | null
           business_type?: Database["public"]["Enums"]["business_type"] | null
           charge_commission?: boolean | null
           client_id?: string
