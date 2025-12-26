@@ -114,6 +114,7 @@ const Oportunidades = () => {
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
   const [businessType, setBusinessType] = useState("cliente_novo");
   const [chargeCommission, setChargeCommission] = useState(false);
+  const [billingType, setBillingType] = useState("recorrente");
 
   const stages = [
     { 
@@ -264,6 +265,7 @@ const Oportunidades = () => {
         created_by: user.id,
         business_type: businessType as any,
         charge_commission: chargeCommission,
+        billing_type: billingType,
       }]);
 
       if (error) throw error;
@@ -289,6 +291,7 @@ const Oportunidades = () => {
     setExpectedCloseDate("");
     setBusinessType("cliente_novo");
     setChargeCommission(false);
+    setBillingType("recorrente");
   };
 
   const getFilteredOpportunities = () => {
@@ -517,6 +520,7 @@ const Oportunidades = () => {
     setExpectedCloseDate(opp.expected_close_date || "");
     setBusinessType(opp.business_type || "cliente_novo");
     setChargeCommission(opp.charge_commission || false);
+    setBillingType(opp.billing_type || "recorrente");
     
     // Fetch attachments
     fetchAttachments(opp.id);
@@ -715,6 +719,7 @@ const Oportunidades = () => {
         expected_close_date: expectedCloseDate || null,
         business_type: businessType as any,
         charge_commission: chargeCommission,
+        billing_type: billingType,
       };
 
       // Add loss_reason_id if status is "lost"
@@ -1353,7 +1358,7 @@ const Oportunidades = () => {
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageAnnualizedValue = stageOpps.reduce(
-                (sum, opp) => sum + calculateAnnualizedValue(opp.monthly_value, opp.implementation_value),
+                (sum, opp) => sum + calculateAnnualizedValue(opp.monthly_value, opp.implementation_value, opp.billing_type),
                 0
               );
               const metrics = calculateStageMetrics(stage.key);
@@ -1524,9 +1529,11 @@ const Oportunidades = () => {
                             {/* Valor Anualizado Destacado */}
                             <div className="p-1.5 bg-gradient-to-r from-emerald-500/20 to-emerald-500/10 rounded border border-emerald-500/30">
                               <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-medium text-emerald-700 dark:text-emerald-400">Anualizado</span>
+                                <span className="text-[8px] font-medium text-emerald-700 dark:text-emerald-400">
+                                  {opp.billing_type === 'pontual' ? 'Pontual' : 'Anualizado'}
+                                </span>
                                 <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
+                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value, opp.billing_type)}
                                 </p>
                               </div>
                             </div>
@@ -1639,10 +1646,12 @@ const Oportunidades = () => {
                               {/* Valor Anualizado Destacado */}
                               <div className="p-2 bg-gradient-to-r from-emerald-500/20 via-emerald-500/10 to-transparent rounded-lg border border-emerald-500/30">
                                 <div className="flex items-center justify-between mb-1">
-                                  <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">Valor Anualizado</span>
+                                  <span className="text-[9px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                                    {opp.billing_type === 'pontual' ? 'Valor Pontual' : 'Valor Anualizado'}
+                                  </span>
                                 </div>
                                 <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
+                                  {formatAnnualizedValue(opp.monthly_value, opp.implementation_value, opp.billing_type)}
                                 </p>
                                 {(opp.monthly_value || opp.implementation_value) && (
                                   <div className="flex gap-2 mt-1 text-[8px] text-muted-foreground">
@@ -1835,9 +1844,11 @@ const Oportunidades = () => {
                       )}
                     </div>
                     <div className="p-2 bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 rounded-lg border border-emerald-500/30">
-                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-1 font-medium">Valor Anualizado</p>
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 mb-1 font-medium">
+                        {opp.billing_type === 'pontual' ? 'Valor Pontual' : 'Valor Anualizado'}
+                      </p>
                       <p className="font-bold text-emerald-700 dark:text-emerald-400">
-                        {formatAnnualizedValue(opp.monthly_value, opp.implementation_value)}
+                        {formatAnnualizedValue(opp.monthly_value, opp.implementation_value, opp.billing_type)}
                       </p>
                       {(opp.monthly_value || opp.implementation_value) && (
                         <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -1952,6 +1963,8 @@ const Oportunidades = () => {
         setBusinessType={setBusinessType}
         chargeCommission={chargeCommission}
         setChargeCommission={setChargeCommission}
+        billingType={billingType}
+        setBillingType={setBillingType}
         attachments={attachments}
         onFileUpload={handleFileUpload}
         onDownloadAttachment={handleDownloadAttachment}

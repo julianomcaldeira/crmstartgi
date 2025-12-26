@@ -179,14 +179,31 @@ export const formatCurrency = (value: number | string) => {
   }).format(numValue);
 };
 
-// Calculate annualized value: (monthly * 12) + implementation
-export const calculateAnnualizedValue = (monthlyValue?: number | null, implementationValue?: number | null): number => {
+// Calculate annualized value based on billing type
+// For "recorrente": (monthly * 12) + implementation
+// For "pontual": implementation only (single payment, no monthly)
+export const calculateAnnualizedValue = (
+  monthlyValue?: number | null, 
+  implementationValue?: number | null,
+  billingType?: string | null
+): number => {
   const monthly = monthlyValue || 0;
   const implementation = implementationValue || 0;
+  
+  if (billingType === 'pontual') {
+    // Pontual: only implementation value (one-time payment)
+    return implementation;
+  }
+  
+  // Recorrente (default): (monthly * 12) + implementation
   return (monthly * 12) + implementation;
 };
 
-export const formatAnnualizedValue = (monthlyValue?: number | null, implementationValue?: number | null): string => {
-  const annualized = calculateAnnualizedValue(monthlyValue, implementationValue);
+export const formatAnnualizedValue = (
+  monthlyValue?: number | null, 
+  implementationValue?: number | null,
+  billingType?: string | null
+): string => {
+  const annualized = calculateAnnualizedValue(monthlyValue, implementationValue, billingType);
   return formatCurrency(annualized);
 };
