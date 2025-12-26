@@ -181,7 +181,7 @@ export const formatCurrency = (value: number | string) => {
 
 // Calculate annualized value based on billing type
 // For "recorrente": (monthly * 12) + implementation
-// For "pontual": implementation only (single payment, no monthly)
+// For "pontual": monthly value as single payment (one-time, no multiplication)
 export const calculateAnnualizedValue = (
   monthlyValue?: number | null, 
   implementationValue?: number | null,
@@ -191,8 +191,8 @@ export const calculateAnnualizedValue = (
   const implementation = implementationValue || 0;
   
   if (billingType === 'pontual') {
-    // Pontual: only implementation value (one-time payment)
-    return implementation;
+    // Pontual: monthly value is the one-time payment (no multiplication)
+    return monthly + implementation;
   }
   
   // Recorrente (default): (monthly * 12) + implementation
