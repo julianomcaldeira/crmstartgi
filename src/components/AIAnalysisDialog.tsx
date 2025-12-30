@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, Loader2, RefreshCw, History, Trash2, Calendar } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Sparkles, Loader2, RefreshCw, History, Trash2, Calendar, Target, TrendingUp, AlertTriangle, CheckCircle2, Lightbulb, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -27,6 +28,13 @@ interface AIAnalysisDialogProps {
   opportunities: any[];
   tasks: any[];
   contacts: any[];
+}
+
+interface AnalysisSection {
+  title: string;
+  content: string;
+  icon: React.ReactNode;
+  priority: 'high' | 'medium' | 'low';
 }
 
 const AIAnalysisDialog = ({
@@ -154,15 +162,117 @@ const AIAnalysisDialog = ({
     }
   };
 
-  // Enhanced markdown to HTML converter
+  // Get icon for section based on keywords
+  const getSectionIcon = (title: string): React.ReactNode => {
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('próximo') || lowerTitle.includes('ação') || lowerTitle.includes('passo')) {
+      return <Target className="h-4 w-4" />;
+    }
+    if (lowerTitle.includes('oportunidade') || lowerTitle.includes('potencial')) {
+      return <TrendingUp className="h-4 w-4" />;
+    }
+    if (lowerTitle.includes('risco') || lowerTitle.includes('atenção') || lowerTitle.includes('cuidado')) {
+      return <AlertTriangle className="h-4 w-4" />;
+    }
+    if (lowerTitle.includes('conclus') || lowerTitle.includes('resumo') || lowerTitle.includes('síntese')) {
+      return <CheckCircle2 className="h-4 w-4" />;
+    }
+    if (lowerTitle.includes('dica') || lowerTitle.includes('sugestão') || lowerTitle.includes('recomenda')) {
+      return <Lightbulb className="h-4 w-4" />;
+    }
+    if (lowerTitle.includes('contato') || lowerTitle.includes('relacionamento')) {
+      return <Users className="h-4 w-4" />;
+    }
+    return <Sparkles className="h-4 w-4" />;
+  };
+
+  // Get priority color based on keywords
+  const getSectionPriority = (title: string): 'high' | 'medium' | 'low' => {
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('urgente') || lowerTitle.includes('crítico') || lowerTitle.includes('risco')) {
+      return 'high';
+    }
+    if (lowerTitle.includes('importante') || lowerTitle.includes('próximo') || lowerTitle.includes('ação')) {
+      return 'medium';
+    }
+    return 'low';
+  };
+
+  // Parse analysis text into collapsible sections
+  const parseAnalysisIntoSections = (text: string): AnalysisSection[] => {
+    const sections: AnalysisSection[] = [];
+    
+    // Split by main headers (## or #)
+    const headerRegex = /^(#{1,2})\s+(.+)$/gm;
+    let lastIndex = 0;
+    let matches: RegExpExecArray | null;
+    const allMatches: { index: number; title: string; level: number }[] = [];
+    
+    while ((matches = headerRegex.exec(text)) !== null) {
+      allMatches.push({
+        index: matches.index,
+        title: matches[2].trim(),
+        level: matches[1].length
+      });
+    }
+    
+    // If no headers found, return single section
+    if (allMatches.length === 0) {
+      return [{
+        title: "Análise Completa",
+        content: text,
+        icon: <Sparkles className="h-4 w-4" />,
+        priority: 'medium'
+      }];
+    }
+    
+    // Extract content between headers
+    for (let i = 0; i < allMatches.length; i++) {
+      const match = allMatches[i];
+      const nextMatch = allMatches[i + 1];
+      
+      // Get content between this header and next (or end of text)
+      const headerLine = text.substring(match.index).split('\n')[0];
+      const contentStart = match.index + headerLine.length + 1;
+      const contentEnd = nextMatch ? nextMatch.index : text.length;
+      const content = text.substring(contentStart, contentEnd).trim();
+      
+      if (content) {
+        sections.push({
+          title: match.title,
+          content: content,
+          icon: getSectionIcon(match.title),
+          priority: getSectionPriority(match.title)
+        });
+      }
+    }
+    
+    // Check if there's content before the first header
+    if (allMatches.length > 0 && allMatches[0].index > 0) {
+      const introContent = text.substring(0, allMatches[0].index).trim();
+      if (introContent) {
+        sections.unshift({
+          title: "Visão Geral",
+          content: introContent,
+          icon: <Sparkles className="h-4 w-4" />,
+          priority: 'medium'
+        });
+      }
+    }
+    
+    return sections;
+  };
+
+  // Enhanced markdown to HTML converter for section content
   const renderMarkdown = (text: string) => {
     let html = text;
     
-    // Process headers first (before other replacements)
-    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-foreground border-l-2 border-primary pl-3">$1</h4>');
-    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-3 text-foreground border-l-3 border-primary pl-3">$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-foreground border-b border-border pb-2">$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground border-b-2 border-primary pb-2">$1</h1>');
+    // Remove ## headers since they're already in accordion
+    html = html.replace(/^#{1,2}\s+.*$/gm, '');
+    
+    // Process sub-headers
+    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-sm font-semibold mt-3 mb-2 text-foreground border-l-2 border-primary pl-2">$1</h4>');
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-base font-semibold mt-4 mb-2 text-foreground border-l-2 border-primary pl-2">$1</h3>');
     
     // Bold and italic
     html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-bold italic text-primary">$1</strong>');
@@ -181,33 +291,35 @@ const AIAnalysisDialog = ({
     let listType = '';
     const processedLines: string[] = [];
     
-    lines.forEach((line, index) => {
+    lines.forEach((line) => {
       const unorderedMatch = line.match(/^\s*[-•]\s+(.*)$/);
       const orderedMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
       
       if (unorderedMatch) {
         if (!inList || listType !== 'ul') {
           if (inList) processedLines.push(`</${listType}>`);
-          processedLines.push('<ul class="list-none space-y-2 my-3 pl-2">');
+          processedLines.push('<ul class="list-none space-y-1.5 my-2 pl-1">');
           inList = true;
           listType = 'ul';
         }
-        processedLines.push(`<li class="flex items-start gap-2"><span class="text-primary mt-1.5 text-xs">●</span><span class="flex-1">${unorderedMatch[1]}</span></li>`);
+        processedLines.push(`<li class="flex items-start gap-2 text-sm"><span class="text-primary mt-1 text-xs shrink-0">●</span><span class="flex-1">${unorderedMatch[1]}</span></li>`);
       } else if (orderedMatch) {
         if (!inList || listType !== 'ol') {
           if (inList) processedLines.push(`</${listType}>`);
-          processedLines.push('<ol class="list-none space-y-2 my-3 pl-2 counter-reset-item">');
+          processedLines.push('<ol class="list-none space-y-1.5 my-2 pl-1">');
           inList = true;
           listType = 'ol';
         }
-        processedLines.push(`<li class="flex items-start gap-2"><span class="text-primary font-semibold min-w-[1.5rem]">${orderedMatch[1]}.</span><span class="flex-1">${orderedMatch[2]}</span></li>`);
+        processedLines.push(`<li class="flex items-start gap-2 text-sm"><span class="text-primary font-semibold min-w-[1.25rem] shrink-0">${orderedMatch[1]}.</span><span class="flex-1">${orderedMatch[2]}</span></li>`);
       } else {
-        if (inList) {
+        if (inList && line.trim() === '') {
           processedLines.push(`</${listType}>`);
           inList = false;
           listType = '';
         }
-        processedLines.push(line);
+        if (line.trim()) {
+          processedLines.push(line);
+        }
       }
     });
     
@@ -218,26 +330,79 @@ const AIAnalysisDialog = ({
     html = processedLines.join('\n');
     
     // Convert paragraphs
-    html = html.replace(/\n\n+/g, '</p><p class="mb-4 leading-relaxed text-foreground/90">');
+    html = html.replace(/\n\n+/g, '</p><p class="mb-3 text-sm leading-relaxed text-foreground/90">');
     html = html.replace(/\n/g, '<br/>');
     
     // Highlight key phrases
-    html = html.replace(/\[AÇÃO\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary">AÇÃO</span>');
-    html = html.replace(/\[URGENTE\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-destructive/20 text-destructive">URGENTE</span>');
-    html = html.replace(/\[DICA\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-600">DICA</span>');
-    html = html.replace(/\[IMPORTANTE\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-600">IMPORTANTE</span>');
+    html = html.replace(/\[AÇÃO\]/gi, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary">AÇÃO</span>');
+    html = html.replace(/\[URGENTE\]/gi, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-destructive/20 text-destructive">URGENTE</span>');
+    html = html.replace(/\[DICA\]/gi, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-600">DICA</span>');
+    html = html.replace(/\[IMPORTANTE\]/gi, '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-600">IMPORTANTE</span>');
+    
+    // Clean up empty paragraphs
+    html = html.replace(/<p[^>]*>\s*<\/p>/g, '');
+    html = html.replace(/<br\/>\s*<br\/>/g, '<br/>');
     
     return html;
   };
 
-  const renderAnalysisContent = (text: string) => (
-    <div 
-      className="ai-analysis-content text-sm leading-relaxed"
-      dangerouslySetInnerHTML={{ 
-        __html: `<div class="space-y-2"><p class="mb-4 leading-relaxed text-foreground/90">${renderMarkdown(text)}</p></div>` 
-      }}
-    />
-  );
+  const getPriorityStyles = (priority: 'high' | 'medium' | 'low') => {
+    switch (priority) {
+      case 'high':
+        return 'border-l-destructive bg-destructive/5';
+      case 'medium':
+        return 'border-l-primary bg-primary/5';
+      default:
+        return 'border-l-muted-foreground/30 bg-muted/30';
+    }
+  };
+
+  const renderAnalysisWithAccordion = (text: string) => {
+    const sections = parseAnalysisIntoSections(text);
+    
+    if (sections.length === 1 && sections[0].title === "Análise Completa") {
+      // Fallback to simple rendering if no sections
+      return (
+        <div 
+          className="ai-analysis-content text-sm leading-relaxed"
+          dangerouslySetInnerHTML={{ 
+            __html: `<div class="space-y-2"><p class="mb-3 text-sm leading-relaxed text-foreground/90">${renderMarkdown(text)}</p></div>` 
+          }}
+        />
+      );
+    }
+    
+    return (
+      <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)} className="space-y-2">
+        {sections.map((section, index) => (
+          <AccordionItem 
+            key={index} 
+            value={`section-${index}`}
+            className={`border rounded-lg px-4 border-l-4 ${getPriorityStyles(section.priority)}`}
+          >
+            <AccordionTrigger className="hover:no-underline py-3">
+              <div className="flex items-center gap-2 text-left">
+                <span className={`${section.priority === 'high' ? 'text-destructive' : section.priority === 'medium' ? 'text-primary' : 'text-muted-foreground'}`}>
+                  {section.icon}
+                </span>
+                <span className="font-medium text-sm">{section.title}</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="pb-4">
+              <div 
+                className="ai-analysis-content text-sm leading-relaxed pt-2"
+                dangerouslySetInnerHTML={{ 
+                  __html: `<div class="space-y-1"><p class="mb-3 text-sm leading-relaxed text-foreground/90">${renderMarkdown(section.content)}</p></div>` 
+                }}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    );
+  };
+
+  const renderAnalysisContent = (text: string) => renderAnalysisWithAccordion(text);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
