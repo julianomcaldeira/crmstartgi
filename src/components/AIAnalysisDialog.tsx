@@ -433,7 +433,7 @@ const AIAnalysisDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
@@ -461,7 +461,7 @@ const AIAnalysisDialog = ({
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="new" className="flex-1 flex flex-col min-h-0 mt-4">
+          <TabsContent value="new" className="flex-1 flex flex-col min-h-0 mt-4 overflow-hidden">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -470,7 +470,7 @@ const AIAnalysisDialog = ({
               </div>
             ) : analysis ? (
               <>
-                <ScrollArea className="flex-1 pr-4">
+                <ScrollArea className="flex-1 h-full max-h-[calc(85vh-220px)] pr-4">
                   {renderAnalysisContent(analysis)}
                 </ScrollArea>
                 <div className="flex justify-end gap-2 pt-4 border-t mt-4">
@@ -501,7 +501,7 @@ const AIAnalysisDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="history" className="flex-1 flex min-h-0 mt-4 gap-4">
+          <TabsContent value="history" className="flex-1 flex min-h-0 mt-4 gap-4 overflow-hidden">
             {loadingHistory ? (
               <div className="flex items-center justify-center w-full py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -519,7 +519,7 @@ const AIAnalysisDialog = ({
               <>
                 {/* History List */}
                 <div className="w-1/3 border-r pr-4">
-                  <ScrollArea className="h-[50vh]">
+                  <ScrollArea className="h-[calc(85vh-200px)]">
                     <div className="space-y-2">
                       {analysisHistory.map((item) => (
                         <div
@@ -564,7 +564,7 @@ const AIAnalysisDialog = ({
                 {/* Analysis Detail */}
                 <div className="flex-1 min-h-0">
                   {selectedHistoryItem ? (
-                    <ScrollArea className="h-[50vh]">
+                    <ScrollArea className="h-[calc(85vh-200px)]">
                       <div className="pr-4">
                         <div className="mb-4 p-3 bg-muted/30 rounded-lg">
                           <p className="text-sm text-muted-foreground">
@@ -591,7 +591,7 @@ const AIAnalysisDialog = ({
             )}
           </TabsContent>
 
-          <TabsContent value="compare" className="flex-1 flex flex-col min-h-0 mt-4">
+          <TabsContent value="compare" className="flex-1 flex flex-col min-h-0 mt-4 overflow-hidden">
             {analysisHistory.length < 2 ? (
               <div className="flex flex-col items-center justify-center w-full py-12 gap-4">
                 <GitCompare className="h-16 w-16 text-muted-foreground/50" />
@@ -613,7 +613,7 @@ const AIAnalysisDialog = ({
                       : '📌 Agora selecione a segunda análise (mais recente) para comparar:'}
                   </p>
                 </div>
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 max-h-[calc(85vh-280px)]">
                   <div className="grid grid-cols-2 gap-3">
                     {analysisHistory.map((item) => {
                       const isSelected = compareLeft?.id === item.id || compareRight?.id === item.id;
@@ -704,7 +704,7 @@ const AIAnalysisDialog = ({
                         <span>{compareLeft.contacts_count} contatos</span>
                       </div>
                     </div>
-                    <ScrollArea className="flex-1 p-3">
+                    <ScrollArea className="flex-1 max-h-[calc(85vh-350px)] p-3">
                       {renderAnalysisContent(compareLeft.analysis)}
                     </ScrollArea>
                   </div>
@@ -739,7 +739,7 @@ const AIAnalysisDialog = ({
                         <span>{compareRight.contacts_count} contatos</span>
                       </div>
                     </div>
-                    <ScrollArea className="flex-1 p-3">
+                    <ScrollArea className="flex-1 max-h-[calc(85vh-350px)] p-3">
                       {renderAnalysisContent(compareRight.analysis)}
                     </ScrollArea>
                   </div>
