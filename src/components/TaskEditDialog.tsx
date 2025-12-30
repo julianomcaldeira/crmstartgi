@@ -25,6 +25,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
 import AudioRecorder from "@/components/AudioRecorder";
+import TaskAttachments from "@/components/TaskAttachments";
 
 interface TaskEditDialogProps {
   task: any;
@@ -471,6 +472,14 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                 ))
               )}
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Attachments Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Anexos</h3>
+            <TaskAttachments taskId={task?.id} />
           </div>
 
           {/* Task History */}
