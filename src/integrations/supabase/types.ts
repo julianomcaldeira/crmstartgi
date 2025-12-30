@@ -1175,6 +1175,54 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_ai_analyses: {
+        Row: {
+          analysis: string
+          client_id: string
+          contacts_count: number | null
+          created_at: string
+          created_by: string
+          id: string
+          opportunities_count: number | null
+          tasks_count: number | null
+        }
+        Insert: {
+          analysis: string
+          client_id: string
+          contacts_count?: number | null
+          created_at?: string
+          created_by: string
+          id?: string
+          opportunities_count?: number | null
+          tasks_count?: number | null
+        }
+        Update: {
+          analysis?: string
+          client_id?: string
+          contacts_count?: number | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          opportunities_count?: number | null
+          tasks_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_ai_analyses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_ai_analyses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radar_leads: {
         Row: {
           assigned_to: string | null
