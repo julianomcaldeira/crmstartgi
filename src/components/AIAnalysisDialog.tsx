@@ -154,24 +154,88 @@ const AIAnalysisDialog = ({
     }
   };
 
-  // Simple markdown to HTML converter
+  // Enhanced markdown to HTML converter
   const renderMarkdown = (text: string) => {
-    return text
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-4 mb-2 text-foreground">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-foreground">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground">$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^\s*-\s+(.*)$/gim, '<li class="ml-4 mb-1 text-foreground">$1</li>')
-      .replace(/^\s*\d+\.\s+(.*)$/gim, '<li class="ml-4 mb-1 list-decimal text-foreground">$1</li>')
-      .replace(/\n\n/g, '</p><p class="mb-3 text-foreground">')
-      .replace(/\n/g, '<br/>');
+    let html = text;
+    
+    // Process headers first (before other replacements)
+    html = html.replace(/^#### (.*$)/gim, '<h4 class="text-base font-semibold mt-4 mb-2 text-foreground border-l-2 border-primary pl-3">$1</h4>');
+    html = html.replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold mt-5 mb-3 text-foreground border-l-3 border-primary pl-3">$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold mt-6 mb-3 text-foreground border-b border-border pb-2">$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold mt-6 mb-4 text-foreground border-b-2 border-primary pb-2">$1</h1>');
+    
+    // Bold and italic
+    html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-bold italic text-primary">$1</strong>');
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>');
+    html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
+    
+    // Emoji indicators for priority/action items
+    html = html.replace(/🔴|❌|⚠️/g, '<span class="text-destructive">$&</span>');
+    html = html.replace(/🟢|✅|✓/g, '<span class="text-green-500">$&</span>');
+    html = html.replace(/🟡|⚡|💡/g, '<span class="text-yellow-500">$&</span>');
+    html = html.replace(/🔵|📌|📋/g, '<span class="text-blue-500">$&</span>');
+    
+    // Process lists - wrap in ul/ol
+    const lines = html.split('\n');
+    let inList = false;
+    let listType = '';
+    const processedLines: string[] = [];
+    
+    lines.forEach((line, index) => {
+      const unorderedMatch = line.match(/^\s*[-•]\s+(.*)$/);
+      const orderedMatch = line.match(/^\s*(\d+)\.\s+(.*)$/);
+      
+      if (unorderedMatch) {
+        if (!inList || listType !== 'ul') {
+          if (inList) processedLines.push(`</${listType}>`);
+          processedLines.push('<ul class="list-none space-y-2 my-3 pl-2">');
+          inList = true;
+          listType = 'ul';
+        }
+        processedLines.push(`<li class="flex items-start gap-2"><span class="text-primary mt-1.5 text-xs">●</span><span class="flex-1">${unorderedMatch[1]}</span></li>`);
+      } else if (orderedMatch) {
+        if (!inList || listType !== 'ol') {
+          if (inList) processedLines.push(`</${listType}>`);
+          processedLines.push('<ol class="list-none space-y-2 my-3 pl-2 counter-reset-item">');
+          inList = true;
+          listType = 'ol';
+        }
+        processedLines.push(`<li class="flex items-start gap-2"><span class="text-primary font-semibold min-w-[1.5rem]">${orderedMatch[1]}.</span><span class="flex-1">${orderedMatch[2]}</span></li>`);
+      } else {
+        if (inList) {
+          processedLines.push(`</${listType}>`);
+          inList = false;
+          listType = '';
+        }
+        processedLines.push(line);
+      }
+    });
+    
+    if (inList) {
+      processedLines.push(`</${listType}>`);
+    }
+    
+    html = processedLines.join('\n');
+    
+    // Convert paragraphs
+    html = html.replace(/\n\n+/g, '</p><p class="mb-4 leading-relaxed text-foreground/90">');
+    html = html.replace(/\n/g, '<br/>');
+    
+    // Highlight key phrases
+    html = html.replace(/\[AÇÃO\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary">AÇÃO</span>');
+    html = html.replace(/\[URGENTE\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-destructive/20 text-destructive">URGENTE</span>');
+    html = html.replace(/\[DICA\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-600">DICA</span>');
+    html = html.replace(/\[IMPORTANTE\]/gi, '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-600">IMPORTANTE</span>');
+    
+    return html;
   };
 
   const renderAnalysisContent = (text: string) => (
     <div 
-      className="prose prose-sm dark:prose-invert max-w-none text-foreground"
-      dangerouslySetInnerHTML={{ __html: `<p class="mb-3 text-foreground">${renderMarkdown(text)}</p>` }}
+      className="ai-analysis-content text-sm leading-relaxed"
+      dangerouslySetInnerHTML={{ 
+        __html: `<div class="space-y-2"><p class="mb-4 leading-relaxed text-foreground/90">${renderMarkdown(text)}</p></div>` 
+      }}
     />
   );
 
