@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Paperclip, Upload, Download, Trash2, FileText, Image, File } from "lucide-react";
@@ -15,6 +15,7 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (taskId) {
@@ -230,6 +231,38 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
     return <File className="h-4 w-4" />;
   };
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files);
+      
+      if (!taskId) {
+        if (onPendingFilesChange) {
+          onPendingFilesChange([...pendingFiles, ...files]);
+        }
+        toast.success(`${files.length} arquivo(s) selecionado(s) para upload`);
+        return;
+      }
+      
+      uploadFiles(files);
+    }
+  }, [taskId, pendingFiles, onPendingFilesChange, uploadFiles]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -258,6 +291,32 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
             className="hidden"
           />
         </label>
+      </div>
+
+      {/* Drop Zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-lg p-4 transition-all text-center ${
+          isDragOver 
+            ? 'border-primary bg-primary/10 scale-[1.02]' 
+            : 'border-muted-foreground/25 hover:border-primary/50'
+        }`}
+      >
+        <Upload className={`h-8 w-8 mx-auto mb-2 transition-colors ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+        <p className="text-sm text-muted-foreground">
+          {isDragOver ? (
+            <span className="text-primary font-medium">Solte os arquivos aqui</span>
+          ) : (
+            <>
+              Arraste arquivos aqui ou use o botão acima
+            </>
+          )}
+        </p>
+        {uploadingFiles && (
+          <p className="text-xs text-primary mt-2 animate-pulse">Enviando arquivos...</p>
+        )}
       </div>
 
       {/* Pending files (for new tasks) */}
