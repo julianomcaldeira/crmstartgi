@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.ocr-business-card]
 verify_jwt = false
+
+[functions.analyze-prospect]
+verify_jwt = false
