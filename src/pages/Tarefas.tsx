@@ -24,6 +24,7 @@ import TaskQuickMessages from "@/components/TaskQuickMessages";
 import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 import AudioRecorder from "@/components/AudioRecorder";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
+import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachments";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -61,6 +62,7 @@ const Tarefas = () => {
   const [opportunityId, setOpportunityId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
+  const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -240,7 +242,7 @@ const Tarefas = () => {
       
       const title = taskTypeLabels[taskType] || "Tarefa";
 
-      const { error } = await supabase.from("tasks").insert([{
+      const { data, error } = await supabase.from("tasks").insert([{
         title,
         description,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
@@ -251,9 +253,19 @@ const Tarefas = () => {
         opportunity_id: opportunityId || null,
         assigned_to: assignedTo || user.id,
         created_by: user.id,
-      }]);
+      }]).select().single();
 
       if (error) throw error;
+
+      // Upload pending attachments if any
+      if (pendingAttachments.length > 0 && data?.id) {
+        try {
+          await uploadTaskAttachments(data.id, pendingAttachments);
+        } catch (attachError) {
+          console.error("Error uploading attachments:", attachError);
+          toast.warning("Tarefa criada, mas houve erro ao anexar arquivos");
+        }
+      }
 
       toast.success("Tarefa criada com sucesso!");
       setDialogOpen(false);
@@ -275,6 +287,7 @@ const Tarefas = () => {
     setOpportunityId("");
     setAssignedTo("");
     setContacts([]);
+    setPendingAttachments([]);
   };
 
   const toggleTaskStatus = async (taskId: string, currentStatus: string) => {
@@ -704,6 +717,15 @@ const Tarefas = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Attachments Section */}
+              <div className="border-t pt-4">
+                <TaskAttachments
+                  taskId={null}
+                  pendingFiles={pendingAttachments}
+                  onPendingFilesChange={setPendingAttachments}
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
