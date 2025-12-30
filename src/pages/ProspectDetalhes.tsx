@@ -39,7 +39,8 @@ import {
   MapPinned,
   Linkedin,
   Briefcase,
-  Flag
+  Flag,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import TaskViewDialog from "@/components/TaskViewDialog";
@@ -51,6 +52,7 @@ import TaskQuickMessages from "@/components/TaskQuickMessages";
 import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 import AudioRecorder from "@/components/AudioRecorder";
 import BusinessCardScanner from "@/components/BusinessCardScanner";
+import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -85,6 +87,7 @@ const ClienteDetalhes = () => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [taskNotesDialogOpen, setTaskNotesDialogOpen] = useState(false);
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
+  const [aiAnalysisDialogOpen, setAiAnalysisDialogOpen] = useState(false);
   
 
   const handleCopy = async (value: string, field: string) => {
@@ -602,6 +605,17 @@ const ClienteDetalhes = () => {
           </div>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
+        {opportunities.length > 0 && (
+          <Button 
+            variant="default" 
+            size="sm"
+            onClick={() => setAiAnalysisDialogOpen(true)}
+            className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Análise IA
+          </Button>
+        )}
         <Button 
           variant="outline" 
           size="sm"
@@ -1880,6 +1894,16 @@ const ClienteDetalhes = () => {
         taskTitle={selectedTaskForNotes?.title || ""}
         open={taskNotesDialogOpen}
         onOpenChange={setTaskNotesDialogOpen}
+      />
+
+      {/* AI Analysis Dialog */}
+      <AIAnalysisDialog
+        open={aiAnalysisDialogOpen}
+        onOpenChange={setAiAnalysisDialogOpen}
+        client={client}
+        opportunities={opportunities}
+        tasks={tasks}
+        contacts={contacts}
       />
     </div>
   );
