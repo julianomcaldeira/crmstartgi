@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Sparkles, Loader2, RefreshCw, History, Trash2, Calendar, Target, TrendingUp, AlertTriangle, CheckCircle2, Lightbulb, Users } from "lucide-react";
+import { Sparkles, Loader2, RefreshCw, History, Trash2, Calendar, Target, TrendingUp, AlertTriangle, CheckCircle2, Lightbulb, Users, GitCompare, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -51,6 +51,9 @@ const AIAnalysisDialog = ({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<AIAnalysis | null>(null);
   const [activeTab, setActiveTab] = useState("new");
+  const [compareLeft, setCompareLeft] = useState<AIAnalysis | null>(null);
+  const [compareRight, setCompareRight] = useState<AIAnalysis | null>(null);
+  const [selectingFor, setSelectingFor] = useState<'left' | 'right' | null>(null);
 
   useEffect(() => {
     if (open && client?.id) {
@@ -159,7 +162,31 @@ const AIAnalysisDialog = ({
       setAnalysis(null);
       setSelectedHistoryItem(null);
       setActiveTab("new");
+      setCompareLeft(null);
+      setCompareRight(null);
+      setSelectingFor(null);
     }
+  };
+
+  const handleSelectForCompare = (item: AIAnalysis) => {
+    if (selectingFor === 'left') {
+      setCompareLeft(item);
+      if (!compareRight) {
+        setSelectingFor('right');
+      } else {
+        setSelectingFor(null);
+      }
+    } else if (selectingFor === 'right') {
+      setCompareRight(item);
+      setSelectingFor(null);
+    }
+  };
+
+  const startCompareMode = () => {
+    setCompareLeft(null);
+    setCompareRight(null);
+    setSelectingFor('left');
+    setActiveTab('compare');
   };
 
   // Get icon for section based on keywords
@@ -415,7 +442,7 @@ const AIAnalysisDialog = ({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="new" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               Nova Análise
@@ -423,6 +450,14 @@ const AIAnalysisDialog = ({
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
               Histórico ({analysisHistory.length})
+            </TabsTrigger>
+            <TabsTrigger 
+              value="compare" 
+              className="flex items-center gap-2"
+              disabled={analysisHistory.length < 2}
+            >
+              <GitCompare className="h-4 w-4" />
+              Comparar
             </TabsTrigger>
           </TabsList>
 
@@ -553,6 +588,239 @@ const AIAnalysisDialog = ({
                   )}
                 </div>
               </>
+            )}
+          </TabsContent>
+
+          <TabsContent value="compare" className="flex-1 flex flex-col min-h-0 mt-4">
+            {analysisHistory.length < 2 ? (
+              <div className="flex flex-col items-center justify-center w-full py-12 gap-4">
+                <GitCompare className="h-16 w-16 text-muted-foreground/50" />
+                <p className="text-muted-foreground text-center">
+                  Você precisa de pelo menos 2 análises para comparar.<br />
+                  Gere mais análises no histórico.
+                </p>
+                <Button onClick={() => setActiveTab("new")}>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Gerar Nova Análise
+                </Button>
+              </div>
+            ) : selectingFor ? (
+              <div className="flex flex-col h-full">
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-primary font-medium">
+                    {selectingFor === 'left' 
+                      ? '📌 Selecione a primeira análise (mais antiga) para comparar:' 
+                      : '📌 Agora selecione a segunda análise (mais recente) para comparar:'}
+                  </p>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="grid grid-cols-2 gap-3">
+                    {analysisHistory.map((item) => {
+                      const isSelected = compareLeft?.id === item.id || compareRight?.id === item.id;
+                      const isDisabled = (selectingFor === 'right' && compareLeft?.id === item.id);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                            isSelected
+                              ? "bg-primary/10 border-primary ring-2 ring-primary/30"
+                              : isDisabled
+                              ? "opacity-50 cursor-not-allowed"
+                              : "hover:bg-muted/50 hover:border-primary/50"
+                          }`}
+                          onClick={() => !isDisabled && handleSelectForCompare(item)}
+                        >
+                          <div className="flex items-center gap-2 text-sm font-medium mb-1">
+                            <Calendar className="h-3 w-3 text-primary" />
+                            {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </div>
+                          <div className="flex gap-2 text-xs text-muted-foreground">
+                            <span>{item.opportunities_count} oport.</span>
+                            <span>•</span>
+                            <span>{item.tasks_count} tarefas</span>
+                            <span>•</span>
+                            <span>{item.contacts_count} contatos</span>
+                          </div>
+                          {isSelected && (
+                            <div className="mt-2 text-xs font-medium text-primary">
+                              ✓ {compareLeft?.id === item.id ? 'Análise 1' : 'Análise 2'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                  <Button variant="outline" onClick={() => {
+                    setSelectingFor(null);
+                    setCompareLeft(null);
+                    setCompareRight(null);
+                  }}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : compareLeft && compareRight ? (
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <GitCompare className="h-4 w-4 text-primary" />
+                    <span>Comparando 2 análises</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={startCompareMode}>
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Nova Comparação
+                  </Button>
+                </div>
+                <div className="flex gap-4 flex-1 min-h-0">
+                  {/* Left Analysis */}
+                  <div className="flex-1 flex flex-col border rounded-lg overflow-hidden">
+                    <div className="bg-blue-500/10 border-b border-blue-500/30 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded">1</span>
+                          <span className="text-sm font-medium">
+                            {format(new Date(compareLeft.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setCompareLeft(null);
+                            setSelectingFor('left');
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                        <span>{compareLeft.opportunities_count} oport.</span>
+                        <span>•</span>
+                        <span>{compareLeft.tasks_count} tarefas</span>
+                        <span>•</span>
+                        <span>{compareLeft.contacts_count} contatos</span>
+                      </div>
+                    </div>
+                    <ScrollArea className="flex-1 p-3">
+                      {renderAnalysisContent(compareLeft.analysis)}
+                    </ScrollArea>
+                  </div>
+
+                  {/* Right Analysis */}
+                  <div className="flex-1 flex flex-col border rounded-lg overflow-hidden">
+                    <div className="bg-green-500/10 border-b border-green-500/30 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded">2</span>
+                          <span className="text-sm font-medium">
+                            {format(new Date(compareRight.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setCompareRight(null);
+                            setSelectingFor('right');
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div className="flex gap-2 text-xs text-muted-foreground mt-1">
+                        <span>{compareRight.opportunities_count} oport.</span>
+                        <span>•</span>
+                        <span>{compareRight.tasks_count} tarefas</span>
+                        <span>•</span>
+                        <span>{compareRight.contacts_count} contatos</span>
+                      </div>
+                    </div>
+                    <ScrollArea className="flex-1 p-3">
+                      {renderAnalysisContent(compareRight.analysis)}
+                    </ScrollArea>
+                  </div>
+                </div>
+
+                {/* Context Changes Summary */}
+                <div className="mt-4 p-3 bg-muted/30 rounded-lg border">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Mudanças no contexto entre as análises:</p>
+                  <div className="flex gap-6 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Oportunidades:</span>
+                      <span className={`font-medium ${
+                        compareRight.opportunities_count > compareLeft.opportunities_count 
+                          ? 'text-green-500' 
+                          : compareRight.opportunities_count < compareLeft.opportunities_count 
+                          ? 'text-destructive' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {compareLeft.opportunities_count} → {compareRight.opportunities_count}
+                        {compareRight.opportunities_count !== compareLeft.opportunities_count && (
+                          <span className="ml-1">
+                            ({compareRight.opportunities_count > compareLeft.opportunities_count ? '+' : ''}
+                            {compareRight.opportunities_count - compareLeft.opportunities_count})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Tarefas:</span>
+                      <span className={`font-medium ${
+                        compareRight.tasks_count > compareLeft.tasks_count 
+                          ? 'text-green-500' 
+                          : compareRight.tasks_count < compareLeft.tasks_count 
+                          ? 'text-destructive' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {compareLeft.tasks_count} → {compareRight.tasks_count}
+                        {compareRight.tasks_count !== compareLeft.tasks_count && (
+                          <span className="ml-1">
+                            ({compareRight.tasks_count > compareLeft.tasks_count ? '+' : ''}
+                            {compareRight.tasks_count - compareLeft.tasks_count})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Contatos:</span>
+                      <span className={`font-medium ${
+                        compareRight.contacts_count > compareLeft.contacts_count 
+                          ? 'text-green-500' 
+                          : compareRight.contacts_count < compareLeft.contacts_count 
+                          ? 'text-destructive' 
+                          : 'text-muted-foreground'
+                      }`}>
+                        {compareLeft.contacts_count} → {compareRight.contacts_count}
+                        {compareRight.contacts_count !== compareLeft.contacts_count && (
+                          <span className="ml-1">
+                            ({compareRight.contacts_count > compareLeft.contacts_count ? '+' : ''}
+                            {compareRight.contacts_count - compareLeft.contacts_count})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center w-full py-12 gap-4">
+                <GitCompare className="h-16 w-16 text-primary/50" />
+                <div className="text-center space-y-2">
+                  <p className="text-lg font-medium text-foreground">Comparar Análises</p>
+                  <p className="text-muted-foreground max-w-md">
+                    Compare duas análises lado a lado para identificar mudanças na estratégia 
+                    e evolução das recomendações ao longo do tempo.
+                  </p>
+                </div>
+                <Button onClick={startCompareMode} size="lg" className="mt-4">
+                  <GitCompare className="mr-2 h-5 w-5" />
+                  Iniciar Comparação
+                </Button>
+              </div>
             )}
           </TabsContent>
         </Tabs>
