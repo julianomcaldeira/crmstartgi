@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +77,8 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [visitSearch, setVisitSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "status" | "date">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [selectedVisitsToRemove, setSelectedVisitsToRemove] = useState<string[]>([]);
+  const [removingVisits, setRemovingVisits] = useState(false);
 
   const filteredAndSortedVisits = visits
     .filter((visit) => {
@@ -124,6 +126,49 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const getSortIcon = (field: "name" | "status" | "date") => {
     if (sortBy !== field) return <ArrowUpDown className="h-3 w-3" />;
     return sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+
+  const toggleVisitToRemove = (visitId: string) => {
+    setSelectedVisitsToRemove(prev => 
+      prev.includes(visitId) 
+        ? prev.filter(id => id !== visitId)
+        : [...prev, visitId]
+    );
+  };
+
+  const selectAllVisitsToRemove = () => {
+    const allIds = filteredAndSortedVisits.map(v => v.id);
+    const allSelected = allIds.every(id => selectedVisitsToRemove.includes(id));
+    
+    if (allSelected) {
+      setSelectedVisitsToRemove(prev => prev.filter(id => !allIds.includes(id)));
+    } else {
+      setSelectedVisitsToRemove(prev => [...new Set([...prev, ...allIds])]);
+    }
+  };
+
+  const handleBulkRemoveVisits = async () => {
+    if (selectedVisitsToRemove.length === 0) return;
+
+    setRemovingVisits(true);
+    try {
+      const { error } = await supabase
+        .from("client_feiras")
+        .delete()
+        .in("id", selectedVisitsToRemove);
+
+      if (error) throw error;
+
+      toast.success(`${selectedVisitsToRemove.length} empresa(s) removida(s) da lista`);
+      setSelectedVisitsToRemove([]);
+      fetchVisits();
+      fetchAvailableClients();
+    } catch (error) {
+      console.error("Error removing visits:", error);
+      toast.error("Erro ao remover empresas");
+    } finally {
+      setRemovingVisits(false);
+    }
   };
 
   useEffect(() => {
@@ -630,6 +675,38 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                 </div>
               </div>
             )}
+
+            {/* Bulk Remove Controls */}
+            {visits.length > 0 && (
+              <div className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-md">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={filteredAndSortedVisits.length > 0 && filteredAndSortedVisits.every(v => selectedVisitsToRemove.includes(v.id))}
+                    onCheckedChange={selectAllVisitsToRemove}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Selecionar para remover
+                  </span>
+                  {selectedVisitsToRemove.length > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      {selectedVisitsToRemove.length} selecionada(s)
+                    </Badge>
+                  )}
+                </div>
+                {selectedVisitsToRemove.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkRemoveVisits}
+                    disabled={removingVisits}
+                    className="h-8 text-xs gap-1"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    {removingVisits ? "Removendo..." : `Remover (${selectedVisitsToRemove.length})`}
+                  </Button>
+                )}
+              </div>
+            )}
             
             {filteredAndSortedVisits.length === 0 ? (
               <Card className="p-8 text-center text-muted-foreground">
@@ -645,8 +722,21 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
               </Card>
             ) : (
               filteredAndSortedVisits.map((visit) => (
-                <Card key={visit.id} className="p-4">
+                <Card 
+                  key={visit.id} 
+                  className={`p-4 ${selectedVisitsToRemove.includes(visit.id) ? 'ring-2 ring-destructive/50 bg-destructive/5' : ''}`}
+                >
                   <div className="flex items-start gap-3">
+                    {/* Selection checkbox for removal */}
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={selectedVisitsToRemove.includes(visit.id)}
+                        onCheckedChange={() => toggleVisitToRemove(visit.id)}
+                        className="border-destructive data-[state=checked]:bg-destructive"
+                      />
+                    </div>
+                    
+                    {/* Visit status checkbox */}
                     <div className="pt-1">
                       <Checkbox
                         checked={visit.visited}
