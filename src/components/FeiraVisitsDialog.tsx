@@ -65,7 +65,8 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [open, setOpen] = useState(false);
   const [visits, setVisits] = useState<ClientFeira[]>([]);
   const [availableClients, setAvailableClients] = useState<any[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [bulkSearchTerm, setBulkSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesText, setNotesText] = useState("");
@@ -206,9 +207,9 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     }
   };
 
-  const handleAddClient = async () => {
-    if (!selectedClient) {
-      toast.error("Selecione uma empresa");
+  const handleAddClients = async () => {
+    if (selectedClients.length === 0) {
+      toast.error("Selecione ao menos uma empresa");
       return;
     }
 
@@ -217,26 +218,58 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("client_feiras").insert({
+      const insertData = selectedClients.map(clientId => ({
         feira_id: feiraId,
-        client_id: selectedClient,
+        client_id: clientId,
         created_by: user.id,
         visited: false,
-      });
+      }));
+
+      const { error } = await supabase.from("client_feiras").insert(insertData);
 
       if (error) throw error;
 
-      toast.success("Empresa adicionada à lista de visitas");
-      setSelectedClient("");
+      toast.success(`${selectedClients.length} empresa(s) adicionada(s) à lista de visitas`);
+      setSelectedClients([]);
+      setBulkSearchTerm("");
       fetchVisits();
       fetchAvailableClients();
     } catch (error) {
-      console.error("Error adding client:", error);
-      toast.error("Erro ao adicionar empresa");
+      console.error("Error adding clients:", error);
+      toast.error("Erro ao adicionar empresas");
     } finally {
       setLoading(false);
     }
   };
+
+  const toggleClientSelection = (clientId: string) => {
+    setSelectedClients(prev => 
+      prev.includes(clientId) 
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
+  const selectAllFilteredClients = () => {
+    const filteredIds = filteredAvailableClients.map(c => c.id);
+    const allSelected = filteredIds.every(id => selectedClients.includes(id));
+    
+    if (allSelected) {
+      setSelectedClients(prev => prev.filter(id => !filteredIds.includes(id)));
+    } else {
+      setSelectedClients(prev => [...new Set([...prev, ...filteredIds])]);
+    }
+  };
+
+  const filteredAvailableClients = availableClients.filter(client => {
+    if (!bulkSearchTerm.trim()) return true;
+    const search = bulkSearchTerm.toLowerCase();
+    return (
+      client.company_name?.toLowerCase().includes(search) ||
+      client.trade_name?.toLowerCase().includes(search) ||
+      client.city?.toLowerCase().includes(search)
+    );
+  });
 
   const handleToggleVisited = async (visitId: string, currentVisited: boolean, clientData: { id: string; company_name: string }) => {
     try {
@@ -434,32 +467,83 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
         <div className="space-y-6">
           {/* Add Client Section */}
           <Card className="p-4">
-            <h3 className="font-semibold mb-3 text-sm">Adicionar Empresa à Lista de Visitas</h3>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <SearchableCombobox
-                  items={availableClients.map((client) => ({
-                    value: client.id,
-                    label: client.company_name,
-                    subLabel: client.city ? `${client.city}/${client.state}` : undefined,
-                    searchText: `${client.company_name ?? ""} ${client.trade_name ?? ""} ${client.cnpj ?? ""} ${client.city ?? ""}`.trim(),
-                  }))}
-                  value={selectedClient}
-                  onValueChange={setSelectedClient}
-                  placeholder="Buscar e selecionar empresa..."
-                  searchPlaceholder="Digite para buscar por nome, CNPJ ou cidade..."
-                  emptyText="Nenhuma empresa disponível para adicionar."
-                />
-              </div>
-              <Button onClick={handleAddClient} disabled={loading || !selectedClient}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar
-              </Button>
+            <h3 className="font-semibold mb-3 text-sm">Adicionar Empresas à Lista de Visitas</h3>
+            
+            {/* Search Input */}
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar empresa por nome ou cidade..."
+                value={bulkSearchTerm}
+                onChange={(e) => setBulkSearchTerm(e.target.value)}
+                className="pl-9"
+              />
             </div>
-            {availableClients.length === 0 && (
-              <p className="text-xs text-muted-foreground mt-2">
+
+            {availableClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
                 Todas as empresas já foram adicionadas a esta feira.
               </p>
+            ) : (
+              <>
+                {/* Select All + Counter */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={filteredAvailableClients.length > 0 && filteredAvailableClients.every(c => selectedClients.includes(c.id))}
+                      onCheckedChange={selectAllFilteredClients}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      Selecionar todos ({filteredAvailableClients.length})
+                    </span>
+                  </div>
+                  {selectedClients.length > 0 && (
+                    <Badge variant="secondary">
+                      {selectedClients.length} selecionada(s)
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Client List */}
+                <div className="max-h-[200px] overflow-y-auto border rounded-md">
+                  {filteredAvailableClients.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhuma empresa encontrada.
+                    </p>
+                  ) : (
+                    filteredAvailableClients.map((client) => (
+                      <div
+                        key={client.id}
+                        className={`flex items-center gap-2 p-2 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 ${
+                          selectedClients.includes(client.id) ? 'bg-primary/10' : ''
+                        }`}
+                        onClick={() => toggleClientSelection(client.id)}
+                      >
+                        <Checkbox
+                          checked={selectedClients.includes(client.id)}
+                          onCheckedChange={() => toggleClientSelection(client.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{client.company_name}</p>
+                          {client.city && (
+                            <p className="text-xs text-muted-foreground">{client.city}/{client.state}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Button */}
+                <Button 
+                  onClick={handleAddClients} 
+                  disabled={loading || selectedClients.length === 0}
+                  className="w-full mt-3"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {loading ? "Adicionando..." : `Adicionar ${selectedClients.length > 0 ? `(${selectedClients.length})` : ""} Empresa(s)`}
+                </Button>
+              </>
             )}
           </Card>
 
