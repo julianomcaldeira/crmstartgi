@@ -20,7 +20,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, User, Clock, History } from "lucide-react";
+import { Plus, Trash2, User, Clock, History, Building2, Users } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
@@ -312,6 +312,24 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl">Editar Tarefa</DialogTitle>
+          {/* Client/Contact Info */}
+          {(task.client || task.contact) && (
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
+              {task.client && (
+                <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-md">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{task.client.company_name || task.client.trade_name}</span>
+                </div>
+              )}
+              {task.contact && (
+                <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-md">
+                  <Users className="h-4 w-4 text-primary" />
+                  <span>{task.contact.name}</span>
+                  {task.contact.role && <span className="text-xs">({task.contact.role})</span>}
+                </div>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-6">
