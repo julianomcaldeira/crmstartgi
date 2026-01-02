@@ -19,12 +19,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search } from "lucide-react";
+import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { AudioRecorder } from "@/components/AudioRecorder";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 
 interface FeiraVisitsDialogProps {
   feiraId: string;
@@ -73,23 +74,56 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [clientSearch, setClientSearch] = useState("");
   const [visitFilter, setVisitFilter] = useState<"all" | "visited" | "pending">("all");
   const [visitSearch, setVisitSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "status" | "date">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  const filteredVisits = visits.filter((visit) => {
-    // Filter by visit status
-    const matchesStatus = 
-      visitFilter === "all" ? true :
-      visitFilter === "visited" ? visit.visited :
-      visitFilter === "pending" ? !visit.visited : true;
-    
-    // Filter by search term
-    const searchTerm = visitSearch.toLowerCase().trim();
-    const matchesSearch = !searchTerm || 
-      visit.clients.company_name?.toLowerCase().includes(searchTerm) ||
-      visit.clients.trade_name?.toLowerCase().includes(searchTerm) ||
-      visit.clients.city?.toLowerCase().includes(searchTerm);
-    
-    return matchesStatus && matchesSearch;
-  });
+  const filteredAndSortedVisits = visits
+    .filter((visit) => {
+      // Filter by visit status
+      const matchesStatus = 
+        visitFilter === "all" ? true :
+        visitFilter === "visited" ? visit.visited :
+        visitFilter === "pending" ? !visit.visited : true;
+      
+      // Filter by search term
+      const searchTerm = visitSearch.toLowerCase().trim();
+      const matchesSearch = !searchTerm || 
+        visit.clients.company_name?.toLowerCase().includes(searchTerm) ||
+        visit.clients.trade_name?.toLowerCase().includes(searchTerm) ||
+        visit.clients.city?.toLowerCase().includes(searchTerm);
+      
+      return matchesStatus && matchesSearch;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === "name") {
+        comparison = (a.clients.company_name || "").localeCompare(b.clients.company_name || "");
+      } else if (sortBy === "status") {
+        // Visited first (true = 1, false = 0)
+        comparison = (b.visited ? 1 : 0) - (a.visited ? 1 : 0);
+      } else if (sortBy === "date") {
+        const dateA = a.visited_at ? new Date(a.visited_at).getTime() : 0;
+        const dateB = b.visited_at ? new Date(b.visited_at).getTime() : 0;
+        comparison = dateB - dateA;
+      }
+      
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+  const toggleSort = (field: "name" | "status" | "date") => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("asc");
+    }
+  };
+
+  const getSortIcon = (field: "name" | "status" | "date") => {
+    if (sortBy !== field) return <ArrowUpDown className="h-3 w-3" />;
+    return sortOrder === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
 
   useEffect(() => {
     if (open) {
@@ -401,46 +435,39 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
           {/* Add Client Section */}
           <Card className="p-4">
             <h3 className="font-semibold mb-3 text-sm">Adicionar Empresa à Lista de Visitas</h3>
-            <div className="space-y-3">
-              <Input
-                placeholder="Buscar empresa por nome ou CNPJ..."
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                className="w-full"
-              />
-              <div className="flex gap-2">
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Selecione uma empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableClients
-                      .filter(client => 
-                        !clientSearch || 
-                        client.company_name?.toLowerCase().includes(clientSearch.toLowerCase()) ||
-                        client.cnpj?.includes(clientSearch)
-                      )
-                      .map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.company_name} {client.city && `- ${client.city}/${client.state}`}
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleAddClient} disabled={loading || !selectedClient}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar
-                </Button>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <SearchableCombobox
+                  items={availableClients.map((client) => ({
+                    value: client.id,
+                    label: client.company_name,
+                    subLabel: client.city ? `${client.city}/${client.state}` : undefined,
+                    searchText: `${client.company_name ?? ""} ${client.trade_name ?? ""} ${client.cnpj ?? ""} ${client.city ?? ""}`.trim(),
+                  }))}
+                  value={selectedClient}
+                  onValueChange={setSelectedClient}
+                  placeholder="Buscar e selecionar empresa..."
+                  searchPlaceholder="Digite para buscar por nome, CNPJ ou cidade..."
+                  emptyText="Nenhuma empresa disponível para adicionar."
+                />
               </div>
+              <Button onClick={handleAddClient} disabled={loading || !selectedClient}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </Button>
             </div>
+            {availableClients.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Todas as empresas já foram adicionadas a esta feira.
+              </p>
+            )}
           </Card>
 
           {/* Visits List */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold text-sm">
-                Lista de Empresas ({filteredVisits.length}{filteredVisits.length !== visits.length ? ` de ${visits.length}` : ""})
+                Lista de Empresas ({filteredAndSortedVisits.length}{filteredAndSortedVisits.length !== visits.length ? ` de ${visits.length}` : ""})
               </h3>
               
               {/* Visit Filter Buttons */}
@@ -474,20 +501,53 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
               </div>
             </div>
 
-            {/* Search Input */}
+            {/* Search and Sort Controls */}
             {visits.length > 0 && (
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar empresa por nome ou cidade..."
-                  value={visitSearch}
-                  onChange={(e) => setVisitSearch(e.target.value)}
-                  className="pl-9"
-                />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar empresa por nome ou cidade..."
+                    value={visitSearch}
+                    onChange={(e) => setVisitSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                
+                {/* Sort Buttons */}
+                <div className="flex gap-1">
+                  <Button
+                    variant={sortBy === "name" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => toggleSort("name")}
+                    className="h-9 text-xs gap-1"
+                  >
+                    {getSortIcon("name")}
+                    Nome
+                  </Button>
+                  <Button
+                    variant={sortBy === "status" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => toggleSort("status")}
+                    className="h-9 text-xs gap-1"
+                  >
+                    {getSortIcon("status")}
+                    Status
+                  </Button>
+                  <Button
+                    variant={sortBy === "date" ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => toggleSort("date")}
+                    className="h-9 text-xs gap-1"
+                  >
+                    {getSortIcon("date")}
+                    Data
+                  </Button>
+                </div>
               </div>
             )}
             
-            {filteredVisits.length === 0 ? (
+            {filteredAndSortedVisits.length === 0 ? (
               <Card className="p-8 text-center text-muted-foreground">
                 <ClipboardList className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 {visits.length === 0 ? (
@@ -500,7 +560,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                 )}
               </Card>
             ) : (
-              filteredVisits.map((visit) => (
+              filteredAndSortedVisits.map((visit) => (
                 <Card key={visit.id} className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="pt-1">
