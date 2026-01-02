@@ -71,6 +71,14 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [uploadingPhotos, setUploadingPhotos] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [clientSearch, setClientSearch] = useState("");
+  const [visitFilter, setVisitFilter] = useState<"all" | "visited" | "pending">("all");
+
+  const filteredVisits = visits.filter((visit) => {
+    if (visitFilter === "all") return true;
+    if (visitFilter === "visited") return visit.visited;
+    if (visitFilter === "pending") return !visit.visited;
+    return true;
+  });
 
   useEffect(() => {
     if (open) {
@@ -419,18 +427,56 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
           {/* Visits List */}
           <div className="space-y-3">
-            <h3 className="font-semibold text-sm">
-              Lista de Empresas ({visits.length})
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold text-sm">
+                Lista de Empresas ({filteredVisits.length}{filteredVisits.length !== visits.length ? ` de ${visits.length}` : ""})
+              </h3>
+              
+              {/* Visit Filter Buttons */}
+              <div className="flex gap-1">
+                <Button
+                  variant={visitFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setVisitFilter("all")}
+                  className="h-7 text-xs"
+                >
+                  Todos
+                </Button>
+                <Button
+                  variant={visitFilter === "visited" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setVisitFilter("visited")}
+                  className="h-7 text-xs gap-1"
+                >
+                  <CheckCircle2 className="h-3 w-3" />
+                  Visitados ({visits.filter(v => v.visited).length})
+                </Button>
+                <Button
+                  variant={visitFilter === "pending" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setVisitFilter("pending")}
+                  className="h-7 text-xs gap-1"
+                >
+                  <Circle className="h-3 w-3" />
+                  Pendentes ({visits.filter(v => !v.visited).length})
+                </Button>
+              </div>
+            </div>
             
-            {visits.length === 0 ? (
+            {filteredVisits.length === 0 ? (
               <Card className="p-8 text-center text-muted-foreground">
                 <ClipboardList className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhuma empresa na lista de visitas desta feira.</p>
-                <p className="text-sm mt-1">Adicione empresas acima para começar.</p>
+                {visits.length === 0 ? (
+                  <>
+                    <p>Nenhuma empresa na lista de visitas desta feira.</p>
+                    <p className="text-sm mt-1">Adicione empresas acima para começar.</p>
+                  </>
+                ) : (
+                  <p>Nenhuma empresa encontrada com este filtro.</p>
+                )}
               </Card>
             ) : (
-              visits.map((visit) => (
+              filteredVisits.map((visit) => (
                 <Card key={visit.id} className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="pt-1">
