@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon } from "lucide-react";
+import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -72,12 +72,23 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [clientSearch, setClientSearch] = useState("");
   const [visitFilter, setVisitFilter] = useState<"all" | "visited" | "pending">("all");
+  const [visitSearch, setVisitSearch] = useState("");
 
   const filteredVisits = visits.filter((visit) => {
-    if (visitFilter === "all") return true;
-    if (visitFilter === "visited") return visit.visited;
-    if (visitFilter === "pending") return !visit.visited;
-    return true;
+    // Filter by visit status
+    const matchesStatus = 
+      visitFilter === "all" ? true :
+      visitFilter === "visited" ? visit.visited :
+      visitFilter === "pending" ? !visit.visited : true;
+    
+    // Filter by search term
+    const searchTerm = visitSearch.toLowerCase().trim();
+    const matchesSearch = !searchTerm || 
+      visit.clients.company_name?.toLowerCase().includes(searchTerm) ||
+      visit.clients.trade_name?.toLowerCase().includes(searchTerm) ||
+      visit.clients.city?.toLowerCase().includes(searchTerm);
+    
+    return matchesStatus && matchesSearch;
   });
 
   useEffect(() => {
@@ -462,6 +473,19 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                 </Button>
               </div>
             </div>
+
+            {/* Search Input */}
+            {visits.length > 0 && (
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar empresa por nome ou cidade..."
+                  value={visitSearch}
+                  onChange={(e) => setVisitSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            )}
             
             {filteredVisits.length === 0 ? (
               <Card className="p-8 text-center text-muted-foreground">
