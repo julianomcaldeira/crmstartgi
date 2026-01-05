@@ -22,7 +22,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, User, Clock, History, Building2, Users, Mail, Phone, FileText } from "lucide-react";
+import { Plus, Trash2, User, Clock, History, Building2, Users, Mail, Phone, FileText, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
@@ -52,6 +52,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [activeTab, setActiveTab] = useState<"tarefa" | "contatos">("tarefa");
   const [allContacts, setAllContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const [contactSearch, setContactSearch] = useState("");
 
   const clientDisplay = task?.client ?? task?.clients;
   const contactDisplay = task?.contact ?? task?.contacts;
@@ -79,7 +80,10 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   }, [task]);
 
   useEffect(() => {
-    if (open) setActiveTab("tarefa");
+    if (open) {
+      setActiveTab("tarefa");
+      setContactSearch("");
+    }
   }, [open, task?.id]);
 
   useEffect(() => {
@@ -666,61 +670,95 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
             ) : loadingContacts ? (
               <div className="text-sm text-muted-foreground">Carregando contatos...</div>
             ) : allContacts.length > 0 ? (
-              <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-2">
-                {allContacts.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`p-4 rounded-lg border ${c.id === selectedContactId ? "border-primary bg-primary/5" : "border-border"}`}
-                  >
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{c.name}</span>
-                      {c.is_primary && (
-                        <Badge variant="default" className="text-xs">
-                          Principal
-                        </Badge>
-                      )}
-                      {c.id === selectedContactId && (
-                        <Badge variant="outline" className="text-xs">
-                          Contato da Tarefa
-                        </Badge>
-                      )}
-                      {c.role && (
-                        <Badge variant="secondary" className="text-xs">
-                          {c.role}
-                        </Badge>
-                      )}
-                    </div>
+              <>
+                {/* Search/Filter Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por nome, cargo ou e-mail..."
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
 
-                    <div className="space-y-1 pl-6 text-sm text-muted-foreground">
-                      {c.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3 w-3" />
-                          <a href={`mailto:${c.email}`} className="hover:text-primary transition-colors">
-                            {c.email}
-                          </a>
+                {(() => {
+                  const searchLower = contactSearch.toLowerCase().trim();
+                  const filteredContacts = searchLower
+                    ? allContacts.filter((c) =>
+                        (c.name?.toLowerCase() || "").includes(searchLower) ||
+                        (c.role?.toLowerCase() || "").includes(searchLower) ||
+                        (c.email?.toLowerCase() || "").includes(searchLower)
+                      )
+                    : allContacts;
+
+                  if (filteredContacts.length === 0) {
+                    return (
+                      <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg text-center">
+                        Nenhum contato encontrado para "{contactSearch}"
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-2">
+                      {filteredContacts.map((c) => (
+                        <div
+                          key={c.id}
+                          className={`p-4 rounded-lg border ${c.id === selectedContactId ? "border-primary bg-primary/5" : "border-border"}`}
+                        >
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-foreground">{c.name}</span>
+                            {c.is_primary && (
+                              <Badge variant="default" className="text-xs">
+                                Principal
+                              </Badge>
+                            )}
+                            {c.id === selectedContactId && (
+                              <Badge variant="outline" className="text-xs">
+                                Contato da Tarefa
+                              </Badge>
+                            )}
+                            {c.role && (
+                              <Badge variant="secondary" className="text-xs">
+                                {c.role}
+                              </Badge>
+                            )}
+                          </div>
+
+                          <div className="space-y-1 pl-6 text-sm text-muted-foreground">
+                            {c.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3 w-3" />
+                                <a href={`mailto:${c.email}`} className="hover:text-primary transition-colors">
+                                  {c.email}
+                                </a>
+                              </div>
+                            )}
+                            {c.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3 w-3" />
+                                <a href={`tel:${c.phone}`} className="hover:text-primary transition-colors">
+                                  {c.phone}
+                                </a>
+                              </div>
+                            )}
+                            {c.mobile && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3 w-3" />
+                                <a href={`tel:${c.mobile}`} className="hover:text-primary transition-colors">
+                                  {c.mobile} (Celular)
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      {c.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          <a href={`tel:${c.phone}`} className="hover:text-primary transition-colors">
-                            {c.phone}
-                          </a>
-                        </div>
-                      )}
-                      {c.mobile && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          <a href={`tel:${c.mobile}`} className="hover:text-primary transition-colors">
-                            {c.mobile} (Celular)
-                          </a>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  );
+                })()}
+              </>
             ) : (
               <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
                 Nenhum contato cadastrado para este prospect.
