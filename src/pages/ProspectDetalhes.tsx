@@ -205,7 +205,10 @@ const ClienteDetalhes = () => {
         .from("tasks")
         .select(`
           *,
-          assigned_user:profiles!tasks_assigned_to_fkey(full_name)
+          assigned_user:profiles!tasks_assigned_to_fkey(full_name),
+          clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+          contacts(id, name, email, phone, mobile, role),
+          profiles:assigned_to(full_name)
         `)
         .eq("client_id", id)
         .order("created_at", { ascending: false });

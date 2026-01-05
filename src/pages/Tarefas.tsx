@@ -155,9 +155,10 @@ const Tarefas = () => {
           .from("tasks")
           .select(`
             *,
-            client:clients(company_name, trade_name),
-            opportunity:opportunities(title),
-            contact:contacts(id, name, email, phone, mobile, role)
+            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+            opportunities(title),
+            contacts(id, name, email, phone, mobile, role),
+            profiles:assigned_to(full_name)
           `)
           .eq("assigned_to", user.id)
           .gte("due_date", weekStart.toISOString())
@@ -168,9 +169,10 @@ const Tarefas = () => {
           .from("tasks")
           .select(`
             *,
-            client:clients(company_name, trade_name),
-            opportunity:opportunities(title),
-            contact:contacts(id, name, email, phone, mobile, role)
+            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+            opportunities(title),
+            contacts(id, name, email, phone, mobile, role),
+            profiles:assigned_to(full_name)
           `)
           .eq("assigned_to", user.id)
           .order("due_date", { ascending: true });
@@ -944,16 +946,16 @@ const Tarefas = () => {
                                 </span>
                               </div>
                             )}
-                            {task.client && (
+                            {task.clients && (
                               <div className="flex items-center gap-1">
                                 <Building2 size={14} />
-                                <span>{task.client.company_name || task.client.trade_name}</span>
+                                <span>{task.clients.company_name || task.clients.trade_name}</span>
                               </div>
                             )}
-                            {task.contact && (
+                            {task.contacts && (
                               <div className="flex items-center gap-1">
                                 <Users size={14} />
-                                <span>{task.contact.name}</span>
+                                <span>{task.contacts.name}</span>
                               </div>
                             )}
                           </div>
@@ -1087,10 +1089,10 @@ const Tarefas = () => {
                                       <span>{format(new Date(task.due_date), "HH:mm")}</span>
                                     </div>
                                   )}
-                                  {task.client && (
+                                  {task.clients && (
                                     <div className="flex items-center gap-1 text-muted-foreground mt-1">
                                       <Building2 size={12} />
-                                      <span className="truncate">{task.client.company_name || task.client.trade_name}</span>
+                                      <span className="truncate">{task.clients.company_name || task.clients.trade_name}</span>
                                     </div>
                                   )}
                                 </div>
