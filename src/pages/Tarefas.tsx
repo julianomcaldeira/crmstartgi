@@ -190,7 +190,14 @@ const Tarefas = () => {
       if (oppsResponse.error) throw oppsResponse.error;
       if (usersResponse.error) throw usersResponse.error;
 
-      setTasks(tasksResponse.data || []);
+      const normalizedTasks = (tasksResponse.data || []).map((t: any) => ({
+        ...t,
+        client: t.client ?? t.clients,
+        contact: t.contact ?? t.contacts,
+        opportunity: t.opportunity ?? t.opportunities,
+      }));
+
+      setTasks(normalizedTasks);
       setClients(clientsResponse.data || []);
       setOpportunities(oppsResponse.data || []);
       setUsers(usersResponse.data || []);

@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +22,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, User, Clock, History, Building2, Users } from "lucide-react";
+import { Plus, Trash2, User, Clock, History, Building2, Users, Mail, Phone, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
@@ -47,6 +49,15 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"tarefa" | "contatos">("tarefa");
+  const [allContacts, setAllContacts] = useState<any[]>([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+
+  const clientDisplay = task?.client ?? task?.clients;
+  const contactDisplay = task?.contact ?? task?.contacts;
+  const resolvedClientId: string | undefined = task?.client_id ?? clientDisplay?.id;
+  const selectedContactId: string | undefined = task?.contact_id ?? contactDisplay?.id;
+
   useEffect(() => {
     if (task) {
       setTaskType(task.task_type || "ligacao");
@@ -66,6 +77,19 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       fetchTaskHistory();
     }
   }, [task]);
+
+  useEffect(() => {
+    if (open) setActiveTab("tarefa");
+  }, [open, task?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (resolvedClientId) {
+      fetchClientContacts(resolvedClientId);
+    } else {
+      setAllContacts([]);
+    }
+  }, [open, resolvedClientId]);
 
   const fetchNotes = async () => {
     if (!task?.id) return;
@@ -104,6 +128,25 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setHistory(data || []);
     } catch (error) {
       console.error("Error fetching task history:", error);
+    }
+  };
+
+  const fetchClientContacts = async (clientId: string) => {
+    setLoadingContacts(true);
+    try {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("is_primary", { ascending: false })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setAllContacts(data || []);
+    } catch (error) {
+      console.error("Error fetching client contacts:", error);
+    } finally {
+      setLoadingContacts(false);
     }
   };
 
@@ -313,26 +356,44 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
         <DialogHeader>
           <DialogTitle className="text-2xl">Editar Tarefa</DialogTitle>
           {/* Client/Contact Info */}
-          {(task.client || task.contact) && (
+          {(clientDisplay || contactDisplay) && (
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-              {task.client && (
+              {clientDisplay && (
                 <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-md">
                   <Building2 className="h-4 w-4 text-primary" />
-                  <span className="font-medium">{task.client.company_name || task.client.trade_name}</span>
+                  <span className="font-medium">{clientDisplay.company_name || clientDisplay.trade_name}</span>
                 </div>
               )}
-              {task.contact && (
+              {contactDisplay && (
                 <div className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-md">
                   <Users className="h-4 w-4 text-primary" />
-                  <span>{task.contact.name}</span>
-                  {task.contact.role && <span className="text-xs">({task.contact.role})</span>}
+                  <span>{contactDisplay.name}</span>
+                  {contactDisplay.role && <span className="text-xs">({contactDisplay.role})</span>}
                 </div>
               )}
             </div>
           )}
         </DialogHeader>
 
-        <div className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="tarefa" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Tarefa
+            </TabsTrigger>
+            <TabsTrigger value="contatos" className="gap-2">
+              <Users className="h-4 w-4" />
+              Contatos do Prospect
+              {allContacts.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  {allContacts.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="tarefa" className="mt-4">
+            <div className="space-y-6">
           {/* Task Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -594,7 +655,79 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </Button>
             </div>
           </div>
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="contatos" className="mt-4 space-y-4">
+            {!resolvedClientId ? (
+              <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
+                Nenhum prospect associado a esta tarefa.
+              </div>
+            ) : loadingContacts ? (
+              <div className="text-sm text-muted-foreground">Carregando contatos...</div>
+            ) : allContacts.length > 0 ? (
+              <div className="max-h-[60vh] overflow-y-auto space-y-3 pr-2">
+                {allContacts.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`p-4 rounded-lg border ${c.id === selectedContactId ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-foreground">{c.name}</span>
+                      {c.is_primary && (
+                        <Badge variant="default" className="text-xs">
+                          Principal
+                        </Badge>
+                      )}
+                      {c.id === selectedContactId && (
+                        <Badge variant="outline" className="text-xs">
+                          Contato da Tarefa
+                        </Badge>
+                      )}
+                      {c.role && (
+                        <Badge variant="secondary" className="text-xs">
+                          {c.role}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 pl-6 text-sm text-muted-foreground">
+                      {c.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3 w-3" />
+                          <a href={`mailto:${c.email}`} className="hover:text-primary transition-colors">
+                            {c.email}
+                          </a>
+                        </div>
+                      )}
+                      {c.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3" />
+                          <a href={`tel:${c.phone}`} className="hover:text-primary transition-colors">
+                            {c.phone}
+                          </a>
+                        </div>
+                      )}
+                      {c.mobile && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3 w-3" />
+                          <a href={`tel:${c.mobile}`} className="hover:text-primary transition-colors">
+                            {c.mobile} (Celular)
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground p-4 border border-border rounded-lg">
+                Nenhum contato cadastrado para este prospect.
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
