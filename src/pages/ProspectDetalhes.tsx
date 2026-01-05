@@ -216,7 +216,15 @@ const ClienteDetalhes = () => {
       if (tasksError) {
         console.error("Error fetching tasks:", tasksError);
       }
-      setTasks(tasksData || []);
+
+      const normalizedTasks = (tasksData || []).map((t: any) => ({
+        ...t,
+        client: t.client ?? t.clients,
+        contact: t.contact ?? t.contacts,
+        opportunity: t.opportunity ?? t.opportunities,
+      }));
+
+      setTasks(normalizedTasks);
 
       // Fetch users for assignment
       const { data: usersData } = await supabase
