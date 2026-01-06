@@ -34,12 +34,17 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (taskId && open) {
-      fetchNotes();
+    // Reset state when dialog opens/closes or task changes
+    if (open && taskId) {
+      setNotes([]);
+      setNewNote("");
+      fetchNotes(taskId);
     }
   }, [taskId, open]);
 
-  const fetchNotes = async () => {
+  const fetchNotes = async (id: string) => {
+    if (!id) return;
+    
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -48,7 +53,7 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
           *,
           profiles:user_id(full_name)
         `)
-        .eq("task_id", taskId)
+        .eq("task_id", id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -62,6 +67,10 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
 
   const handleAddNote = async () => {
     if (!newNote.trim()) return;
+    if (!taskId) {
+      toast.error("Tarefa não identificada");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -83,7 +92,7 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
 
       toast.success("Nota adicionada!");
       setNewNote("");
-      fetchNotes();
+      fetchNotes(taskId);
     } catch (error) {
       console.error("Error adding note:", error);
       toast.error("Erro ao adicionar nota");
