@@ -19,13 +19,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { ClipboardList, Plus, CheckCircle2, Circle, Upload, X, Image as ImageIcon, Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Pencil, ListTodo } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { AudioRecorder } from "@/components/AudioRecorder";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface FeiraVisitsDialogProps {
   feiraId: string;
@@ -51,6 +61,7 @@ interface ClientFeira {
     full_name: string;
   };
   photos?: FeiraPhoto[];
+  tasks?: FeiraTask[];
 }
 
 interface FeiraPhoto {
@@ -59,6 +70,15 @@ interface FeiraPhoto {
   uploaded_at: string;
   uploaded_by: string;
   notes: string | null;
+}
+
+interface FeiraTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  created_at: string;
 }
 
 export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps) {
@@ -79,6 +99,10 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedVisitsToRemove, setSelectedVisitsToRemove] = useState<string[]>([]);
   const [removingVisits, setRemovingVisits] = useState(false);
+  const [editingTask, setEditingTask] = useState<FeiraTask | null>(null);
+  const [editingTaskDescription, setEditingTaskDescription] = useState("");
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [showTasks, setShowTasks] = useState<string | null>(null);
 
   const filteredAndSortedVisits = visits
     .filter((visit) => {
@@ -247,7 +271,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
       if (error) throw error;
 
-      // Fetch profiles and photos for each visit
+      // Fetch profiles, photos and tasks for each visit
       const visitsWithDetails = await Promise.all(
         (data || []).map(async (visit) => {
           let visited_by_profile = null;
@@ -267,7 +291,16 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
             .eq("client_feira_id", visit.id)
             .order("uploaded_at", { ascending: false });
 
-          return { ...visit, visited_by_profile, photos: photos || [] };
+          // Fetch tasks for this client related to feira
+          const { data: tasks } = await supabase
+            .from("tasks")
+            .select("id, title, description, status, due_date, created_at")
+            .eq("client_id", visit.client_id)
+            .eq("task_type", "visita_feira")
+            .ilike("title", `%${feiraName}%`)
+            .order("created_at", { ascending: false });
+
+          return { ...visit, visited_by_profile, photos: photos || [], tasks: tasks || [] };
         })
       );
 
@@ -275,6 +308,47 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     } catch (error) {
       console.error("Error fetching visits:", error);
       toast.error("Erro ao carregar visitas");
+    }
+  };
+
+  const handleEditTask = async () => {
+    if (!editingTask) return;
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ description: editingTaskDescription })
+        .eq("id", editingTask.id);
+
+      if (error) throw error;
+
+      toast.success("Tarefa atualizada com sucesso");
+      setEditingTask(null);
+      setEditingTaskDescription("");
+      fetchVisits();
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Erro ao atualizar tarefa");
+    }
+  };
+
+  const handleDeleteTask = async () => {
+    if (!deletingTaskId) return;
+
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", deletingTaskId);
+
+      if (error) throw error;
+
+      toast.success("Tarefa excluída com sucesso");
+      setDeletingTaskId(null);
+      fetchVisits();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Erro ao excluir tarefa");
     }
   };
 
@@ -896,6 +970,86 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                         )}
                       </div>
 
+                      {/* Tasks Section */}
+                      <div className="space-y-2 mt-4">
+                        <div className="flex items-center justify-between">
+                          <h5 className="text-sm font-medium flex items-center gap-2">
+                            <ListTodo className="h-4 w-4" />
+                            Tarefas da Feira ({visit.tasks?.length || 0})
+                          </h5>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setShowTasks(showTasks === visit.id ? null : visit.id)}
+                          >
+                            {showTasks === visit.id ? "Ocultar" : "Ver tarefas"}
+                          </Button>
+                        </div>
+
+                        {showTasks === visit.id && (
+                          <div className="space-y-2">
+                            {visit.tasks && visit.tasks.length > 0 ? (
+                              visit.tasks.map((task) => (
+                                <div
+                                  key={task.id}
+                                  className="flex items-start justify-between gap-2 p-2 border rounded-md bg-muted/30"
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{task.title}</p>
+                                    {task.description && (
+                                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                        {task.description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Badge
+                                        variant={
+                                          task.status === "completed" ? "default" :
+                                          task.status === "pending" ? "secondary" : "outline"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {task.status === "completed" ? "Concluída" :
+                                         task.status === "pending" ? "Pendente" :
+                                         task.status === "in_progress" ? "Em andamento" : task.status}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">
+                                        {format(new Date(task.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setEditingTask(task);
+                                        setEditingTaskDescription(task.description || "");
+                                      }}
+                                    >
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-destructive hover:text-destructive"
+                                      onClick={() => setDeletingTaskId(task.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-xs text-muted-foreground italic text-center py-2">
+                                Nenhuma tarefa criada para esta empresa nesta feira.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Photos Section */}
                       <div className="space-y-2 mt-4">
                         <div className="flex items-center justify-between">
@@ -982,6 +1136,52 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Task Dialog */}
+      <Dialog open={!!editingTask} onOpenChange={() => { setEditingTask(null); setEditingTaskDescription(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Tarefa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium mb-2">{editingTask?.title}</p>
+              <Textarea
+                value={editingTaskDescription}
+                onChange={(e) => setEditingTaskDescription(e.target.value)}
+                placeholder="Descrição da tarefa..."
+                className="min-h-[120px]"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setEditingTask(null); setEditingTaskDescription(""); }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEditTask}>
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Task Confirmation */}
+      <AlertDialog open={!!deletingTaskId} onOpenChange={() => setDeletingTaskId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTask} className="bg-destructive hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
