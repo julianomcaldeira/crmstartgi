@@ -162,7 +162,9 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
       toast.success(`${selectedVisitsToRemove.length} empresa(s) removida(s) da lista`);
       setSelectedVisitsToRemove([]);
       fetchVisits();
-      fetchAvailableClients();
+      // Clear and refetch available clients with same search
+      setAvailableClients([]);
+      setBulkSearchTerm("");
     } catch (error) {
       console.error("Error removing visits:", error);
       toast.error("Erro ao remover empresas");
@@ -174,9 +176,56 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
   useEffect(() => {
     if (open) {
       fetchVisits();
-      fetchAvailableClients();
+      // Clear available clients on open - only search when user types
+      setAvailableClients([]);
+      setBulkSearchTerm("");
+      setSelectedClients([]);
     }
   }, [open, feiraId]);
+
+  // Search clients when user types (min 2 characters)
+  useEffect(() => {
+    if (!open || bulkSearchTerm.trim().length < 2) {
+      setAvailableClients([]);
+      return;
+    }
+
+    const searchClients = async () => {
+      try {
+        // Fetch all clients that are NOT already linked to this feira
+        const { data: existingLinks } = await supabase
+          .from("client_feiras")
+          .select("client_id")
+          .eq("feira_id", feiraId);
+
+        const existingClientIds = existingLinks?.map((link) => link.client_id) || [];
+
+        const search = bulkSearchTerm.toLowerCase();
+        
+        let query = supabase
+          .from("clients")
+          .select("id, company_name, trade_name, city, state");
+        
+        if (existingClientIds.length > 0) {
+          query = query.not("id", "in", `(${existingClientIds.join(",")})`);
+        }
+        
+        // Filter by search term
+        query = query.or(`company_name.ilike.%${search}%,trade_name.ilike.%${search}%,city.ilike.%${search}%`);
+        query = query.order("company_name").limit(50);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+        setAvailableClients(data || []);
+      } catch (error) {
+        console.error("Error searching clients:", error);
+      }
+    };
+
+    const debounce = setTimeout(searchClients, 300);
+    return () => clearTimeout(debounce);
+  }, [open, feiraId, bulkSearchTerm]);
 
   const fetchVisits = async () => {
     try {
@@ -229,28 +278,7 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     }
   };
 
-  const fetchAvailableClients = async () => {
-    try {
-      // Fetch all clients that are NOT already linked to this feira
-      const { data: existingLinks } = await supabase
-        .from("client_feiras")
-        .select("client_id")
-        .eq("feira_id", feiraId);
-
-      const existingClientIds = existingLinks?.map((link) => link.client_id) || [];
-
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, company_name, trade_name, city, state")
-        .not("id", "in", `(${existingClientIds.join(",") || "''"})`)
-        .order("company_name");
-
-      if (error) throw error;
-      setAvailableClients(data || []);
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    }
-  };
+  // fetchAvailableClients removed - now using search-based useEffect above
 
   const handleAddClients = async () => {
     if (selectedClients.length === 0) {
@@ -277,8 +305,8 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
       toast.success(`${selectedClients.length} empresa(s) adicionada(s) à lista de visitas`);
       setSelectedClients([]);
       setBulkSearchTerm("");
+      setAvailableClients([]);
       fetchVisits();
-      fetchAvailableClients();
     } catch (error) {
       console.error("Error adding clients:", error);
       toast.error("Erro ao adicionar empresas");
@@ -306,15 +334,8 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     }
   };
 
-  const filteredAvailableClients = availableClients.filter(client => {
-    if (!bulkSearchTerm.trim()) return true;
-    const search = bulkSearchTerm.toLowerCase();
-    return (
-      client.company_name?.toLowerCase().includes(search) ||
-      client.trade_name?.toLowerCase().includes(search) ||
-      client.city?.toLowerCase().includes(search)
-    );
-  });
+  // Clients are already filtered by the search query, no need to filter again
+  const filteredAvailableClients = availableClients;
 
   const handleToggleVisited = async (visitId: string, currentVisited: boolean, clientData: { id: string; company_name: string }) => {
     try {
@@ -396,6 +417,12 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
   const handleSaveNotes = async (visitId: string) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const visit = visits.find(v => v.id === visitId);
+      if (!visit) throw new Error("Visita não encontrada");
+
       const { error } = await supabase
         .from("client_feiras")
         .update({ notes: notesText })
@@ -403,7 +430,32 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
       if (error) throw error;
 
-      toast.success("Anotações salvas");
+      // Create a task with the notes as description
+      if (notesText.trim()) {
+        const { error: taskError } = await supabase
+          .from("tasks")
+          .insert({
+            title: `Anotação Feira ${feiraName}: ${visit.clients.company_name}`,
+            description: notesText,
+            task_type: "visita_feira",
+            status: "pending",
+            priority: "medium",
+            client_id: visit.clients.id,
+            assigned_to: user.id,
+            created_by: user.id,
+            due_date: new Date().toISOString(),
+          });
+
+        if (taskError) {
+          console.error("Error creating task:", taskError);
+          toast.error("Anotação salva, mas erro ao criar tarefa");
+        } else {
+          toast.success("Anotações salvas e tarefa criada!");
+        }
+      } else {
+        toast.success("Anotações salvas");
+      }
+
       setEditingNotes(null);
       setNotesText("");
       fetchVisits();
@@ -525,9 +577,13 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
               />
             </div>
 
-            {availableClients.length === 0 ? (
+            {bulkSearchTerm.trim().length < 2 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Todas as empresas já foram adicionadas a esta feira.
+                Digite pelo menos 2 caracteres para buscar empresas.
+              </p>
+            ) : availableClients.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                Nenhuma empresa encontrada ou todas já foram adicionadas.
               </p>
             ) : (
               <>
