@@ -60,7 +60,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const selectedContactId: string | undefined = task?.contact_id ?? contactDisplay?.id;
 
   useEffect(() => {
-    if (task) {
+    if (task?.id && open) {
       setTaskType(task.task_type || "ligacao");
       // Converter UTC do banco para formato local para o input datetime-local
       if (task.due_date) {
@@ -74,10 +74,13 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
       setDescription(task.description || "");
-      fetchNotes();
-      fetchTaskHistory();
+      // Reset notes before fetching to prevent showing old task's notes
+      setNotes([]);
+      setNewNote("");
+      fetchNotesForTask(task.id);
+      fetchTaskHistoryForTask(task.id);
     }
-  }, [task]);
+  }, [task?.id, open]);
 
   useEffect(() => {
     if (open) {
@@ -95,8 +98,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
     }
   }, [open, resolvedClientId]);
 
-  const fetchNotes = async () => {
-    if (!task?.id) return;
+  const fetchNotesForTask = async (taskId: string) => {
+    if (!taskId) return;
     
     try {
       const { data, error } = await supabase
@@ -105,7 +108,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           *,
           profiles:user_id(full_name)
         `)
-        .eq("task_id", task.id)
+        .eq("task_id", taskId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -115,8 +118,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
     }
   };
 
-  const fetchTaskHistory = async () => {
-    if (!task?.id) return;
+  const fetchTaskHistoryForTask = async (taskId: string) => {
+    if (!taskId) return;
     
     try {
       const { data, error } = await supabase
@@ -125,7 +128,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           *,
           profiles:changed_by(full_name)
         `)
-        .eq("task_id", task.id)
+        .eq("task_id", taskId)
         .order("changed_at", { ascending: false });
 
       if (error) throw error;
@@ -247,7 +250,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
 
       toast.success("Nota adicionada!");
       setNewNote("");
-      fetchNotes();
+      if (task?.id) fetchNotesForTask(task.id);
     } catch (error: any) {
       console.error("Error adding note:", error);
       toast.error(error.message || "Erro ao adicionar nota");
@@ -264,7 +267,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       if (error) throw error;
 
       toast.success("Nota removida!");
-      fetchNotes();
+      if (task?.id) fetchNotesForTask(task.id);
     } catch (error: any) {
       console.error("Error deleting note:", error);
       toast.error("Erro ao remover nota");
@@ -314,7 +317,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       
       // Wait a moment for the trigger to process, then refresh history
       setTimeout(() => {
-        fetchTaskHistory();
+        if (task?.id) fetchTaskHistoryForTask(task.id);
       }, 500);
       
       onSuccess();
