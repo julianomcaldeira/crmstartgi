@@ -526,6 +526,9 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
       const visit = visits.find(v => v.id === visitId);
       if (!visit) throw new Error("Visita não encontrada");
 
+      const previousNotes = visit.notes || "";
+      const isNewNotes = !previousNotes.trim() && notesText.trim();
+
       const { error } = await supabase
         .from("client_feiras")
         .update({ notes: notesText })
@@ -533,12 +536,12 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
 
       if (error) throw error;
 
-      // Create a task with the notes as description
-      if (notesText.trim()) {
+      // Create a task ONLY when adding notes for the first time (previous was empty)
+      if (isNewNotes) {
         const { error: taskError } = await supabase
           .from("tasks")
           .insert({
-            title: `Anotação Feira ${feiraName}: ${visit.clients.company_name}`,
+            title: `Visita Feira ${feiraName}: ${visit.clients.company_name}`,
             description: notesText,
             task_type: "visita_feira",
             status: "pending",
