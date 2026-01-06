@@ -352,6 +352,35 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
     }
   };
 
+  const handleToggleTaskStatus = async (taskId: string, currentStatus: string) => {
+    const newStatus = currentStatus === "completed" ? "pending" : "completed";
+    
+    try {
+      const updateData: { status: "pending" | "completed"; completed_at?: string | null } = { 
+        status: newStatus as "pending" | "completed"
+      };
+      
+      if (newStatus === "completed") {
+        updateData.completed_at = new Date().toISOString();
+      } else {
+        updateData.completed_at = null;
+      }
+
+      const { error } = await supabase
+        .from("tasks")
+        .update(updateData)
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      toast.success(newStatus === "completed" ? "Tarefa concluída!" : "Tarefa reaberta");
+      fetchVisits();
+    } catch (error) {
+      console.error("Error toggling task status:", error);
+      toast.error("Erro ao atualizar tarefa");
+    }
+  };
+
   // fetchAvailableClients removed - now using search-based useEffect above
 
   const handleAddClients = async () => {
@@ -992,10 +1021,20 @@ export function FeiraVisitsDialog({ feiraId, feiraName }: FeiraVisitsDialogProps
                               visit.tasks.map((task) => (
                                 <div
                                   key={task.id}
-                                  className="flex items-start justify-between gap-2 p-2 border rounded-md bg-muted/30"
+                                  className={`flex items-start gap-2 p-2 border rounded-md ${task.status === "completed" ? "bg-muted/50 opacity-75" : "bg-muted/30"}`}
                                 >
+                                  {/* Checkbox to toggle completion */}
+                                  <div className="pt-0.5">
+                                    <Checkbox
+                                      checked={task.status === "completed"}
+                                      onCheckedChange={() => handleToggleTaskStatus(task.id, task.status)}
+                                    />
+                                  </div>
+                                  
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{task.title}</p>
+                                    <p className={`text-sm font-medium truncate ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                                      {task.title}
+                                    </p>
                                     {task.description && (
                                       <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
                                         {task.description}
