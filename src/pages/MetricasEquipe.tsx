@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Target, TrendingUp, DollarSign, Briefcase, CheckCircle2, ChevronDown, ChevronUp, Trophy, Activity, ListTodo } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users, Target, TrendingUp, DollarSign, Briefcase, CheckCircle2, ChevronDown, ChevronUp, Trophy, Activity, ListTodo, Calendar, LayoutGrid, List } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateGoalProgress } from "@/hooks/useGoalProgress";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface SellerMetrics {
@@ -36,24 +39,47 @@ interface GoalWithProgress {
   is_achieved: boolean;
 }
 
-interface SellerGoals {
-  seller_id: string;
-  goals: GoalWithProgress[];
-}
-
 const MetricasEquipe = () => {
   const [metrics, setMetrics] = useState<SellerMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSellers, setExpandedSellers] = useState<Record<string, boolean>>({});
   const [sellerGoals, setSellerGoals] = useState<Record<string, GoalWithProgress[]>>({});
   const [loadingGoals, setLoadingGoals] = useState<Record<string, boolean>>({});
+  const [selectedPeriod, setSelectedPeriod] = useState(format(new Date(), "yyyy-MM"));
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
 
   useEffect(() => {
     fetchTeamMetrics();
-  }, []);
+  }, [selectedPeriod]);
+
+  const getPeriodDates = () => {
+    const [year, month] = selectedPeriod.split("-");
+    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+    const endDate = endOfMonth(startDate);
+    return { startDate, endDate };
+  };
+
+  const getPeriodOptions = () => {
+    const options = [];
+    const currentDate = new Date();
+    
+    for (let i = 0; i < 12; i++) {
+      const date = subMonths(currentDate, i);
+      const value = format(date, "yyyy-MM");
+      const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+      options.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+    }
+    
+    return options;
+  };
 
   const fetchTeamMetrics = async () => {
+    setLoading(true);
     try {
+      const { startDate, endDate } = getPeriodDates();
+      const startDateStr = format(startDate, "yyyy-MM-dd");
+      const endDateStr = format(endDate, "yyyy-MM-dd");
+
       // Fetch all sellers
       const { data: sellers, error: sellersError } = await supabase
         .from("profiles")
@@ -63,17 +89,21 @@ const MetricasEquipe = () => {
       if (sellersError) throw sellersError;
 
       const metricsPromises = sellers.map(async (seller) => {
-        // Count clients
+        // Count clients created in period
         const { count: clientsCount } = await supabase
           .from("clients")
           .select("*", { count: "exact", head: true })
-          .eq("created_by", seller.id);
+          .eq("created_by", seller.id)
+          .gte("created_at", `${startDateStr}T00:00:00`)
+          .lte("created_at", `${endDateStr}T23:59:59`);
 
-        // Count opportunities
+        // Count opportunities in period
         const { data: opportunities } = await supabase
           .from("opportunities")
-          .select("status, value")
-          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`);
+          .select("status, value, updated_at")
+          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`)
+          .gte("created_at", `${startDateStr}T00:00:00`)
+          .lte("created_at", `${endDateStr}T23:59:59`);
 
         const totalOpportunities = opportunities?.length || 0;
         const wonOpportunities = opportunities?.filter(o => o.status === "won").length || 0;
@@ -84,11 +114,13 @@ const MetricasEquipe = () => {
           ? (wonOpportunities / totalOpportunities) * 100 
           : 0;
 
-        // Count tasks
+        // Count tasks in period
         const { data: tasks } = await supabase
           .from("tasks")
           .select("status")
-          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`);
+          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`)
+          .gte("created_at", `${startDateStr}T00:00:00`)
+          .lte("created_at", `${endDateStr}T23:59:59`);
 
         const totalTasks = tasks?.length || 0;
         const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
@@ -109,6 +141,9 @@ const MetricasEquipe = () => {
 
       const metricsData = await Promise.all(metricsPromises);
       setMetrics(metricsData);
+      // Reset goals when period changes
+      setSellerGoals({});
+      setExpandedSellers({});
     } catch (error) {
       console.error("Error fetching team metrics:", error);
       toast.error("Erro ao carregar métricas da equipe");
@@ -123,15 +158,16 @@ const MetricasEquipe = () => {
     setLoadingGoals(prev => ({ ...prev, [sellerId]: true }));
     
     try {
-      // Fetch active goals for this seller
-      const today = format(new Date(), "yyyy-MM-dd");
+      const { startDate, endDate } = getPeriodDates();
+      const startDateStr = format(startDate, "yyyy-MM-dd");
+      const endDateStr = format(endDate, "yyyy-MM-dd");
       
       const { data: goals, error } = await supabase
         .from("goals")
         .select("*")
         .eq("assigned_to", sellerId)
-        .lte("start_date", today)
-        .gte("end_date", today);
+        .lte("start_date", endDateStr)
+        .gte("end_date", startDateStr);
 
       if (error) throw error;
 
@@ -233,60 +269,99 @@ const MetricasEquipe = () => {
     ? metrics.reduce((sum, m) => sum + m.conversion_rate, 0) / metrics.length
     : 0;
 
+  const selectedPeriodLabel = getPeriodOptions().find(o => o.value === selectedPeriod)?.label || selectedPeriod;
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
-          Métricas de Equipe
-        </h1>
-        <p className="text-muted-foreground">
-          Visão geral do desempenho de toda a equipe de vendas
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
+            Métricas de Equipe
+          </h1>
+          <p className="text-muted-foreground">
+            Visão geral do desempenho de toda a equipe de vendas
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-[200px]">
+              <Calendar className="mr-2 h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {getPeriodOptions().map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex border rounded-lg overflow-hidden">
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="rounded-none"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="rounded-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-lg border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
+            <CardTitle className="text-sm font-medium">Novos Clientes</CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{totalClients}</div>
-            <p className="text-xs text-muted-foreground">Toda a base</p>
+            <p className="text-xs text-muted-foreground">No período</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg border-l-4 border-l-success">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Oportunidades Totais</CardTitle>
+            <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
             <Target className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-success">{totalOpportunities}</div>
-            <p className="text-xs text-muted-foreground">Em pipeline</p>
+            <p className="text-xs text-muted-foreground">No período</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg border-l-4 border-l-warning">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+            <CardTitle className="text-sm font-medium">Receita</CardTitle>
             <DollarSign className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">Ganhos fechados</p>
+            <p className="text-xs text-muted-foreground">No período</p>
           </CardContent>
         </Card>
 
         <Card className="shadow-lg border-l-4 border-l-accent">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conversão Média</CardTitle>
+            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
             <TrendingUp className="h-4 w-4 text-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent">{avgConversion.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Da equipe</p>
+            <p className="text-xs text-muted-foreground">Média da equipe</p>
           </CardContent>
         </Card>
       </div>
@@ -296,10 +371,12 @@ const MetricasEquipe = () => {
         <CardHeader>
           <CardTitle className="text-xl flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
-            Desempenho Individual dos Vendedores
+            Desempenho Individual - {selectedPeriodLabel}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            Clique em "Ver Metas" para visualizar o progresso das metas de cada vendedor
+            {viewMode === "cards" 
+              ? 'Clique em "Ver Metas" para visualizar o progresso das metas de cada vendedor'
+              : "Visualização em lista do desempenho de cada vendedor"}
           </p>
         </CardHeader>
         <CardContent>
@@ -307,7 +384,68 @@ const MetricasEquipe = () => {
             <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
           ) : metrics.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum vendedor encontrado</p>
+          ) : viewMode === "list" ? (
+            /* List View */
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead className="text-center">Clientes</TableHead>
+                    <TableHead className="text-center">Oportunidades</TableHead>
+                    <TableHead className="text-center">Ganhos</TableHead>
+                    <TableHead className="text-right">Receita</TableHead>
+                    <TableHead className="text-center">Conversão</TableHead>
+                    <TableHead className="text-center">Tarefas</TableHead>
+                    <TableHead className="text-center">Concluídas</TableHead>
+                    <TableHead className="text-center">Metas</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {metrics.map((metric) => (
+                    <TableRow key={metric.seller_id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{metric.seller_name}</p>
+                          <p className="text-xs text-muted-foreground">{metric.seller_email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{metric.total_clients}</TableCell>
+                      <TableCell className="text-center">{metric.total_opportunities}</TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-success font-medium">{metric.won_opportunities}</span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-warning font-medium">{formatCurrency(metric.total_revenue)}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={metric.conversion_rate >= 30 ? "default" : "secondary"}>
+                          {metric.conversion_rate.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{metric.total_tasks}</TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-success">{metric.completed_tasks}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setViewMode("cards");
+                            toggleSellerExpanded(metric.seller_id);
+                          }}
+                        >
+                          <Target className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
+            /* Cards View */
             <div className="space-y-4">
               {metrics.map((metric) => (
                 <Collapsible
@@ -403,14 +541,14 @@ const MetricasEquipe = () => {
                           <div className="space-y-4">
                             <h4 className="font-semibold text-foreground flex items-center gap-2">
                               <Trophy className="h-4 w-4 text-warning" />
-                              Metas Ativas
+                              Metas do Período
                             </h4>
 
                             {loadingGoals[metric.seller_id] ? (
                               <p className="text-sm text-muted-foreground">Carregando metas...</p>
                             ) : !sellerGoals[metric.seller_id] || sellerGoals[metric.seller_id].length === 0 ? (
                               <p className="text-sm text-muted-foreground italic">
-                                Nenhuma meta ativa para este período
+                                Nenhuma meta para este período
                               </p>
                             ) : (
                               <div className="grid gap-3 md:grid-cols-2">
