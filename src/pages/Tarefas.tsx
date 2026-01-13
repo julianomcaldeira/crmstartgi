@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -52,6 +52,10 @@ const Tarefas = () => {
   // Quick filters for list view
   const [quickTaskTypeFilter, setQuickTaskTypeFilter] = useState("all");
   const [quickPriorityFilter, setQuickPriorityFilter] = useState("all");
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Form state
   const [description, setDescription] = useState("");
@@ -537,6 +541,17 @@ const Tarefas = () => {
       matchesQuickTaskType && matchesQuickPriority;
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, selectedClient, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter]);
+
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -910,89 +925,166 @@ const Tarefas = () => {
               </CardContent>
             </Card>
           ) : (
-            <div 
-              key={cardViewMode}
-              className="space-y-3 animate-fade-in"
-            >
-              {filteredTasks.map((task) => (
-                <SwipeableCard
-                  key={task.id}
-                  onEdit={() => {
-                    setSelectedTask(task);
-                    setEditDialogOpen(true);
-                  }}
-                >
-                <Card 
-                  className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setEditDialogOpen(true);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleTaskStatus(task.id, task.status);
-                          }}
-                          className="mt-1"
-                        >
-                          {task.status === "completed" ? (
-                            <CheckCircle2 className="h-5 w-5 text-success" />
-                          ) : (
-                            <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
-                          )}
-                        </button>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
-                            {getTaskTypeIcon(task.task_type)}
-                            <span className="font-medium">{task.title}</span>
-                            <Badge className={getPriorityColor(task.priority)}>
-                              {getPriorityLabel(task.priority)}
-                            </Badge>
-                          </div>
+            <>
+              <div 
+                key={cardViewMode}
+                className="space-y-3 animate-fade-in"
+              >
+                {paginatedTasks.map((task) => (
+                  <SwipeableCard
+                    key={task.id}
+                    onEdit={() => {
+                      setSelectedTask(task);
+                      setEditDialogOpen(true);
+                    }}
+                  >
+                  <Card 
+                    className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setEditDialogOpen(true);
+                    }}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleTaskStatus(task.id, task.status);
+                            }}
+                            className="mt-1"
+                          >
+                            {task.status === "completed" ? (
+                              <CheckCircle2 className="h-5 w-5 text-success" />
+                            ) : (
+                              <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                            )}
+                          </button>
                           
-                          {task.description && (
-                            <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                              {task.description}
-                            </p>
-                          )}
-                          
-                          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                            {task.due_date && (
-                              <div className="flex items-center gap-1">
-                                {getTaskStatusIcon(task)}
-                                <span>
-                                  {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                </span>
-                              </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getTaskTypeIcon(task.task_type)}
+                              <span className="font-medium">{task.title}</span>
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {getPriorityLabel(task.priority)}
+                              </Badge>
+                            </div>
+                            
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                                {task.description}
+                              </p>
                             )}
-                            {task.clients && (
-                              <div className="flex items-center gap-1">
-                                <Building2 size={14} />
-                                <span>{task.clients.company_name || task.clients.trade_name}</span>
-                              </div>
-                            )}
-                            {task.contacts && (
-                              <div className="flex items-center gap-1">
-                                <Users size={14} />
-                                <span>{task.contacts.name}</span>
-                              </div>
-                            )}
+                            
+                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                              {task.due_date && (
+                                <div className="flex items-center gap-1">
+                                  {getTaskStatusIcon(task)}
+                                  <span>
+                                    {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </span>
+                                </div>
+                              )}
+                              {task.clients && (
+                                <div className="flex items-center gap-1">
+                                  <Building2 size={14} />
+                                  <span>{task.clients.company_name || task.clients.trade_name}</span>
+                                </div>
+                              )}
+                              {task.contacts && (
+                                <div className="flex items-center gap-1">
+                                  <Users size={14} />
+                                  <span>{task.contacts.name}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        
+                        <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
                       </div>
-                      
-                      <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
+                    </CardContent>
+                  </Card>
+                  </SwipeableCard>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t pt-4 mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {startIndex + 1} - {Math.min(endIndex, filteredTasks.length)} de {filteredTasks.length} tarefas
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1 px-2">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="icon"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="h-8 w-8"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
                     </div>
-                  </CardContent>
-                </Card>
-                </SwipeableCard>
-              ))}
-            </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
