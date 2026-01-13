@@ -12,15 +12,33 @@ serve(async (req) => {
   }
 
   try {
-    const { client, opportunities, tasks, contacts } = await req.json();
+    const body = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build context for AI analysis
-    const clientInfo = `
+    let prompt: string;
+    let systemPrompt: string;
+
+    // Check if this is a custom prompt request (from reports) or prospect analysis
+    if (body.customPrompt && body.prompt) {
+      // Custom prompt mode - used by reports AI analysis
+      prompt = body.prompt;
+      systemPrompt = body.systemPrompt || `Você é um Especialista em Análise de Dados Comerciais. Formate sua resposta em seções claras usando markdown com títulos ##. Seja específico e dê recomendações práticas.`;
+      
+      console.log("Using custom prompt mode for reports analysis");
+    } else {
+      // Standard prospect analysis mode
+      const { client, opportunities, tasks, contacts } = body;
+      
+      if (!client || !client.company_name) {
+        throw new Error("Dados do cliente são obrigatórios");
+      }
+
+      // Build context for AI analysis
+      const clientInfo = `
 ## Dados do Prospect
 - Razão Social: ${client.company_name}
 - Nome Fantasia: ${client.trade_name || 'N/A'}
@@ -33,12 +51,12 @@ serve(async (req) => {
 - Distribuidor atual: ${client.distributor || 'N/A'}
 `;
 
-    const contactsInfo = contacts?.length > 0 ? `
+      const contactsInfo = contacts?.length > 0 ? `
 ## Contatos (${contacts.length})
 ${contacts.map((c: any) => `- ${c.name}${c.role ? ` (${c.role})` : ''}${c.is_primary ? ' [PRINCIPAL]' : ''}`).join('\n')}
 ` : `## Contatos\nNenhum contato cadastrado.`;
 
-    const opportunitiesInfo = opportunities?.length > 0 ? `
+      const opportunitiesInfo = opportunities?.length > 0 ? `
 ## Oportunidades (${opportunities.length})
 ${opportunities.map((o: any) => {
   const statusLabels: Record<string, string> = {
@@ -56,7 +74,7 @@ ${opportunities.map((o: any) => {
 }).join('\n')}
 ` : `## Oportunidades\nNenhuma oportunidade cadastrada.`;
 
-    const tasksInfo = tasks?.length > 0 ? `
+      const tasksInfo = tasks?.length > 0 ? `
 ## Tarefas/Atividades (${tasks.length})
 ${tasks.slice(0, 15).map((t: any) => {
   const taskTypeLabels: Record<string, string> = {
@@ -83,7 +101,7 @@ ${tasks.slice(0, 15).map((t: any) => {
 ${tasks.length > 15 ? `\n... e mais ${tasks.length - 15} tarefas.` : ''}
 ` : `## Tarefas\nNenhuma tarefa registrada.`;
 
-    const prompt = `${clientInfo}
+      prompt = `${clientInfo}
 
 ${contactsInfo}
 
@@ -95,7 +113,7 @@ ${tasksInfo}
 
 Com base nos dados acima, analise a situação deste prospect e forneça recomendações estratégicas de vendas.`;
 
-    const systemPrompt = `Você é um Especialista em Vendas B2B com mais de 20 anos de experiência. Sua missão é analisar os dados do prospect e fornecer insights acionáveis para ajudar o vendedor a fechar a venda.
+      systemPrompt = `Você é um Especialista em Vendas B2B com mais de 20 anos de experiência. Sua missão é analisar os dados do prospect e fornecer insights acionáveis para ajudar o vendedor a fechar a venda.
 
 IMPORTANTE: Seja direto, objetivo e prático. Foque em ações concretas.
 
@@ -122,7 +140,10 @@ Sua análise deve incluir:
 
 Responda em português brasileiro, de forma clara e estruturada usando markdown.`;
 
-    console.log("Calling Lovable AI Gateway for prospect analysis...");
+      console.log("Using prospect analysis mode");
+    }
+
+    console.log("Calling Lovable AI Gateway...");
     
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -176,7 +197,7 @@ Responda em português brasileiro, de forma clara e estruturada usando markdown.
   } catch (error) {
     console.error("Error in analyze-prospect function:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Erro ao analisar prospect" }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Erro ao analisar" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
