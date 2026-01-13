@@ -145,6 +145,15 @@ const Tarefas = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Check user role to determine if they can see all tasks
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .single();
+
+      const isAdminOrGestor = roleData?.role === "admin" || roleData?.role === "gestor";
+
       let tasksQuery;
       
       if (viewMode === "calendar") {
@@ -160,10 +169,14 @@ const Tarefas = () => {
             contacts(id, name, email, phone, mobile, role),
             profiles:assigned_to(full_name)
           `)
-          .eq("assigned_to", user.id)
           .gte("due_date", weekStart.toISOString())
           .lte("due_date", weekEnd.toISOString())
           .order("due_date", { ascending: true });
+        
+        // Only filter by assigned_to for vendedor role
+        if (!isAdminOrGestor) {
+          tasksQuery = tasksQuery.eq("assigned_to", user.id);
+        }
       } else {
         tasksQuery = supabase
           .from("tasks")
@@ -174,8 +187,12 @@ const Tarefas = () => {
             contacts(id, name, email, phone, mobile, role),
             profiles:assigned_to(full_name)
           `)
-          .eq("assigned_to", user.id)
           .order("due_date", { ascending: true });
+        
+        // Only filter by assigned_to for vendedor role
+        if (!isAdminOrGestor) {
+          tasksQuery = tasksQuery.eq("assigned_to", user.id);
+        }
       }
 
       const [tasksResponse, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
