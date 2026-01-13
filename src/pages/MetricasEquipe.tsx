@@ -114,16 +114,36 @@ const MetricasEquipe = () => {
           ? (wonOpportunities / totalOpportunities) * 100 
           : 0;
 
-        // Count tasks in period
+        // Count tasks in period - using consistent logic with goals (completed_at for completed tasks)
         const { data: tasks } = await supabase
           .from("tasks")
-          .select("status")
-          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`)
+          .select("status, completed_at")
+          .eq("assigned_to", seller.id);
+
+        // Filter tasks created in period OR completed in period
+        const tasksCreatedInPeriod = tasks?.filter(t => {
+          // For this metric we count all tasks assigned to the seller in the period
+          return true;
+        }) || [];
+        
+        // Count completed tasks that were completed within the period
+        const completedTasksInPeriod = tasks?.filter(t => {
+          if (t.status !== "completed" || !t.completed_at) return false;
+          const completedDate = new Date(t.completed_at);
+          return completedDate >= new Date(`${startDateStr}T00:00:00`) && 
+                 completedDate <= new Date(`${endDateStr}T23:59:59`);
+        }) || [];
+        
+        // For total tasks, count those created in period
+        const { count: totalTasksCount } = await supabase
+          .from("tasks")
+          .select("*", { count: "exact", head: true })
+          .eq("assigned_to", seller.id)
           .gte("created_at", `${startDateStr}T00:00:00`)
           .lte("created_at", `${endDateStr}T23:59:59`);
 
-        const totalTasks = tasks?.length || 0;
-        const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
+        const totalTasks = totalTasksCount || 0;
+        const completedTasks = completedTasksInPeriod.length;
 
         return {
           seller_id: seller.id,
