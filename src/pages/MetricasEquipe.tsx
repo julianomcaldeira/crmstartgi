@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Target, TrendingUp, DollarSign, Briefcase, CheckCircle2, ChevronDown, ChevronUp, Trophy, Activity, ListTodo, Calendar, LayoutGrid, List } from "lucide-react";
+import { Users, Target, TrendingUp, DollarSign, Briefcase, CheckCircle2, ChevronDown, ChevronUp, Trophy, Activity, ListTodo, Calendar, LayoutGrid, List, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateGoalProgress } from "@/hooks/useGoalProgress";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SellerMetrics {
   seller_id: string;
@@ -340,51 +341,97 @@ const MetricasEquipe = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-lg border-l-4 border-l-primary">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Novos Clientes</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">{totalClients}</div>
-            <p className="text-xs text-muted-foreground">No período</p>
-          </CardContent>
-        </Card>
+      <TooltipProvider>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="shadow-lg border-l-4 border-l-primary">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Novos Clientes</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-medium mb-1">Cálculo: Novos Clientes</p>
+                    <p className="text-xs">Soma de todos os clientes cadastrados (created_at) no período selecionado por cada vendedor.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Users className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{totalClients}</div>
+              <p className="text-xs text-muted-foreground">No período</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg border-l-4 border-l-success">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
-            <Target className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">{totalOpportunities}</div>
-            <p className="text-xs text-muted-foreground">No período</p>
-          </CardContent>
-        </Card>
+          <Card className="shadow-lg border-l-4 border-l-success">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-medium mb-1">Cálculo: Oportunidades</p>
+                    <p className="text-xs">Soma de todas as oportunidades criadas (created_at) no período selecionado, onde o vendedor é criador ou responsável.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Target className="h-4 w-4 text-success" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-success">{totalOpportunities}</div>
+              <p className="text-xs text-muted-foreground">No período</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg border-l-4 border-l-warning">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Receita</CardTitle>
-            <DollarSign className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{formatCurrency(totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">No período</p>
-          </CardContent>
-        </Card>
+          <Card className="shadow-lg border-l-4 border-l-warning">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Receita</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-medium mb-1">Cálculo: Receita</p>
+                    <p className="text-xs">Soma do valor de todas as oportunidades com status "Ganha" criadas no período selecionado.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <DollarSign className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-warning">{formatCurrency(totalRevenue)}</div>
+              <p className="text-xs text-muted-foreground">No período</p>
+            </CardContent>
+          </Card>
 
-        <Card className="shadow-lg border-l-4 border-l-accent">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-            <TrendingUp className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-accent">{avgConversion.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">Média da equipe</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="shadow-lg border-l-4 border-l-accent">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-medium mb-1">Cálculo: Taxa de Conversão</p>
+                    <p className="text-xs">Média da taxa de conversão de cada vendedor. Taxa individual = (Oportunidades Ganhas ÷ Total de Oportunidades) × 100.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <TrendingUp className="h-4 w-4 text-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-accent">{avgConversion.toFixed(1)}%</div>
+              <p className="text-xs text-muted-foreground">Média da equipe</p>
+            </CardContent>
+          </Card>
+        </div>
+      </TooltipProvider>
 
       {/* Individual Seller Metrics */}
       <Card className="shadow-lg">
@@ -411,13 +458,97 @@ const MetricasEquipe = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-center">Clientes</TableHead>
-                    <TableHead className="text-center">Oportunidades</TableHead>
-                    <TableHead className="text-center">Ganhos</TableHead>
-                    <TableHead className="text-right">Receita</TableHead>
-                    <TableHead className="text-center">Conversão</TableHead>
-                    <TableHead className="text-center">Tarefas</TableHead>
-                    <TableHead className="text-center">Concluídas</TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Clientes
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Clientes cadastrados no período</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Oportunidades
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Oportunidades criadas no período</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Ganhos
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Oportunidades com status "Ganha"</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
+                            Receita
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Soma do valor das oportunidades ganhas</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Conversão
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">(Ganhas ÷ Total) × 100</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Tarefas
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Tarefas criadas no período</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
+                    <TableHead className="text-center">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
+                            Concluídas
+                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Tarefas concluídas (completed_at) no período</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
                     <TableHead className="text-center">Metas</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -504,57 +635,107 @@ const MetricasEquipe = () => {
                         </div>
 
                         {/* Metrics Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-4 border-t">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Users size={16} />
-                              <span className="text-xs">Clientes</span>
+                        <TooltipProvider>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-4 border-t">
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <Users size={16} />
+                                    <span className="text-xs">Clientes</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Clientes cadastrados no período</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-xl font-semibold text-foreground">{metric.total_clients}</p>
                             </div>
-                            <p className="text-xl font-semibold text-foreground">{metric.total_clients}</p>
-                          </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Target size={16} />
-                              <span className="text-xs">Oportunidades</span>
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <Target size={16} />
+                                    <span className="text-xs">Oportunidades</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Oportunidades criadas no período</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-xl font-semibold text-foreground">{metric.total_opportunities}</p>
                             </div>
-                            <p className="text-xl font-semibold text-foreground">{metric.total_opportunities}</p>
-                          </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <TrendingUp size={16} />
-                              <span className="text-xs">Ganhos</span>
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <TrendingUp size={16} />
+                                    <span className="text-xs">Ganhos</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Oportunidades com status "Ganha"</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-xl font-semibold text-success">{metric.won_opportunities}</p>
                             </div>
-                            <p className="text-xl font-semibold text-success">{metric.won_opportunities}</p>
-                          </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <DollarSign size={16} />
-                              <span className="text-xs">Receita</span>
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <DollarSign size={16} />
+                                    <span className="text-xs">Receita</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Soma do valor das oportunidades ganhas</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-lg font-semibold text-warning">
+                                {formatCurrency(metric.total_revenue)}
+                              </p>
                             </div>
-                            <p className="text-lg font-semibold text-warning">
-                              {formatCurrency(metric.total_revenue)}
-                            </p>
-                          </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <Briefcase size={16} />
-                              <span className="text-xs">Tarefas</span>
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <Briefcase size={16} />
+                                    <span className="text-xs">Tarefas</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Tarefas criadas (created_at) no período</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-xl font-semibold text-foreground">{metric.total_tasks}</p>
                             </div>
-                            <p className="text-xl font-semibold text-foreground">{metric.total_tasks}</p>
-                          </div>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <CheckCircle2 size={16} />
-                              <span className="text-xs">Concluídas</span>
+                            <div className="space-y-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
+                                    <CheckCircle2 size={16} />
+                                    <span className="text-xs">Concluídas</span>
+                                    <HelpCircle className="h-3 w-3" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="text-xs">Tarefas concluídas (completed_at) no período</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <p className="text-xl font-semibold text-success">{metric.completed_tasks}</p>
                             </div>
-                            <p className="text-xl font-semibold text-success">{metric.completed_tasks}</p>
                           </div>
-                        </div>
+                        </TooltipProvider>
 
                         {/* Goals Section - Collapsible */}
                         <CollapsibleContent className="pt-4 border-t mt-4">
