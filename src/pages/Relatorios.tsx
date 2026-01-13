@@ -208,9 +208,10 @@ const Relatorios = () => {
 
   const fetchTasksMetrics = async () => {
     try {
+      // Fetch tasks created in period
       let query = supabase
         .from("tasks")
-        .select("status, due_date, task_type")
+        .select("status, due_date, task_type, completed_at, created_at")
         .gte("created_at", startDate)
         .lte("created_at", endDate);
 
@@ -220,8 +221,23 @@ const Relatorios = () => {
 
       const { data: tasksData } = await query;
 
+      // Also fetch tasks completed in period (even if created before)
+      let completedQuery = supabase
+        .from("tasks")
+        .select("status, due_date, task_type, completed_at")
+        .eq("status", "completed")
+        .gte("completed_at", `${startDate}T00:00:00`)
+        .lte("completed_at", `${endDate}T23:59:59`);
+
+      if (selectedSeller !== 'all') {
+        completedQuery = completedQuery.eq("assigned_to", selectedSeller);
+      }
+
+      const { data: completedTasksData } = await completedQuery;
+
       const total = tasksData?.length || 0;
-      const completed = tasksData?.filter(t => t.status === "completed").length || 0;
+      // Use completed_at based counting for consistency with goals
+      const completed = completedTasksData?.length || 0;
       const pending = tasksData?.filter(t => t.status === "pending").length || 0;
       
       const now = new Date();
@@ -313,7 +329,7 @@ const Relatorios = () => {
         .in("user_roles.role", ["vendedor", "gestor"]);
 
       const performancePromises = usersData?.map(async (user) => {
-        const [clientsRes, oppsRes, wonOppsRes, tasksRes] = await Promise.all([
+        const [clientsRes, oppsRes, wonOppsRes, tasksRes, completedTasksRes] = await Promise.all([
           supabase
             .from("clients")
             .select("id", { count: "exact", head: true })
@@ -338,15 +354,25 @@ const Relatorios = () => {
 
           supabase
             .from("tasks")
-            .select("status", { count: "exact" })
+            .select("status, completed_at")
             .eq("assigned_to", user.id)
             .gte("created_at", startDate)
             .lte("created_at", endDate),
+          
+          // Fetch tasks completed in period for this user (consistent with goals)
+          supabase
+            .from("tasks")
+            .select("id", { count: "exact", head: true })
+            .eq("assigned_to", user.id)
+            .eq("status", "completed")
+            .gte("completed_at", `${startDate}T00:00:00`)
+            .lte("completed_at", `${endDate}T23:59:59`),
         ]);
 
         const wonValue = wonOppsRes.data?.reduce((sum, opp) => sum + (Number(opp.value) || 0), 0) || 0;
         const convRate = oppsRes.count ? ((wonOppsRes.count || 0) / oppsRes.count) * 100 : 0;
-        const completedTasks = tasksRes.data?.filter(t => t.status === "completed").length || 0;
+        // Use completed_at based counting for consistency with goals
+        const completedTasks = completedTasksRes.count || 0;
 
         return {
           ...user,
@@ -355,7 +381,7 @@ const Relatorios = () => {
           wonOpportunitiesCount: wonOppsRes.count || 0,
           wonValue,
           conversionRate: convRate,
-          totalTasks: tasksRes.count || 0,
+          totalTasks: tasksRes.data?.length || 0,
           completedTasksCount: completedTasks,
         };
       }) || [];
