@@ -5,13 +5,13 @@ import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRadarLeads, useRadarLeadsStats } from "@/hooks/useRadarLeads";
+import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
   const queryClient = useQueryClient();
@@ -484,9 +484,7 @@ export default function RadarLeads() {
                   <TableRow>
                     <TableHead>Empresa</TableHead>
                     <TableHead>CNPJ</TableHead>
-                    <TableHead>Fonte</TableHead>
                     <TableHead>Valor do Contrato</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead>Localização</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -495,12 +493,7 @@ export default function RadarLeads() {
                   {leads.map((lead) => (
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.company_name}</TableCell>
-                      <TableCell>{lead.cnpj}</TableCell>
-                      <TableCell>
-                        <Badge className={getSourceBadgeColor(lead.source)}>
-                          {lead.source?.toUpperCase() || "N/A"}
-                        </Badge>
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
                       <TableCell>
                         {lead.contract_value
                           ? new Intl.NumberFormat("pt-BR", {
@@ -510,47 +503,25 @@ export default function RadarLeads() {
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={lead.status || "novo"}
-                          onValueChange={(value) =>
-                            updateStatusMutation.mutate({ leadId: lead.id, status: value })
-                          }
-                        >
-                          <SelectTrigger className="w-[140px]">
-                            <Badge className={getStatusBadgeColor(lead.status || "novo")}>
-                              {(lead.status || "novo").charAt(0).toUpperCase() + (lead.status || "novo").slice(1)}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="novo">Novo</SelectItem>
-                            <SelectItem value="contatado">Contatado</SelectItem>
-                            <SelectItem value="qualificado">Qualificado</SelectItem>
-                            <SelectItem value="descartado">Descartado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          {lead.status === "novo" && (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => convertToProspectMutation.mutate(lead)}
-                              disabled={convertingLeadId === lead.id || convertToProspectMutation.isPending}
-                            >
-                              {convertingLeadId === lead.id ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Consultando...
-                                </>
-                              ) : (
-                                "Converter em Prospect"
-                              )}
-                            </Button>
-                          )}
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => convertToProspectMutation.mutate(lead)}
+                            disabled={convertingLeadId === lead.id || convertToProspectMutation.isPending}
+                          >
+                            {convertingLeadId === lead.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Consultando...
+                              </>
+                            ) : (
+                              "Converter em Prospect"
+                            )}
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
