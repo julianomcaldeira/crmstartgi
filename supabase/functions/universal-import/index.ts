@@ -60,51 +60,39 @@ function convertDateToISO(dateStr: string | null | undefined): string | null {
   return null;
 }
 
-// Simple CSV parser to avoid heavy XLSX library memory usage
-function parseCSV(text: string): any[] {
-  const lines = text.split('\n').filter(line => line.trim());
-  if (lines.length === 0) return [];
-  
-  // Detect separator (comma or semicolon)
-  const firstLine = lines[0];
-  const separator = firstLine.includes(';') ? ';' : ',';
-  
-  const headers = lines[0].split(separator).map(h => h.trim().replace(/^"|"$/g, ''));
-  const data: any[] = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
-    const row: any = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] || null;
-    });
-    data.push(row);
-  }
-  
-  return data;
-}
+type ChunkPayload = {
+  rows: any[];
+  userId: string;
+  sessionId: string;
+  importType: string;
+  totalRows?: number;
+  fileName?: string;
+  fileSize?: number;
+  historyId?: string;
+  rowOffset?: number; // 0-based index offset for correct "Linha X" messages
+  isLastChunk?: boolean;
+};
 
-// Parse Excel using a lightweight approach - only parse what we need
-async function parseExcelLightweight(arrayBuffer: ArrayBuffer): Promise<any[]> {
-  // Dynamic import to reduce initial memory footprint
-  const XLSX = await import("npm:xlsx@0.18.5");
-  
-  const workbook = XLSX.read(new Uint8Array(arrayBuffer), { 
-    type: 'array',
-    cellDates: true,
-    cellNF: false,
-    cellText: false,
-    cellStyles: false,
-    sheetStubs: false
-  });
-  
-  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-  const data = XLSX.utils.sheet_to_json(worksheet, { defval: null, raw: true });
-  
-  // Clear references to help garbage collection
-  workbook.Sheets = {};
-  
-  return data;
+type ChunkProcessResult = {
+  processed: number;
+  success: number;
+  errors: number;
+  duplicates: number;
+  errorMessages: string[];
+};
+
+function safeParseErrorMessages(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed.map(String) : [value];
+    } catch {
+      return [value];
+    }
+  }
+  return [String(value)];
 }
 
 serve(async (req) => {
@@ -112,14 +100,36 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const formData = await req.formData();
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
-    const sessionId = formData.get('sessionId') as string;
-    const importType = formData.get('importType') as string;
+  let sessionIdForFailUpdate: string | undefined;
 
-    if (!file || !userId || !sessionId || !importType) {
+  try {
+    const contentType = req.headers.get('content-type') ?? '';
+
+    // NEW: JSON payload (preferred) — the browser parses XLSX/CSV and sends rows in chunks
+    let payload: ChunkPayload;
+    if (contentType.includes('application/json')) {
+      payload = await req.json();
+    } else {
+      // Backward compat (older clients): reject to avoid memory issues on the server
+      throw new Error('Formato de requisição inválido. Atualize a tela de importação e tente novamente.');
+    }
+
+    const {
+      rows,
+      userId,
+      sessionId,
+      importType,
+      totalRows,
+      fileName,
+      fileSize,
+      historyId: incomingHistoryId,
+      rowOffset = 0,
+      isLastChunk = false,
+    } = payload;
+
+    sessionIdForFailUpdate = sessionId;
+
+    if (!Array.isArray(rows) || !userId || !sessionId || !importType) {
       throw new Error('Parâmetros obrigatórios faltando');
     }
 
@@ -128,67 +138,126 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Read file content
-    const fileContent = await file.text();
-    const fileName = file.name.toLowerCase();
-    
-    let data: any[];
-    
-    // Use CSV parser for CSV files (much lighter on memory)
-    if (fileName.endsWith('.csv')) {
-      data = parseCSV(fileContent);
-    } else {
-      // For Excel files, use the lightweight parser
-      const arrayBuffer = await file.arrayBuffer();
-      data = await parseExcelLightweight(arrayBuffer);
-    }
+    // Ensure progress row exists (chunk-friendly)
+    const { data: existingProgress } = await supabase
+      .from('import_progress')
+      .select('processed_rows, success_count, error_count, duplicate_count, error_message, total_rows')
+      .eq('session_id', sessionId)
+      .maybeSingle();
 
-    console.log(`Processing ${data.length} rows for import type: ${importType}`);
-
-    // Limit to prevent memory issues - process max 500 rows per request
-    const MAX_ROWS = 500;
-    if (data.length > MAX_ROWS) {
-      console.log(`Limiting import to ${MAX_ROWS} rows to prevent memory issues`);
-      data = data.slice(0, MAX_ROWS);
-    }
-
-    // Create progress record
-    await supabase.from('import_progress').insert({
-      session_id: sessionId,
-      user_id: userId,
-      total_rows: data.length,
-      status: 'processing'
-    });
-
-    // Create import history record
-    const { data: historyRecord } = await supabase
-      .from('import_history')
-      .insert({
+    if (!existingProgress) {
+      await supabase.from('import_progress').insert({
+        session_id: sessionId,
         user_id: userId,
-        import_type: importType,
-        file_name: file.name,
-        file_size: file.size,
-        total_rows: data.length,
-        status: 'processing'
-      })
-      .select()
-      .single();
+        total_rows: totalRows ?? rows.length,
+        processed_rows: 0,
+        success_count: 0,
+        error_count: 0,
+        duplicate_count: 0,
+        status: 'processing',
+      });
+    } else if (typeof totalRows === 'number' && totalRows > 0 && existingProgress.total_rows !== totalRows) {
+      await supabase.from('import_progress').update({
+        total_rows: totalRows,
+        updated_at: new Date().toISOString(),
+      }).eq('session_id', sessionId);
+    }
 
-    // Process synchronously but in smaller batches to avoid memory issues
-    const result = await processImport(supabase, data, userId, sessionId, importType, historyRecord?.id);
+    // Ensure history row exists (we pass historyId in subsequent chunks)
+    let historyId = incomingHistoryId;
+    if (!historyId) {
+      const { data: historyRecord, error: historyError } = await supabase
+        .from('import_history')
+        .insert({
+          user_id: userId,
+          import_type: importType,
+          file_name: fileName ?? 'importacao',
+          file_size: fileSize ?? null,
+          total_rows: totalRows ?? rows.length,
+          status: 'processing',
+        })
+        .select('id')
+        .single();
+
+      if (historyError) throw historyError;
+      historyId = historyRecord?.id;
+    }
+
+    const result = await processImportChunk(supabase, rows, userId, importType, rowOffset);
+
+    // Update progress cumulatively
+    const { data: progressNow } = await supabase
+      .from('import_progress')
+      .select('processed_rows, success_count, error_count, duplicate_count, error_message, total_rows')
+      .eq('session_id', sessionId)
+      .maybeSingle();
+
+    const previousErrors = safeParseErrorMessages(progressNow?.error_message);
+    const mergedErrors = [...previousErrors, ...result.errorMessages].slice(0, 50);
+
+    const newProcessed = (progressNow?.processed_rows ?? 0) + result.processed;
+    const newSuccess = (progressNow?.success_count ?? 0) + result.success;
+    const newErrors = (progressNow?.error_count ?? 0) + result.errors;
+    const newDuplicates = (progressNow?.duplicate_count ?? 0) + result.duplicates;
+
+    await supabase.from('import_progress').update({
+      processed_rows: newProcessed,
+      success_count: newSuccess,
+      error_count: newErrors,
+      duplicate_count: newDuplicates,
+      status: isLastChunk ? 'completed' : 'processing',
+      error_message: mergedErrors.length ? JSON.stringify(mergedErrors) : null,
+      updated_at: new Date().toISOString(),
+    }).eq('session_id', sessionId);
+
+    // Update history (counts on every chunk; completed_at only on last)
+    if (historyId) {
+      await supabase.from('import_history').update({
+        success_count: newSuccess,
+        error_count: newErrors,
+        duplicate_count: newDuplicates,
+        error_details: mergedErrors.length
+          ? mergedErrors.slice(0, 20).map((e) => ({ erro: e }))
+          : null,
+        status: isLastChunk ? 'completed' : 'processing',
+        completed_at: isLastChunk ? new Date().toISOString() : null,
+      }).eq('id', historyId);
+    }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sessionId, 
-        totalRows: data.length, 
-        historyId: historyRecord?.id,
-        ...result
+      JSON.stringify({
+        success: true,
+        sessionId,
+        historyId,
+        chunk: {
+          processed: result.processed,
+          success: result.success,
+          errors: result.errors,
+          duplicates: result.duplicates,
+        },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
     console.error('Error in universal-import:', error);
+
+    // Best-effort: mark progress as failed
+    try {
+      if (sessionIdForFailUpdate) {
+        const supabase = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        await supabase.from('import_progress').update({
+          status: 'failed',
+          error_message: error?.message ? JSON.stringify([String(error.message)]) : JSON.stringify(['Erro desconhecido']),
+          updated_at: new Date().toISOString(),
+        }).eq('session_id', sessionIdForFailUpdate);
+      }
+    } catch (e) {
+      console.error('Failed to update import_progress to failed:', e);
+    }
+
     return new Response(
       JSON.stringify({ error: error.message }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -196,146 +265,191 @@ serve(async (req) => {
   }
 });
 
-async function processImport(
+async function processImportChunk(
   supabase: any,
-  data: any[],
+  rows: any[],
   userId: string,
-  sessionId: string,
   importType: string,
-  historyId?: string
-): Promise<{ successCount: number; errorCount: number; duplicateCount: number }> {
-  let successCount = 0;
-  let errorCount = 0;
-  let duplicateCount = 0;
-  const errors: string[] = [];
+  rowOffset: number
+): Promise<ChunkProcessResult> {
+  let success = 0;
+  let errors = 0;
+  let duplicates = 0;
+  const errorMessages: string[] = [];
 
-  try {
-    // Fetch sellers for mapping
-    const { data: sellers } = await supabase.from('profiles').select('id, full_name');
-    const sellerMap: Map<string, string> = new Map(
-      sellers?.map((s: any) => [s.full_name.toLowerCase(), s.id]) || []
-    );
+  // Fetch sellers for mapping (once per chunk)
+  const { data: sellers } = await supabase.from('profiles').select('id, full_name');
+  const sellerMap: Map<string, string> = new Map(
+    sellers?.map((s: any) => [String(s.full_name || '').toLowerCase(), s.id]) || []
+  );
 
-    // Process in batches of 20 to reduce memory pressure
-    const BATCH_SIZE = 20;
-    
-    for (let i = 0; i < data.length; i++) {
-      try {
-        const row = data[i];
-        let result: { success?: boolean; error?: string; duplicate?: boolean } = {};
+  // Optimize Radar Leads (batch duplicate check)
+  if (importType === 'radar_leads') {
+    const normalize = (v: any) => String(v || '').toLowerCase().trim();
 
-        switch (importType) {
-          case 'prospects':
-            result = await importProspect(supabase, row, userId, sellerMap);
-            break;
-          case 'feiras':
-            result = await importFeira(supabase, row, userId);
-            break;
-          case 'knowledge_base':
-            result = await importKnowledgeBase(supabase, row, userId);
-            break;
-          case 'contacts':
-            result = await importContact(supabase, row, userId);
-            break;
-          case 'opportunities':
-            result = await importOpportunity(supabase, row, userId, sellerMap);
-            break;
-          case 'tasks':
-            result = await importTask(supabase, row, userId, sellerMap);
-            break;
-          case 'radar_leads':
-            result = await importRadarLead(supabase, row, userId, sellerMap);
-            break;
-          default:
-            throw new Error(`Tipo de importação não suportado: ${importType}`);
-        }
+    const prepared: { line: number; cnpj: string; payload: any }[] = [];
+    const cnpjs: string[] = [];
 
-        if (result.duplicate) {
-          duplicateCount++;
-        } else if (result.success) {
-          successCount++;
-        } else {
-          errorCount++;
-          if (errors.length < 50) { // Limit error messages to save memory
-            errors.push(`Linha ${i + 2}: ${result.error || 'Erro desconhecido'}`);
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const line = rowOffset + i + 2;
+      const cnpj = String(row['CNPJ'] || '').replace(/\D/g, '');
+
+      if (!cnpj || !row['Razão Social']) {
+        errors++;
+        if (errorMessages.length < 50) errorMessages.push(`Linha ${line}: CNPJ ou Razão Social faltando`);
+        continue;
+      }
+
+      if (!validateCNPJ(cnpj)) {
+        errors++;
+        if (errorMessages.length < 50) errorMessages.push(`Linha ${line}: CNPJ inválido: ${cnpj}`);
+        continue;
+      }
+
+      if (row['Email'] && !validateEmail(row['Email'])) {
+        errors++;
+        if (errorMessages.length < 50) errorMessages.push(`Linha ${line}: Email inválido: ${row['Email']}`);
+        continue;
+      }
+
+      const sellerId = row['Vendedor'] ? sellerMap.get(normalize(row['Vendedor'])) : null;
+
+      let contractValue = null;
+      if (row['Valor Contrato']) {
+        const parsedValue = parseFloat(String(row['Valor Contrato']).replace(/[^\d.,]/g, '').replace(',', '.'));
+        if (!isNaN(parsedValue)) contractValue = parsedValue;
+      }
+
+      const contractDate = row['Data Contrato'] ? convertDateToISO(row['Data Contrato']) : null;
+
+      prepared.push({
+        line,
+        cnpj,
+        payload: {
+          cnpj,
+          company_name: row['Razão Social'],
+          trade_name: row['Nome Fantasia'] || null,
+          source: row['Fonte'] || 'Importação',
+          email: row['Email'] || null,
+          phone: row['Telefone'] || null,
+          city: row['Cidade'] || null,
+          state: row['Estado'] || null,
+          segment: row['Segmento'] || null,
+          contract_value: contractValue,
+          contract_date: contractDate,
+          notes: row['Notas'] || null,
+          assigned_to: sellerId,
+          status: 'novo',
+        },
+      });
+      cnpjs.push(cnpj);
+    }
+
+    // Dedupe inside chunk
+    const seen = new Set<string>();
+    const uniquePrepared: typeof prepared = [];
+    for (const item of prepared) {
+      if (seen.has(item.cnpj)) {
+        duplicates++;
+      } else {
+        seen.add(item.cnpj);
+        uniquePrepared.push(item);
+      }
+    }
+
+    // Batch check duplicates in DB
+    const uniqueCnpjs = [...new Set(uniquePrepared.map((p) => p.cnpj))];
+    const { data: existing } = uniqueCnpjs.length
+      ? await supabase.from('radar_leads').select('cnpj').in('cnpj', uniqueCnpjs)
+      : { data: [] };
+
+    const existingSet = new Set((existing || []).map((r: any) => String(r.cnpj)));
+    const toInsert = uniquePrepared.filter((p) => !existingSet.has(p.cnpj));
+    duplicates += uniquePrepared.length - toInsert.length;
+
+    // Try bulk insert; fallback to per-row on error
+    if (toInsert.length) {
+      const { error: bulkError } = await supabase.from('radar_leads').insert(toInsert.map((x) => x.payload));
+      if (!bulkError) {
+        success += toInsert.length;
+      } else {
+        console.warn('Bulk insert radar_leads failed, falling back to per-row:', bulkError.message);
+        for (const item of toInsert) {
+          const { error } = await supabase.from('radar_leads').insert(item.payload);
+          if (error) {
+            errors++;
+            if (errorMessages.length < 50) errorMessages.push(`Linha ${item.line}: ${error.message}`);
+          } else {
+            success++;
           }
-        }
-
-        // Update progress every batch
-        if ((i + 1) % BATCH_SIZE === 0 || i === data.length - 1) {
-          await supabase.from('import_progress').update({
-            processed_rows: i + 1,
-            success_count: successCount,
-            error_count: errorCount,
-            duplicate_count: duplicateCount,
-            error_message: errors.length > 0 ? JSON.stringify(errors.slice(0, 20)) : null,
-            updated_at: new Date().toISOString()
-          }).eq('session_id', sessionId);
-        }
-      } catch (rowError: any) {
-        errorCount++;
-        if (errors.length < 50) {
-          errors.push(`Linha ${i + 2}: ${rowError.message}`);
         }
       }
     }
 
-    // Final update to import_progress
-    await supabase.from('import_progress').update({
-      status: 'completed',
-      processed_rows: data.length,
-      success_count: successCount,
-      error_count: errorCount,
-      duplicate_count: duplicateCount,
-      error_message: errors.length > 0 ? JSON.stringify(errors.slice(0, 20)) : null,
-      updated_at: new Date().toISOString()
-    }).eq('session_id', sessionId);
+    return {
+      processed: rows.length,
+      success,
+      errors,
+      duplicates,
+      errorMessages,
+    };
+  }
 
-    // Update import history
-    if (historyId) {
-      const errorDetails = errors.slice(0, 20).map((err) => {
-        const parts = err.split(':');
-        return {
-          linha: parts[0]?.replace('Linha ', '').trim(),
-          erro: parts[1]?.trim() || err
-        };
-      });
+  // Default: row-by-row (kept for other types)
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const line = rowOffset + i + 2;
 
-      await supabase
-        .from('import_history')
-        .update({
-          success_count: successCount,
-          error_count: errorCount,
-          duplicate_count: duplicateCount,
-          error_details: errorDetails.length > 0 ? errorDetails : null,
-          completed_at: new Date().toISOString(),
-          status: 'completed'
-        })
-        .eq('id', historyId);
-    }
+    try {
+      let result: { success?: boolean; error?: string; duplicate?: boolean } = {};
 
-  } catch (error: any) {
-    console.error('Error in processImport:', error);
-    await supabase.from('import_progress').update({
-      status: 'failed',
-      error_message: error.message,
-      updated_at: new Date().toISOString()
-    }).eq('session_id', sessionId);
+      switch (importType) {
+        case 'prospects':
+          result = await importProspect(supabase, row, userId, sellerMap);
+          break;
+        case 'feiras':
+          result = await importFeira(supabase, row, userId);
+          break;
+        case 'knowledge_base':
+          result = await importKnowledgeBase(supabase, row, userId);
+          break;
+        case 'contacts':
+          result = await importContact(supabase, row, userId);
+          break;
+        case 'opportunities':
+          result = await importOpportunity(supabase, row, userId, sellerMap);
+          break;
+        case 'tasks':
+          result = await importTask(supabase, row, userId, sellerMap);
+          break;
+        default:
+          throw new Error(`Tipo de importação não suportado: ${importType}`);
+      }
 
-    if (historyId) {
-      await supabase
-        .from('import_history')
-        .update({
-          status: 'failed',
-          error_details: [{ erro: error.message }],
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', historyId);
+      if (result.duplicate) {
+        duplicates++;
+      } else if (result.success) {
+        success++;
+      } else {
+        errors++;
+        if (errorMessages.length < 50) errorMessages.push(`Linha ${line}: ${result.error || 'Erro desconhecido'}`);
+      }
+    } catch (e: any) {
+      errors++;
+      if (errorMessages.length < 50) errorMessages.push(`Linha ${line}: ${e.message || String(e)}`);
     }
   }
 
-  return { successCount, errorCount, duplicateCount };
+  return {
+    processed: rows.length,
+    success,
+    errors,
+    duplicates,
+    errorMessages,
+  };
 }
+
 
 async function importProspect(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
   const cnpj = String(row['CNPJ'] || '').replace(/\D/g, '');
