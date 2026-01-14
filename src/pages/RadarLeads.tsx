@@ -484,7 +484,6 @@ export default function RadarLeads() {
                   <TableRow>
                     <TableHead>Empresa</TableHead>
                     <TableHead>CNPJ</TableHead>
-                    <TableHead>Valor do Contrato</TableHead>
                     <TableHead>Localização</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -494,14 +493,6 @@ export default function RadarLeads() {
                     <TableRow key={lead.id}>
                       <TableCell className="font-medium">{lead.company_name}</TableCell>
                       <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
-                      <TableCell>
-                        {lead.contract_value
-                          ? new Intl.NumberFormat("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            }).format(lead.contract_value)
-                          : "-"}
-                      </TableCell>
                       <TableCell>
                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
                       </TableCell>
