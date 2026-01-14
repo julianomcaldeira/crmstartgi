@@ -71,24 +71,6 @@ export default function RadarLeads() {
     </TableHead>
   );
 
-  // Mutation para atribuir lead
-  const assignMutation = useMutation({
-    mutationFn: async ({ leadId, userId }: { leadId: string; userId: string | null }) => {
-      const { error } = await supabase
-        .from("radar_leads")
-        .update({ assigned_to: userId })
-        .eq("id", leadId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Lead atribuído com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro ao atribuir lead: ${error.message}`);
-    },
-  });
 
   // Mutation para atualizar status
   const updateStatusMutation = useMutation({
@@ -531,35 +513,21 @@ export default function RadarLeads() {
                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => convertToProspectMutation.mutate(lead)}
-                            disabled={convertingLeadId === lead.id || convertToProspectMutation.isPending}
-                          >
-                            {convertingLeadId === lead.id ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Consultando...
-                              </>
-                            ) : (
-                              "Converter em Prospect"
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              assignMutation.mutate({
-                                leadId: lead.id,
-                                userId: lead.assigned_to ? null : "current-user-id",
-                              })
-                            }
-                          >
-                            {lead.assigned_to ? "Remover" : "Atribuir"}
-                          </Button>
-                        </div>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => convertToProspectMutation.mutate(lead)}
+                          disabled={convertingLeadId === lead.id || convertToProspectMutation.isPending}
+                        >
+                          {convertingLeadId === lead.id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Consultando...
+                            </>
+                          ) : (
+                            "Converter em Prospect"
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
