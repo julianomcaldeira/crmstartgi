@@ -3,14 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 const PAGE_SIZE = 50;
 
+export type SortColumn = "company_name" | "cnpj" | "city" | "created_at";
+export type SortDirection = "asc" | "desc";
+
 export function useRadarLeads(
   sourceFilter: string = "all",
   statusFilter: string = "all",
   searchTerm: string = "",
-  page: number = 1
+  page: number = 1,
+  sortColumn: SortColumn = "created_at",
+  sortDirection: SortDirection = "desc"
 ) {
   return useQuery({
-    queryKey: ["radar-leads", sourceFilter, statusFilter, searchTerm, page],
+    queryKey: ["radar-leads", sourceFilter, statusFilter, searchTerm, page, sortColumn, sortDirection],
     queryFn: async () => {
       // Build base query for counting
       let countQuery = supabase
@@ -40,7 +45,7 @@ export function useRadarLeads(
           *,
           assigned_user:profiles!radar_leads_assigned_to_fkey(full_name)
         `)
-        .order("created_at", { ascending: false })
+        .order(sortColumn, { ascending: sortDirection === "asc" })
         .range(from, to);
 
       if (sourceFilter !== "all") {
