@@ -9,18 +9,32 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet } from "lucide-react";
+import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { useRadarLeads } from "@/hooks/useRadarLeads";
+import { useRadarLeads, useRadarLeadsStats } from "@/hooks/useRadarLeads";
 
 export default function RadarLeads() {
   const queryClient = useQueryClient();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Buscar leads usando hook customizado
-  const { data: leads, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm);
+  // Buscar leads usando hook customizado com paginação
+  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage);
+  
+  // Buscar estatísticas globais
+  const { data: stats } = useRadarLeadsStats();
+
+  const leads = leadsData?.leads || [];
+  const totalCount = leadsData?.totalCount || 0;
+  const totalPages = leadsData?.totalPages || 1;
+
+  // Reset página ao mudar filtros
+  const handleFilterChange = (setter: (value: string) => void, value: string) => {
+    setter(value);
+    setCurrentPage(1);
+  };
 
   // Mutation para atribuir lead
   const assignMutation = useMutation({
@@ -54,6 +68,7 @@ export default function RadarLeads() {
     onSuccess: () => {
       toast.success("Status atualizado!");
       queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] });
     },
     onError: (error: any) => {
       toast.error(`Erro ao atualizar status: ${error.message}`);
@@ -95,6 +110,7 @@ export default function RadarLeads() {
     onSuccess: () => {
       toast.success("Lead convertido em prospect com sucesso!");
       queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] });
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
     },
     onError: (error: any) => {
@@ -132,8 +148,8 @@ export default function RadarLeads() {
     }
   };
 
-  // Obter fontes únicas dos leads para o filtro
-  const uniqueSources = leads ? [...new Set(leads.map(l => l.source))].filter(Boolean) : [];
+  // Obter fontes únicas das estatísticas
+  const uniqueSources = stats?.uniqueSources || [];
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
@@ -163,7 +179,7 @@ export default function RadarLeads() {
             <Database className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{leads?.length || 0}</div>
+            <div className="text-2xl font-bold">{stats?.totalCount?.toLocaleString("pt-BR") || 0}</div>
           </CardContent>
         </Card>
 
@@ -174,7 +190,7 @@ export default function RadarLeads() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {leads?.filter((l) => l.status === "novo").length || 0}
+              {stats?.newCount?.toLocaleString("pt-BR") || 0}
             </div>
           </CardContent>
         </Card>
@@ -205,12 +221,12 @@ export default function RadarLeads() {
               <Input
                 placeholder="Nome ou CNPJ..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleFilterChange(setSearchTerm, e.target.value)}
               />
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Fonte</label>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+              <Select value={sourceFilter} onValueChange={(v) => handleFilterChange(setSourceFilter, v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as fontes" />
                 </SelectTrigger>
@@ -226,7 +242,7 @@ export default function RadarLeads() {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={(v) => handleFilterChange(setStatusFilter, v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
@@ -245,15 +261,18 @@ export default function RadarLeads() {
 
       {/* Tabela de Leads */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Leads Importados</CardTitle>
+          <span className="text-sm text-muted-foreground">
+            Mostrando {leads.length} de {totalCount.toLocaleString("pt-BR")} leads
+          </span>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : leads?.length === 0 ? (
+          ) : leads.length === 0 ? (
             <div className="text-center py-12">
               <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">Nenhum lead encontrado</h3>
@@ -268,89 +287,148 @@ export default function RadarLeads() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Empresa</TableHead>
-                  <TableHead>CNPJ</TableHead>
-                  <TableHead>Fonte</TableHead>
-                  <TableHead>Valor do Contrato</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Localização</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leads?.map((lead) => (
-                  <TableRow key={lead.id}>
-                    <TableCell className="font-medium">{lead.company_name}</TableCell>
-                    <TableCell>{lead.cnpj}</TableCell>
-                    <TableCell>
-                      <Badge className={getSourceBadgeColor(lead.source)}>
-                        {lead.source?.toUpperCase() || "N/A"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {lead.contract_value
-                        ? new Intl.NumberFormat("pt-BR", {
-                            style: "currency",
-                            currency: "BRL",
-                          }).format(lead.contract_value)
-                        : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={lead.status || "novo"}
-                        onValueChange={(value) =>
-                          updateStatusMutation.mutate({ leadId: lead.id, status: value })
-                        }
-                      >
-                        <SelectTrigger className="w-[140px]">
-                          <Badge className={getStatusBadgeColor(lead.status || "novo")}>
-                            {(lead.status || "novo").charAt(0).toUpperCase() + (lead.status || "novo").slice(1)}
-                          </Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="novo">Novo</SelectItem>
-                          <SelectItem value="contatado">Contatado</SelectItem>
-                          <SelectItem value="qualificado">Qualificado</SelectItem>
-                          <SelectItem value="descartado">Descartado</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {lead.status === "novo" && (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => convertToProspectMutation.mutate(lead)}
-                            disabled={convertToProspectMutation.isPending}
-                          >
-                            Converter em Prospect
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            assignMutation.mutate({
-                              leadId: lead.id,
-                              userId: lead.assigned_to ? null : "current-user-id",
-                            })
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead>CNPJ</TableHead>
+                    <TableHead>Fonte</TableHead>
+                    <TableHead>Valor do Contrato</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((lead) => (
+                    <TableRow key={lead.id}>
+                      <TableCell className="font-medium">{lead.company_name}</TableCell>
+                      <TableCell>{lead.cnpj}</TableCell>
+                      <TableCell>
+                        <Badge className={getSourceBadgeColor(lead.source)}>
+                          {lead.source?.toUpperCase() || "N/A"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {lead.contract_value
+                          ? new Intl.NumberFormat("pt-BR", {
+                              style: "currency",
+                              currency: "BRL",
+                            }).format(lead.contract_value)
+                          : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={lead.status || "novo"}
+                          onValueChange={(value) =>
+                            updateStatusMutation.mutate({ leadId: lead.id, status: value })
                           }
                         >
-                          {lead.assigned_to ? "Remover" : "Atribuir"}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          <SelectTrigger className="w-[140px]">
+                            <Badge className={getStatusBadgeColor(lead.status || "novo")}>
+                              {(lead.status || "novo").charAt(0).toUpperCase() + (lead.status || "novo").slice(1)}
+                            </Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="novo">Novo</SelectItem>
+                            <SelectItem value="contatado">Contatado</SelectItem>
+                            <SelectItem value="qualificado">Qualificado</SelectItem>
+                            <SelectItem value="descartado">Descartado</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          {lead.status === "novo" && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => convertToProspectMutation.mutate(lead)}
+                              disabled={convertToProspectMutation.isPending}
+                            >
+                              Converter em Prospect
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              assignMutation.mutate({
+                                leadId: lead.id,
+                                userId: lead.assigned_to ? null : "current-user-id",
+                              })
+                            }
+                          >
+                            {lead.assigned_to ? "Remover" : "Atribuir"}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Página {currentPage} de {totalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            onClick={() => setCurrentPage(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Próximo
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
