@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useRadarLeads, useRadarLeadsStats } from "@/hooks/useRadarLeads";
 
@@ -195,6 +195,102 @@ export default function RadarLeads() {
     },
   });
 
+  // Mutation para limpar duplicados em lote
+  const cleanDuplicatesMutation = useMutation({
+    mutationFn: async () => {
+      // 1. Buscar todos os leads do radar
+      const { data: allLeads, error: leadsError } = await supabase
+        .from("radar_leads")
+        .select("id, cnpj, company_name");
+
+      if (leadsError) throw leadsError;
+
+      if (!allLeads || allLeads.length === 0) {
+        return { removed: 0, duplicates: [] };
+      }
+
+      // 2. Extrair CNPJs únicos e limpos
+      const leadsByCnpj = new Map<string, { id: string; company_name: string }[]>();
+      allLeads.forEach(lead => {
+        const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+        if (cleanCnpj.length === 14) {
+          if (!leadsByCnpj.has(cleanCnpj)) {
+            leadsByCnpj.set(cleanCnpj, []);
+          }
+          leadsByCnpj.get(cleanCnpj)!.push({ id: lead.id, company_name: lead.company_name });
+        }
+      });
+
+      const uniqueCnpjs = Array.from(leadsByCnpj.keys());
+
+      if (uniqueCnpjs.length === 0) {
+        return { removed: 0, duplicates: [] };
+      }
+
+      // 3. Buscar quais CNPJs já existem como prospects (em batches de 100)
+      const existingCnpjs: string[] = [];
+      const batchSize = 100;
+
+      for (let i = 0; i < uniqueCnpjs.length; i += batchSize) {
+        const batch = uniqueCnpjs.slice(i, i + batchSize);
+        const { data: existingClients } = await supabase
+          .from("clients")
+          .select("cnpj")
+          .in("cnpj", batch);
+
+        if (existingClients) {
+          existingClients.forEach(client => {
+            const cleanCnpj = client.cnpj?.replace(/\D/g, "") || "";
+            if (cleanCnpj) existingCnpjs.push(cleanCnpj);
+          });
+        }
+      }
+
+      if (existingCnpjs.length === 0) {
+        return { removed: 0, duplicates: [] };
+      }
+
+      // 4. Identificar leads duplicados para remover
+      const leadsToRemove: string[] = [];
+      const duplicateNames: string[] = [];
+
+      existingCnpjs.forEach(cnpj => {
+        const leads = leadsByCnpj.get(cnpj);
+        if (leads) {
+          leads.forEach(lead => {
+            leadsToRemove.push(lead.id);
+            if (!duplicateNames.includes(lead.company_name)) {
+              duplicateNames.push(lead.company_name);
+            }
+          });
+        }
+      });
+
+      // 5. Remover leads duplicados em batches
+      for (let i = 0; i < leadsToRemove.length; i += batchSize) {
+        const batch = leadsToRemove.slice(i, i + batchSize);
+        await supabase
+          .from("radar_leads")
+          .delete()
+          .in("id", batch);
+      }
+
+      return { removed: leadsToRemove.length, duplicates: duplicateNames };
+    },
+    onSuccess: (result) => {
+      if (result.removed === 0) {
+        toast.info("Nenhum lead duplicado encontrado. Todos os leads do radar são únicos!");
+      } else {
+        toast.success(`${result.removed} lead(s) duplicado(s) removido(s) do radar.`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] });
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao verificar duplicados: ${error.message}`);
+    },
+  });
+
   const getSourceBadgeColor = (source: string) => {
     switch (source?.toLowerCase()) {
       case "bndes":
@@ -239,6 +335,24 @@ export default function RadarLeads() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => cleanDuplicatesMutation.mutate()}
+            disabled={cleanDuplicatesMutation.isPending}
+          >
+            {cleanDuplicatesMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" />
+                Limpar Duplicados
+              </>
+            )}
+          </Button>
           <Button asChild variant="default" className="gap-2">
             <Link to="/admin/importar">
               <Upload className="h-4 w-4" />
