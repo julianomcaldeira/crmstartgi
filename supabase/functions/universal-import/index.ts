@@ -572,8 +572,8 @@ async function importRadarLead(supabase: any, row: any, userId: string, sellerMa
   const cnpj = String(row['CNPJ'] || '').replace(/\D/g, '');
   
   // Validações obrigatórias
-  if (!cnpj || !row['Razão Social'] || !row['Fonte']) {
-    return { success: false, error: 'CNPJ, Razão Social ou Fonte faltando' };
+  if (!cnpj || !row['Razão Social']) {
+    return { success: false, error: 'CNPJ ou Razão Social faltando' };
   }
 
   // Validação de CNPJ
