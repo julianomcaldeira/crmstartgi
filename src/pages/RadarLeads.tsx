@@ -19,6 +19,7 @@ export default function RadarLeads() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
 
   // Buscar leads usando hook customizado com paginação
   const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage);
@@ -75,45 +76,121 @@ export default function RadarLeads() {
     },
   });
 
-  // Mutation para converter lead em prospect
+  // Mutation para excluir lead do radar
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      const { error } = await supabase
+        .from("radar_leads")
+        .delete()
+        .eq("id", leadId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] });
+    },
+  });
+
+  // Mutation para converter lead em prospect com validação e busca CNPJ
   const convertToProspectMutation = useMutation({
     mutationFn: async (lead: any) => {
+      setConvertingLeadId(lead.id);
+      
+      const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+      
+      if (!cleanCnpj || cleanCnpj.length !== 14) {
+        throw new Error("CNPJ inválido. Não é possível converter este lead.");
+      }
+
+      // 1. Verificar se já existe como prospect/cliente
+      const { data: existingClient, error: checkError } = await supabase
+        .from("clients")
+        .select("id, company_name")
+        .eq("cnpj", cleanCnpj)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingClient) {
+        // Já existe - deletar do radar e informar usuário
+        await supabase
+          .from("radar_leads")
+          .delete()
+          .eq("id", lead.id);
+
+        return { 
+          alreadyExists: true, 
+          companyName: existingClient.company_name 
+        };
+      }
+
+      // 2. Buscar dados completos do CNPJ na Receita Federal
+      const { data: cnpjData, error: cnpjError } = await supabase.functions.invoke("buscar-cnpj", {
+        body: { cnpj: cleanCnpj },
+      });
+
+      if (cnpjError) {
+        console.error("Erro ao buscar CNPJ:", cnpjError);
+        throw new Error("Erro ao consultar CNPJ na Receita Federal. Tente novamente.");
+      }
+
+      if (cnpjData?.error) {
+        throw new Error(cnpjData.error);
+      }
+
+      // 3. Criar prospect com dados completos da Receita
       const { data: userData } = await supabase.auth.getUser();
       
-      // Criar prospect a partir do lead
-      const { data: newClient, error } = await supabase
+      const { data: newClient, error: insertError } = await supabase
         .from("clients")
         .insert({
-          cnpj: lead.cnpj,
-          company_name: lead.company_name,
-          trade_name: lead.trade_name,
-          email: lead.email,
-          phone: lead.phone,
-          city: lead.city,
-          state: lead.state,
-          segment: lead.segment,
+          cnpj: cleanCnpj,
+          company_name: cnpjData.company_name || lead.company_name,
+          trade_name: cnpjData.trade_name || lead.trade_name,
+          email: cnpjData.email || lead.email,
+          phone: cnpjData.phone || lead.phone,
+          address: cnpjData.address,
+          city: cnpjData.city || lead.city,
+          state: cnpjData.state || lead.state,
+          zip_code: cnpjData.zip_code,
+          segment: cnpjData.segment || lead.segment,
+          share_capital: cnpjData.share_capital,
+          legal_nature: cnpjData.legal_nature,
+          registration_status: cnpjData.registration_status,
+          foundation_date: cnpjData.foundation_date,
+          cnae_principal: cnpjData.cnae_principal,
+          cnae_description: cnpjData.cnae_description,
           created_by: userData?.user?.id,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      // Atualizar status do lead para "qualificado"
+      // 4. Excluir lead do radar após conversão
       await supabase
         .from("radar_leads")
-        .update({ status: "qualificado" })
+        .delete()
         .eq("id", lead.id);
 
-      return newClient;
+      return { alreadyExists: false, newClient };
     },
-    onSuccess: () => {
-      toast.success("Lead convertido em prospect com sucesso!");
+    onSuccess: (result) => {
+      setConvertingLeadId(null);
+      
+      if (result.alreadyExists) {
+        toast.info(`A empresa "${result.companyName}" já está cadastrada como prospect. Lead removido do radar.`);
+      } else {
+        toast.success("Lead convertido em prospect com sucesso! Dados completos obtidos da Receita Federal.");
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
       queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] });
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
     },
     onError: (error: any) => {
+      setConvertingLeadId(null);
       toast.error(`Erro ao converter lead: ${error.message}`);
     },
   });
@@ -348,9 +425,16 @@ export default function RadarLeads() {
                               variant="default"
                               size="sm"
                               onClick={() => convertToProspectMutation.mutate(lead)}
-                              disabled={convertToProspectMutation.isPending}
+                              disabled={convertingLeadId === lead.id || convertToProspectMutation.isPending}
                             >
-                              Converter em Prospect
+                              {convertingLeadId === lead.id ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Consultando...
+                                </>
+                              ) : (
+                                "Converter em Prospect"
+                              )}
                             </Button>
                           )}
                           <Button
