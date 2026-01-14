@@ -175,6 +175,9 @@ async function processImport(
           case 'tasks':
             result = await importTask(supabase, row, userId, sellerMap);
             break;
+          case 'radar_leads':
+            result = await importRadarLead(supabase, row, userId, sellerMap);
+            break;
           default:
             throw new Error(`Tipo de importação não suportado: ${importType}`);
         }
@@ -560,6 +563,72 @@ async function importTask(supabase: any, row: any, userId: string, sellerMap: Ma
     priority,
     assigned_to: sellerId,
     created_by: userId
+  });
+
+  return error ? { success: false, error: error.message } : { success: true };
+}
+
+async function importRadarLead(supabase: any, row: any, userId: string, sellerMap: Map<string, string>) {
+  const cnpj = String(row['CNPJ'] || '').replace(/\D/g, '');
+  
+  // Validações obrigatórias
+  if (!cnpj || !row['Razão Social'] || !row['Fonte']) {
+    return { success: false, error: 'CNPJ, Razão Social ou Fonte faltando' };
+  }
+
+  // Validação de CNPJ
+  if (!validateCNPJ(cnpj)) {
+    return { success: false, error: `CNPJ inválido: ${cnpj}` };
+  }
+
+  // Validação de email (se fornecido)
+  if (row['Email'] && !validateEmail(row['Email'])) {
+    return { success: false, error: `Email inválido: ${row['Email']}` };
+  }
+
+  // Check duplicate by CNPJ
+  const { data: existing } = await supabase
+    .from('radar_leads')
+    .select('id')
+    .eq('cnpj', cnpj)
+    .single();
+
+  if (existing) {
+    return { duplicate: true };
+  }
+
+  const sellerId = row['Vendedor'] ? sellerMap.get(String(row['Vendedor']).toLowerCase()) : null;
+
+  // Parse contract value
+  let contractValue = null;
+  if (row['Valor Contrato']) {
+    const parsedValue = parseFloat(String(row['Valor Contrato']).replace(/[^\d.,]/g, '').replace(',', '.'));
+    if (!isNaN(parsedValue)) {
+      contractValue = parsedValue;
+    }
+  }
+
+  // Parse contract date
+  let contractDate = null;
+  if (row['Data Contrato']) {
+    contractDate = convertDateToISO(row['Data Contrato']);
+  }
+
+  const { error } = await supabase.from('radar_leads').insert({
+    cnpj,
+    company_name: row['Razão Social'],
+    trade_name: row['Nome Fantasia'] || null,
+    source: row['Fonte'],
+    email: row['Email'] || null,
+    phone: row['Telefone'] || null,
+    city: row['Cidade'] || null,
+    state: row['Estado'] || null,
+    segment: row['Segmento'] || null,
+    contract_value: contractValue,
+    contract_date: contractDate,
+    notes: row['Notas'] || null,
+    assigned_to: sellerId,
+    status: 'novo'
   });
 
   return error ? { success: false, error: error.message } : { success: true };

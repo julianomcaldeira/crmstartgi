@@ -13,7 +13,7 @@ import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 
-type ImportType = "prospects" | "feiras" | "knowledge_base" | "contacts" | "opportunities" | "tasks";
+type ImportType = "prospects" | "feiras" | "knowledge_base" | "contacts" | "opportunities" | "tasks" | "radar_leads";
 
 interface ImportProgress {
   total: number;
@@ -67,6 +67,11 @@ const IMPORT_TEMPLATES = {
     name: "Tarefas",
     columns: ["Título", "Descrição", "CNPJ Cliente", "Tipo", "Data Vencimento", "Prioridade", "Vendedor"],
     description: "Importar tarefas"
+  },
+  radar_leads: {
+    name: "Radar de Leads",
+    columns: ["CNPJ", "Razão Social", "Nome Fantasia", "Fonte", "Email", "Telefone", "Cidade", "Estado", "Segmento", "Valor Contrato", "Data Contrato", "Notas", "Vendedor"],
+    description: "Importar leads para o Radar de Leads"
   }
 };
 
@@ -190,7 +195,8 @@ const AdminImport = () => {
       knowledge_base: ['Título', 'Conteúdo'],
       contacts: ['CNPJ Cliente', 'Nome'],
       opportunities: ['CNPJ Cliente', 'Produto'],
-      tasks: ['Título']
+      tasks: ['Título'],
+      radar_leads: ['CNPJ', 'Razão Social', 'Fonte']
     };
 
     const required = requiredFields[importType];
