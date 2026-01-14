@@ -349,6 +349,8 @@ const AdminImport = () => {
     setProgress({ total: 0, processed: 0, success: 0, errors: 0, duplicates: 0 });
     setErrorDetails([]);
 
+    let channel: any = null;
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -356,25 +358,24 @@ const AdminImport = () => {
         return;
       }
 
+      // Parse o arquivo no navegador (evita estouro de memória no backend)
+      const arrayBuffer = await file.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+      if (!rows || rows.length === 0) {
+        toast.error("Arquivo vazio", { description: "Não foram encontradas linhas para importar." });
+        return;
+      }
+
       const newSessionId = `import_${Date.now()}`;
       setSessionId(newSessionId);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("userId", user.id);
-      formData.append("sessionId", newSessionId);
-      formData.append("importType", importType);
 
-      const { data: functionData, error: functionError } = await supabase.functions.invoke(
-        "universal-import",
-        {
-          body: formData,
-        }
-      );
+      setProgress({ total: rows.length, processed: 0, success: 0, errors: 0, duplicates: 0 });
 
-      if (functionError) throw functionError;
-
-      // Subscribe to real-time progress
-      const channel = supabase
+      // Subscribe to real-time progress (antes de enviar os chunks)
+      channel = supabase
         .channel(`import-${newSessionId}`)
         .on(
           "postgres_changes",
@@ -406,18 +407,56 @@ const AdminImport = () => {
             if (data.status === "completed") {
               toast.success(`Importação concluída! ${data.success_count} registros importados`);
               setImporting(false);
-              channel.unsubscribe();
-              loadHistory(); // Reload history after completion
+              channel?.unsubscribe();
+              loadHistory();
+            }
+
+            if (data.status === "failed") {
+              toast.error("Importação falhou", { description: data.error_message || "Verifique os detalhes do erro." });
+              setImporting(false);
+              channel?.unsubscribe();
+              loadHistory();
             }
           }
         )
         .subscribe();
+
+      // Envia em chunks para não estourar limites de execução
+      const CHUNK_SIZE = 150;
+      let historyId: string | undefined = undefined;
+
+      for (let offset = 0; offset < rows.length; offset += CHUNK_SIZE) {
+        const chunk = rows.slice(offset, offset + CHUNK_SIZE);
+        const isLastChunk = offset + CHUNK_SIZE >= rows.length;
+
+        const { data: functionData, error: functionError } = await supabase.functions.invoke(
+          "universal-import",
+          {
+            body: {
+              rows: chunk,
+              userId: user.id,
+              sessionId: newSessionId,
+              importType,
+              totalRows: rows.length,
+              fileName: file.name,
+              fileSize: file.size,
+              historyId,
+              rowOffset: offset,
+              isLastChunk,
+            },
+          }
+        );
+
+        if (functionError) throw functionError;
+        historyId = functionData?.historyId ?? historyId;
+      }
 
       toast.success("Importação iniciada!");
     } catch (error: any) {
       console.error("Erro na importação:", error);
       toast.error(error.message || "Erro ao iniciar importação");
       setImporting(false);
+      channel?.unsubscribe();
     }
   };
 
