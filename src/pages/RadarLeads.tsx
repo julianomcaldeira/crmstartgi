@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
-import { useRadarLeads, useRadarLeadsStats } from "@/hooks/useRadarLeads";
+import { useRadarLeads, useRadarLeadsStats, SortColumn, SortDirection } from "@/hooks/useRadarLeads";
 import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
@@ -20,9 +20,11 @@ export default function RadarLeads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Buscar leads usando hook customizado com paginação
-  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage);
+  // Buscar leads usando hook customizado com paginação e ordenação
+  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage, sortColumn, sortDirection);
   
   // Buscar estatísticas globais
   const { data: stats } = useRadarLeadsStats();
@@ -36,6 +38,38 @@ export default function RadarLeads() {
     setter(value);
     setCurrentPage(1);
   };
+
+  // Função para alternar ordenação
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  // Componente para cabeçalho ordenável
+  const SortableHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => (
+    <TableHead 
+      className="cursor-pointer hover:bg-muted/50 select-none"
+      onClick={() => handleSort(column)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortColumn === column ? (
+          sortDirection === "asc" ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 text-muted-foreground/50" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   // Mutation para atribuir lead
   const assignMutation = useMutation({
@@ -482,9 +516,9 @@ export default function RadarLeads() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Empresa</TableHead>
-                    <TableHead>CNPJ</TableHead>
-                    <TableHead>Localização</TableHead>
+                    <SortableHeader column="company_name">Empresa</SortableHeader>
+                    <SortableHeader column="cnpj">CNPJ</SortableHeader>
+                    <SortableHeader column="city">Localização</SortableHeader>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
