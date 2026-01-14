@@ -196,7 +196,7 @@ const AdminImport = () => {
       contacts: ['CNPJ Cliente', 'Nome'],
       opportunities: ['CNPJ Cliente', 'Produto'],
       tasks: ['Título'],
-      radar_leads: ['CNPJ', 'Razão Social', 'Fonte']
+      radar_leads: ['CNPJ', 'Razão Social']
     };
 
     const required = requiredFields[importType];
