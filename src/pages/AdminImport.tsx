@@ -124,18 +124,55 @@ const AdminImport = () => {
     toast.success("Relatório exportado", { description: "O arquivo com os erros foi baixado com sucesso." });
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = (format: 'xlsx' | 'csv' = 'xlsx') => {
     if (!importType) {
       toast.error("Selecione o tipo de importação primeiro");
       return;
     }
 
     const template = IMPORT_TEMPLATES[importType];
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet([template.columns]);
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, `template_${importType}.xlsx`);
-    toast.success("Template baixado com sucesso!");
+    
+    if (format === 'csv') {
+      // Generate CSV with semicolon separator (common in Brazil)
+      const csvContent = template.columns.join(';');
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `template_${importType}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Template CSV baixado com sucesso!");
+    } else {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([template.columns]);
+      XLSX.utils.book_append_sheet(wb, ws, "Template");
+      XLSX.writeFile(wb, `template_${importType}.xlsx`);
+      toast.success("Template Excel baixado com sucesso!");
+    }
+  };
+
+  // Parse CSV content (supports semicolon and comma separators)
+  const parseCSV = (text: string): any[] => {
+    const lines = text.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return [];
+    
+    const firstLine = lines[0];
+    const separator = firstLine.includes(';') ? ';' : ',';
+    
+    const headers = lines[0].split(separator).map(h => h.trim().replace(/^"|"$/g, '').replace(/^\ufeff/, ''));
+    const data: any[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(separator).map(v => v.trim().replace(/^"|"$/g, ''));
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || null;
+      });
+      data.push(row);
+    }
+    
+    return data;
   };
 
   const validateCNPJ = (cnpj: string): boolean => {
@@ -290,10 +327,26 @@ const AdminImport = () => {
     setValidating(true);
     
     try {
-      const arrayBuffer = await fileToValidate.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+      const fileName = fileToValidate.name.toLowerCase();
+      let data: any[];
+      
+      if (fileName.endsWith('.csv')) {
+        // Parse CSV
+        const text = await fileToValidate.text();
+        data = parseCSV(text);
+      } else {
+        // Parse Excel
+        const arrayBuffer = await fileToValidate.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+      }
+      
+      if (!data || data.length === 0) {
+        toast.error("Arquivo vazio ou formato inválido");
+        setValidating(false);
+        return;
+      }
       
       const template = IMPORT_TEMPLATES[importType];
       const headers = Object.keys(data[0] || {});
@@ -359,10 +412,18 @@ const AdminImport = () => {
       }
 
       // Parse o arquivo no navegador (evita estouro de memória no backend)
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+      const fileName = file.name.toLowerCase();
+      let rows: any[];
+      
+      if (fileName.endsWith('.csv')) {
+        const text = await file.text();
+        rows = parseCSV(text);
+      } else {
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+      }
 
       if (!rows || rows.length === 0) {
         toast.error("Arquivo vazio", { description: "Não foram encontradas linhas para importar." });
@@ -512,13 +573,22 @@ const AdminImport = () => {
 
           <div className="flex gap-2">
             <Button
-              onClick={downloadTemplate}
+              onClick={() => downloadTemplate('xlsx')}
               disabled={!importType}
               variant="outline"
               className="flex-1"
             >
               <Download className="mr-2 h-4 w-4" />
               Baixar Template Excel
+            </Button>
+            <Button
+              onClick={() => downloadTemplate('csv')}
+              disabled={!importType}
+              variant="outline"
+              className="flex-1"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Baixar Template CSV
             </Button>
           </div>
         </CardContent>
@@ -529,18 +599,21 @@ const AdminImport = () => {
           <CardHeader>
             <CardTitle>Upload do Arquivo</CardTitle>
             <CardDescription>
-              Selecione o arquivo Excel preenchido com os dados para importação
+              Selecione o arquivo Excel ou CSV preenchido com os dados para importação
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <input
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".xlsx,.xls,.csv"
                 onChange={handleFileSelect}
                 className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                 disabled={importing}
               />
+              <p className="text-xs text-muted-foreground">
+                Formatos aceitos: Excel (.xlsx, .xls) ou CSV (.csv). Para arquivos grandes, prefira CSV.
+              </p>
             </div>
 
             {file && (
