@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,47 +9,18 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, RefreshCw, Database, TrendingUp, Clock, Filter, TestTube, Zap } from "lucide-react";
+import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { useRadarLeads, useRadarSyncHistory } from "@/hooks/useRadarLeads";
+import { useRadarLeads } from "@/hooks/useRadarLeads";
 
 export default function RadarLeads() {
   const queryClient = useQueryClient();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [testDialogOpen, setTestDialogOpen] = useState(false);
-  const [testCnpj, setTestCnpj] = useState("");
-  const [testResults, setTestResults] = useState<any>(null);
 
   // Buscar leads usando hook customizado
   const { data: leads, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm);
-
-  // Buscar histórico de sincronização
-  const { data: syncHistory } = useRadarSyncHistory();
-
-  // Mutation para sincronizar leads
-  const syncMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("sync-radar-leads");
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      toast.success(
-        `Sincronização concluída! ${data.totals.leads_new} novos leads, ${data.totals.leads_updated} atualizados.`
-      );
-      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["radar-sync-history"] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro na sincronização: ${error.message}`);
-    },
-  });
 
   // Mutation para atribuir lead
   const assignMutation = useMutation({
@@ -130,50 +102,16 @@ export default function RadarLeads() {
     },
   });
 
-  // Mutation para testar APIs
-  const testApiMutation = useMutation({
-    mutationFn: async (cnpj: string) => {
-      const { data, error } = await supabase.functions.invoke("test-radar-api", {
-        body: { cnpj },
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      setTestResults(data);
-      toast.success("Teste concluído! Verifique os resultados abaixo.");
-    },
-    onError: (error: any) => {
-      toast.error(`Erro no teste: ${error.message}`);
-    },
-  });
-
-  // Mutation para enriquecer leads
-  const enrichMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("enrich-radar-leads");
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      toast.success(
-        `Enriquecimento concluído! ${data.sicaf_leads} leads SICAF e ${data.portal_leads} leads Portal criados.`
-      );
-      queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
-    },
-    onError: (error: any) => {
-      toast.error(`Erro no enriquecimento: ${error.message}`);
-    },
-  });
-
   const getSourceBadgeColor = (source: string) => {
-    switch (source) {
+    switch (source?.toLowerCase()) {
       case "bndes":
         return "bg-blue-100 text-blue-800 border-blue-300";
       case "portal_compras":
         return "bg-green-100 text-green-800 border-green-300";
       case "sicaf":
         return "bg-purple-100 text-purple-800 border-purple-300";
+      case "importacao":
+        return "bg-orange-100 text-orange-800 border-orange-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
@@ -194,6 +132,9 @@ export default function RadarLeads() {
     }
   };
 
+  // Obter fontes únicas dos leads para o filtro
+  const uniqueSources = leads ? [...new Set(leads.map(l => l.source))].filter(Boolean) : [];
+
   return (
     <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
       {/* Header */}
@@ -201,157 +142,15 @@ export default function RadarLeads() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Radar de Leads</h1>
           <p className="text-muted-foreground">
-            Empresas que vendem ao governo - BNDES, SICAF e Portal de Compras
+            Gerencie sua base de leads importados
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <TestTube className="h-4 w-4" />
-                Testar APIs
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Testar APIs SICAF e Portal de Compras</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">CNPJ para Teste</label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Digite o CNPJ (apenas números)"
-                      value={testCnpj}
-                      onChange={(e) => setTestCnpj(e.target.value.replace(/\D/g, ""))}
-                      maxLength={14}
-                    />
-                    <Button
-                      onClick={() => testApiMutation.mutate(testCnpj)}
-                      disabled={testApiMutation.isPending || testCnpj.length !== 14}
-                    >
-                      {testApiMutation.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        "Testar"
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                {testResults && (
-                  <div className="space-y-4">
-                    <div className="grid gap-4">
-                      {/* SICAF */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">SICAF</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="text-sm">
-                            <strong>Status HTTP:</strong> {testResults.tests.sicaf?.status || "N/A"}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Sucesso:</strong>{" "}
-                            {testResults.tests.sicaf?.ok ? "✅ Sim" : "❌ Não"}
-                          </div>
-                          {testResults.tests.sicaf?.data && (
-                            <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                              {JSON.stringify(testResults.tests.sicaf.data, null, 2)}
-                            </pre>
-                          )}
-                          {testResults.tests.sicaf?.error && (
-                            <div className="text-xs text-destructive">
-                              {testResults.tests.sicaf.error}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Portal Fornecedor */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Portal - Fornecedor</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="text-sm">
-                            <strong>Status HTTP:</strong>{" "}
-                            {testResults.tests.fornecedor?.status || "N/A"}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Sucesso:</strong>{" "}
-                            {testResults.tests.fornecedor?.ok ? "✅ Sim" : "❌ Não"}
-                          </div>
-                          {testResults.tests.fornecedor?.data && (
-                            <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-40">
-                              {JSON.stringify(testResults.tests.fornecedor.data, null, 2)}
-                            </pre>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      {/* Portal Contratos */}
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Portal - Contratos</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="text-sm">
-                            <strong>Status HTTP:</strong>{" "}
-                            {testResults.tests.contratos?.status || "N/A"}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Sucesso:</strong>{" "}
-                            {testResults.tests.contratos?.ok ? "✅ Sim" : "❌ Não"}
-                          </div>
-                          <div className="text-sm">
-                            <strong>Contratos encontrados:</strong>{" "}
-                            {testResults.tests.contratos?.count || 0}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-
-          <Button
-            onClick={() => enrichMutation.mutate()}
-            disabled={enrichMutation.isPending}
-            className="gap-2"
-            variant="secondary"
-          >
-            {enrichMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Enriquecendo...
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                Enriquecer com SICAF/Portal
-              </>
-            )}
-          </Button>
-
-          <Button
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-            className="gap-2"
-          >
-            {syncMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Sincronizando...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4" />
-                Sincronizar Agora
-              </>
-            )}
+          <Button asChild variant="default" className="gap-2">
+            <Link to="/admin/importar">
+              <Upload className="h-4 w-4" />
+              Importar Leads
+            </Link>
           </Button>
         </div>
       </div>
@@ -382,18 +181,11 @@ export default function RadarLeads() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Última Sincronização</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Fontes Cadastradas</CardTitle>
+            <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-sm">
-              {syncHistory?.[0]?.sync_completed_at
-                ? formatDistanceToNow(new Date(syncHistory[0].sync_completed_at), {
-                    addSuffix: true,
-                    locale: ptBR,
-                  })
-                : "Nunca sincronizado"}
-            </div>
+            <div className="text-2xl font-bold">{uniqueSources.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -424,9 +216,11 @@ export default function RadarLeads() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as fontes</SelectItem>
-                  <SelectItem value="bndes">BNDES</SelectItem>
-                  <SelectItem value="portal_compras">Portal de Compras</SelectItem>
-                  <SelectItem value="sicaf">SICAF</SelectItem>
+                  {uniqueSources.map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {source.toUpperCase()}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -452,12 +246,26 @@ export default function RadarLeads() {
       {/* Tabela de Leads */}
       <Card>
         <CardHeader>
-          <CardTitle>Leads Capturados</CardTitle>
+          <CardTitle>Leads Importados</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : leads?.length === 0 ? (
+            <div className="text-center py-12">
+              <FileSpreadsheet className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">Nenhum lead encontrado</h3>
+              <p className="text-muted-foreground mb-4">
+                Importe uma planilha com seus leads para começar.
+              </p>
+              <Button asChild>
+                <Link to="/admin/importar">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar Leads
+                </Link>
+              </Button>
             </div>
           ) : (
             <Table>
@@ -479,7 +287,7 @@ export default function RadarLeads() {
                     <TableCell>{lead.cnpj}</TableCell>
                     <TableCell>
                       <Badge className={getSourceBadgeColor(lead.source)}>
-                        {lead.source.toUpperCase()}
+                        {lead.source?.toUpperCase() || "N/A"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -492,14 +300,14 @@ export default function RadarLeads() {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={lead.status}
+                        value={lead.status || "novo"}
                         onValueChange={(value) =>
                           updateStatusMutation.mutate({ leadId: lead.id, status: value })
                         }
                       >
                         <SelectTrigger className="w-[140px]">
-                          <Badge className={getStatusBadgeColor(lead.status)}>
-                            {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                          <Badge className={getStatusBadgeColor(lead.status || "novo")}>
+                            {(lead.status || "novo").charAt(0).toUpperCase() + (lead.status || "novo").slice(1)}
                           </Badge>
                         </SelectTrigger>
                         <SelectContent>
