@@ -38,21 +38,3 @@ export function useRadarLeads(
     gcTime: 60000, // 1 minuto
   });
 }
-
-export function useRadarSyncHistory() {
-  return useQuery({
-    queryKey: ["radar-sync-history"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("radar_sync_history")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      return data || [];
-    },
-    staleTime: 30000,
-    gcTime: 60000,
-  });
-}
