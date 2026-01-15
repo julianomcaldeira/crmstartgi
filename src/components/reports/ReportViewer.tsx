@@ -102,7 +102,8 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('pt-BR');
+  // Adding T12:00:00 to avoid timezone issues when parsing date-only strings
+  return new Date(date + 'T12:00:00').toLocaleDateString('pt-BR');
 };
 
 export function ReportViewer({ config, data, loading, onExport, onPrint }: ReportViewerProps) {
