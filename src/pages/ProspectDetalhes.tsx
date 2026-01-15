@@ -555,20 +555,25 @@ const ClienteDetalhes = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: any = {
-      lead: { label: "Lead", variant: "secondary" },
-      qualificacao: { label: "Qualificação", variant: "default" },
-      proposta: { label: "Proposta", variant: "default" },
-      negociacao: { label: "Negociação", variant: "default" },
-      fechado: { label: "Fechado", variant: "default" },
-      perdido: { label: "Perdido", variant: "destructive" },
-      pending: { label: "Pendente", variant: "secondary" },
-      in_progress: { label: "Em Progresso", variant: "default" },
-      completed: { label: "Concluída", variant: "default" }
+    const statusConfig: Record<string, { label: string; className: string }> = {
+      // Opportunity statuses - matching pipeline colors
+      lead: { label: "Lead", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-100" },
+      contacted: { label: "Contactado", className: "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300 hover:bg-sky-100" },
+      qualified: { label: "Qualificado", className: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300 hover:bg-cyan-100" },
+      apresentacao: { label: "Apresentação", className: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-100" },
+      proposal: { label: "Proposta", className: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 hover:bg-amber-100" },
+      negotiation: { label: "Negociação", className: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 hover:bg-orange-100" },
+      won: { label: "Ganho", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 hover:bg-green-100" },
+      lost: { label: "Perdido", className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 hover:bg-red-100" },
+      // Task statuses
+      pending: { label: "Pendente", className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-100" },
+      in_progress: { label: "Em Progresso", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 hover:bg-blue-100" },
+      completed: { label: "Concluída", className: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 hover:bg-green-100" },
+      cancelled: { label: "Cancelada", className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-100" },
     };
     
-    const config = statusConfig[status] || { label: status, variant: "default" };
-    return <Badge variant={config.variant as any}>{config.label}</Badge>;
+    const config = statusConfig[status] || { label: status, className: "bg-gray-100 text-gray-700" };
+    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   if (loading) {
@@ -921,8 +926,8 @@ const ClienteDetalhes = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      {new Date(item.feira.start_date).toLocaleDateString('pt-BR')}
-                      {item.feira.end_date && ` - ${new Date(item.feira.end_date).toLocaleDateString('pt-BR')}`}
+                      {new Date(item.feira.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}
+                      {item.feira.end_date && ` - ${new Date(item.feira.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}`}
                     </span>
                   </div>
                 )}

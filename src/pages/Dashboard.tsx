@@ -7,7 +7,7 @@ import { Users, Target, CheckSquare, DollarSign, TrendingUp, Clock, Calendar, Tr
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, Tooltip, Legend } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { format, startOfMonth, endOfMonth, parseISO, addDays, subMonths, differenceInDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, addDays, subMonths, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTodayTasks, useGoals, useOpportunities } from "@/hooks/useQueries";
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
@@ -557,8 +557,8 @@ const Dashboard = () => {
                   <div className="mt-2">
                     <p className="text-xs font-medium truncate">{upcomingFeiras[0].name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {format(parseISO(upcomingFeiras[0].start_date), "dd/MM")}
-                      {upcomingFeiras[0].end_date && ` até ${format(parseISO(upcomingFeiras[0].end_date), "dd/MM")}`}
+                      {format(new Date(upcomingFeiras[0].start_date + 'T12:00:00'), "dd/MM")}
+                      {upcomingFeiras[0].end_date && ` até ${format(new Date(upcomingFeiras[0].end_date + 'T12:00:00'), "dd/MM")}`}
                     </p>
                   </div>
                 )}
