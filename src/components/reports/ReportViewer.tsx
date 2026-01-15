@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatDateLocaleBR } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,8 +103,7 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (date: string) => {
-  // Adding T12:00:00 to avoid timezone issues when parsing date-only strings
-  return new Date(date + 'T12:00:00').toLocaleDateString('pt-BR');
+  return formatDateLocaleBR(date);
 };
 
 export function ReportViewer({ config, data, loading, onExport, onPrint }: ReportViewerProps) {

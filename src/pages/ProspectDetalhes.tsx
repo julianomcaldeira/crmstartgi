@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { formatDateLocaleBR } from "@/lib/dateUtils";
 import { Input } from "@/components/ui/input";
 import { PhoneInput, CurrencyInput } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
@@ -926,8 +927,8 @@ const ClienteDetalhes = () => {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                     <Calendar className="h-4 w-4" />
                     <span>
-                      {new Date(item.feira.start_date + 'T12:00:00').toLocaleDateString('pt-BR')}
-                      {item.feira.end_date && ` - ${new Date(item.feira.end_date + 'T12:00:00').toLocaleDateString('pt-BR')}`}
+                      {formatDateLocaleBR(item.feira.start_date)}
+                      {item.feira.end_date && ` - ${formatDateLocaleBR(item.feira.end_date)}`}
                     </span>
                   </div>
                 )}
