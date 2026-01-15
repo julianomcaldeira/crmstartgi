@@ -45,12 +45,18 @@ import {
   List,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, isToday, isThisWeek, parseISO, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { format, isThisWeek, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
+
+// Helper function to parse date-only strings correctly without timezone issues
+const parseDateOnly = (dateString: string): Date => {
+  // Adding T12:00:00 to avoid timezone issues when parsing date-only strings
+  return new Date(dateString + 'T12:00:00');
+};
 
 const Feiras = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
@@ -263,15 +269,15 @@ const Feiras = () => {
 
   const isFeiraHappeningToday = (feira: any) => {
     if (!feira.start_date || !feira.end_date) return false;
-    const today = new Date();
-    const startDate = parseISO(feira.start_date);
-    const endDate = parseISO(feira.end_date);
+    const today = startOfDay(new Date());
+    const startDate = startOfDay(parseDateOnly(feira.start_date));
+    const endDate = endOfDay(parseDateOnly(feira.end_date));
     return today >= startDate && today <= endDate;
   };
 
   const isFeiraHappeningThisWeek = (feira: any) => {
     if (!feira.start_date) return false;
-    const startDate = parseISO(feira.start_date);
+    const startDate = parseDateOnly(feira.start_date);
     return isThisWeek(startDate, { weekStartsOn: 0 });
   };
 
@@ -719,12 +725,12 @@ const Feiras = () => {
                       <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
                         {feira.start_date &&
-                          format(parseISO(feira.start_date), "dd/MM/yyyy", {
+                          format(parseDateOnly(feira.start_date), "dd/MM/yyyy", {
                             locale: ptBR,
                           })}
                         {feira.start_date && feira.end_date && " - "}
                         {feira.end_date &&
-                          format(parseISO(feira.end_date), "dd/MM/yyyy", {
+                          format(parseDateOnly(feira.end_date), "dd/MM/yyyy", {
                             locale: ptBR,
                           })}
                       </span>
@@ -816,7 +822,7 @@ const Feiras = () => {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {feira.start_date && (
                           <span className="truncate">
-                            {format(parseISO(feira.start_date), "dd/MM/yy")}
+                            {format(parseDateOnly(feira.start_date), "dd/MM/yy")}
                           </span>
                         )}
                         <div className="flex items-center gap-1">
