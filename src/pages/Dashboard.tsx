@@ -9,8 +9,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineCh
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, addDays, subMonths, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useTodayTasks, useGoals, useOpportunities } from "@/hooks/useQueries";
+
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
+import { formatDateBR } from "@/lib/dateUtils";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -557,8 +558,8 @@ const Dashboard = () => {
                   <div className="mt-2">
                     <p className="text-xs font-medium truncate">{upcomingFeiras[0].name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {format(new Date(upcomingFeiras[0].start_date + 'T12:00:00'), "dd/MM")}
-                      {upcomingFeiras[0].end_date && ` até ${format(new Date(upcomingFeiras[0].end_date + 'T12:00:00'), "dd/MM")}`}
+                      {formatDateBR(upcomingFeiras[0].start_date, "dd/MM")}
+                      {upcomingFeiras[0].end_date && ` até ${formatDateBR(upcomingFeiras[0].end_date, "dd/MM")}`}
                     </p>
                   </div>
                 )}

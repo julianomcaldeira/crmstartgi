@@ -45,18 +45,12 @@ import {
   List,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, isThisWeek, startOfDay, endOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isThisWeek, startOfDay, endOfDay } from "date-fns";
 import { FeiraVisitsDialog } from "@/components/FeiraVisitsDialog";
 import { FeiraVisitsReport } from "@/components/FeiraVisitsReport";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
-
-// Helper function to parse date-only strings correctly without timezone issues
-const parseDateOnly = (dateString: string): Date => {
-  // Adding T12:00:00 to avoid timezone issues when parsing date-only strings
-  return new Date(dateString + 'T12:00:00');
-};
+import { parseDateOnly, formatDateBR, formatDateShortBR } from "@/lib/dateUtils";
 
 const Feiras = () => {
   const [feiras, setFeiras] = useState<any[]>([]);
@@ -724,15 +718,9 @@ const Feiras = () => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <CalendarIcon className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">
-                        {feira.start_date &&
-                          format(parseDateOnly(feira.start_date), "dd/MM/yyyy", {
-                            locale: ptBR,
-                          })}
+                        {feira.start_date && formatDateBR(feira.start_date)}
                         {feira.start_date && feira.end_date && " - "}
-                        {feira.end_date &&
-                          format(parseDateOnly(feira.end_date), "dd/MM/yyyy", {
-                            locale: ptBR,
-                          })}
+                        {feira.end_date && formatDateBR(feira.end_date)}
                       </span>
                     </div>
                   )}
@@ -822,7 +810,7 @@ const Feiras = () => {
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         {feira.start_date && (
                           <span className="truncate">
-                            {format(parseDateOnly(feira.start_date), "dd/MM/yy")}
+                            {formatDateShortBR(feira.start_date)}
                           </span>
                         )}
                         <div className="flex items-center gap-1">
