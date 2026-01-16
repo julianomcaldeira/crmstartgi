@@ -232,6 +232,24 @@ export default function IndicadoresFundo() {
     }).format(value);
   };
 
+  // Função para determinar a cor do CAC baseado em faixas de valores
+  // Verde: até R$ 5.000 (bom)
+  // Amarelo: R$ 5.000 a R$ 15.000 (atenção)
+  // Vermelho: acima de R$ 15.000 (alto)
+  const getCacColor = (cac: number): string => {
+    if (cac === 0) return "text-muted-foreground";
+    if (cac <= 5000) return "text-green-600";
+    if (cac <= 15000) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getCacBgColor = (cac: number): string => {
+    if (cac === 0) return "bg-muted";
+    if (cac <= 5000) return "bg-green-100 dark:bg-green-900/30";
+    if (cac <= 15000) return "bg-yellow-100 dark:bg-yellow-900/30";
+    return "bg-red-100 dark:bg-red-900/30";
+  };
+
   const formatMonth = (dateStr: string) => {
     const date = new Date(dateStr + "T12:00:00");
     return format(date, "MMMM", { locale: ptBR });
@@ -349,13 +367,13 @@ export default function IndicadoresFundo() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={getCacBgColor(cacTotal)}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">CAC</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className={`h-4 w-4 ${getCacColor(cacTotal)}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(cacTotal)}</div>
+            <div className={`text-2xl font-bold ${getCacColor(cacTotal)}`}>{formatCurrency(cacTotal)}</div>
             <p className="text-xs text-muted-foreground">
               Mídia: {formatCurrency(totals.gasto_midia)} | Comercial: {formatCurrency(totals.custo_comercial)}
             </p>
@@ -446,7 +464,7 @@ export default function IndicadoresFundo() {
                           className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className={`text-right font-medium ${getCacColor(indicador.cac)}`}>
                         {formatCurrency(indicador.cac)}
                       </TableCell>
                       <TableCell>
@@ -477,7 +495,7 @@ export default function IndicadoresFundo() {
                     <TableCell className="text-right">{formatCurrency(totals.venda_na_base)}</TableCell>
                     <TableCell>{formatCurrency(totals.gasto_midia)}</TableCell>
                     <TableCell>{formatCurrency(totals.custo_comercial)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(cacTotal)}</TableCell>
+                    <TableCell className={`text-right ${getCacColor(cacTotal)}`}>{formatCurrency(cacTotal)}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
                 </TableBody>
