@@ -12,10 +12,12 @@ export function useRadarLeads(
   searchTerm: string = "",
   page: number = 1,
   sortColumn: SortColumn = "created_at",
-  sortDirection: SortDirection = "desc"
+  sortDirection: SortDirection = "desc",
+  stateFilter: string = "all",
+  cityFilter: string = "all"
 ) {
   return useQuery({
-    queryKey: ["radar-leads", sourceFilter, statusFilter, searchTerm, page, sortColumn, sortDirection],
+    queryKey: ["radar-leads", sourceFilter, statusFilter, searchTerm, page, sortColumn, sortDirection, stateFilter, cityFilter],
     queryFn: async () => {
       // Build base query for counting
       let countQuery = supabase
@@ -27,6 +29,12 @@ export function useRadarLeads(
       }
       if (statusFilter !== "all") {
         countQuery = countQuery.eq("status", statusFilter);
+      }
+      if (stateFilter !== "all") {
+        countQuery = countQuery.eq("state", stateFilter);
+      }
+      if (cityFilter !== "all") {
+        countQuery = countQuery.eq("city", cityFilter);
       }
       if (searchTerm) {
         countQuery = countQuery.or(`company_name.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%`);
@@ -53,6 +61,12 @@ export function useRadarLeads(
       }
       if (statusFilter !== "all") {
         dataQuery = dataQuery.eq("status", statusFilter);
+      }
+      if (stateFilter !== "all") {
+        dataQuery = dataQuery.eq("state", stateFilter);
+      }
+      if (cityFilter !== "all") {
+        dataQuery = dataQuery.eq("city", cityFilter);
       }
       if (searchTerm) {
         dataQuery = dataQuery.or(`company_name.ilike.%${searchTerm}%,cnpj.ilike.%${searchTerm}%`);
@@ -98,11 +112,56 @@ export function useRadarLeadsStats() {
 
       const uniqueSources = [...new Set(sourcesData?.map(s => s.source) || [])];
 
+      // Estados únicos
+      const { data: statesData } = await supabase
+        .from("radar_leads")
+        .select("state")
+        .not("state", "is", null);
+
+      const uniqueStates = [...new Set(statesData?.map(s => s.state) || [])].sort();
+
+      // Cidades únicas
+      const { data: citiesData } = await supabase
+        .from("radar_leads")
+        .select("city")
+        .not("city", "is", null);
+
+      const uniqueCities = [...new Set(citiesData?.map(s => s.city) || [])].sort();
+
       return {
         totalCount: totalCount || 0,
         newCount: newCount || 0,
         uniqueSources,
+        uniqueStates,
+        uniqueCities,
       };
+    },
+    staleTime: 30000,
+    gcTime: 60000,
+  });
+}
+
+// Hook para buscar cidades por estado
+export function useRadarLeadsCities(stateFilter: string) {
+  return useQuery({
+    queryKey: ["radar-leads-cities", stateFilter],
+    queryFn: async () => {
+      if (stateFilter === "all") {
+        const { data } = await supabase
+          .from("radar_leads")
+          .select("city")
+          .not("city", "is", null);
+
+        return [...new Set(data?.map(s => s.city) || [])].sort();
+      }
+
+      const { data } = await supabase
+        .from("radar_leads")
+        .select("city")
+        .eq("state", stateFilter)
+        .not("city", "is", null);
+
+      return [...new Set(data?.map(s => s.city) || [])].sort();
     },
     staleTime: 30000,
     gcTime: 60000,

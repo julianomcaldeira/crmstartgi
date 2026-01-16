@@ -10,13 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
-import { useRadarLeads, useRadarLeadsStats, SortColumn, SortDirection } from "@/hooks/useRadarLeads";
+import { useRadarLeads, useRadarLeadsStats, useRadarLeadsCities, SortColumn, SortDirection } from "@/hooks/useRadarLeads";
 import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
   const queryClient = useQueryClient();
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [stateFilter, setStateFilter] = useState<string>("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
@@ -24,7 +26,10 @@ export default function RadarLeads() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Buscar leads usando hook customizado com paginação e ordenação
-  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage, sortColumn, sortDirection);
+  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage, sortColumn, sortDirection, stateFilter, cityFilter);
+  
+  // Buscar cidades com base no estado selecionado
+  const { data: citiesForState } = useRadarLeadsCities(stateFilter);
   
   // Buscar estatísticas globais
   const { data: stats } = useRadarLeadsStats();
@@ -34,9 +39,13 @@ export default function RadarLeads() {
   const totalPages = leadsData?.totalPages || 1;
 
   // Reset página ao mudar filtros
-  const handleFilterChange = (setter: (value: string) => void, value: string) => {
+  const handleFilterChange = (setter: (value: string) => void, value: string, resetCity?: boolean) => {
     setter(value);
     setCurrentPage(1);
+    // Reset cidade quando mudar estado
+    if (resetCity) {
+      setCityFilter("all");
+    }
   };
 
   // Função para alternar ordenação
@@ -337,8 +346,10 @@ export default function RadarLeads() {
     }
   };
 
-  // Obter fontes únicas das estatísticas
+  // Obter fontes e estados únicos das estatísticas
   const uniqueSources = stats?.uniqueSources || [];
+  const uniqueStates = stats?.uniqueStates || [];
+  const availableCities = citiesForState || [];
 
   return (
     <div className="max-w-6xl mx-auto space-y-4 md:space-y-6">
@@ -422,7 +433,7 @@ export default function RadarLeads() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <div>
               <label className="text-sm font-medium mb-2 block">Buscar</label>
               <Input
@@ -459,6 +470,38 @@ export default function RadarLeads() {
                   <SelectItem value="contatado">Contatado</SelectItem>
                   <SelectItem value="qualificado">Qualificado</SelectItem>
                   <SelectItem value="descartado">Descartado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Estado</label>
+              <Select value={stateFilter} onValueChange={(v) => handleFilterChange(setStateFilter, v, true)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os estados</SelectItem>
+                  {uniqueStates.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Cidade</label>
+              <Select value={cityFilter} onValueChange={(v) => handleFilterChange(setCityFilter, v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todas as cidades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as cidades</SelectItem>
+                  {availableCities.map((city) => (
+                    <SelectItem key={city} value={city}>
+                      {city}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
