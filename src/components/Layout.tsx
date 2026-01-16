@@ -19,6 +19,7 @@ import {
   GitBranch,
   Upload,
   Radar,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -102,6 +103,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" },
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },
     ...((isAdmin || isGestor) ? [{ icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" }] : []),
+    ...(isAdmin ? [{ icon: TrendingUp, label: "Indicadores Fundo", path: "/indicadores-fundo" }] : []),
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];

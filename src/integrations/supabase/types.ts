@@ -609,6 +609,65 @@ export type Database = {
         }
         Relationships: []
       }
+      indicadores_fundo: {
+        Row: {
+          cac: number | null
+          contratos_assinados: number | null
+          created_at: string
+          created_by: string | null
+          custo_comercial: number | null
+          gasto_midia: number | null
+          id: string
+          leads_negociacao: number | null
+          leads_novos_qualificados: number | null
+          mes_referencia: string
+          propostas_enviadas: number | null
+          updated_at: string
+          venda_na_base: number | null
+          vendas: number | null
+        }
+        Insert: {
+          cac?: number | null
+          contratos_assinados?: number | null
+          created_at?: string
+          created_by?: string | null
+          custo_comercial?: number | null
+          gasto_midia?: number | null
+          id?: string
+          leads_negociacao?: number | null
+          leads_novos_qualificados?: number | null
+          mes_referencia: string
+          propostas_enviadas?: number | null
+          updated_at?: string
+          venda_na_base?: number | null
+          vendas?: number | null
+        }
+        Update: {
+          cac?: number | null
+          contratos_assinados?: number | null
+          created_at?: string
+          created_by?: string | null
+          custo_comercial?: number | null
+          gasto_midia?: number | null
+          id?: string
+          leads_negociacao?: number | null
+          leads_novos_qualificados?: number | null
+          mes_referencia?: string
+          propostas_enviadas?: number | null
+          updated_at?: string
+          venda_na_base?: number | null
+          vendas?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "indicadores_fundo_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string
