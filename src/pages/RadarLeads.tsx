@@ -15,8 +15,6 @@ import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
   const queryClient = useQueryClient();
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,7 +24,7 @@ export default function RadarLeads() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   // Buscar leads usando hook customizado com paginação e ordenação
-  const { data: leadsData, isLoading } = useRadarLeads(sourceFilter, statusFilter, searchTerm, currentPage, sortColumn, sortDirection, stateFilter, cityFilter);
+  const { data: leadsData, isLoading } = useRadarLeads("all", "all", searchTerm, currentPage, sortColumn, sortDirection, stateFilter, cityFilter);
   
   // Buscar cidades com base no estado selecionado
   const { data: citiesForState } = useRadarLeadsCities(stateFilter);
@@ -433,7 +431,7 @@ export default function RadarLeads() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-3">
             <div>
               <label className="text-sm font-medium mb-2 block">Buscar</label>
               <Input
@@ -441,37 +439,6 @@ export default function RadarLeads() {
                 value={searchTerm}
                 onChange={(e) => handleFilterChange(setSearchTerm, e.target.value)}
               />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Fonte</label>
-              <Select value={sourceFilter} onValueChange={(v) => handleFilterChange(setSourceFilter, v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as fontes" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as fontes</SelectItem>
-                  {uniqueSources.map((source) => (
-                    <SelectItem key={source} value={source}>
-                      {source.toUpperCase()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Status</label>
-              <Select value={statusFilter} onValueChange={(v) => handleFilterChange(setStatusFilter, v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os status</SelectItem>
-                  <SelectItem value="novo">Novo</SelectItem>
-                  <SelectItem value="contatado">Contatado</SelectItem>
-                  <SelectItem value="qualificado">Qualificado</SelectItem>
-                  <SelectItem value="descartado">Descartado</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Estado</label>
