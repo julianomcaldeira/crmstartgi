@@ -36,6 +36,7 @@ export default function IndicadoresFundo() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [newIndicador, setNewIndicador] = useState<IndicadorFundo | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
 
   // Verificar autenticação e role
   useEffect(() => {
@@ -46,24 +47,25 @@ export default function IndicadoresFundo() {
         return;
       }
       setUserId(user.id);
+      setAuthChecked(true);
     };
     checkAuth();
   }, [navigate]);
 
-  // Verificar se é admin
+  // Verificar se é admin - apenas após carregar role
   useEffect(() => {
-    if (!isLoadingRole && userRole !== "admin") {
+    if (authChecked && !isLoadingRole && userRole && userRole !== "admin") {
       toast.error("Acesso negado. Apenas administradores podem acessar esta página.");
       navigate("/");
     }
-  }, [userRole, isLoadingRole, navigate]);
+  }, [userRole, isLoadingRole, navigate, authChecked]);
 
   // Carregar indicadores
   useEffect(() => {
-    if (userRole === "admin") {
+    if (authChecked && !isLoadingRole && userRole === "admin") {
       fetchIndicadores();
     }
-  }, [selectedYear, userRole]);
+  }, [selectedYear, userRole, isLoadingRole, authChecked]);
 
   const fetchIndicadores = async () => {
     setIsLoading(true);
@@ -235,12 +237,18 @@ export default function IndicadoresFundo() {
     ? (totals.gasto_midia + totals.custo_comercial) / totals.contratos_assinados 
     : 0;
 
-  if (isLoadingRole || (userRole !== "admin" && !isLoadingRole)) {
+  // Mostrar loading enquanto verifica auth e role
+  if (!authChecked || isLoadingRole) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  // Se não for admin, não renderiza nada (redirecionamento já aconteceu)
+  if (userRole !== "admin") {
+    return null;
   }
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
