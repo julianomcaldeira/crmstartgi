@@ -4,14 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useUserRole } from "@/hooks/useQueries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, startOfYear, endOfYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Save, TrendingUp, DollarSign, Users, FileText, Loader2, RefreshCw } from "lucide-react";
+import { NumericFormat } from "react-number-format";
 
 interface IndicadorMensal {
   mes_referencia: string;
@@ -139,10 +138,8 @@ export default function IndicadoresFundo() {
         const gasto_midia = Number(dadosManuais?.gasto_midia) || 0;
         const custo_comercial = Number(dadosManuais?.custo_comercial) || 0;
 
-        // Calcular CAC (Custo sobre Receita em %)
-        const cac = vendas > 0 
-          ? ((gasto_midia + custo_comercial) / vendas) * 100 
-          : 0;
+        // Calcular Custo sobre Receita (valor)
+        const cac = gasto_midia + custo_comercial;
 
         return {
           mes_referencia: mesRef,
@@ -218,15 +215,12 @@ export default function IndicadoresFundo() {
     const updated = [...indicadores];
     const newGastoMidia = field === "gasto_midia" ? value : updated[index].gasto_midia;
     const newCustoComercial = field === "custo_comercial" ? value : updated[index].custo_comercial;
-    const vendas = updated[index].vendas;
     
     updated[index] = { 
       ...updated[index], 
       [field]: value,
-      // Recalcular CAC (Custo sobre Receita em %)
-      cac: vendas > 0 
-        ? ((newGastoMidia + newCustoComercial) / vendas) * 100 
-        : 0
+      // Recalcular Custo sobre Receita (valor)
+      cac: newGastoMidia + newCustoComercial
     };
     setIndicadores(updated);
   };
@@ -267,9 +261,7 @@ export default function IndicadoresFundo() {
     }
   );
 
-  const cacTotal = totals.vendas > 0 
-    ? ((totals.gasto_midia + totals.custo_comercial) / totals.vendas) * 100 
-    : 0;
+  const cacTotal = totals.gasto_midia + totals.custo_comercial;
 
   // Mostrar loading enquanto verifica auth e role
   if (!authChecked || isLoadingRole) {
@@ -359,13 +351,13 @@ export default function IndicadoresFundo() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Custo sobre Receita</CardTitle>
+            <CardTitle className="text-sm font-medium">Custo Total</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{cacTotal.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{formatCurrency(cacTotal)}</div>
             <p className="text-xs text-muted-foreground">
-              Investimento: {formatCurrency(totals.gasto_midia + totals.custo_comercial)}
+              Mídia: {formatCurrency(totals.gasto_midia)} | Comercial: {formatCurrency(totals.custo_comercial)}
             </p>
           </CardContent>
         </Card>
@@ -398,7 +390,7 @@ export default function IndicadoresFundo() {
                     <TableHead className="text-right">Venda Base</TableHead>
                     <TableHead>Gasto Mídia</TableHead>
                     <TableHead>Custo Comercial</TableHead>
-                    <TableHead className="text-right">Custo/Receita</TableHead>
+                    <TableHead className="text-right">Custo Total</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -427,25 +419,35 @@ export default function IndicadoresFundo() {
                         {formatCurrency(indicador.venda_na_base)}
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          className="w-28"
+                        <NumericFormat
                           value={indicador.gasto_midia || ""}
-                          placeholder="0,00"
-                          onChange={(e) => handleCostChange(index, "gasto_midia", parseFloat(e.target.value) || 0)}
+                          onValueChange={(values) => handleCostChange(index, "gasto_midia", values.floatValue || 0)}
+                          thousandSeparator="."
+                          decimalSeparator=","
+                          prefix="R$ "
+                          decimalScale={2}
+                          fixedDecimalScale
+                          allowNegative={false}
+                          placeholder="R$ 0,00"
+                          className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          className="w-28"
+                        <NumericFormat
                           value={indicador.custo_comercial || ""}
-                          placeholder="0,00"
-                          onChange={(e) => handleCostChange(index, "custo_comercial", parseFloat(e.target.value) || 0)}
+                          onValueChange={(values) => handleCostChange(index, "custo_comercial", values.floatValue || 0)}
+                          thousandSeparator="."
+                          decimalSeparator=","
+                          prefix="R$ "
+                          decimalScale={2}
+                          fixedDecimalScale
+                          allowNegative={false}
+                          placeholder="R$ 0,00"
+                          className="flex h-10 w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         />
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {indicador.cac.toFixed(1)}%
+                        {formatCurrency(indicador.cac)}
                       </TableCell>
                       <TableCell>
                         <Button
