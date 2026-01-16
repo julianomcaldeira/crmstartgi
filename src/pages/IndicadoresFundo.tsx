@@ -139,9 +139,9 @@ export default function IndicadoresFundo() {
         const gasto_midia = Number(dadosManuais?.gasto_midia) || 0;
         const custo_comercial = Number(dadosManuais?.custo_comercial) || 0;
 
-        // Calcular CAC
-        const cac = contratos_assinados > 0 
-          ? (gasto_midia + custo_comercial) / contratos_assinados 
+        // Calcular CAC (Custo sobre Receita em %)
+        const cac = vendas > 0 
+          ? ((gasto_midia + custo_comercial) / vendas) * 100 
           : 0;
 
         return {
@@ -216,13 +216,16 @@ export default function IndicadoresFundo() {
 
   const handleCostChange = (index: number, field: "gasto_midia" | "custo_comercial", value: number) => {
     const updated = [...indicadores];
+    const newGastoMidia = field === "gasto_midia" ? value : updated[index].gasto_midia;
+    const newCustoComercial = field === "custo_comercial" ? value : updated[index].custo_comercial;
+    const vendas = updated[index].vendas;
+    
     updated[index] = { 
       ...updated[index], 
       [field]: value,
-      // Recalcular CAC
-      cac: updated[index].contratos_assinados > 0 
-        ? ((field === "gasto_midia" ? value : updated[index].gasto_midia) + 
-           (field === "custo_comercial" ? value : updated[index].custo_comercial)) / updated[index].contratos_assinados 
+      // Recalcular CAC (Custo sobre Receita em %)
+      cac: vendas > 0 
+        ? ((newGastoMidia + newCustoComercial) / vendas) * 100 
         : 0
     };
     setIndicadores(updated);
@@ -264,8 +267,8 @@ export default function IndicadoresFundo() {
     }
   );
 
-  const cacTotal = totals.contratos_assinados > 0 
-    ? (totals.gasto_midia + totals.custo_comercial) / totals.contratos_assinados 
+  const cacTotal = totals.vendas > 0 
+    ? ((totals.gasto_midia + totals.custo_comercial) / totals.vendas) * 100 
     : 0;
 
   // Mostrar loading enquanto verifica auth e role
@@ -356,11 +359,11 @@ export default function IndicadoresFundo() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CAC Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Custo sobre Receita</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(cacTotal)}</div>
+            <div className="text-2xl font-bold">{cacTotal.toFixed(1)}%</div>
             <p className="text-xs text-muted-foreground">
               Investimento: {formatCurrency(totals.gasto_midia + totals.custo_comercial)}
             </p>
@@ -395,7 +398,7 @@ export default function IndicadoresFundo() {
                     <TableHead className="text-right">Venda Base</TableHead>
                     <TableHead>Gasto Mídia</TableHead>
                     <TableHead>Custo Comercial</TableHead>
-                    <TableHead className="text-right">CAC</TableHead>
+                    <TableHead className="text-right">Custo/Receita</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -442,7 +445,7 @@ export default function IndicadoresFundo() {
                         />
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatCurrency(indicador.cac)}
+                        {indicador.cac.toFixed(1)}%
                       </TableCell>
                       <TableCell>
                         <Button
