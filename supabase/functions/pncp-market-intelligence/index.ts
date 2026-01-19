@@ -43,6 +43,8 @@ interface PNCPContratacao {
     cnpj: string;
   };
   linkSistemaOrigem: string;
+  anoCompra?: number;
+  sequencialCompra?: string;
 }
 
 interface MarketData {
@@ -63,6 +65,7 @@ interface MarketData {
     date: string;
     organ: string;
     link: string;
+    pncpLink?: string;
   }>;
   rawData: any;
 }
@@ -182,14 +185,30 @@ serve(async (req) => {
             // Adicionar aos contratos de amostra
             if (aggregatedData.sampleContracts.length < 5) {
               const numeroControle = contrato.numeroControlePNCP || contrato.numero || '';
+              const cnpjOrgao = contrato.orgaoEntidade?.cnpj || contrato.unidadeOrgao?.cnpj || '';
+              const anoContrato = contrato.anoContrato || new Date(contrato.dataVigenciaInicio || contrato.dataAssinatura || '').getFullYear();
+              const sequencialContrato = contrato.sequencialContrato || '';
+              
+              // Construir link direto para o documento do contrato/edital
+              let documentLink = '';
+              if (contrato.linkSistemaOrigem) {
+                documentLink = contrato.linkSistemaOrigem;
+              } else if (cnpjOrgao && anoContrato && sequencialContrato) {
+                documentLink = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao.replace(/\D/g, '')}/contratos/${anoContrato}/${sequencialContrato}/arquivos/1`;
+              } else if (numeroControle) {
+                // Tentar buscar documento via API
+                documentLink = `https://pncp.gov.br/api/pncp/v1/contratos/${numeroControle}/arquivos`;
+              } else {
+                documentLink = 'https://pncp.gov.br/app/editais';
+              }
+              
               aggregatedData.sampleContracts.push({
                 title: contrato.objetoContrato || contrato.objeto || 'Contrato sem título',
                 value: valor,
                 date: contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || '',
                 organ: contrato.orgaoEntidade?.razaoSocial || contrato.unidadeOrgao?.nomeUnidade || 'Órgão não informado',
-                link: numeroControle 
-                  ? `https://pncp.gov.br/app/editais/${numeroControle}`
-                  : 'https://pncp.gov.br'
+                link: documentLink,
+                pncpLink: numeroControle ? `https://pncp.gov.br/app/contratos/${numeroControle}` : ''
               });
             }
 
@@ -228,13 +247,29 @@ serve(async (req) => {
           for (const contratacao of filteredContratacoes.slice(0, 3)) {
             if (aggregatedData.sampleContracts.length < 5) {
               const numeroControle = contratacao.numeroControlePNCP || '';
+              const cnpjOrgao = contratacao.orgaoEntidade?.cnpj || '';
+              const anoCompra = contratacao.anoCompra || new Date(contratacao.dataPublicacaoPncp || '').getFullYear();
+              const sequencialCompra = contratacao.sequencialCompra || '';
+              
+              // Construir link direto para o edital/documento
+              let documentLink = '';
+              if (contratacao.linkSistemaOrigem) {
+                documentLink = contratacao.linkSistemaOrigem;
+              } else if (cnpjOrgao && anoCompra && sequencialCompra) {
+                documentLink = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao.replace(/\D/g, '')}/compras/${anoCompra}/${sequencialCompra}/arquivos/1`;
+              } else if (numeroControle) {
+                documentLink = `https://pncp.gov.br/api/pncp/v1/editais/${numeroControle}/arquivos`;
+              } else {
+                documentLink = 'https://pncp.gov.br/app/editais';
+              }
+              
               aggregatedData.sampleContracts.push({
                 title: contratacao.objeto || contratacao.objetoCompra || 'Licitação',
                 value: contratacao.valorTotalEstimado || contratacao.valorTotalHomologado || 0,
                 date: contratacao.dataPublicacaoPncp || contratacao.dataAberturaProposta || '',
                 organ: contratacao.orgaoEntidade?.razaoSocial || 'Órgão não informado',
-                link: contratacao.linkSistemaOrigem || 
-                  (numeroControle ? `https://pncp.gov.br/app/editais/${numeroControle}` : 'https://pncp.gov.br')
+                link: documentLink,
+                pncpLink: numeroControle ? `https://pncp.gov.br/app/editais/${numeroControle}` : ''
               });
             }
           }

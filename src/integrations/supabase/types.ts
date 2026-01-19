@@ -877,6 +877,56 @@ export type Database = {
         }
         Relationships: []
       }
+      market_intelligence_searches: {
+        Row: {
+          ai_analysis: string | null
+          competitors: Json | null
+          created_at: string
+          id: string
+          sample_contracts: Json | null
+          search_terms: string[]
+          total_quantity_12m: number | null
+          total_quantity_24m: number | null
+          total_value_12m: number | null
+          total_value_24m: number | null
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          competitors?: Json | null
+          created_at?: string
+          id?: string
+          sample_contracts?: Json | null
+          search_terms: string[]
+          total_quantity_12m?: number | null
+          total_quantity_24m?: number | null
+          total_value_12m?: number | null
+          total_value_24m?: number | null
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          competitors?: Json | null
+          created_at?: string
+          id?: string
+          sample_contracts?: Json | null
+          search_terms?: string[]
+          total_quantity_12m?: number | null
+          total_quantity_24m?: number | null
+          total_value_12m?: number | null
+          total_value_24m?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_intelligence_searches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunities: {
         Row: {
           assigned_to: string
