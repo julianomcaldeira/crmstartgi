@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMarketIntelligenceCache } from "@/hooks/useMarketIntelligenceCache";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -28,6 +29,8 @@ import {
   Link as LinkIcon,
   MapPin,
   Lightbulb,
+  Database,
+  RefreshCw,
   FileDown,
   GitCompare,
   Check,
@@ -149,12 +152,23 @@ const InteligenciaMercado = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [parsedSections, setParsedSections] = useState<AnalysisSection[]>([]);
   const [selectedState, setSelectedState] = useState("");
+  const [usedCache, setUsedCache] = useState(false);
   
   const [showHistory, setShowHistory] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Cache hook
+  const { 
+    getFromCache, 
+    saveToCache, 
+    clearCache, 
+    getCacheStats, 
+    hasValidCache,
+    cacheSize 
+  } = useMarketIntelligenceCache();
 
   // Fetch current user
   useEffect(() => {
@@ -403,25 +417,41 @@ const InteligenciaMercado = () => {
     return approach;
   };
 
-  const searchMarketData = async () => {
+  const searchMarketData = async (forceRefresh: boolean = false) => {
     if (searchTerms.length === 0) {
       toast.error("Adicione pelo menos um produto ou serviço para pesquisar");
       return;
+    }
+
+    const filters = { state: selectedState };
+
+    // Verificar cache local primeiro (se não for refresh forçado)
+    if (!forceRefresh) {
+      const cachedData = getFromCache(searchTerms, filters);
+      if (cachedData) {
+        const dataWithApproach = {
+          ...cachedData,
+          quickApproach: generateQuickApproach(cachedData),
+        };
+        setMarketData(dataWithApproach);
+        setUsedCache(true);
+        toast.success("Dados carregados do cache local (30 min)");
+        return;
+      }
     }
 
     setLoading(true);
     setMarketData(null);
     setAiAnalysis(null);
     setParsedSections([]);
+    setUsedCache(false);
 
     try {
       // Buscar dados do PNCP com filtros
       const { data, error } = await supabase.functions.invoke("pncp-market-intelligence", {
         body: { 
           searchTerms,
-          filters: {
-            state: selectedState,
-          }
+          filters,
         },
       });
 
@@ -433,6 +463,9 @@ const InteligenciaMercado = () => {
       }
 
       if (data?.success && data?.data) {
+        // Salvar no cache local
+        saveToCache(searchTerms, filters, data.data);
+        
         const dataWithApproach = {
           ...data.data,
           quickApproach: generateQuickApproach(data.data),
@@ -448,6 +481,10 @@ const InteligenciaMercado = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForceRefresh = () => {
+    searchMarketData(true);
   };
 
   const generateAIAnalysis = async () => {
@@ -1236,7 +1273,7 @@ const InteligenciaMercado = () => {
 
           <div className="flex gap-2">
             <Button
-              onClick={searchMarketData}
+              onClick={() => searchMarketData()}
               disabled={loading || searchTerms.length === 0}
               className="flex-1"
             >
