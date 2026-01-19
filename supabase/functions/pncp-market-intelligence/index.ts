@@ -384,51 +384,9 @@ serve(async (req) => {
         period: `${c.contracts12m} contratos (12m) / ${c.contracts24m} contratos (24m)`
       }));
 
-    // Se não encontrou dados reais, retornar dados de exemplo para demonstração
+    // Log quando não encontrar dados - não usamos mais dados mockados
     if (aggregatedData.totalValue24Months === 0 && aggregatedData.competitors.length === 0) {
-      console.log('Nenhum dado encontrado no PNCP, usando dados de demonstração');
-      
-      // Gerar dados de demonstração baseados nos termos buscados
-      const demoMultiplier = Math.random() * 10 + 5; // Entre 5 e 15 milhões base
-      
-      aggregatedData.totalValue12Months = demoMultiplier * 1000000;
-      aggregatedData.totalValue24Months = demoMultiplier * 1.8 * 1000000;
-      aggregatedData.totalQuantity12Months = Math.floor(50 + Math.random() * 150);
-      aggregatedData.totalQuantity24Months = Math.floor(100 + Math.random() * 300);
-      
-      aggregatedData.competitors = [
-        { name: 'Tech Solutions Ltda', cnpj: '12.345.678/0001-90', totalValue: demoMultiplier * 200000, contractCount: 15, period: '8 contratos (12m) / 15 contratos (24m)' },
-        { name: 'Inovação Sistemas S.A.', cnpj: '23.456.789/0001-01', totalValue: demoMultiplier * 180000, contractCount: 12, period: '6 contratos (12m) / 12 contratos (24m)' },
-        { name: 'Digital Services EIRELI', cnpj: '34.567.890/0001-12', totalValue: demoMultiplier * 150000, contractCount: 10, period: '5 contratos (12m) / 10 contratos (24m)' },
-        { name: 'Consultoria Premium Ltda', cnpj: '45.678.901/0001-23', totalValue: demoMultiplier * 120000, contractCount: 8, period: '4 contratos (12m) / 8 contratos (24m)' },
-        { name: 'InfoTech Brasil S.A.', cnpj: '56.789.012/0001-34', totalValue: demoMultiplier * 100000, contractCount: 6, period: '3 contratos (12m) / 6 contratos (24m)' },
-      ];
-      
-      aggregatedData.sampleContracts = [
-        {
-          title: `Contratação de ${searchTerms[0]} para órgão federal`,
-          value: demoMultiplier * 50000,
-          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          organ: 'Ministério da Economia',
-          link: 'https://pncp.gov.br/app/editais'
-        },
-        {
-          title: `Pregão Eletrônico - ${searchTerms[0]}`,
-          value: demoMultiplier * 80000,
-          date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          organ: 'Tribunal de Contas da União',
-          link: 'https://pncp.gov.br/app/editais'
-        },
-        {
-          title: `Aquisição de ${searchTerms[0]} - Ata de Registro de Preços`,
-          value: demoMultiplier * 120000,
-          date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          organ: 'Secretaria de Governo Digital',
-          link: 'https://pncp.gov.br/app/editais'
-        }
-      ];
-      
-      aggregatedData.rawData = { note: 'Dados de demonstração - API do PNCP não retornou resultados para os termos pesquisados' };
+      console.log('Nenhum dado encontrado no PNCP para os termos pesquisados');
     }
 
     console.log('Dados agregados:', {
