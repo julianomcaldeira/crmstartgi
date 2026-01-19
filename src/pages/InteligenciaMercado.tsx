@@ -24,6 +24,9 @@ import {
   Save,
   Trash2,
   Link as LinkIcon,
+  MapPin,
+  Building,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +52,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface MarketData {
   totalValue12Months: number;
@@ -70,7 +80,49 @@ interface MarketData {
     link: string;
     pncpLink?: string;
   }>;
+  quickApproach?: string;
 }
+
+const BRAZILIAN_STATES = [
+  { value: "", label: "Todos os estados" },
+  { value: "AC", label: "Acre" },
+  { value: "AL", label: "Alagoas" },
+  { value: "AP", label: "Amapá" },
+  { value: "AM", label: "Amazonas" },
+  { value: "BA", label: "Bahia" },
+  { value: "CE", label: "Ceará" },
+  { value: "DF", label: "Distrito Federal" },
+  { value: "ES", label: "Espírito Santo" },
+  { value: "GO", label: "Goiás" },
+  { value: "MA", label: "Maranhão" },
+  { value: "MT", label: "Mato Grosso" },
+  { value: "MS", label: "Mato Grosso do Sul" },
+  { value: "MG", label: "Minas Gerais" },
+  { value: "PA", label: "Pará" },
+  { value: "PB", label: "Paraíba" },
+  { value: "PR", label: "Paraná" },
+  { value: "PE", label: "Pernambuco" },
+  { value: "PI", label: "Piauí" },
+  { value: "RJ", label: "Rio de Janeiro" },
+  { value: "RN", label: "Rio Grande do Norte" },
+  { value: "RS", label: "Rio Grande do Sul" },
+  { value: "RO", label: "Rondônia" },
+  { value: "RR", label: "Roraima" },
+  { value: "SC", label: "Santa Catarina" },
+  { value: "SP", label: "São Paulo" },
+  { value: "SE", label: "Sergipe" },
+  { value: "TO", label: "Tocantins" },
+];
+
+const ORGAN_TYPES = [
+  { value: "", label: "Todos os órgãos" },
+  { value: "federal", label: "Órgãos Federais" },
+  { value: "estadual", label: "Órgãos Estaduais" },
+  { value: "municipal", label: "Órgãos Municipais" },
+  { value: "autarquia", label: "Autarquias" },
+  { value: "empresa_publica", label: "Empresas Públicas" },
+  { value: "fundacao", label: "Fundações" },
+];
 
 interface SavedSearch {
   id: string;
@@ -101,6 +153,8 @@ const InteligenciaMercado = () => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [parsedSections, setParsedSections] = useState<AnalysisSection[]>([]);
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedOrganType, setSelectedOrganType] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -287,6 +341,37 @@ const InteligenciaMercado = () => {
     }
   };
 
+  const generateQuickApproach = (data: MarketData): string => {
+    const avgTicket = data.totalQuantity12Months > 0 
+      ? data.totalValue12Months / data.totalQuantity12Months 
+      : 0;
+    
+    const topCompetitor = data.competitors[0];
+    const hasHighValue = data.totalValue12Months > 1000000;
+    const hasCompetitors = data.competitors.length > 0;
+    
+    let approach = "";
+    
+    if (hasHighValue && hasCompetitors) {
+      approach = `O mercado movimenta ${formatCurrency(data.totalValue12Months)} anuais com ticket médio de ${formatCurrency(avgTicket)}. `;
+      approach += `O líder "${topCompetitor?.name}" possui ${topCompetitor?.contractCount} contratos. `;
+      approach += `Estratégia: Foque em diferenciação por qualidade de atendimento, prazo de entrega e suporte técnico. `;
+      approach += `Considere participar de pregões como segunda opção para ganhar experiência e referências no setor público.`;
+    } else if (hasHighValue) {
+      approach = `Mercado com potencial de ${formatCurrency(data.totalValue12Months)} anuais. `;
+      approach += `Poucos concorrentes identificados indica oportunidade de entrada. `;
+      approach += `Estratégia: Apresente-se como especialista, destaque cases de sucesso e ofereça condições competitivas para primeiros contratos.`;
+    } else if (data.totalQuantity12Months > 0) {
+      approach = `Mercado fragmentado com ${data.totalQuantity12Months} contratos no último ano. `;
+      approach += `Estratégia: Foque em nichos específicos, construa relacionamento com compradores-chave e participe ativamente de pregões.`;
+    } else {
+      approach = `Dados limitados para este segmento. `;
+      approach += `Estratégia: Realize contatos diretos com órgãos públicos, participe de eventos do setor e monitore novos editais.`;
+    }
+    
+    return approach;
+  };
+
   const searchMarketData = async () => {
     if (searchTerms.length === 0) {
       toast.error("Adicione pelo menos um produto ou serviço para pesquisar");
@@ -299,9 +384,15 @@ const InteligenciaMercado = () => {
     setParsedSections([]);
 
     try {
-      // Buscar dados do PNCP
+      // Buscar dados do PNCP com filtros
       const { data, error } = await supabase.functions.invoke("pncp-market-intelligence", {
-        body: { searchTerms },
+        body: { 
+          searchTerms,
+          filters: {
+            state: selectedState,
+            organType: selectedOrganType,
+          }
+        },
       });
 
       if (error) throw error;
@@ -312,7 +403,11 @@ const InteligenciaMercado = () => {
       }
 
       if (data?.success && data?.data) {
-        setMarketData(data.data);
+        const dataWithApproach = {
+          ...data.data,
+          quickApproach: generateQuickApproach(data.data),
+        };
+        setMarketData(dataWithApproach);
         toast.success("Dados de mercado carregados com sucesso!");
       } else {
         toast.error("Nenhum dado encontrado para os termos pesquisados");
@@ -566,6 +661,46 @@ const InteligenciaMercado = () => {
             </div>
           )}
 
+          {/* Filters */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-muted/50">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                Estado/Região
+              </label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os estados" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BRAZILIAN_STATES.map((state) => (
+                    <SelectItem key={state.value} value={state.value || "all"}>
+                      {state.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Building className="h-4 w-4 text-muted-foreground" />
+                Tipo de Órgão
+              </label>
+              <Select value={selectedOrganType} onValueChange={setSelectedOrganType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os órgãos" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ORGAN_TYPES.map((organ) => (
+                    <SelectItem key={organ.value} value={organ.value || "all"}>
+                      {organ.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <Button
               onClick={searchMarketData}
@@ -608,6 +743,39 @@ const InteligenciaMercado = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Quick Approach Card */}
+      {marketData?.quickApproach && (
+        <Card className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border-amber-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Lightbulb className="h-5 w-5 text-amber-500" />
+              Resumo Rápido de Abordagem
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm leading-relaxed">{marketData.quickApproach}</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Badge variant="outline" className="bg-amber-500/10 border-amber-500/30">
+                <Target className="h-3 w-3 mr-1" />
+                Prospecção Ativa
+              </Badge>
+              {marketData.totalValue12Months > 1000000 && (
+                <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
+                  <TrendingUp className="h-3 w-3 mr-1" />
+                  Alto Potencial
+                </Badge>
+              )}
+              {marketData.competitors.length > 5 && (
+                <Badge variant="outline" className="bg-purple-500/10 border-purple-500/30">
+                  <Users className="h-3 w-3 mr-1" />
+                  Mercado Competitivo
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Results Section */}
       {marketData && (
