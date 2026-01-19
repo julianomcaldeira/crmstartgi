@@ -29,6 +29,8 @@ import {
   MapPin,
   Lightbulb,
   FileDown,
+  GitCompare,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,6 +151,9 @@ const InteligenciaMercado = () => {
   const [selectedState, setSelectedState] = useState("");
   
   const [showHistory, setShowHistory] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
+  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Fetch current user
@@ -243,6 +248,39 @@ const InteligenciaMercado = () => {
     }
     setShowHistory(false);
     toast.success('Pesquisa carregada');
+  };
+
+  const toggleCompareSelection = (searchId: string) => {
+    setSelectedForComparison(prev => {
+      if (prev.includes(searchId)) {
+        return prev.filter(id => id !== searchId);
+      }
+      if (prev.length >= 4) {
+        toast.error('Máximo de 4 pesquisas para comparação');
+        return prev;
+      }
+      return [...prev, searchId];
+    });
+  };
+
+  const startComparison = () => {
+    if (selectedForComparison.length < 2) {
+      toast.error('Selecione pelo menos 2 pesquisas para comparar');
+      return;
+    }
+    setShowComparison(true);
+    setShowHistory(false);
+    setCompareMode(false);
+  };
+
+  const getComparisonSearches = () => {
+    return savedSearches.filter(s => selectedForComparison.includes(s.id));
+  };
+
+  const calculateGrowth = (current: number, previous: number): { value: number; isPositive: boolean } => {
+    if (previous === 0) return { value: 0, isPositive: true };
+    const growth = ((current - previous) / previous) * 100;
+    return { value: Math.abs(growth), isPositive: growth >= 0 };
   };
 
   const formatCurrency = (value: number) => {
@@ -697,6 +735,26 @@ const InteligenciaMercado = () => {
               <Badge variant="secondary" className="ml-1">{savedSearches.length}</Badge>
             )}
           </Button>
+          {savedSearches.length >= 2 && (
+            <Button
+              variant={showComparison ? "default" : "outline"}
+              onClick={() => {
+                if (showComparison) {
+                  setShowComparison(false);
+                  setSelectedForComparison([]);
+                } else {
+                  setCompareMode(!compareMode);
+                  if (compareMode) {
+                    setSelectedForComparison([]);
+                  }
+                }
+              }}
+              className="gap-2"
+            >
+              <GitCompare className="h-4 w-4" />
+              {showComparison ? "Fechar Comparação" : compareMode ? "Cancelar" : "Comparar"}
+            </Button>
+          )}
           {marketData && (
             <>
               <Button
@@ -725,8 +783,294 @@ const InteligenciaMercado = () => {
         </div>
       </div>
 
+      {/* Compare Mode Selection */}
+      {compareMode && !showComparison && (
+        <Card className="border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GitCompare className="h-5 w-5 text-primary" />
+              Selecione Pesquisas para Comparar
+            </CardTitle>
+            <CardDescription>
+              Selecione de 2 a 4 pesquisas para comparar lado a lado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {savedSearches.length > 0 ? (
+              <>
+                <ScrollArea className="h-[300px]">
+                  <div className="space-y-3">
+                    {savedSearches.map((search) => (
+                      <div
+                        key={search.id}
+                        onClick={() => toggleCompareSelection(search.id)}
+                        className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                          selectedForComparison.includes(search.id) 
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/20' 
+                            : 'bg-card hover:bg-accent/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center ${
+                              selectedForComparison.includes(search.id) 
+                                ? 'border-primary bg-primary text-primary-foreground' 
+                                : 'border-muted-foreground'
+                            }`}>
+                              {selectedForComparison.includes(search.id) && (
+                                <Check className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap gap-1 mb-2">
+                                {search.search_terms?.map((term, i) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {term}
+                                  </Badge>
+                                ))}
+                              </div>
+                              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <DollarSign className="h-3 w-3" />
+                                  {formatCurrency(search.total_value_12m || 0)} (12m)
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDateTime(search.created_at)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <span className="text-sm text-muted-foreground">
+                    {selectedForComparison.length} de 4 selecionadas
+                  </span>
+                  <Button 
+                    onClick={startComparison}
+                    disabled={selectedForComparison.length < 2}
+                    className="gap-2"
+                  >
+                    <GitCompare className="h-4 w-4" />
+                    Comparar ({selectedForComparison.length})
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">
+                Nenhuma pesquisa salva ainda
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Comparison View */}
+      {showComparison && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <GitCompare className="h-5 w-5 text-primary" />
+              Comparação de Pesquisas
+            </CardTitle>
+            <CardDescription>
+              Análise comparativa lado a lado das pesquisas selecionadas
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-3 font-medium text-muted-foreground bg-muted/50 min-w-[150px]">Métrica</th>
+                    {getComparisonSearches().map((search, idx) => (
+                      <th key={search.id} className="text-left p-3 font-medium min-w-[180px]">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap gap-1">
+                            {search.search_terms?.slice(0, 2).map((term, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {term}
+                              </Badge>
+                            ))}
+                            {(search.search_terms?.length || 0) > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{(search.search_terms?.length || 0) - 2}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground font-normal">
+                            {formatDate(search.created_at)}
+                          </span>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      Valor Total (12m)
+                    </td>
+                    {getComparisonSearches().map((search, idx) => {
+                      const prevSearch = idx > 0 ? getComparisonSearches()[idx - 1] : null;
+                      const growth = prevSearch 
+                        ? calculateGrowth(search.total_value_12m || 0, prevSearch.total_value_12m || 0)
+                        : null;
+                      return (
+                        <td key={search.id} className="p-3">
+                          <div className="font-semibold">{formatCurrency(search.total_value_12m || 0)}</div>
+                          {growth && growth.value > 0 && (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs mt-1 ${growth.isPositive ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}`}
+                            >
+                              {growth.isPositive ? '↑' : '↓'} {growth.value.toFixed(1)}%
+                            </Badge>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      Valor Total (24m)
+                    </td>
+                    {getComparisonSearches().map((search) => (
+                      <td key={search.id} className="p-3">
+                        <div className="font-semibold">{formatCurrency(search.total_value_24m || 0)}</div>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-purple-600" />
+                      Contratos (12m)
+                    </td>
+                    {getComparisonSearches().map((search, idx) => {
+                      const prevSearch = idx > 0 ? getComparisonSearches()[idx - 1] : null;
+                      const growth = prevSearch 
+                        ? calculateGrowth(search.total_quantity_12m || 0, prevSearch.total_quantity_12m || 0)
+                        : null;
+                      return (
+                        <td key={search.id} className="p-3">
+                          <div className="font-semibold">{search.total_quantity_12m || 0}</div>
+                          {growth && growth.value > 0 && (
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs mt-1 ${growth.isPositive ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}`}
+                            >
+                              {growth.isPositive ? '↑' : '↓'} {growth.value.toFixed(1)}%
+                            </Badge>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-orange-600" />
+                      Contratos (24m)
+                    </td>
+                    {getComparisonSearches().map((search) => (
+                      <td key={search.id} className="p-3">
+                        <div className="font-semibold">{search.total_quantity_24m || 0}</div>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-cyan-600" />
+                      Ticket Médio (12m)
+                    </td>
+                    {getComparisonSearches().map((search) => {
+                      const avgTicket = (search.total_quantity_12m || 0) > 0 
+                        ? (search.total_value_12m || 0) / (search.total_quantity_12m || 1)
+                        : 0;
+                      return (
+                        <td key={search.id} className="p-3">
+                          <div className="font-semibold">{formatCurrency(avgTicket)}</div>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr className="border-b hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-600" />
+                      Concorrentes
+                    </td>
+                    {getComparisonSearches().map((search) => (
+                      <td key={search.id} className="p-3">
+                        <div className="font-semibold">{(search.competitors as any[])?.length || 0}</div>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="hover:bg-muted/30">
+                    <td className="p-3 font-medium flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-600" />
+                      Análise IA
+                    </td>
+                    {getComparisonSearches().map((search) => (
+                      <td key={search.id} className="p-3">
+                        {search.ai_analysis ? (
+                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                            <Check className="h-3 w-3 mr-1" />
+                            Disponível
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Não gerada
+                          </Badge>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Top Competitors Comparison */}
+            <div className="mt-6 pt-6 border-t">
+              <h4 className="font-semibold mb-4 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Top 3 Concorrentes por Pesquisa
+              </h4>
+              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${getComparisonSearches().length}, 1fr)` }}>
+                {getComparisonSearches().map((search) => (
+                  <div key={search.id} className="space-y-2">
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {search.search_terms?.slice(0, 2).map((term, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">
+                          {term}
+                        </Badge>
+                      ))}
+                    </div>
+                    {((search.competitors as any[]) || []).slice(0, 3).map((comp, idx) => (
+                      <div key={idx} className="p-2 rounded-lg bg-muted/50 text-sm">
+                        <div className="font-medium truncate">{comp.name}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {formatCurrency(comp.totalValue)} • {comp.contractCount} contratos
+                        </div>
+                      </div>
+                    ))}
+                    {((search.competitors as any[]) || []).length === 0 && (
+                      <p className="text-sm text-muted-foreground">Nenhum concorrente identificado</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* History Section */}
-      {showHistory && (
+      {showHistory && !compareMode && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
