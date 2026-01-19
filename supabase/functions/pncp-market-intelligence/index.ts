@@ -149,8 +149,10 @@ serve(async (req) => {
     // Buscar contratos para cada termo
     for (const term of searchTerms) {
       try {
-        // Buscar contratos
-        const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=1&tamanhoPagina=50`;
+        const encodedTerm = encodeURIComponent(term);
+        
+        // Buscar contratos com termo de busca na API
+        const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&pagina=1&tamanhoPagina=100`;
         console.log('Buscando contratos:', contratosUrl);
         
         const contratosResponse = await fetch(contratosUrl, {
@@ -162,18 +164,16 @@ serve(async (req) => {
 
         if (contratosResponse.ok) {
           const contratosData = await contratosResponse.json();
-          console.log('Contratos recebidos:', contratosData?.data?.length || 0);
+          console.log('Contratos recebidos:', contratosData?.data?.length || contratosData?.length || 0);
           
           const contratos = contratosData?.data || contratosData || [];
           
-          // Filtrar por termo de busca e filtros de estado/órgão
+          // Filtrar por estado/órgão (termo já filtrado pela API)
           const filteredContratos = Array.isArray(contratos) 
             ? contratos.filter((c: any) => {
-                const objeto = (c.objetoContrato || c.objeto || '').toLowerCase();
-                const matchesTerm = objeto.includes(term.toLowerCase());
                 const matchesStateFilter = matchesState(c.orgaoEntidade || c.unidadeOrgao);
                 const matchesOrgan = matchesOrganType(c.orgaoEntidade || c.unidadeOrgao);
-                return matchesTerm && matchesStateFilter && matchesOrgan;
+                return matchesStateFilter && matchesOrgan;
               })
             : [];
 
@@ -277,8 +277,8 @@ serve(async (req) => {
           }
         }
 
-        // Buscar contratações/licitações
-        const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=1&tamanhoPagina=50`;
+        // Buscar contratações/licitações com termo de busca na API
+        const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&pagina=1&tamanhoPagina=100`;
         console.log('Buscando contratações:', contratacaoUrl);
 
         const contratacaoResponse = await fetch(contratacaoUrl, {
@@ -290,18 +290,16 @@ serve(async (req) => {
 
         if (contratacaoResponse.ok) {
           const contratacaoData = await contratacaoResponse.json();
-          console.log('Contratações recebidas:', contratacaoData?.data?.length || 0);
+          console.log('Contratações recebidas:', contratacaoData?.data?.length || contratacaoData?.length || 0);
           
           const contratacoes = contratacaoData?.data || contratacaoData || [];
           
-          // Filtrar por termo de busca e filtros de estado/órgão
+          // Filtrar por estado/órgão (termo já filtrado pela API)
           const filteredContratacoes = Array.isArray(contratacoes)
             ? contratacoes.filter((c: any) => {
-                const objeto = (c.objeto || c.objetoCompra || '').toLowerCase();
-                const matchesTerm = objeto.includes(term.toLowerCase());
                 const matchesStateFilter = matchesState(c.orgaoEntidade);
                 const matchesOrgan = matchesOrganType(c.orgaoEntidade);
-                return matchesTerm && matchesStateFilter && matchesOrgan;
+                return matchesStateFilter && matchesOrgan;
               })
             : [];
 
