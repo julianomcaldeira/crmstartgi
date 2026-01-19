@@ -108,18 +108,23 @@ serve(async (req) => {
     };
 
     const fetchPncpJson = async (url: string, label: string) => {
-      const res = await fetch(url, { headers: pncpHeaders });
-      const text = await res.text();
-
-      if (!res.ok) {
-        console.log(`${label} HTTP ${res.status}:`, text.slice(0, 500));
-        return null;
-      }
-
       try {
-        return JSON.parse(text);
+        const res = await fetch(url, { headers: pncpHeaders });
+        const text = await res.text();
+
+        if (!res.ok) {
+          console.log(`${label} HTTP ${res.status}:`, text.slice(0, 500));
+          return null;
+        }
+
+        try {
+          return JSON.parse(text);
+        } catch (e) {
+          console.log(`${label} JSON inválido:`, String(e), '| body:', text.slice(0, 500));
+          return null;
+        }
       } catch (e) {
-        console.log(`${label} JSON inválido:`, String(e), '| body:', text.slice(0, 500));
+        console.log(`${label} Erro de fetch:`, String(e));
         return null;
       }
     };
@@ -168,29 +173,67 @@ serve(async (req) => {
 
     const competitorsMap = new Map<string, { name: string; cnpj: string; totalValue: number; contractCount: number; contracts12m: number; contracts24m: number }>();
 
+    // Função para buscar com paginação
+    const fetchWithPagination = async (
+      baseUrl: string, 
+      label: string, 
+      maxPages: number = 5,
+      pageSize: number = 100
+    ): Promise<any[]> => {
+      const allResults: any[] = [];
+      let currentPage = 1;
+      let hasMore = true;
+
+      while (hasMore && currentPage <= maxPages) {
+        const url = `${baseUrl}&pagina=${currentPage}&tamanhoPagina=${pageSize}`;
+        console.log(`${label} - Página ${currentPage}:`, url);
+        
+        const data = await fetchPncpJson(url, `${label} (p${currentPage})`);
+        
+        if (!data) {
+          hasMore = false;
+          break;
+        }
+
+        const items = data?.data ?? data ?? [];
+        const itemsArray = Array.isArray(items) ? items : [];
+        
+        if (itemsArray.length === 0) {
+          hasMore = false;
+        } else {
+          allResults.push(...itemsArray);
+          // Se retornou menos que o tamanho da página, não há mais resultados
+          if (itemsArray.length < pageSize) {
+            hasMore = false;
+          }
+          currentPage++;
+        }
+      }
+
+      console.log(`${label} - Total coletado: ${allResults.length} registros em ${currentPage - 1} páginas`);
+      return allResults;
+    };
+
     // Buscar contratos para cada termo
     for (const term of searchTerms) {
       try {
         const encodedTerm = encodeURIComponent(term);
         const termLower = term.toLowerCase();
 
-        // Buscar contratos (tamanhoPagina 50 para evitar 400)
-        const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&pagina=1&tamanhoPagina=50`;
-        console.log('Buscando contratos:', contratosUrl);
+        // Buscar contratos com paginação (até 5 páginas de 100 registros = 500 contratos)
+        const contratosBaseUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}`;
+        console.log('Iniciando busca de contratos para:', term);
 
-        let contratosData: any = await fetchPncpJson(contratosUrl, 'Contratos');
+        let contratos = await fetchWithPagination(contratosBaseUrl, 'Contratos', 5, 100);
 
-        // Fallback: se a API rejeitar o parâmetro termo, tenta sem termo e filtra localmente
-        if (!contratosData) {
-          const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=1&tamanhoPagina=50`;
-          console.log('Buscando contratos (fallback sem termo):', fallbackUrl);
-          contratosData = await fetchPncpJson(fallbackUrl, 'Contratos (fallback)');
+        // Fallback: se a API não retornar nada com termo, tenta sem termo e filtra localmente
+        if (contratos.length === 0) {
+          const fallbackBaseUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+          console.log('Buscando contratos (fallback sem termo)');
+          contratos = await fetchWithPagination(fallbackBaseUrl, 'Contratos (fallback)', 3, 100);
         }
 
-        const contratosRaw = contratosData?.data ?? contratosData ?? [];
-        const contratos = Array.isArray(contratosRaw) ? contratosRaw : [];
-
-        console.log('Contratos recebidos:', contratos.length);
+        console.log('Total de contratos recebidos:', contratos.length);
 
         // Filtrar por termo + estado/órgão
         const filteredContratos = contratos.filter((c: any) => {
@@ -203,120 +246,112 @@ serve(async (req) => {
 
         console.log(`Contratos filtrados para "${term}":`, filteredContratos.length);
 
-          for (const contrato of filteredContratos) {
-            const contratoDate = new Date(contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || contrato.dataAssinatura);
-            const valor = contrato.valorInicial || contrato.valorFinal || contrato.valorTotal || 0;
-            
-            // Acumular valores por período
-            if (contratoDate >= date12MonthsAgo) {
-              aggregatedData.totalValue12Months += valor;
-              aggregatedData.totalQuantity12Months += 1;
-            }
-            if (contratoDate >= date24MonthsAgo) {
-              aggregatedData.totalValue24Months += valor;
-              aggregatedData.totalQuantity24Months += 1;
-            }
-
-            // Mapear concorrentes
-            const fornecedorCnpj = contrato.cnpjFornecedor || contrato.fornecedor?.cnpj;
-            const fornecedorNome = contrato.razaoSocialFornecedor || contrato.fornecedor?.razaoSocial || 'Não informado';
-            
-            if (fornecedorCnpj) {
-              const existing = competitorsMap.get(fornecedorCnpj);
-              if (existing) {
-                existing.totalValue += valor;
-                existing.contractCount += 1;
-                if (contratoDate >= date12MonthsAgo) {
-                  existing.contracts12m += 1;
-                }
-                existing.contracts24m += 1;
-              } else {
-                competitorsMap.set(fornecedorCnpj, {
-                  name: fornecedorNome,
-                  cnpj: fornecedorCnpj,
-                  totalValue: valor,
-                  contractCount: 1,
-                  contracts12m: contratoDate >= date12MonthsAgo ? 1 : 0,
-                  contracts24m: 1
-                });
-              }
-            }
-
-            // Adicionar aos contratos de amostra
-            if (aggregatedData.sampleContracts.length < 5) {
-              const numeroControle = contrato.numeroControlePNCP || contrato.numero || '';
-              const cnpjOrgao = (contrato.orgaoEntidade?.cnpj || contrato.unidadeOrgao?.cnpj || '').replace(/\D/g, '');
-              const anoContrato = contrato.anoContrato || new Date(contrato.dataVigenciaInicio || contrato.dataAssinatura || '').getFullYear();
-              const sequencialContrato = contrato.sequencialContrato || '';
-              
-              // Extrair dados do numeroControlePNCP se disponível (formato: cnpj-tipo-sequencial/ano)
-              let parsedCnpj = cnpjOrgao;
-              let parsedAno = anoContrato;
-              let parsedSequencial = sequencialContrato;
-              
-              if (numeroControle && numeroControle.includes('-')) {
-                const match = numeroControle.match(/^(\d+)-(\d+)-(\d+)\/(\d+)$/);
-                if (match) {
-                  parsedCnpj = match[1];
-                  parsedSequencial = match[3];
-                  parsedAno = parseInt(match[4]);
-                }
-              }
-              
-              // Construir link direto para o documento do contrato
-              // A API correta é: /orgaos/{cnpj}/contratos/{ano}/{sequencial}/arquivos/{sequencialArquivo}
-              let documentLink = '';
-              let pncpPortalLink = '';
-              
-              if (contrato.linkSistemaOrigem && contrato.linkSistemaOrigem.startsWith('http')) {
-                documentLink = contrato.linkSistemaOrigem;
-              }
-              
-              if (parsedCnpj && parsedAno && parsedSequencial) {
-                // Link direto para download do primeiro arquivo
-                if (!documentLink) {
-                  documentLink = `https://pncp.gov.br/api/pncp/v1/orgaos/${parsedCnpj}/contratos/${parsedAno}/${parsedSequencial}/arquivos/1`;
-                }
-                // Link para visualizar no portal PNCP
-                pncpPortalLink = `https://pncp.gov.br/app/contratos/${parsedCnpj}/2/${parsedAno}/${parsedSequencial}`;
-              } else if (numeroControle) {
-                pncpPortalLink = `https://pncp.gov.br/app/contratos/${numeroControle}`;
-              }
-              
-              if (!documentLink) {
-                documentLink = pncpPortalLink || 'https://pncp.gov.br/app/editais';
-              }
-              
-              aggregatedData.sampleContracts.push({
-                title: contrato.objetoContrato || contrato.objeto || 'Contrato sem título',
-                value: valor,
-                date: contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || '',
-                organ: contrato.orgaoEntidade?.razaoSocial || contrato.unidadeOrgao?.nomeUnidade || 'Órgão não informado',
-                link: documentLink,
-                pncpLink: pncpPortalLink
-              });
-            }
-
-            aggregatedData.rawData.contratos.push(contrato);
+        for (const contrato of filteredContratos) {
+          const contratoDate = new Date(contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || contrato.dataAssinatura);
+          const valor = contrato.valorInicial || contrato.valorFinal || contrato.valorTotal || 0;
+          
+          // Acumular valores por período
+          if (contratoDate >= date12MonthsAgo) {
+            aggregatedData.totalValue12Months += valor;
+            aggregatedData.totalQuantity12Months += 1;
+          }
+          if (contratoDate >= date24MonthsAgo) {
+            aggregatedData.totalValue24Months += valor;
+            aggregatedData.totalQuantity24Months += 1;
           }
 
-        // Buscar contratações/licitações (tamanhoPagina 50 para evitar 400)
-        const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&pagina=1&tamanhoPagina=50`;
-        console.log('Buscando contratações:', contratacaoUrl);
+          // Mapear concorrentes
+          const fornecedorCnpj = contrato.cnpjFornecedor || contrato.fornecedor?.cnpj;
+          const fornecedorNome = contrato.razaoSocialFornecedor || contrato.fornecedor?.razaoSocial || 'Não informado';
+          
+          if (fornecedorCnpj) {
+            const existing = competitorsMap.get(fornecedorCnpj);
+            if (existing) {
+              existing.totalValue += valor;
+              existing.contractCount += 1;
+              if (contratoDate >= date12MonthsAgo) {
+                existing.contracts12m += 1;
+              }
+              existing.contracts24m += 1;
+            } else {
+              competitorsMap.set(fornecedorCnpj, {
+                name: fornecedorNome,
+                cnpj: fornecedorCnpj,
+                totalValue: valor,
+                contractCount: 1,
+                contracts12m: contratoDate >= date12MonthsAgo ? 1 : 0,
+                contracts24m: 1
+              });
+            }
+          }
 
-        let contratacaoData: any = await fetchPncpJson(contratacaoUrl, 'Contratações');
+          // Adicionar aos contratos de amostra (aumentado para 10)
+          if (aggregatedData.sampleContracts.length < 10) {
+            const numeroControle = contrato.numeroControlePNCP || contrato.numero || '';
+            const cnpjOrgao = (contrato.orgaoEntidade?.cnpj || contrato.unidadeOrgao?.cnpj || '').replace(/\D/g, '');
+            const anoContrato = contrato.anoContrato || new Date(contrato.dataVigenciaInicio || contrato.dataAssinatura || '').getFullYear();
+            const sequencialContrato = contrato.sequencialContrato || '';
+            
+            let parsedCnpj = cnpjOrgao;
+            let parsedAno = anoContrato;
+            let parsedSequencial = sequencialContrato;
+            
+            if (numeroControle && numeroControle.includes('-')) {
+              const match = numeroControle.match(/^(\d+)-(\d+)-(\d+)\/(\d+)$/);
+              if (match) {
+                parsedCnpj = match[1];
+                parsedSequencial = match[3];
+                parsedAno = parseInt(match[4]);
+              }
+            }
+            
+            let documentLink = '';
+            let pncpPortalLink = '';
+            
+            if (contrato.linkSistemaOrigem && contrato.linkSistemaOrigem.startsWith('http')) {
+              documentLink = contrato.linkSistemaOrigem;
+            }
+            
+            if (parsedCnpj && parsedAno && parsedSequencial) {
+              if (!documentLink) {
+                documentLink = `https://pncp.gov.br/api/pncp/v1/orgaos/${parsedCnpj}/contratos/${parsedAno}/${parsedSequencial}/arquivos/1`;
+              }
+              pncpPortalLink = `https://pncp.gov.br/app/contratos/${parsedCnpj}/2/${parsedAno}/${parsedSequencial}`;
+            } else if (numeroControle) {
+              pncpPortalLink = `https://pncp.gov.br/app/contratos/${numeroControle}`;
+            }
+            
+            if (!documentLink) {
+              documentLink = pncpPortalLink || 'https://pncp.gov.br/app/editais';
+            }
+            
+            aggregatedData.sampleContracts.push({
+              title: contrato.objetoContrato || contrato.objeto || 'Contrato sem título',
+              value: valor,
+              date: contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || '',
+              organ: contrato.orgaoEntidade?.razaoSocial || contrato.unidadeOrgao?.nomeUnidade || 'Órgão não informado',
+              link: documentLink,
+              pncpLink: pncpPortalLink
+            });
+          }
 
-        // Fallback: tenta sem termo e filtra localmente
-        if (!contratacaoData) {
-          const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&pagina=1&tamanhoPagina=50`;
-          console.log('Buscando contratações (fallback sem termo):', fallbackUrl);
-          contratacaoData = await fetchPncpJson(fallbackUrl, 'Contratações (fallback)');
+          aggregatedData.rawData.contratos.push(contrato);
         }
 
-        const contratacoesRaw = contratacaoData?.data ?? contratacaoData ?? [];
-        const contratacoes = Array.isArray(contratacoesRaw) ? contratacoesRaw : [];
+        // Buscar contratações/licitações com paginação (até 5 páginas)
+        const contratacaoBaseUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}`;
+        console.log('Iniciando busca de contratações para:', term);
 
-        console.log('Contratações recebidas:', contratacoes.length);
+        let contratacoes = await fetchWithPagination(contratacaoBaseUrl, 'Contratações', 5, 100);
+
+        // Fallback: tenta sem termo
+        if (contratacoes.length === 0) {
+          const fallbackBaseUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+          console.log('Buscando contratações (fallback sem termo)');
+          contratacoes = await fetchWithPagination(fallbackBaseUrl, 'Contratações (fallback)', 3, 100);
+        }
+
+        console.log('Total de contratações recebidas:', contratacoes.length);
 
         // Filtrar por termo + estado/órgão
         const filteredContratacoes = contratacoes.filter((c: any) => {
@@ -329,15 +364,14 @@ serve(async (req) => {
 
         console.log(`Contratações filtradas para "${term}":`, filteredContratacoes.length);
 
-        // Adicionar links de editais das contratações
-        for (const contratacao of filteredContratacoes.slice(0, 3)) {
-          if (aggregatedData.sampleContracts.length < 5) {
+        // Adicionar links de editais das contratações (aumentado para 5)
+        for (const contratacao of filteredContratacoes.slice(0, 5)) {
+          if (aggregatedData.sampleContracts.length < 10) {
             const numeroControle = contratacao.numeroControlePNCP || '';
             const cnpjOrgao = (contratacao.orgaoEntidade?.cnpj || '').replace(/\D/g, '');
             const anoCompra = contratacao.anoCompra || new Date(contratacao.dataPublicacaoPncp || '').getFullYear();
             const sequencialCompra = contratacao.sequencialCompra || '';
 
-            // Extrair dados do numeroControlePNCP se disponível (formato: cnpj-tipo-sequencial/ano)
             let parsedCnpj = cnpjOrgao;
             let parsedAno = anoCompra;
             let parsedSequencial = sequencialCompra;
@@ -351,8 +385,6 @@ serve(async (req) => {
               }
             }
 
-            // Construir link direto para o edital/documento
-            // A API correta é: /orgaos/{cnpj}/compras/{ano}/{sequencial}/arquivos/{sequencialArquivo}
             let documentLink = '';
             let pncpPortalLink = '';
 
@@ -361,11 +393,9 @@ serve(async (req) => {
             }
 
             if (parsedCnpj && parsedAno && parsedSequencial) {
-              // Link direto para download do primeiro arquivo (edital)
               if (!documentLink) {
                 documentLink = `https://pncp.gov.br/api/pncp/v1/orgaos/${parsedCnpj}/compras/${parsedAno}/${parsedSequencial}/arquivos/1`;
               }
-              // Link para visualizar no portal PNCP
               pncpPortalLink = `https://pncp.gov.br/app/editais/${parsedCnpj}/1/${parsedAno}/${parsedSequencial}`;
             } else if (numeroControle) {
               pncpPortalLink = `https://pncp.gov.br/app/editais/${numeroControle}`;
@@ -396,7 +426,7 @@ serve(async (req) => {
     // Converter mapa de concorrentes para array ordenado
     aggregatedData.competitors = Array.from(competitorsMap.values())
       .sort((a, b) => b.totalValue - a.totalValue)
-      .slice(0, 15)
+      .slice(0, 20) // Aumentado para 20 concorrentes
       .map(c => ({
         name: c.name,
         cnpj: c.cnpj,
@@ -405,7 +435,7 @@ serve(async (req) => {
         period: `${c.contracts12m} contratos (12m) / ${c.contracts24m} contratos (24m)`
       }));
 
-    // Log quando não encontrar dados - não usamos mais dados mockados
+    // Log quando não encontrar dados
     if (aggregatedData.totalValue24Months === 0 && aggregatedData.competitors.length === 0) {
       console.log('Nenhum dado encontrado no PNCP para os termos pesquisados');
     }
@@ -413,8 +443,12 @@ serve(async (req) => {
     console.log('Dados agregados:', {
       totalValue12Months: aggregatedData.totalValue12Months,
       totalValue24Months: aggregatedData.totalValue24Months,
+      totalQuantity12Months: aggregatedData.totalQuantity12Months,
+      totalQuantity24Months: aggregatedData.totalQuantity24Months,
       competitorsCount: aggregatedData.competitors.length,
-      contractsCount: aggregatedData.sampleContracts.length
+      contractsCount: aggregatedData.sampleContracts.length,
+      rawContratosCount: aggregatedData.rawData.contratos.length,
+      rawContratacoes: aggregatedData.rawData.contratacoes.length
     });
 
     return new Response(
@@ -425,6 +459,11 @@ serve(async (req) => {
         period: {
           start: dataInicial,
           end: dataFinal
+        },
+        paginationInfo: {
+          maxPagesPerTerm: 5,
+          pageSizeUsed: 100,
+          note: 'Busca com paginação automática para trazer mais resultados'
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
