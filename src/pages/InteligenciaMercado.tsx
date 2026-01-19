@@ -27,7 +27,6 @@ import {
   Trash2,
   Link as LinkIcon,
   MapPin,
-  Building,
   Lightbulb,
   FileDown,
 } from "lucide-react";
@@ -117,15 +116,6 @@ const BRAZILIAN_STATES = [
   { value: "TO", label: "Tocantins" },
 ];
 
-const ORGAN_TYPES = [
-  { value: "", label: "Todos os órgãos" },
-  { value: "federal", label: "Órgãos Federais" },
-  { value: "estadual", label: "Órgãos Estaduais" },
-  { value: "municipal", label: "Órgãos Municipais" },
-  { value: "autarquia", label: "Autarquias" },
-  { value: "empresa_publica", label: "Empresas Públicas" },
-  { value: "fundacao", label: "Fundações" },
-];
 
 interface SavedSearch {
   id: string;
@@ -157,7 +147,7 @@ const InteligenciaMercado = () => {
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [parsedSections, setParsedSections] = useState<AnalysisSection[]>([]);
   const [selectedState, setSelectedState] = useState("");
-  const [selectedOrganType, setSelectedOrganType] = useState("");
+  
   const [showHistory, setShowHistory] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
@@ -393,7 +383,6 @@ const InteligenciaMercado = () => {
           searchTerms,
           filters: {
             state: selectedState,
-            organType: selectedOrganType,
           }
         },
       });
@@ -880,38 +869,20 @@ const InteligenciaMercado = () => {
           )}
 
           {/* Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-muted/50">
+          <div className="p-4 rounded-lg bg-muted/50">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 Estado/Região
               </label>
               <Select value={selectedState} onValueChange={setSelectedState}>
-                <SelectTrigger>
+                <SelectTrigger className="max-w-xs">
                   <SelectValue placeholder="Todos os estados" />
                 </SelectTrigger>
                 <SelectContent>
                   {BRAZILIAN_STATES.map((state) => (
                     <SelectItem key={state.value} value={state.value || "all"}>
                       {state.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" />
-                Tipo de Órgão
-              </label>
-              <Select value={selectedOrganType} onValueChange={setSelectedOrganType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os órgãos" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ORGAN_TYPES.map((organ) => (
-                    <SelectItem key={organ.value} value={organ.value || "all"}>
-                      {organ.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
