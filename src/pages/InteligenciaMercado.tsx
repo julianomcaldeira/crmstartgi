@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Search,
   TrendingUp,
@@ -27,6 +29,7 @@ import {
   MapPin,
   Building,
   Lightbulb,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -475,6 +478,211 @@ const InteligenciaMercado = () => {
       .join('');
   };
 
+  const exportToPDF = () => {
+    if (!marketData) {
+      toast.error("Nenhum dado disponível para exportar");
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPos = 20;
+
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(33, 37, 41);
+      doc.text("Análise de Inteligência de Mercado", pageWidth / 2, yPos, { align: "center" });
+      yPos += 10;
+
+      // Date
+      doc.setFontSize(10);
+      doc.setTextColor(108, 117, 125);
+      doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
+
+      // Search terms
+      doc.setFontSize(12);
+      doc.setTextColor(33, 37, 41);
+      doc.text("Termos pesquisados:", 14, yPos);
+      yPos += 7;
+      doc.setFontSize(10);
+      doc.text(searchTerms.join(", "), 14, yPos);
+      yPos += 15;
+
+      // Summary Section
+      doc.setFontSize(14);
+      doc.setTextColor(25, 135, 84);
+      doc.text("Resumo do Mercado", 14, yPos);
+      yPos += 10;
+
+      // Summary Table
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Métrica", "Últimos 12 meses", "Últimos 24 meses"]],
+        body: [
+          ["Valor Total", formatCurrency(marketData.totalValue12Months), formatCurrency(marketData.totalValue24Months)],
+          ["Qtd. Contratos", marketData.totalQuantity12Months.toString(), marketData.totalQuantity24Months.toString()],
+          ["Ticket Médio", 
+            marketData.totalQuantity12Months > 0 
+              ? formatCurrency(marketData.totalValue12Months / marketData.totalQuantity12Months) 
+              : "—",
+            marketData.totalQuantity24Months > 0 
+              ? formatCurrency(marketData.totalValue24Months / marketData.totalQuantity24Months) 
+              : "—"
+          ],
+        ],
+        theme: "striped",
+        headStyles: { fillColor: [25, 135, 84] },
+        margin: { left: 14, right: 14 },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 15;
+
+      // Quick Approach
+      if (marketData.quickApproach) {
+        doc.setFontSize(14);
+        doc.setTextColor(255, 193, 7);
+        doc.text("Abordagem Recomendada", 14, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(33, 37, 41);
+        const approachLines = doc.splitTextToSize(marketData.quickApproach, pageWidth - 28);
+        doc.text(approachLines, 14, yPos);
+        yPos += approachLines.length * 5 + 10;
+      }
+
+      // Check if we need a new page
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Competitors Section
+      if (marketData.competitors.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(111, 66, 193);
+        doc.text("Principais Concorrentes", 14, yPos);
+        yPos += 10;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [["Empresa", "CNPJ", "Valor Total", "Contratos"]],
+          body: marketData.competitors.slice(0, 10).map((comp) => [
+            comp.name.substring(0, 40),
+            comp.cnpj,
+            formatCurrency(comp.totalValue),
+            comp.contractCount.toString(),
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [111, 66, 193] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 60 },
+            1: { cellWidth: 40 },
+            2: { cellWidth: 45 },
+            3: { cellWidth: 25 },
+          },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // Check if we need a new page
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Sample Contracts Section
+      if (marketData.sampleContracts.length > 0) {
+        doc.setFontSize(14);
+        doc.setTextColor(13, 110, 253);
+        doc.text("Contratos/Editais de Exemplo", 14, yPos);
+        yPos += 10;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [["Descrição", "Órgão", "Valor", "Data"]],
+          body: marketData.sampleContracts.slice(0, 10).map((contract) => [
+            contract.title.substring(0, 50) + (contract.title.length > 50 ? "..." : ""),
+            contract.organ.substring(0, 30) + (contract.organ.length > 30 ? "..." : ""),
+            formatCurrency(contract.value),
+            formatDate(contract.date),
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [13, 110, 253] },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            0: { cellWidth: 55 },
+            1: { cellWidth: 50 },
+            2: { cellWidth: 40 },
+            3: { cellWidth: 25 },
+          },
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 15;
+      }
+
+      // AI Analysis Section
+      if (aiAnalysis) {
+        doc.addPage();
+        yPos = 20;
+
+        doc.setFontSize(14);
+        doc.setTextColor(220, 53, 69);
+        doc.text("Análise de IA", 14, yPos);
+        yPos += 10;
+
+        // Clean markdown and format for PDF
+        const cleanText = aiAnalysis
+          .replace(/##\s*[📊💰🏆🎯⚠️✅]\s*/g, "\n")
+          .replace(/\*\*/g, "")
+          .replace(/\*/g, "")
+          .replace(/#{1,3}\s*/g, "");
+
+        doc.setFontSize(10);
+        doc.setTextColor(33, 37, 41);
+        
+        const analysisLines = doc.splitTextToSize(cleanText, pageWidth - 28);
+        
+        // Split into chunks to handle page breaks
+        let currentY = yPos;
+        for (const line of analysisLines) {
+          if (currentY > 280) {
+            doc.addPage();
+            currentY = 20;
+          }
+          doc.text(line, 14, currentY);
+          currentY += 5;
+        }
+      }
+
+      // Footer on all pages
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(108, 117, 125);
+        doc.text(
+          `Página ${i} de ${pageCount} | Evolua CRM - Inteligência de Mercado`,
+          pageWidth / 2,
+          doc.internal.pageSize.getHeight() - 10,
+          { align: "center" }
+        );
+      }
+
+      // Download
+      const fileName = `inteligencia-mercado-${searchTerms.join("-").substring(0, 30)}-${new Date().toISOString().split("T")[0]}.pdf`;
+      doc.save(fileName);
+      toast.success("PDF exportado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao exportar PDF:", error);
+      toast.error("Erro ao gerar PDF");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -501,19 +709,29 @@ const InteligenciaMercado = () => {
             )}
           </Button>
           {marketData && (
-            <Button
-              variant="outline"
-              onClick={() => saveSearchMutation.mutate()}
-              disabled={saveSearchMutation.isPending}
-              className="gap-2"
-            >
-              {saveSearchMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Salvar Pesquisa
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={exportToPDF}
+                className="gap-2"
+              >
+                <FileDown className="h-4 w-4" />
+                Exportar PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => saveSearchMutation.mutate()}
+                disabled={saveSearchMutation.isPending}
+                className="gap-2"
+              >
+                {saveSearchMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Salvar Pesquisa
+              </Button>
+            </>
           )}
         </div>
       </div>
