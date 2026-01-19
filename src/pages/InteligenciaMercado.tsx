@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   TrendingUp,
@@ -19,6 +20,10 @@ import {
   BarChart3,
   AlertTriangle,
   CheckCircle2,
+  History,
+  Save,
+  Trash2,
+  Link as LinkIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +38,17 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface MarketData {
   totalValue12Months: number;
@@ -52,7 +68,21 @@ interface MarketData {
     date: string;
     organ: string;
     link: string;
+    pncpLink?: string;
   }>;
+}
+
+interface SavedSearch {
+  id: string;
+  search_terms: string[];
+  total_value_12m: number | null;
+  total_value_24m: number | null;
+  total_quantity_12m: number | null;
+  total_quantity_24m: number | null;
+  competitors: any;
+  sample_contracts: any;
+  ai_analysis: string | null;
+  created_at: string;
 }
 
 interface AnalysisSection {
@@ -63,6 +93,7 @@ interface AnalysisSection {
 }
 
 const InteligenciaMercado = () => {
+  const queryClient = useQueryClient();
   const [searchTerms, setSearchTerms] = useState<string[]>([]);
   const [currentTerm, setCurrentTerm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -70,6 +101,102 @@ const InteligenciaMercado = () => {
   const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
   const [parsedSections, setParsedSections] = useState<AnalysisSection[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Fetch current user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUserId(user?.id || null);
+    };
+    getUser();
+  }, []);
+
+  // Fetch saved searches
+  const { data: savedSearches = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ['market-intelligence-searches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('market_intelligence_searches')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (error) throw error;
+      return data as SavedSearch[];
+    },
+    enabled: !!currentUserId,
+  });
+
+  // Save search mutation
+  const saveSearchMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentUserId || !marketData) throw new Error('Dados incompletos');
+      
+      const { error } = await supabase
+        .from('market_intelligence_searches')
+        .insert({
+          user_id: currentUserId,
+          search_terms: searchTerms,
+          total_value_12m: marketData.totalValue12Months,
+          total_value_24m: marketData.totalValue24Months,
+          total_quantity_12m: marketData.totalQuantity12Months,
+          total_quantity_24m: marketData.totalQuantity24Months,
+          competitors: marketData.competitors,
+          sample_contracts: marketData.sampleContracts,
+          ai_analysis: aiAnalysis,
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['market-intelligence-searches'] });
+      toast.success('Pesquisa salva com sucesso!');
+    },
+    onError: (error) => {
+      console.error('Erro ao salvar pesquisa:', error);
+      toast.error('Erro ao salvar pesquisa');
+    },
+  });
+
+  // Delete search mutation
+  const deleteSearchMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('market_intelligence_searches')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['market-intelligence-searches'] });
+      toast.success('Pesquisa excluída');
+    },
+    onError: () => {
+      toast.error('Erro ao excluir pesquisa');
+    },
+  });
+
+  const loadSavedSearch = (search: SavedSearch) => {
+    setSearchTerms(search.search_terms || []);
+    setMarketData({
+      totalValue12Months: search.total_value_12m || 0,
+      totalValue24Months: search.total_value_24m || 0,
+      totalQuantity12Months: search.total_quantity_12m || 0,
+      totalQuantity24Months: search.total_quantity_24m || 0,
+      competitors: search.competitors || [],
+      sampleContracts: search.sample_contracts || [],
+    });
+    setAiAnalysis(search.ai_analysis);
+    if (search.ai_analysis) {
+      const sections = parseAnalysisToSections(search.ai_analysis);
+      setParsedSections(sections);
+    }
+    setShowHistory(false);
+    toast.success('Pesquisa carregada');
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -82,6 +209,21 @@ const InteligenciaMercado = () => {
     if (!dateStr) return "—";
     try {
       return new Date(dateStr).toLocaleDateString("pt-BR");
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "—";
+    try {
+      return new Date(dateStr).toLocaleString("pt-BR", {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     } catch {
       return dateStr;
     }
@@ -241,7 +383,7 @@ const InteligenciaMercado = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Brain className="h-8 w-8 text-primary" />
@@ -251,7 +393,137 @@ const InteligenciaMercado = () => {
             Analise dados de compras governamentais e identifique oportunidades de vendas
           </p>
         </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowHistory(!showHistory)}
+            className="gap-2"
+          >
+            <History className="h-4 w-4" />
+            Histórico
+            {savedSearches.length > 0 && (
+              <Badge variant="secondary" className="ml-1">{savedSearches.length}</Badge>
+            )}
+          </Button>
+          {marketData && (
+            <Button
+              variant="outline"
+              onClick={() => saveSearchMutation.mutate()}
+              disabled={saveSearchMutation.isPending}
+              className="gap-2"
+            >
+              {saveSearchMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              Salvar Pesquisa
+            </Button>
+          )}
+        </div>
       </div>
+
+      {/* History Section */}
+      {showHistory && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Pesquisas Salvas
+            </CardTitle>
+            <CardDescription>
+              Consulte e carregue pesquisas anteriores
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingHistory ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : savedSearches.length > 0 ? (
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-3">
+                  {savedSearches.map((search) => (
+                    <div
+                      key={search.id}
+                      className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {search.search_terms?.map((term, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {term}
+                              </Badge>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />
+                              {formatCurrency(search.total_value_12m || 0)} (12m)
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {(search.competitors as any[])?.length || 0} concorrentes
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDateTime(search.created_at)}
+                            </span>
+                            {search.ai_analysis && (
+                              <Badge variant="outline" className="text-xs gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Com IA
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => loadSavedSearch(search)}
+                          >
+                            Carregar
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir pesquisa?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteSearchMutation.mutate(search.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">
+                Nenhuma pesquisa salva ainda
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search Section */}
       <Card>
@@ -464,21 +736,40 @@ const InteligenciaMercado = () => {
                                 </span>
                               </div>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              asChild
-                              className="shrink-0"
-                            >
-                              <a
-                                href={contract.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                            <div className="flex gap-2 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
                               >
-                                <ExternalLink className="h-4 w-4 mr-1" />
-                                Ver
-                              </a>
-                            </Button>
+                                <a
+                                  href={contract.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Baixar documento do edital"
+                                >
+                                  <FileText className="h-4 w-4 mr-1" />
+                                  Documento
+                                </a>
+                              </Button>
+                              {contract.pncpLink && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  asChild
+                                >
+                                  <a
+                                    href={contract.pncpLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Ver no portal PNCP"
+                                  >
+                                    <LinkIcon className="h-4 w-4 mr-1" />
+                                    PNCP
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
