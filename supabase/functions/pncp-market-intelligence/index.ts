@@ -76,7 +76,9 @@ serve(async (req) => {
   }
 
   try {
-    const { searchTerms, analysisType } = await req.json();
+    const { searchTerms, filters } = await req.json();
+    const stateFilter = filters?.state && filters.state !== 'all' ? filters.state : '';
+    const organTypeFilter = filters?.organType && filters.organType !== 'all' ? filters.organType : '';
 
     if (!searchTerms || !Array.isArray(searchTerms) || searchTerms.length === 0) {
       return new Response(
@@ -85,7 +87,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Buscando dados do PNCP para:', searchTerms);
+    console.log('Buscando dados do PNCP para:', searchTerms, 'Filtros:', { stateFilter, organTypeFilter });
 
     const now = new Date();
     const date24MonthsAgo = new Date(now);
@@ -99,6 +101,37 @@ serve(async (req) => {
 
     const dataInicial = formatDate(date24MonthsAgo);
     const dataFinal = formatDate(now);
+
+    // Helper function to match state
+    const matchesState = (organ: any): boolean => {
+      if (!stateFilter) return true;
+      const uf = organ?.uf || organ?.unidadeOrgao?.uf || organ?.municipio?.uf || '';
+      return uf.toUpperCase() === stateFilter.toUpperCase();
+    };
+
+    // Helper function to match organ type
+    const matchesOrganType = (organ: any): boolean => {
+      if (!organTypeFilter) return true;
+      const razaoSocial = (organ?.razaoSocial || organ?.nomeUnidade || '').toLowerCase();
+      const esferaId = organ?.esferaId || organ?.unidadeOrgao?.esferaId || '';
+      
+      switch (organTypeFilter) {
+        case 'federal':
+          return esferaId === 'F' || razaoSocial.includes('ministério') || razaoSocial.includes('federal');
+        case 'estadual':
+          return esferaId === 'E' || razaoSocial.includes('estado') || razaoSocial.includes('estadual');
+        case 'municipal':
+          return esferaId === 'M' || razaoSocial.includes('município') || razaoSocial.includes('prefeitura');
+        case 'autarquia':
+          return razaoSocial.includes('autarquia') || razaoSocial.includes('instituto') || razaoSocial.includes('inss');
+        case 'empresa_publica':
+          return razaoSocial.includes('empresa') || razaoSocial.includes('correios') || razaoSocial.includes('caixa');
+        case 'fundacao':
+          return razaoSocial.includes('fundação') || razaoSocial.includes('fundacao');
+        default:
+          return true;
+      }
+    };
 
     // Agregar dados de todas as buscas
     const aggregatedData: MarketData = {
@@ -133,11 +166,14 @@ serve(async (req) => {
           
           const contratos = contratosData?.data || contratosData || [];
           
-          // Filtrar por termo de busca
+          // Filtrar por termo de busca e filtros de estado/órgão
           const filteredContratos = Array.isArray(contratos) 
             ? contratos.filter((c: any) => {
                 const objeto = (c.objetoContrato || c.objeto || '').toLowerCase();
-                return objeto.includes(term.toLowerCase());
+                const matchesTerm = objeto.includes(term.toLowerCase());
+                const matchesStateFilter = matchesState(c.orgaoEntidade || c.unidadeOrgao);
+                const matchesOrgan = matchesOrganType(c.orgaoEntidade || c.unidadeOrgao);
+                return matchesTerm && matchesStateFilter && matchesOrgan;
               })
             : [];
 
@@ -233,11 +269,14 @@ serve(async (req) => {
           
           const contratacoes = contratacaoData?.data || contratacaoData || [];
           
-          // Filtrar por termo de busca
+          // Filtrar por termo de busca e filtros de estado/órgão
           const filteredContratacoes = Array.isArray(contratacoes)
             ? contratacoes.filter((c: any) => {
                 const objeto = (c.objeto || c.objetoCompra || '').toLowerCase();
-                return objeto.includes(term.toLowerCase());
+                const matchesTerm = objeto.includes(term.toLowerCase());
+                const matchesStateFilter = matchesState(c.orgaoEntidade);
+                const matchesOrgan = matchesOrganType(c.orgaoEntidade);
+                return matchesTerm && matchesStateFilter && matchesOrgan;
               })
             : [];
 
