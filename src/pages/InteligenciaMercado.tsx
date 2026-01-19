@@ -428,7 +428,12 @@ const InteligenciaMercado = () => {
     // Verificar cache local primeiro (se não for refresh forçado)
     if (!forceRefresh) {
       const cachedData = getFromCache(searchTerms, filters);
-      if (cachedData) {
+      // Só usar cache se tiver dados reais
+      if (cachedData && (
+        (cachedData?.rawData?.contratos?.length ?? 0) > 0 ||
+        (cachedData?.rawData?.contratacoes?.length ?? 0) > 0 ||
+        (cachedData?.competitors?.length ?? 0) > 0
+      )) {
         const dataWithApproach = {
           ...cachedData,
           quickApproach: generateQuickApproach(cachedData),
