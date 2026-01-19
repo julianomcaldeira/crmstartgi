@@ -128,14 +128,14 @@ Responda sempre em português brasileiro, de forma profissional mas acessível.`
 
     console.log('Enviando para análise de IA...');
 
-    const aiResponse = await fetch("https://api.lovable.dev/v1/ai/chat", {
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }

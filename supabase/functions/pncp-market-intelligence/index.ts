@@ -299,7 +299,6 @@ serve(async (req) => {
 
             aggregatedData.rawData.contratos.push(contrato);
           }
-        }
 
         // Buscar contratações/licitações (tamanhoPagina 50 para evitar 400)
         const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&pagina=1&tamanhoPagina=50`;
