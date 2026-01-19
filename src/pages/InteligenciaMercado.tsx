@@ -463,9 +463,20 @@ const InteligenciaMercado = () => {
       }
 
       if (data?.success && data?.data) {
-        // Salvar no cache local
+        const hasResults =
+          (data.data?.rawData?.contratos?.length ?? 0) > 0 ||
+          (data.data?.rawData?.contratacoes?.length ?? 0) > 0 ||
+          (data.data?.competitors?.length ?? 0) > 0 ||
+          (data.data?.sampleContracts?.length ?? 0) > 0;
+
+        if (!hasResults) {
+          toast.error("Nenhum dado encontrado para os termos pesquisados");
+          return;
+        }
+
+        // Salvar no cache local (somente quando houver resultado)
         saveToCache(searchTerms, filters, data.data);
-        
+
         const dataWithApproach = {
           ...data.data,
           quickApproach: generateQuickApproach(data.data),
