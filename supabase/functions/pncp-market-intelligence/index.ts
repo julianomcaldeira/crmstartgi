@@ -3,8 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface MarketData {
@@ -37,64 +36,31 @@ serve(async (req) => {
 
   try {
     const { searchTerms, filters } = await req.json();
-    const stateFilter =
-      filters?.state && filters.state !== "all" ? filters.state : "";
-    const organTypeFilter =
-      filters?.organType && filters.organType !== "all" ? filters.organType : "";
+    const stateFilter = filters?.state && filters.state !== "all" ? filters.state : "";
+    const organTypeFilter = filters?.organType && filters.organType !== "all" ? filters.organType : "";
 
     if (!searchTerms || !Array.isArray(searchTerms) || searchTerms.length === 0) {
       return new Response(
         JSON.stringify({ error: "searchTerms é obrigatório e deve ser um array" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(
-      "Buscando dados do PNCP para:",
-      searchTerms,
-      "Filtros:",
-      { stateFilter, organTypeFilter },
-    );
+    console.log("Buscando dados do PNCP para:", searchTerms, "Filtros:", { stateFilter, organTypeFilter });
 
     const now = new Date();
-    const date24MonthsAgo = new Date(now);
-    date24MonthsAgo.setMonth(date24MonthsAgo.getMonth() - 24);
+    // Simplificado: apenas últimos 12 meses (dentro do limite de 365 dias da API)
     const date12MonthsAgo = new Date(now);
     date12MonthsAgo.setMonth(date12MonthsAgo.getMonth() - 12);
-
-    const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
     const formatDate = (date: Date) => {
       return date.toISOString().split("T")[0].replace(/-/g, "");
     };
 
-    // PNCP limita consultas por período (ex.: contratos: 365 dias). Fazemos chunking em janelas <=365.
-    const makeDateRanges = (start: Date, end: Date, maxDays = 365) => {
-      const ranges: Array<{ start: Date; end: Date }> = [];
-      let curStart = new Date(start);
-      const endTime = end.getTime();
-
-      while (curStart.getTime() <= endTime) {
-        const curEndTime = Math.min(
-          endTime,
-          curStart.getTime() + (maxDays - 1) * MS_PER_DAY,
-        );
-        const curEnd = new Date(curEndTime);
-        ranges.push({ start: new Date(curStart), end: curEnd });
-        curStart = new Date(curEndTime + MS_PER_DAY);
-      }
-
-      return ranges;
-    };
-
-    const dateRanges24m = makeDateRanges(date24MonthsAgo, now, 365);
-
-    // Mantém no response o período completo solicitado
-    const dataInicial = formatDate(date24MonthsAgo);
+    const dataInicial = formatDate(date12MonthsAgo);
     const dataFinal = formatDate(now);
+
+    console.log("Período de busca:", dataInicial, "a", dataFinal);
 
     const pncpHeaders = {
       Accept: "application/json",
@@ -103,23 +69,19 @@ serve(async (req) => {
 
     const fetchPncpJson = async (url: string, label: string) => {
       try {
+        console.log(`Fetching ${label}:`, url);
         const res = await fetch(url, { headers: pncpHeaders });
         const text = await res.text();
 
         if (!res.ok) {
-          console.log(`${label} HTTP ${res.status}:`, text.slice(0, 500));
+          console.log(`${label} HTTP ${res.status}:`, text.slice(0, 300));
           return null;
         }
 
         try {
           return JSON.parse(text);
         } catch (e) {
-          console.log(
-            `${label} JSON inválido:`,
-            String(e),
-            "| body:",
-            text.slice(0, 500),
-          );
+          console.log(`${label} JSON inválido:`, String(e));
           return null;
         }
       } catch (e) {
@@ -130,43 +92,26 @@ serve(async (req) => {
 
     const matchesState = (organ: any): boolean => {
       if (!stateFilter) return true;
-      const uf =
-        organ?.uf || organ?.unidadeOrgao?.uf || organ?.municipio?.uf || "";
+      const uf = organ?.uf || organ?.unidadeOrgao?.uf || organ?.municipio?.uf || "";
       return uf.toUpperCase() === stateFilter.toUpperCase();
     };
 
     const matchesOrganType = (organ: any): boolean => {
       if (!organTypeFilter) return true;
-      const razaoSocial = (organ?.razaoSocial || organ?.nomeUnidade || "")
-        .toLowerCase();
+      const razaoSocial = (organ?.razaoSocial || organ?.nomeUnidade || "").toLowerCase();
       const esferaId = organ?.esferaId || organ?.unidadeOrgao?.esferaId || "";
 
       switch (organTypeFilter) {
         case "federal":
-          return (
-            esferaId === "F" || razaoSocial.includes("ministério") ||
-            razaoSocial.includes("federal")
-          );
+          return esferaId === "F" || razaoSocial.includes("ministério") || razaoSocial.includes("federal");
         case "estadual":
-          return (
-            esferaId === "E" || razaoSocial.includes("estado") ||
-            razaoSocial.includes("estadual")
-          );
+          return esferaId === "E" || razaoSocial.includes("estado") || razaoSocial.includes("estadual");
         case "municipal":
-          return (
-            esferaId === "M" || razaoSocial.includes("município") ||
-            razaoSocial.includes("prefeitura")
-          );
+          return esferaId === "M" || razaoSocial.includes("município") || razaoSocial.includes("prefeitura");
         case "autarquia":
-          return (
-            razaoSocial.includes("autarquia") || razaoSocial.includes("instituto") ||
-            razaoSocial.includes("inss")
-          );
+          return razaoSocial.includes("autarquia") || razaoSocial.includes("instituto") || razaoSocial.includes("inss");
         case "empresa_publica":
-          return (
-            razaoSocial.includes("empresa") || razaoSocial.includes("correios") ||
-            razaoSocial.includes("caixa")
-          );
+          return razaoSocial.includes("empresa") || razaoSocial.includes("correios") || razaoSocial.includes("caixa");
         case "fundacao":
           return razaoSocial.includes("fundação") || razaoSocial.includes("fundacao");
         default:
@@ -184,35 +129,19 @@ serve(async (req) => {
       rawData: { contratos: [], contratacoes: [] },
     };
 
-    const competitorsMap = new Map<
-      string,
-      {
-        name: string;
-        cnpj: string;
-        totalValue: number;
-        contractCount: number;
-        contracts12m: number;
-        contracts24m: number;
-      }
-    >();
-
-    const dedupeByKey = <T,>(items: T[], keyFn: (item: T) => string): T[] => {
-      const seen = new Set<string>();
-      const out: T[] = [];
-      for (const item of items) {
-        const key = keyFn(item);
-        if (!key || seen.has(key)) continue;
-        seen.add(key);
-        out.push(item);
-      }
-      return out;
-    };
+    const competitorsMap = new Map<string, {
+      name: string;
+      cnpj: string;
+      totalValue: number;
+      contractCount: number;
+      contracts12m: number;
+    }>();
 
     const fetchWithPagination = async (
       baseUrl: string,
       label: string,
       maxPages = 3,
-      pageSize = 100,
+      pageSize = 100
     ): Promise<any[]> => {
       const allResults: any[] = [];
       let currentPage = 1;
@@ -220,9 +149,7 @@ serve(async (req) => {
 
       while (hasMore && currentPage <= maxPages) {
         const url = `${baseUrl}&pagina=${currentPage}&tamanhoPagina=${pageSize}`;
-        console.log(`${label} - Página ${currentPage}:`, url);
-
-        const data = await fetchPncpJson(url, `${label} (p${currentPage})`);
+        const data = await fetchPncpJson(url, `${label} p${currentPage}`);
 
         if (!data) {
           hasMore = false;
@@ -241,14 +168,12 @@ serve(async (req) => {
         }
       }
 
-      console.log(
-        `${label} - Total coletado: ${allResults.length} registros em ${currentPage - 1} páginas`,
-      );
+      console.log(`${label} - Total: ${allResults.length} registros`);
       return allResults;
     };
 
-    // Endpoint de contratações/publicacao exige codigoModalidadeContratacao.
-    const MODALIDADES_CONTRATACAO = [6, 8, 9, 10];
+    // Modalidades de contratação - apenas Pregão Eletrônico (mais comum)
+    const MODALIDADES = [6];
 
     for (const term of searchTerms) {
       try {
@@ -256,49 +181,30 @@ serve(async (req) => {
         const termLower = term.toLowerCase();
 
         // =====================
-        // CONTRATOS (chunking <=365 dias)
+        // CONTRATOS (12 meses, dentro do limite de 365 dias)
         // =====================
-        console.log("Iniciando busca de contratos para:", term);
-        let contratos: any[] = [];
+        console.log("Buscando contratos para:", term);
+        
+        const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}`;
+        let contratos = await fetchWithPagination(contratosUrl, "Contratos", 5, 100);
 
-        for (const r of dateRanges24m) {
-          const rStart = formatDate(r.start);
-          const rEnd = formatDate(r.end);
-          const base =
-            `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${rStart}&dataFinal=${rEnd}&termo=${encodedTerm}`;
-          contratos.push(
-            ...await fetchWithPagination(base, `Contratos ${rStart}-${rEnd}`, 3, 100),
-          );
-        }
-
-        contratos = dedupeByKey(contratos, (c: any) => c.numeroControlePNCP || "");
-
-        // Fallback sem termo (ainda com chunking)
+        // Fallback sem termo
         if (contratos.length === 0) {
-          console.log("Buscando contratos (fallback sem termo)");
-          let fallbackAll: any[] = [];
-          for (const r of dateRanges24m) {
-            const rStart = formatDate(r.start);
-            const rEnd = formatDate(r.end);
-            const base =
-              `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${rStart}&dataFinal=${rEnd}`;
-            fallbackAll.push(
-              ...await fetchWithPagination(
-                base,
-                `Contratos (fallback) ${rStart}-${rEnd}`,
-                2,
-                100,
-              ),
-            );
-          }
-          contratos = dedupeByKey(fallbackAll, (c: any) => c.numeroControlePNCP || "");
+          console.log("Fallback: buscando contratos sem termo");
+          const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
+          contratos = await fetchWithPagination(fallbackUrl, "Contratos (fallback)", 3, 100);
         }
 
-        console.log("Total de contratos recebidos:", contratos.length);
-
+        // Filtrar por termo + estado/órgão
+        // O termo pode estar em vários campos
         const filteredContratos = contratos.filter((c: any) => {
           const objeto = (c.objetoContrato || c.objeto || "").toLowerCase();
-          const matchesTerm = objeto.includes(termLower);
+          const descricao = (c.descricao || "").toLowerCase();
+          const fornecedor = (c.razaoSocialFornecedor || c.fornecedor?.razaoSocial || "").toLowerCase();
+          const orgao = (c.orgaoEntidade?.razaoSocial || c.unidadeOrgao?.nomeUnidade || "").toLowerCase();
+          
+          const textToSearch = `${objeto} ${descricao} ${fornecedor} ${orgao}`;
+          const matchesTerm = textToSearch.includes(termLower);
           const matchesStateFilter = matchesState(c.orgaoEntidade || c.unidadeOrgao);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade || c.unidadeOrgao);
           return matchesTerm && matchesStateFilter && matchesOrgan;
@@ -307,97 +213,53 @@ serve(async (req) => {
         console.log(`Contratos filtrados para "${term}":`, filteredContratos.length);
 
         for (const contrato of filteredContratos) {
-          const contratoDate = new Date(
-            contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp ||
-              contrato.dataAssinatura,
-          );
-          const valor =
-            contrato.valorInicial || contrato.valorFinal || contrato.valorTotal || 0;
+          const valor = contrato.valorInicial || contrato.valorFinal || contrato.valorTotal || 0;
 
-          if (contratoDate >= date12MonthsAgo) {
-            aggregatedData.totalValue12Months += valor;
-            aggregatedData.totalQuantity12Months += 1;
-          }
-          if (contratoDate >= date24MonthsAgo) {
-            aggregatedData.totalValue24Months += valor;
-            aggregatedData.totalQuantity24Months += 1;
-          }
+          aggregatedData.totalValue12Months += valor;
+          aggregatedData.totalQuantity12Months += 1;
+          // Também adiciona em 24m (são os mesmos dados neste caso simplificado)
+          aggregatedData.totalValue24Months += valor;
+          aggregatedData.totalQuantity24Months += 1;
 
+          // Mapear concorrentes
           const fornecedorCnpj = contrato.cnpjFornecedor || contrato.fornecedor?.cnpj;
-          const fornecedorNome =
-            contrato.razaoSocialFornecedor || contrato.fornecedor?.razaoSocial ||
-            "Não informado";
+          const fornecedorNome = contrato.razaoSocialFornecedor || contrato.fornecedor?.razaoSocial || "Não informado";
 
           if (fornecedorCnpj) {
             const existing = competitorsMap.get(fornecedorCnpj);
             if (existing) {
               existing.totalValue += valor;
               existing.contractCount += 1;
-              if (contratoDate >= date12MonthsAgo) existing.contracts12m += 1;
-              existing.contracts24m += 1;
+              existing.contracts12m += 1;
             } else {
               competitorsMap.set(fornecedorCnpj, {
                 name: fornecedorNome,
                 cnpj: fornecedorCnpj,
                 totalValue: valor,
                 contractCount: 1,
-                contracts12m: contratoDate >= date12MonthsAgo ? 1 : 0,
-                contracts24m: 1,
+                contracts12m: 1,
               });
             }
           }
 
+          // Adicionar aos contratos de amostra
           if (aggregatedData.sampleContracts.length < 10) {
-            const numeroControle = contrato.numeroControlePNCP || contrato.numero || "";
-            const cnpjOrgao = (contrato.orgaoEntidade?.cnpj || contrato.unidadeOrgao?.cnpj || "")
-              .replace(/\D/g, "");
-            const anoContrato =
-              contrato.anoContrato ||
-              new Date(contrato.dataVigenciaInicio || contrato.dataAssinatura || "")
-                .getFullYear();
-            const sequencialContrato = contrato.sequencialContrato || "";
-
-            let parsedCnpj = cnpjOrgao;
-            let parsedAno = anoContrato;
-            let parsedSequencial = sequencialContrato;
-
-            if (numeroControle && numeroControle.includes("-")) {
-              const match = numeroControle.match(/^(\d+)-(\d+)-(\d+)\/(\d+)$/);
-              if (match) {
-                parsedCnpj = match[1];
-                parsedSequencial = match[3];
-                parsedAno = parseInt(match[4]);
-              }
-            }
-
-            let documentLink = "";
+            const numeroControle = contrato.numeroControlePNCP || "";
+            let documentLink = contrato.linkSistemaOrigem || "";
             let pncpPortalLink = "";
 
-            if (contrato.linkSistemaOrigem && contrato.linkSistemaOrigem.startsWith("http")) {
-              documentLink = contrato.linkSistemaOrigem;
-            }
-
-            if (parsedCnpj && parsedAno && parsedSequencial) {
-              if (!documentLink) {
-                documentLink =
-                  `https://pncp.gov.br/api/pncp/v1/orgaos/${parsedCnpj}/contratos/${parsedAno}/${parsedSequencial}/arquivos/1`;
-              }
-              pncpPortalLink =
-                `https://pncp.gov.br/app/contratos/${parsedCnpj}/2/${parsedAno}/${parsedSequencial}`;
-            } else if (numeroControle) {
+            if (numeroControle) {
               pncpPortalLink = `https://pncp.gov.br/app/contratos/${numeroControle}`;
+              if (!documentLink) documentLink = pncpPortalLink;
             }
 
-            if (!documentLink) {
-              documentLink = pncpPortalLink || "https://pncp.gov.br/app/contratos";
-            }
+            if (!documentLink) documentLink = "https://pncp.gov.br/app/contratos";
 
             aggregatedData.sampleContracts.push({
-              title: contrato.objetoContrato || contrato.objeto || "Contrato sem título",
+              title: contrato.objetoContrato || contrato.objeto || "Contrato",
               value: valor,
               date: contrato.dataVigenciaInicio || contrato.dataPublicacaoPncp || "",
-              organ: contrato.orgaoEntidade?.razaoSocial ||
-                contrato.unidadeOrgao?.nomeUnidade || "Órgão não informado",
+              organ: contrato.orgaoEntidade?.razaoSocial || contrato.unidadeOrgao?.nomeUnidade || "Órgão não informado",
               link: documentLink,
               pncpLink: pncpPortalLink,
             });
@@ -407,124 +269,69 @@ serve(async (req) => {
         }
 
         // =====================
-        // CONTRATAÇÕES (publicacao) - exige modalidade + chunking
+        // CONTRATAÇÕES (exige modalidade)
         // =====================
-        console.log("Iniciando busca de contratações para:", term);
+        console.log("Buscando contratações para:", term);
         let contratacoes: any[] = [];
 
-        for (const r of dateRanges24m) {
-          const rStart = formatDate(r.start);
-          const rEnd = formatDate(r.end);
-
-          for (const codigoModalidadeContratacao of MODALIDADES_CONTRATACAO) {
-            const base =
-              `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${rStart}&dataFinal=${rEnd}&termo=${encodedTerm}&codigoModalidadeContratacao=${codigoModalidadeContratacao}`;
-            contratacoes.push(
-              ...await fetchWithPagination(
-                base,
-                `Contratações M${codigoModalidadeContratacao} ${rStart}-${rEnd}`,
-                2,
-                100,
-              ),
-            );
-          }
+        for (const modalidade of MODALIDADES) {
+          const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&codigoModalidadeContratacao=${modalidade}`;
+          const modalidadeResults = await fetchWithPagination(contratacaoUrl, `Contratações M${modalidade}`, 2, 50);
+          contratacoes.push(...modalidadeResults);
         }
 
-        contratacoes = dedupeByKey(contratacoes, (c: any) => c.numeroControlePNCP || "");
-
-        // Fallback sem termo (mantém modalidade)
+        // Fallback sem termo (ainda com modalidade)
         if (contratacoes.length === 0) {
-          console.log("Buscando contratações (fallback sem termo)");
-          let fallbackAll: any[] = [];
-
-          for (const r of dateRanges24m) {
-            const rStart = formatDate(r.start);
-            const rEnd = formatDate(r.end);
-
-            for (const codigoModalidadeContratacao of MODALIDADES_CONTRATACAO) {
-              const base =
-                `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${rStart}&dataFinal=${rEnd}&codigoModalidadeContratacao=${codigoModalidadeContratacao}`;
-              fallbackAll.push(
-                ...await fetchWithPagination(
-                  base,
-                  `Contratações (fallback) M${codigoModalidadeContratacao} ${rStart}-${rEnd}`,
-                  1,
-                  100,
-                ),
-              );
-            }
+          console.log("Fallback: buscando contratações sem termo");
+          for (const modalidade of MODALIDADES) {
+            const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&codigoModalidadeContratacao=${modalidade}`;
+            const modalidadeResults = await fetchWithPagination(fallbackUrl, `Contratações (fallback) M${modalidade}`, 1, 50);
+            contratacoes.push(...modalidadeResults);
           }
-
-          contratacoes = dedupeByKey(fallbackAll, (c: any) => c.numeroControlePNCP || "");
         }
 
-        console.log("Total de contratações recebidas:", contratacoes.length);
+        // Dedupe por numeroControlePNCP
+        const seen = new Set<string>();
+        contratacoes = contratacoes.filter((c: any) => {
+          const key = c.numeroControlePNCP || "";
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
 
+        // Filtrar por termo + estado/órgão
         const filteredContratacoes = contratacoes.filter((c: any) => {
           const objeto = (c.objeto || c.objetoCompra || "").toLowerCase();
-          const matchesTerm = objeto.includes(termLower);
+          const descricao = (c.descricao || "").toLowerCase();
+          const orgao = (c.orgaoEntidade?.razaoSocial || "").toLowerCase();
+          
+          const textToSearch = `${objeto} ${descricao} ${orgao}`;
+          const matchesTerm = textToSearch.includes(termLower);
           const matchesStateFilter = matchesState(c.orgaoEntidade);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade);
           return matchesTerm && matchesStateFilter && matchesOrgan;
         });
 
-        console.log(
-          `Contratações filtradas para "${term}":`,
-          filteredContratacoes.length,
-        );
+        console.log(`Contratações filtradas para "${term}":`, filteredContratacoes.length);
 
+        // Adicionar aos contratos de amostra
         for (const contratacao of filteredContratacoes.slice(0, 5)) {
           if (aggregatedData.sampleContracts.length >= 10) break;
 
           const numeroControle = contratacao.numeroControlePNCP || "";
-          const cnpjOrgao = (contratacao.orgaoEntidade?.cnpj || "").replace(/\D/g, "");
-          const anoCompra =
-            contratacao.anoCompra ||
-            new Date(contratacao.dataPublicacaoPncp || "").getFullYear();
-          const sequencialCompra = contratacao.sequencialCompra || "";
-
-          let parsedCnpj = cnpjOrgao;
-          let parsedAno = anoCompra;
-          let parsedSequencial = sequencialCompra;
-
-          if (numeroControle && numeroControle.includes("-")) {
-            const match = numeroControle.match(/^(\d+)-(\d+)-(\d+)\/(\d+)$/);
-            if (match) {
-              parsedCnpj = match[1];
-              parsedSequencial = match[3];
-              parsedAno = parseInt(match[4]);
-            }
-          }
-
-          let documentLink = "";
+          let documentLink = contratacao.linkSistemaOrigem || "";
           let pncpPortalLink = "";
 
-          if (
-            contratacao.linkSistemaOrigem &&
-            contratacao.linkSistemaOrigem.startsWith("http")
-          ) {
-            documentLink = contratacao.linkSistemaOrigem;
-          }
-
-          if (parsedCnpj && parsedAno && parsedSequencial) {
-            if (!documentLink) {
-              documentLink =
-                `https://pncp.gov.br/api/pncp/v1/orgaos/${parsedCnpj}/compras/${parsedAno}/${parsedSequencial}/arquivos/1`;
-            }
-            pncpPortalLink =
-              `https://pncp.gov.br/app/editais/${parsedCnpj}/1/${parsedAno}/${parsedSequencial}`;
-          } else if (numeroControle) {
+          if (numeroControle) {
             pncpPortalLink = `https://pncp.gov.br/app/editais/${numeroControle}`;
+            if (!documentLink) documentLink = pncpPortalLink;
           }
 
-          if (!documentLink) {
-            documentLink = pncpPortalLink || "https://pncp.gov.br/app/editais";
-          }
+          if (!documentLink) documentLink = "https://pncp.gov.br/app/editais";
 
           aggregatedData.sampleContracts.push({
             title: contratacao.objeto || contratacao.objetoCompra || "Licitação",
-            value:
-              contratacao.valorTotalEstimado || contratacao.valorTotalHomologado || 0,
+            value: contratacao.valorTotalEstimado || contratacao.valorTotalHomologado || 0,
             date: contratacao.dataPublicacaoPncp || contratacao.dataAberturaProposta || "",
             organ: contratacao.orgaoEntidade?.razaoSocial || "Órgão não informado",
             link: documentLink,
@@ -533,11 +340,13 @@ serve(async (req) => {
         }
 
         aggregatedData.rawData.contratacoes.push(...filteredContratacoes);
+
       } catch (termError) {
         console.error(`Erro ao buscar termo "${term}":`, termError);
       }
     }
 
+    // Converter mapa de concorrentes para array ordenado
     aggregatedData.competitors = Array.from(competitorsMap.values())
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 20)
@@ -546,22 +355,21 @@ serve(async (req) => {
         cnpj: c.cnpj,
         totalValue: c.totalValue,
         contractCount: c.contractCount,
-        period: `${c.contracts12m} contratos (12m) / ${c.contracts24m} contratos (24m)`,
+        period: `${c.contracts12m} contratos (12m)`,
       }));
 
-    if (aggregatedData.totalValue24Months === 0 && aggregatedData.competitors.length === 0) {
-      console.log("Nenhum dado encontrado no PNCP para os termos pesquisados");
-    }
+    const hasResults = 
+      aggregatedData.rawData.contratos.length > 0 || 
+      aggregatedData.rawData.contratacoes.length > 0;
 
     console.log("Dados agregados:", {
       totalValue12Months: aggregatedData.totalValue12Months,
-      totalValue24Months: aggregatedData.totalValue24Months,
       totalQuantity12Months: aggregatedData.totalQuantity12Months,
-      totalQuantity24Months: aggregatedData.totalQuantity24Months,
       competitorsCount: aggregatedData.competitors.length,
       contractsCount: aggregatedData.sampleContracts.length,
       rawContratosCount: aggregatedData.rawData.contratos.length,
       rawContratacoes: aggregatedData.rawData.contratacoes.length,
+      hasResults,
     });
 
     return new Response(
@@ -574,16 +382,14 @@ serve(async (req) => {
           end: dataFinal,
         },
         paginationInfo: {
-          maxPagesPerChunk: { contratos: 3, contratacoes: 2 },
-          pageSizeUsed: 100,
-          chunks: dateRanges24m.length,
-          modalidadesContratacao: MODALIDADES_CONTRATACAO,
-          note:
-            "Busca com paginação + chunking (<=365 dias) e modalidades (contratações) para evitar respostas vazias.",
+          periodMonths: 12,
+          modalidades: MODALIDADES,
+          note: "Busca simplificada: últimos 12 meses, com paginação e modalidades de contratação",
         },
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+
   } catch (error) {
     console.error("Erro na função pncp-market-intelligence:", error);
     return new Response(
@@ -591,7 +397,7 @@ serve(async (req) => {
         error: error instanceof Error ? error.message : "Erro ao buscar dados do PNCP",
         details: String(error),
       }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
