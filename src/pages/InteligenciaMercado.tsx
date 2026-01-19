@@ -1,0 +1,620 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  Search,
+  TrendingUp,
+  Users,
+  FileText,
+  Sparkles,
+  Loader2,
+  Building2,
+  DollarSign,
+  Calendar,
+  ExternalLink,
+  Plus,
+  X,
+  Brain,
+  Target,
+  BarChart3,
+  AlertTriangle,
+  CheckCircle2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+
+interface MarketData {
+  totalValue12Months: number;
+  totalValue24Months: number;
+  totalQuantity12Months: number;
+  totalQuantity24Months: number;
+  competitors: Array<{
+    name: string;
+    cnpj: string;
+    totalValue: number;
+    contractCount: number;
+    period: string;
+  }>;
+  sampleContracts: Array<{
+    title: string;
+    value: number;
+    date: string;
+    organ: string;
+    link: string;
+  }>;
+}
+
+interface AnalysisSection {
+  title: string;
+  content: string;
+  icon: React.ElementType;
+  type: 'summary' | 'opportunity' | 'competition' | 'strategy' | 'warning' | 'action';
+}
+
+const InteligenciaMercado = () => {
+  const [searchTerms, setSearchTerms] = useState<string[]>([]);
+  const [currentTerm, setCurrentTerm] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [analyzingAI, setAnalyzingAI] = useState(false);
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [parsedSections, setParsedSections] = useState<AnalysisSection[]>([]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return "—";
+    try {
+      return new Date(dateStr).toLocaleDateString("pt-BR");
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const addSearchTerm = () => {
+    const term = currentTerm.trim();
+    if (term && !searchTerms.includes(term)) {
+      setSearchTerms([...searchTerms, term]);
+      setCurrentTerm("");
+    }
+  };
+
+  const removeSearchTerm = (term: string) => {
+    setSearchTerms(searchTerms.filter((t) => t !== term));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addSearchTerm();
+    }
+  };
+
+  const parseAnalysisToSections = (text: string): AnalysisSection[] => {
+    const sections: AnalysisSection[] = [];
+    
+    const sectionPatterns = [
+      { regex: /##\s*📊\s*RESUMO DO MERCADO\s*\n([\s\S]*?)(?=##|$)/i, type: 'summary' as const, icon: BarChart3, title: 'Resumo do Mercado' },
+      { regex: /##\s*💰\s*OPORTUNIDADE DE NEGÓCIO\s*\n([\s\S]*?)(?=##|$)/i, type: 'opportunity' as const, icon: DollarSign, title: 'Oportunidade de Negócio' },
+      { regex: /##\s*🏆\s*ANÁLISE DA CONCORRÊNCIA\s*\n([\s\S]*?)(?=##|$)/i, type: 'competition' as const, icon: Users, title: 'Análise da Concorrência' },
+      { regex: /##\s*🎯\s*ESTRATÉGIA DE ABORDAGEM\s*\n([\s\S]*?)(?=##|$)/i, type: 'strategy' as const, icon: Target, title: 'Estratégia de Abordagem' },
+      { regex: /##\s*⚠️\s*PONTOS DE ATENÇÃO\s*\n([\s\S]*?)(?=##|$)/i, type: 'warning' as const, icon: AlertTriangle, title: 'Pontos de Atenção' },
+      { regex: /##\s*✅\s*PRÓXIMOS PASSOS RECOMENDADOS\s*\n([\s\S]*?)(?=##|$)/i, type: 'action' as const, icon: CheckCircle2, title: 'Próximos Passos' },
+    ];
+
+    for (const pattern of sectionPatterns) {
+      const match = text.match(pattern.regex);
+      if (match && match[1]) {
+        sections.push({
+          title: pattern.title,
+          content: match[1].trim(),
+          icon: pattern.icon,
+          type: pattern.type,
+        });
+      }
+    }
+
+    return sections;
+  };
+
+  const getSectionColor = (type: AnalysisSection['type']) => {
+    switch (type) {
+      case 'summary': return 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300';
+      case 'opportunity': return 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-300';
+      case 'competition': return 'bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300';
+      case 'strategy': return 'bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-300';
+      case 'warning': return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-300';
+      case 'action': return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300';
+      default: return 'bg-muted';
+    }
+  };
+
+  const searchMarketData = async () => {
+    if (searchTerms.length === 0) {
+      toast.error("Adicione pelo menos um produto ou serviço para pesquisar");
+      return;
+    }
+
+    setLoading(true);
+    setMarketData(null);
+    setAiAnalysis(null);
+    setParsedSections([]);
+
+    try {
+      // Buscar dados do PNCP
+      const { data, error } = await supabase.functions.invoke("pncp-market-intelligence", {
+        body: { searchTerms },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.success && data?.data) {
+        setMarketData(data.data);
+        toast.success("Dados de mercado carregados com sucesso!");
+      } else {
+        toast.error("Nenhum dado encontrado para os termos pesquisados");
+      }
+    } catch (error: any) {
+      console.error("Erro ao buscar dados:", error);
+      toast.error("Erro ao buscar dados do mercado. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateAIAnalysis = async () => {
+    if (!marketData) {
+      toast.error("Primeiro busque os dados de mercado");
+      return;
+    }
+
+    setAnalyzingAI(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-market-intelligence", {
+        body: { marketData, searchTerms },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.success && data?.analysis) {
+        setAiAnalysis(data.analysis);
+        const sections = parseAnalysisToSections(data.analysis);
+        setParsedSections(sections);
+        toast.success("Análise de IA gerada com sucesso!");
+      }
+    } catch (error: any) {
+      console.error("Erro ao gerar análise:", error);
+      toast.error("Erro ao gerar análise de IA. Tente novamente.");
+    } finally {
+      setAnalyzingAI(false);
+    }
+  };
+
+  const renderMarkdown = (text: string) => {
+    // Simple markdown rendering
+    return text
+      .split('\n')
+      .map((line, i) => {
+        // Bold
+        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Italic
+        line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        // Lists
+        if (line.startsWith('- ')) {
+          return `<li class="ml-4">${line.substring(2)}</li>`;
+        }
+        if (/^\d+\.\s/.test(line)) {
+          return `<li class="ml-4 list-decimal">${line.replace(/^\d+\.\s/, '')}</li>`;
+        }
+        return line ? `<p class="mb-2">${line}</p>` : '<br/>';
+      })
+      .join('');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Brain className="h-8 w-8 text-primary" />
+            Inteligência de Mercado
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Analise dados de compras governamentais e identifique oportunidades de vendas
+          </p>
+        </div>
+      </div>
+
+      {/* Search Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Pesquisar Produtos/Serviços
+          </CardTitle>
+          <CardDescription>
+            Digite os produtos ou serviços que você quer analisar no mercado governamental
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ex: software de gestão, consultoria em TI, equipamentos de informática..."
+              value={currentTerm}
+              onChange={(e) => setCurrentTerm(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1"
+            />
+            <Button onClick={addSearchTerm} variant="outline" size="icon">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {searchTerms.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {searchTerms.map((term) => (
+                <Badge key={term} variant="secondary" className="px-3 py-1 text-sm">
+                  {term}
+                  <button
+                    onClick={() => removeSearchTerm(term)}
+                    className="ml-2 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              onClick={searchMarketData}
+              disabled={loading || searchTerms.length === 0}
+              className="flex-1"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Buscando dados...
+                </>
+              ) : (
+                <>
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar Dados do PNCP
+                </>
+              )}
+            </Button>
+
+            {marketData && (
+              <Button
+                onClick={generateAIAnalysis}
+                disabled={analyzingAI}
+                variant="default"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                {analyzingAI ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analisando...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Gerar Análise com IA
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Section */}
+      {marketData && (
+        <div className="grid gap-6">
+          {/* Summary Cards */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-blue-500" />
+                  Valor (12 meses)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {formatCurrency(marketData.totalValue12Months)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {marketData.totalQuantity12Months} contratos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                  Valor (24 meses)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {formatCurrency(marketData.totalValue24Months)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {marketData.totalQuantity24Months} contratos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4 text-purple-500" />
+                  Concorrentes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                  {marketData.competitors.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  empresas identificadas
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-orange-500" />
+                  Editais
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                  {marketData.sampleContracts.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  exemplos disponíveis
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tabs for detailed data and AI analysis */}
+          <Tabs defaultValue="data" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="data">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dados de Mercado
+              </TabsTrigger>
+              <TabsTrigger value="competitors">
+                <Users className="h-4 w-4 mr-2" />
+                Concorrentes
+              </TabsTrigger>
+              <TabsTrigger value="ai" disabled={!aiAnalysis}>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Análise IA
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="data" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Exemplos de Editais e Contratos</CardTitle>
+                  <CardDescription>
+                    Contratos e licitações encontrados para os termos pesquisados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {marketData.sampleContracts.length > 0 ? (
+                    <div className="space-y-4">
+                      {marketData.sampleContracts.map((contract, index) => (
+                        <div
+                          key={index}
+                          className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm line-clamp-2">
+                                {contract.title}
+                              </h4>
+                              <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Building2 className="h-3 w-3" />
+                                  {contract.organ}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {formatDate(contract.date)}
+                                </span>
+                                <span className="flex items-center gap-1 font-medium text-foreground">
+                                  <DollarSign className="h-3 w-3" />
+                                  {formatCurrency(contract.value)}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="shrink-0"
+                            >
+                              <a
+                                href={contract.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Ver
+                              </a>
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      Nenhum edital encontrado para os termos pesquisados
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="competitors" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Concorrentes Identificados</CardTitle>
+                  <CardDescription>
+                    Empresas que vendem produtos/serviços similares para o governo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {marketData.competitors.length > 0 ? (
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-3">
+                        {marketData.competitors.map((competitor, index) => (
+                          <div
+                            key={index}
+                            className="p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    #{index + 1}
+                                  </Badge>
+                                  <h4 className="font-medium">{competitor.name}</h4>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  CNPJ: {competitor.cnpj}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-lg">
+                                  {formatCurrency(competitor.totalValue)}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {competitor.period}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      Nenhum concorrente identificado
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="ai" className="mt-4">
+              {aiAnalysis && parsedSections.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-purple-500" />
+                      Análise Estratégica por IA
+                    </CardTitle>
+                    <CardDescription>
+                      Insights e recomendações baseados nos dados de mercado
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Accordion type="multiple" defaultValue={parsedSections.map((_, i) => `section-${i}`)} className="space-y-3">
+                      {parsedSections.map((section, index) => {
+                        const Icon = section.icon;
+                        return (
+                          <AccordionItem
+                            key={index}
+                            value={`section-${index}`}
+                            className={`border rounded-lg px-4 ${getSectionColor(section.type)}`}
+                          >
+                            <AccordionTrigger className="hover:no-underline py-4">
+                              <div className="flex items-center gap-3">
+                                <Icon className="h-5 w-5" />
+                                <span className="font-semibold">{section.title}</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-2 pb-4">
+                              <div
+                                className="prose prose-sm dark:prose-invert max-w-none"
+                                dangerouslySetInnerHTML={{ __html: renderMarkdown(section.content) }}
+                              />
+                            </AccordionContent>
+                          </AccordionItem>
+                        );
+                      })}
+                    </Accordion>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Sparkles className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">
+                      Clique em "Gerar Análise com IA" para obter insights estratégicos
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!marketData && !loading && (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+            <h3 className="text-lg font-medium mb-2">
+              Descubra Oportunidades de Mercado
+            </h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Adicione produtos ou serviços acima para analisar dados de compras
+              governamentais e identificar oportunidades de vendas no setor público.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default InteligenciaMercado;

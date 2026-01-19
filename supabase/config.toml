@@ -32,3 +32,9 @@ verify_jwt = false
 
 [functions.analyze-prospect]
 verify_jwt = false
+
+[functions.pncp-market-intelligence]
+verify_jwt = false
+
+[functions.analyze-market-intelligence]
+verify_jwt = false
