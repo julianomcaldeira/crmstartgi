@@ -115,11 +115,12 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch all sellers to map names to IDs
+    // Fetch all sellers to map names to IDs (excluding deleted users)
     console.log("Buscando vendedores...");
     const { data: sellersData, error: sellersError } = await supabase
       .from("profiles")
-      .select("id, full_name, email");
+      .select("id, full_name, email")
+      .or("is_deleted.is.null,is_deleted.eq.false");
     
     if (sellersError) {
       console.error("Erro ao buscar vendedores:", sellersError);

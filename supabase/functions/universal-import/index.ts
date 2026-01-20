@@ -277,8 +277,8 @@ async function processImportChunk(
   let duplicates = 0;
   const errorMessages: string[] = [];
 
-  // Fetch sellers for mapping (once per chunk)
-  const { data: sellers } = await supabase.from('profiles').select('id, full_name');
+  // Fetch sellers for mapping (once per chunk, excluding deleted users)
+  const { data: sellers } = await supabase.from('profiles').select('id, full_name').or('is_deleted.is.null,is_deleted.eq.false');
   const sellerMap: Map<string, string> = new Map(
     sellers?.map((s: any) => [String(s.full_name || '').toLowerCase(), s.id]) || []
   );

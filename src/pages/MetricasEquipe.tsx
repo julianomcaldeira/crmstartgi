@@ -81,10 +81,11 @@ const MetricasEquipe = () => {
       const startDateStr = format(startDate, "yyyy-MM-dd");
       const endDateStr = format(endDate, "yyyy-MM-dd");
 
-      // Fetch all sellers
+      // Fetch all sellers (excluding deleted users)
       const { data: sellers, error: sellersError } = await supabase
         .from("profiles")
         .select("id, full_name, email")
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("full_name");
 
       if (sellersError) throw sellersError;

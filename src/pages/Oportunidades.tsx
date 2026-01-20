@@ -222,7 +222,7 @@ const Oportunidades = () => {
           `)
           .order("created_at", { ascending: false }),
         supabase.from("clients").select("id, company_name, trade_name"),
-        supabase.from("profiles").select("id, full_name"),
+        supabase.from("profiles").select("id, full_name").or("is_deleted.is.null,is_deleted.eq.false"),
         supabase.from("products").select("id, name, description").eq("active", true).order("name", { ascending: true }),
       ]);
 
