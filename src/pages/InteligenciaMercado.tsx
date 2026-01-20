@@ -599,17 +599,15 @@ const InteligenciaMercado = () => {
       // Summary Table
       autoTable(doc, {
         startY: yPos,
-        head: [["Métrica", "Últimos 12 meses", "Últimos 24 meses"]],
+        head: [["Métrica", "Últimos 12 meses"]],
         body: [
-          ["Valor Total", formatCurrency(marketData.totalValue12Months), formatCurrency(marketData.totalValue24Months)],
-          ["Qtd. Contratos", marketData.totalQuantity12Months.toString(), marketData.totalQuantity24Months.toString()],
-          ["Ticket Médio", 
-            marketData.totalQuantity12Months > 0 
-              ? formatCurrency(marketData.totalValue12Months / marketData.totalQuantity12Months) 
+          ["Valor Total", formatCurrency(marketData.totalValue12Months)],
+          ["Qtd. Contratos", marketData.totalQuantity12Months.toString()],
+          [
+            "Ticket Médio",
+            marketData.totalQuantity12Months > 0
+              ? formatCurrency(marketData.totalValue12Months / marketData.totalQuantity12Months)
               : "—",
-            marketData.totalQuantity24Months > 0 
-              ? formatCurrency(marketData.totalValue24Months / marketData.totalQuantity24Months) 
-              : "—"
           ],
         ],
         theme: "striped",
@@ -991,17 +989,6 @@ const InteligenciaMercado = () => {
                   </tr>
                   <tr className="border-b hover:bg-muted/30">
                     <td className="p-3 font-medium flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
-                      Valor Total (24m)
-                    </td>
-                    {getComparisonSearches().map((search) => (
-                      <td key={search.id} className="p-3">
-                        <div className="font-semibold">{formatCurrency(search.total_value_24m || 0)}</div>
-                      </td>
-                    ))}
-                  </tr>
-                  <tr className="border-b hover:bg-muted/30">
-                    <td className="p-3 font-medium flex items-center gap-2">
                       <FileText className="h-4 w-4 text-purple-600" />
                       Contratos (12m)
                     </td>
@@ -1024,17 +1011,6 @@ const InteligenciaMercado = () => {
                         </td>
                       );
                     })}
-                  </tr>
-                  <tr className="border-b hover:bg-muted/30">
-                    <td className="p-3 font-medium flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-orange-600" />
-                      Contratos (24m)
-                    </td>
-                    {getComparisonSearches().map((search) => (
-                      <td key={search.id} className="p-3">
-                        <div className="font-semibold">{search.total_quantity_24m || 0}</div>
-                      </td>
-                    ))}
                   </tr>
                   <tr className="border-b hover:bg-muted/30">
                     <td className="p-3 font-medium flex items-center gap-2">
@@ -1367,7 +1343,7 @@ const InteligenciaMercado = () => {
       {marketData && (
         <div className="grid gap-6">
           {/* Summary Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-3">
             <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -1381,23 +1357,6 @@ const InteligenciaMercado = () => {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {marketData.totalQuantity12Months} contratos
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  Valor (24 meses)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                  {formatCurrency(marketData.totalValue24Months)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {marketData.totalQuantity24Months} contratos
                 </p>
               </CardContent>
             </Card>

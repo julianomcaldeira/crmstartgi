@@ -290,16 +290,26 @@ serve(async (req) => {
 
           // Adicionar aos contratos de amostra
           if (aggregatedData.sampleContracts.length < 10) {
-            const numeroControle = contrato.numeroControlePNCP || "";
+            const numeroControle = contrato.numeroControlePNCP || contrato.numeroControlePncp || "";
+            const numeroControleCompra =
+              contrato.numeroControlePncpCompra ||
+              contrato.numeroControlePNCPCompra ||
+              contrato.numeroControlePncpCompraCompra ||
+              "";
+
+            // PNCP (contrato)
+            // Observação: o identificador vem com "/ANO"; manter como 1 único segmento (encode) evita rotas quebradas.
+            const pncpPortalLink = numeroControle
+              ? `https://pncp.gov.br/app/contratos/${encodeURIComponent(numeroControle)}`
+              : "https://pncp.gov.br/app/contratos";
+
+            // Documento: prioriza sistema de origem; se não existir, abre o EDITAL/COMPRA relacionado
+            // (nos retornos do endpoint de contratos, o campo mais estável para documentos é o numeroControlePncpCompra)
             let documentLink = contrato.linkSistemaOrigem || "";
-            let pncpPortalLink = "";
-
-            if (numeroControle) {
-              pncpPortalLink = `https://pncp.gov.br/app/contratos/${numeroControle}`;
-              if (!documentLink) documentLink = pncpPortalLink;
+            if (!documentLink && numeroControleCompra) {
+              documentLink = `https://pncp.gov.br/app/editais/${encodeURIComponent(numeroControleCompra)}`;
             }
-
-            if (!documentLink) documentLink = "https://pncp.gov.br/app/contratos";
+            if (!documentLink) documentLink = pncpPortalLink;
 
             aggregatedData.sampleContracts.push({
               title: contrato.objetoContrato || contrato.objeto || "Contrato",
