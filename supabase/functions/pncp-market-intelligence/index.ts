@@ -117,9 +117,19 @@ serve(async (req) => {
 
     const tokenize = (term: string) => normalizeText(term).split(" ").filter(Boolean);
 
-    const matchesAllTokens = (text: string, tokens: string[]) => {
+    // Matching mais tolerante:
+    // - Se o PNCP já recebeu `termo=...`, NÃO refiltramos por termo (evita zerar resultados)
+    // - Quando usamos fallback sem termo, validamos por frase OU por pelo menos 1 token.
+    const matchesAnyToken = (textNormalized: string, tokens: string[]) => {
       if (tokens.length === 0) return true;
-      return tokens.every((t) => text.includes(t));
+      return tokens.some((t) => textNormalized.includes(t));
+    };
+
+    const matchesSearchTermFallback = (textNormalized: string, originalTerm: string, tokens: string[]) => {
+      if (tokens.length === 0) return true;
+      const termNormalized = normalizeText(originalTerm);
+      if (termNormalized && textNormalized.includes(termNormalized)) return true;
+      return matchesAnyToken(textNormalized, tokens);
     };
 
     const matchesState = (organ: any): boolean => {
@@ -218,10 +228,12 @@ serve(async (req) => {
         console.log("Buscando contratos para:", term, "tokens:", termTokens);
         
         const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}`;
+        let usedContratosFallback = false;
         let contratos = await fetchWithPagination(contratosUrl, "Contratos", 5, 100);
 
         // Fallback sem termo
         if (contratos.length === 0) {
+          usedContratosFallback = true;
           console.log("Fallback: buscando contratos sem termo");
           const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
           contratos = await fetchWithPagination(fallbackUrl, "Contratos (fallback)", 3, 100);
@@ -235,7 +247,10 @@ serve(async (req) => {
           const orgao = c.orgaoEntidade?.razaoSocial || c.unidadeOrgao?.nomeUnidade || "";
           
           const textNormalized = normalizeText(`${objeto} ${descricao} ${fornecedor} ${orgao}`);
-          const matchesTerm = matchesAllTokens(textNormalized, termTokens);
+          // Se não usamos fallback, confiamos no filtro do PNCP (termo=...)
+          const matchesTerm = usedContratosFallback
+            ? matchesSearchTermFallback(textNormalized, term, termTokens)
+            : true;
           const matchesStateFilter = matchesState(c.orgaoEntidade || c.unidadeOrgao);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade || c.unidadeOrgao);
           return matchesTerm && matchesStateFilter && matchesOrgan;
@@ -304,6 +319,7 @@ serve(async (req) => {
         // =====================
         console.log("Buscando contratações para:", term);
         let contratacoes: any[] = [];
+        let usedContratacoesFallback = false;
 
         for (const modalidade of MODALIDADES) {
           const contratacaoUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}&codigoModalidadeContratacao=${modalidade}`;
@@ -313,6 +329,7 @@ serve(async (req) => {
 
         // Fallback sem termo (ainda com modalidade)
         if (contratacoes.length === 0) {
+          usedContratacoesFallback = true;
           console.log("Fallback: buscando contratações sem termo");
           for (const modalidade of MODALIDADES) {
             const fallbackUrl = `https://pncp.gov.br/api/consulta/v1/contratacoes/publicacao?dataInicial=${dataInicial}&dataFinal=${dataFinal}&codigoModalidadeContratacao=${modalidade}`;
@@ -337,7 +354,9 @@ serve(async (req) => {
           const orgao = c.orgaoEntidade?.razaoSocial || "";
           
           const textNormalized = normalizeText(`${objeto} ${descricao} ${orgao}`);
-          const matchesTerm = matchesAllTokens(textNormalized, termTokens);
+          const matchesTerm = usedContratacoesFallback
+            ? matchesSearchTermFallback(textNormalized, term, termTokens)
+            : true;
           const matchesStateFilter = matchesState(c.orgaoEntidade);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade);
           return matchesTerm && matchesStateFilter && matchesOrgan;
