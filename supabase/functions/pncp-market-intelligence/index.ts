@@ -210,12 +210,12 @@ serve(async (req) => {
     for (const term of searchTerms) {
       try {
         const encodedTerm = encodeURIComponent(term);
-        const termLower = term.toLowerCase();
+        const termTokens = tokenize(term);
 
         // =====================
         // CONTRATOS (12 meses, dentro do limite de 365 dias)
         // =====================
-        console.log("Buscando contratos para:", term);
+        console.log("Buscando contratos para:", term, "tokens:", termTokens);
         
         const contratosUrl = `https://pncp.gov.br/api/consulta/v1/contratos?dataInicial=${dataInicial}&dataFinal=${dataFinal}&termo=${encodedTerm}`;
         let contratos = await fetchWithPagination(contratosUrl, "Contratos", 5, 100);
@@ -227,16 +227,15 @@ serve(async (req) => {
           contratos = await fetchWithPagination(fallbackUrl, "Contratos (fallback)", 3, 100);
         }
 
-        // Filtrar por termo + estado/órgão
-        // O termo pode estar em vários campos
+        // Filtrar por termo (normalizado) + estado/órgão
         const filteredContratos = contratos.filter((c: any) => {
-          const objeto = (c.objetoContrato || c.objeto || "").toLowerCase();
-          const descricao = (c.descricao || "").toLowerCase();
-          const fornecedor = (c.razaoSocialFornecedor || c.fornecedor?.razaoSocial || "").toLowerCase();
-          const orgao = (c.orgaoEntidade?.razaoSocial || c.unidadeOrgao?.nomeUnidade || "").toLowerCase();
+          const objeto = c.objetoContrato || c.objeto || "";
+          const descricao = c.descricao || "";
+          const fornecedor = c.razaoSocialFornecedor || c.fornecedor?.razaoSocial || "";
+          const orgao = c.orgaoEntidade?.razaoSocial || c.unidadeOrgao?.nomeUnidade || "";
           
-          const textToSearch = `${objeto} ${descricao} ${fornecedor} ${orgao}`;
-          const matchesTerm = textToSearch.includes(termLower);
+          const textNormalized = normalizeText(`${objeto} ${descricao} ${fornecedor} ${orgao}`);
+          const matchesTerm = matchesAllTokens(textNormalized, termTokens);
           const matchesStateFilter = matchesState(c.orgaoEntidade || c.unidadeOrgao);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade || c.unidadeOrgao);
           return matchesTerm && matchesStateFilter && matchesOrgan;
@@ -331,14 +330,14 @@ serve(async (req) => {
           return true;
         });
 
-        // Filtrar por termo + estado/órgão
+        // Filtrar por termo (normalizado) + estado/órgão
         const filteredContratacoes = contratacoes.filter((c: any) => {
-          const objeto = (c.objeto || c.objetoCompra || "").toLowerCase();
-          const descricao = (c.descricao || "").toLowerCase();
-          const orgao = (c.orgaoEntidade?.razaoSocial || "").toLowerCase();
+          const objeto = c.objeto || c.objetoCompra || "";
+          const descricao = c.descricao || "";
+          const orgao = c.orgaoEntidade?.razaoSocial || "";
           
-          const textToSearch = `${objeto} ${descricao} ${orgao}`;
-          const matchesTerm = textToSearch.includes(termLower);
+          const textNormalized = normalizeText(`${objeto} ${descricao} ${orgao}`);
+          const matchesTerm = matchesAllTokens(textNormalized, termTokens);
           const matchesStateFilter = matchesState(c.orgaoEntidade);
           const matchesOrgan = matchesOrganType(c.orgaoEntidade);
           return matchesTerm && matchesStateFilter && matchesOrgan;
