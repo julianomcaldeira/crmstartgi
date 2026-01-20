@@ -67,27 +67,59 @@ serve(async (req) => {
       "User-Agent": "Mozilla/5.0 (compatible; EvoluaCRM/1.0)",
     };
 
+    const FETCH_TIMEOUT_MS = 20_000;
+
     const fetchPncpJson = async (url: string, label: string) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      const startedAt = Date.now();
+
       try {
         console.log(`Fetching ${label}:`, url);
-        const res = await fetch(url, { headers: pncpHeaders });
+
+        const res = await fetch(url, {
+          headers: pncpHeaders,
+          signal: controller.signal,
+        });
+
         const text = await res.text();
+        const ms = Date.now() - startedAt;
 
         if (!res.ok) {
-          console.log(`${label} HTTP ${res.status}:`, text.slice(0, 300));
+          console.log(`${label} HTTP ${res.status} (${ms}ms):`, text.slice(0, 300));
           return null;
         }
 
         try {
           return JSON.parse(text);
         } catch (e) {
-          console.log(`${label} JSON inválido:`, String(e));
+          console.log(`${label} JSON inválido (${ms}ms):`, String(e), text.slice(0, 200));
           return null;
         }
       } catch (e) {
-        console.log(`${label} Erro de fetch:`, String(e));
+        const ms = Date.now() - startedAt;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.log(`${label} Erro de fetch (${ms}ms):`, msg);
         return null;
+      } finally {
+        clearTimeout(timeoutId);
       }
+    };
+
+    const normalizeText = (value: unknown) => {
+      return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    };
+
+    const tokenize = (term: string) => normalizeText(term).split(" ").filter(Boolean);
+
+    const matchesAllTokens = (text: string, tokens: string[]) => {
+      if (tokens.length === 0) return true;
+      return tokens.every((t) => text.includes(t));
     };
 
     const matchesState = (organ: any): boolean => {
