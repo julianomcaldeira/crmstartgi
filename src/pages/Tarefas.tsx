@@ -203,7 +203,7 @@ const Tarefas = () => {
         tasksQuery,
         supabase.from("clients").select("id, company_name, trade_name, cnpj"),
         supabase.from("opportunities").select("id, title"),
-        supabase.from("profiles").select("id, full_name"),
+        supabase.from("profiles").select("id, full_name").or("is_deleted.is.null,is_deleted.eq.false"),
       ]);
 
       if (tasksResponse.error) throw tasksResponse.error;

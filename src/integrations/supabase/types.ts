@@ -1261,6 +1261,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_deleted: boolean | null
           phone: string | null
           updated_at: string | null
         }
@@ -1270,6 +1271,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_deleted?: boolean | null
           phone?: string | null
           updated_at?: string | null
         }
@@ -1279,6 +1281,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_deleted?: boolean | null
           phone?: string | null
           updated_at?: string | null
         }

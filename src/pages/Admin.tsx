@@ -155,6 +155,7 @@ const Admin = () => {
         *,
         user_roles (role)
       `)
+      .or("is_deleted.is.null,is_deleted.eq.false")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -280,15 +281,14 @@ const Admin = () => {
         console.error("Erro ao deletar role:", roleError);
       }
 
-      // Delete profile
+      // Soft delete: mark profile as deleted instead of actually deleting
       const { error: profileError } = await supabase
         .from("profiles")
-        .delete()
+        .update({ is_deleted: true })
         .eq("id", userToDelete.id);
 
       if (profileError) {
-        // If we can't delete profile due to RLS or constraints, just remove the role
-        console.error("Erro ao deletar profile:", profileError);
+        console.error("Erro ao marcar profile como deletado:", profileError);
         toast.error("Não foi possível excluir o usuário completamente. O acesso foi cancelado.");
         setDeleteDialogOpen(false);
         setUserToDelete(null);

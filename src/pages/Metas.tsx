@@ -91,6 +91,7 @@ const Metas = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email")
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("full_name");
 
       if (error) throw error;

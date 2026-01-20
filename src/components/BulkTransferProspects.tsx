@@ -47,10 +47,11 @@ export const BulkTransferProspects = () => {
   const fetchUsersWithCounts = async () => {
     setLoading(true);
     try {
-      // Fetch all users
+      // Fetch all users (excluding deleted users)
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email")
+        .or("is_deleted.is.null,is_deleted.eq.false")
         .order("full_name");
 
       if (profilesError) throw profilesError;
