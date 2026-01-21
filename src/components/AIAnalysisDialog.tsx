@@ -229,13 +229,16 @@ const AIAnalysisDialog = ({
   const parseAnalysisIntoSections = (text: string): AnalysisSection[] => {
     const sections: AnalysisSection[] = [];
     
+    // Clean up the text - remove horizontal rules
+    let cleanText = text.replace(/^---+$/gm, '').trim();
+    
     // Split by main headers (## or #)
     const headerRegex = /^(#{1,2})\s+(.+)$/gm;
     let lastIndex = 0;
     let matches: RegExpExecArray | null;
     const allMatches: { index: number; title: string; level: number }[] = [];
     
-    while ((matches = headerRegex.exec(text)) !== null) {
+    while ((matches = headerRegex.exec(cleanText)) !== null) {
       allMatches.push({
         index: matches.index,
         title: matches[2].trim(),
@@ -243,14 +246,27 @@ const AIAnalysisDialog = ({
       });
     }
     
-    // If no headers found, return single section
+    // If no headers found, return single section with full content
     if (allMatches.length === 0) {
       return [{
         title: "Análise Completa",
-        content: text,
+        content: cleanText,
         icon: <Sparkles className="h-4 w-4" />,
         priority: 'medium'
       }];
+    }
+    
+    // Check if there's content before the first header
+    if (allMatches.length > 0 && allMatches[0].index > 0) {
+      const introContent = cleanText.substring(0, allMatches[0].index).trim();
+      if (introContent) {
+        sections.push({
+          title: "Visão Geral",
+          content: introContent,
+          icon: <Sparkles className="h-4 w-4" />,
+          priority: 'medium'
+        });
+      }
     }
     
     // Extract content between headers
@@ -259,10 +275,10 @@ const AIAnalysisDialog = ({
       const nextMatch = allMatches[i + 1];
       
       // Get content between this header and next (or end of text)
-      const headerLine = text.substring(match.index).split('\n')[0];
+      const headerLine = cleanText.substring(match.index).split('\n')[0];
       const contentStart = match.index + headerLine.length + 1;
-      const contentEnd = nextMatch ? nextMatch.index : text.length;
-      const content = text.substring(contentStart, contentEnd).trim();
+      const contentEnd = nextMatch ? nextMatch.index : cleanText.length;
+      const content = cleanText.substring(contentStart, contentEnd).trim();
       
       if (content) {
         sections.push({
@@ -270,19 +286,6 @@ const AIAnalysisDialog = ({
           content: content,
           icon: getSectionIcon(match.title),
           priority: getSectionPriority(match.title)
-        });
-      }
-    }
-    
-    // Check if there's content before the first header
-    if (allMatches.length > 0 && allMatches[0].index > 0) {
-      const introContent = text.substring(0, allMatches[0].index).trim();
-      if (introContent) {
-        sections.unshift({
-          title: "Visão Geral",
-          content: introContent,
-          icon: <Sparkles className="h-4 w-4" />,
-          priority: 'medium'
         });
       }
     }
@@ -388,14 +391,22 @@ const AIAnalysisDialog = ({
     const sections = parseAnalysisIntoSections(text);
     
     if (sections.length === 1 && sections[0].title === "Análise Completa") {
-      // Fallback to simple rendering if no sections
+      // Fallback to simple rendering if no sections - show full text
       return (
-        <div 
-          className="ai-analysis-content text-sm leading-relaxed"
-          dangerouslySetInnerHTML={{ 
-            __html: `<div class="space-y-2"><p class="mb-3 text-sm leading-relaxed text-foreground/90">${renderMarkdown(text)}</p></div>` 
-          }}
-        />
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg border bg-card">
+            <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Análise Completa
+            </h3>
+            <div 
+              className="ai-analysis-content text-sm leading-relaxed whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ 
+                __html: renderMarkdown(sections[0].content)
+              }}
+            />
+          </div>
+        </div>
       );
     }
     
@@ -417,9 +428,9 @@ const AIAnalysisDialog = ({
             </AccordionTrigger>
             <AccordionContent className="pb-4">
               <div 
-                className="ai-analysis-content text-sm leading-relaxed pt-2"
+                className="ai-analysis-content text-sm leading-relaxed pt-2 whitespace-pre-wrap"
                 dangerouslySetInnerHTML={{ 
-                  __html: `<div class="space-y-1"><p class="mb-3 text-sm leading-relaxed text-foreground/90">${renderMarkdown(section.content)}</p></div>` 
+                  __html: renderMarkdown(section.content)
                 }}
               />
             </AccordionContent>
