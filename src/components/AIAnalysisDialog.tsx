@@ -510,7 +510,10 @@ const AIAnalysisDialog = ({
               <div className="flex flex-col items-center justify-center w-full py-12 gap-4">
                 <History className="h-16 w-16 text-muted-foreground/50" />
                 <p className="text-muted-foreground">Nenhuma análise realizada ainda.</p>
-                <Button onClick={() => setActiveTab("new")}>
+                <Button onClick={() => {
+                  setActiveTab("new");
+                  handleAnalyze();
+                }}>
                   <Sparkles className="mr-2 h-4 w-4" />
                   Criar Primeira Análise
                 </Button>
