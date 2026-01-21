@@ -391,7 +391,7 @@ const AIAnalysisDialog = ({
     const sections = parseAnalysisIntoSections(text);
     
     if (sections.length === 1 && sections[0].title === "Análise Completa") {
-      // Fallback to simple rendering if no sections - show full text
+      // Fallback to simple rendering if no sections - show full text with markdown
       return (
         <div className="space-y-4">
           <div className="p-4 rounded-lg border bg-card">
@@ -399,9 +399,10 @@ const AIAnalysisDialog = ({
               <Sparkles className="h-4 w-4 text-primary" />
               Análise Completa
             </h3>
-            <div className="ai-analysis-content text-sm leading-relaxed whitespace-pre-wrap text-foreground">
-              {sections[0].content}
-            </div>
+            <div 
+              className="ai-analysis-content text-sm leading-relaxed text-foreground prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(sections[0].content) }}
+            />
           </div>
         </div>
       );
@@ -424,9 +425,10 @@ const AIAnalysisDialog = ({
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-4">
-              <div className="ai-analysis-content text-sm leading-relaxed pt-2 whitespace-pre-wrap text-foreground">
-                {section.content}
-              </div>
+              <div 
+                className="ai-analysis-content text-sm leading-relaxed pt-2 text-foreground prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(section.content) }}
+              />
             </AccordionContent>
           </AccordionItem>
         ))}
@@ -572,22 +574,33 @@ const AIAnalysisDialog = ({
                 {/* Analysis Detail */}
                 <div className="flex-1 min-h-0 flex flex-col">
                   {selectedHistoryItem ? (
-                    <ScrollArea className="flex-1 min-h-0">
-                      <div className="pr-4">
-                        <div className="mb-4 p-3 bg-muted/30 rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            Análise realizada em{" "}
-                            <strong>
-                              {format(new Date(selectedHistoryItem.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
-                            </strong>
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Contexto: {selectedHistoryItem.opportunities_count} oportunidades, {selectedHistoryItem.tasks_count} tarefas, {selectedHistoryItem.contacts_count} contatos
-                          </p>
+                    <>
+                      <ScrollArea className="flex-1 min-h-0">
+                        <div className="pr-4">
+                          <div className="mb-4 p-3 bg-muted/30 rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              Análise realizada em{" "}
+                              <strong>
+                                {format(new Date(selectedHistoryItem.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                              </strong>
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Contexto: {selectedHistoryItem.opportunities_count} oportunidades, {selectedHistoryItem.tasks_count} tarefas, {selectedHistoryItem.contacts_count} contatos
+                            </p>
+                          </div>
+                          {renderAnalysisContent(selectedHistoryItem.analysis)}
                         </div>
-                        {renderAnalysisContent(selectedHistoryItem.analysis)}
+                      </ScrollArea>
+                      <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                        <Button variant="outline" onClick={() => { setActiveTab("new"); handleAnalyze(); }}>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Nova Análise
+                        </Button>
+                        <Button variant="default" onClick={() => handleOpenChange(false)}>
+                          Fechar
+                        </Button>
                       </div>
-                    </ScrollArea>
+                    </>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                       <History className="h-12 w-12 mb-2 opacity-50" />
