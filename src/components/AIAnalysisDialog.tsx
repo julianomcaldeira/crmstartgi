@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Loader2, RefreshCw, Trash2, Calendar, Eye, ChevronLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sparkles, Loader2, RefreshCw, Trash2, Calendar, Eye, ChevronLeft, GitCompare, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -40,6 +41,8 @@ const AIAnalysisDialog = ({
   const [analysisHistory, setAnalysisHistory] = useState<AIAnalysis[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [viewingAnalysis, setViewingAnalysis] = useState<AIAnalysis | null>(null);
+  const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
+  const [isComparing, setIsComparing] = useState(false);
 
   useEffect(() => {
     if (open && client?.id) {
@@ -93,7 +96,6 @@ const AIAnalysisDialog = ({
 
       const analysisText = data.analysis;
 
-      // Save to history
       const { data: savedAnalysis, error: saveError } = await supabase
         .from("prospect_ai_analyses")
         .insert({
@@ -113,7 +115,6 @@ const AIAnalysisDialog = ({
       } else {
         toast.success("Análise gerada com sucesso!");
         fetchAnalysisHistory();
-        // Automatically open the new analysis
         setViewingAnalysis(savedAnalysis);
       }
     } catch (error: any) {
@@ -136,6 +137,7 @@ const AIAnalysisDialog = ({
 
       toast.success("Análise excluída!");
       setAnalysisHistory(prev => prev.filter(a => a.id !== analysisId));
+      setSelectedForComparison(prev => prev.filter(id => id !== analysisId));
       if (viewingAnalysis?.id === analysisId) {
         setViewingAnalysis(null);
       }
@@ -149,37 +151,139 @@ const AIAnalysisDialog = ({
     onOpenChange(isOpen);
     if (!isOpen) {
       setViewingAnalysis(null);
+      setSelectedForComparison([]);
+      setIsComparing(false);
     }
   };
 
-  // Format markdown text to readable HTML
+  const toggleComparisonSelection = (id: string) => {
+    setSelectedForComparison(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(i => i !== id);
+      }
+      if (prev.length >= 2) {
+        toast.error("Selecione no máximo 2 análises para comparar.");
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const startComparison = () => {
+    if (selectedForComparison.length < 2) {
+      toast.error("Selecione 2 análises para comparar.");
+      return;
+    }
+    setIsComparing(true);
+  };
+
   const formatAnalysisText = (text: string) => {
     let html = text;
     
-    // Headers
     html = html.replace(/^#### (.*$)/gim, '<h4 class="text-sm font-semibold mt-4 mb-2 text-primary">$1</h4>');
     html = html.replace(/^### (.*$)/gim, '<h3 class="text-base font-semibold mt-5 mb-2 text-foreground">$1</h3>');
     html = html.replace(/^## (.*$)/gim, '<h2 class="text-lg font-bold mt-6 mb-3 text-foreground border-b pb-2">$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1 class="text-xl font-bold mt-6 mb-3 text-foreground">$1</h1>');
     
-    // Bold and italic
     html = html.replace(/\*\*\*(.*?)\*\*\*/g, '<strong class="font-bold italic">$1</strong>');
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold">$1</strong>');
     html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
     
-    // Lists
     html = html.replace(/^\s*[-•]\s+(.*)$/gim, '<li class="ml-4 mb-1">• $1</li>');
     html = html.replace(/^\s*(\d+)\.\s+(.*)$/gim, '<li class="ml-4 mb-1">$1. $2</li>');
     
-    // Line breaks and paragraphs
     html = html.replace(/\n\n/g, '</p><p class="mb-3">');
     html = html.replace(/\n/g, '<br/>');
     
-    // Remove horizontal rules
     html = html.replace(/^---+$/gm, '<hr class="my-4 border-border"/>');
     
     return `<div class="prose prose-sm max-w-none"><p class="mb-3">${html}</p></div>`;
   };
+
+  // Comparison view
+  if (isComparing) {
+    const comparisonItems = analysisHistory.filter(a => selectedForComparison.includes(a.id));
+    const [first, second] = comparisonItems;
+
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-w-6xl h-[85vh] flex flex-col">
+          <DialogHeader className="shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => setIsComparing(false)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <DialogTitle className="flex items-center gap-2">
+                  <GitCompare className="h-5 w-5 text-primary" />
+                  Comparação de Análises
+                </DialogTitle>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setIsComparing(false)}>
+                <X className="h-4 w-4 mr-1" />
+                Sair da comparação
+              </Button>
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 min-h-0 grid grid-cols-2 gap-4 mt-4">
+            {/* First analysis */}
+            <div className="flex flex-col border rounded-lg overflow-hidden">
+              <div className="bg-muted/50 p-3 border-b shrink-0">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  {format(new Date(first.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </div>
+                <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                  <span>{first.opportunities_count} oport.</span>
+                  <span>{first.tasks_count} tarefas</span>
+                  <span>{first.contacts_count} contatos</span>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div 
+                  className="p-4 text-sm leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(first.analysis) }}
+                />
+              </ScrollArea>
+            </div>
+
+            {/* Second analysis */}
+            <div className="flex flex-col border rounded-lg overflow-hidden">
+              <div className="bg-muted/50 p-3 border-b shrink-0">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  {format(new Date(second.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </div>
+                <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                  <span>{second.opportunities_count} oport.</span>
+                  <span>{second.tasks_count} tarefas</span>
+                  <span>{second.contacts_count} contatos</span>
+                </div>
+              </div>
+              <ScrollArea className="flex-1">
+                <div 
+                  className="p-4 text-sm leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(second.analysis) }}
+                />
+              </ScrollArea>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t mt-4 shrink-0">
+            <Button variant="outline" onClick={() => setIsComparing(false)}>
+              Voltar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   // Viewing a specific analysis
   if (viewingAnalysis) {
@@ -276,10 +380,42 @@ const AIAnalysisDialog = ({
             </Button>
           </div>
 
+          {/* Comparison bar */}
+          {selectedForComparison.length > 0 && (
+            <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <span className="text-sm text-blue-700 dark:text-blue-300">
+                {selectedForComparison.length} análise(s) selecionada(s)
+              </span>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setSelectedForComparison([])}
+                  className="text-blue-700 dark:text-blue-300"
+                >
+                  Limpar
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={startComparison}
+                  disabled={selectedForComparison.length < 2}
+                >
+                  <GitCompare className="mr-2 h-4 w-4" />
+                  Comparar
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* History list */}
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3">
               Histórico de Análises ({analysisHistory.length})
+              {analysisHistory.length >= 2 && (
+                <span className="ml-2 text-xs font-normal">
+                  — Selecione 2 para comparar
+                </span>
+              )}
             </h3>
 
             {loadingHistory ? (
@@ -298,8 +434,15 @@ const AIAnalysisDialog = ({
                   {analysisHistory.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group"
+                      className={`flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors group ${
+                        selectedForComparison.includes(item.id) ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800' : ''
+                      }`}
                     >
+                      <Checkbox
+                        checked={selectedForComparison.includes(item.id)}
+                        onCheckedChange={() => toggleComparisonSelection(item.id)}
+                        className="shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-sm font-medium">
                           <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
