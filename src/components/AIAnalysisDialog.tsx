@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sparkles, Loader2, RefreshCw, Trash2, Calendar, Eye, ChevronLeft, GitCompare, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Loader2, RefreshCw, Trash2, Calendar, Eye, ChevronLeft, GitCompare, X, MessageCircle, Send, User, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -18,6 +19,11 @@ interface AIAnalysis {
   created_at: string;
   created_by: string;
   profiles?: { full_name: string };
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
 }
 
 interface AIAnalysisDialogProps {
@@ -43,12 +49,33 @@ const AIAnalysisDialog = ({
   const [viewingAnalysis, setViewingAnalysis] = useState<AIAnalysis | null>(null);
   const [selectedForComparison, setSelectedForComparison] = useState<string[]>([]);
   const [isComparing, setIsComparing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  // Chat state
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open && client?.id) {
       fetchAnalysisHistory();
+      fetchCurrentUser();
     }
   }, [open, client?.id]);
+
+  useEffect(() => {
+    // Scroll to bottom when new messages arrive
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setCurrentUserId(user?.id || null);
+  };
 
   const fetchAnalysisHistory = async () => {
     if (!client?.id) return;
@@ -116,6 +143,8 @@ const AIAnalysisDialog = ({
         toast.success("Análise gerada com sucesso!");
         fetchAnalysisHistory();
         setViewingAnalysis(savedAnalysis);
+        setChatMessages([]);
+        setShowChat(false);
       }
     } catch (error: any) {
       console.error("Error analyzing prospect:", error);
@@ -127,6 +156,16 @@ const AIAnalysisDialog = ({
 
   const handleDeleteAnalysis = async (analysisId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    const analysis = analysisHistory.find(a => a.id === analysisId);
+    if (!analysis) return;
+    
+    // Check if current user is the owner
+    if (analysis.created_by !== currentUserId) {
+      toast.error("Você só pode excluir análises que você criou.");
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from("prospect_ai_analyses")
@@ -153,6 +192,9 @@ const AIAnalysisDialog = ({
       setViewingAnalysis(null);
       setSelectedForComparison([]);
       setIsComparing(false);
+      setShowChat(false);
+      setChatMessages([]);
+      setChatInput("");
     }
   };
 
@@ -177,6 +219,52 @@ const AIAnalysisDialog = ({
     setIsComparing(true);
   };
 
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage = chatInput.trim();
+    setChatInput("");
+    setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setChatLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("prospect-chat", {
+        body: {
+          question: userMessage,
+          client,
+          opportunities,
+          tasks,
+          contacts,
+          previousAnalysis: viewingAnalysis?.analysis || null,
+          conversationHistory: chatMessages,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      setChatMessages(prev => [...prev, { role: "assistant", content: data.answer }]);
+    } catch (error: any) {
+      console.error("Error sending chat message:", error);
+      toast.error("Erro ao enviar mensagem. Tente novamente.");
+      // Remove the user message on error
+      setChatMessages(prev => prev.slice(0, -1));
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   const formatAnalysisText = (text: string) => {
     let html = text;
     
@@ -198,6 +286,10 @@ const AIAnalysisDialog = ({
     html = html.replace(/^---+$/gm, '<hr class="my-4 border-border"/>');
     
     return `<div class="prose prose-sm max-w-none"><p class="mb-3">${html}</p></div>`;
+  };
+
+  const canDeleteAnalysis = (analysis: AIAnalysis) => {
+    return analysis.created_by === currentUserId;
   };
 
   // Comparison view
@@ -285,25 +377,51 @@ const AIAnalysisDialog = ({
     );
   }
 
-  // Viewing a specific analysis
+  // Viewing a specific analysis with chat
   if (viewingAnalysis) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-3xl h-[80vh] flex flex-col">
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col">
           <DialogHeader className="shrink-0">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8"
-                onClick={() => setViewingAnalysis(null)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <DialogTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                Análise IA
-              </DialogTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => {
+                    setViewingAnalysis(null);
+                    setShowChat(false);
+                    setChatMessages([]);
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Análise IA
+                </DialogTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={showChat ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowChat(!showChat)}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {showChat ? "Ocultar Chat" : "Perguntar à IA"}
+                </Button>
+                {canDeleteAnalysis(viewingAnalysis) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={(e) => handleDeleteAnalysis(viewingAnalysis.id, e)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="flex items-center justify-between mt-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
@@ -318,15 +436,115 @@ const AIAnalysisDialog = ({
             </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 mt-4">
-            <div 
-              className="text-sm leading-relaxed text-foreground pr-4"
-              dangerouslySetInnerHTML={{ __html: formatAnalysisText(viewingAnalysis.analysis) }}
-            />
-          </ScrollArea>
+          <div className={`flex-1 min-h-0 mt-4 ${showChat ? 'grid grid-cols-2 gap-4' : ''}`}>
+            {/* Analysis content */}
+            <div className={`flex flex-col border rounded-lg overflow-hidden ${showChat ? '' : 'h-full'}`}>
+              <ScrollArea className="flex-1">
+                <div 
+                  className="p-4 text-sm leading-relaxed text-foreground"
+                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(viewingAnalysis.analysis) }}
+                />
+              </ScrollArea>
+            </div>
+
+            {/* Chat panel */}
+            {showChat && (
+              <div className="flex flex-col border rounded-lg overflow-hidden bg-muted/20">
+                <div className="bg-primary/10 p-3 border-b shrink-0">
+                  <h3 className="font-medium text-sm flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-primary" />
+                    Consultor de Vendas IA
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Faça perguntas sobre esta conta específica
+                  </p>
+                </div>
+
+                <div 
+                  ref={chatScrollRef}
+                  className="flex-1 overflow-y-auto p-4 space-y-4"
+                >
+                  {chatMessages.length === 0 && (
+                    <div className="text-center text-muted-foreground text-sm py-8">
+                      <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Pergunte algo sobre esta conta.</p>
+                      <p className="text-xs mt-1">Ex: "Como devo abordar o decisor?"</p>
+                    </div>
+                  )}
+                  {chatMessages.map((msg, index) => (
+                    <div
+                      key={index}
+                      className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      {msg.role === "assistant" && (
+                        <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                          <Bot className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        }`}
+                      >
+                        {msg.role === "assistant" ? (
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: formatAnalysisText(msg.content) }}
+                            className="text-sm [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h4]:text-xs"
+                          />
+                        ) : (
+                          msg.content
+                        )}
+                      </div>
+                      {msg.role === "user" && (
+                        <div className="h-7 w-7 rounded-full bg-secondary flex items-center justify-center shrink-0">
+                          <User className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex gap-2 justify-start">
+                      <div className="h-7 w-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <Bot className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="bg-muted rounded-lg px-3 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3 border-t shrink-0">
+                  <div className="flex gap-2">
+                    <Input
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Digite sua pergunta sobre esta conta..."
+                      disabled={chatLoading}
+                      className="flex-1"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSendMessage}
+                      disabled={!chatInput.trim() || chatLoading}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-between gap-2 pt-4 border-t mt-4 shrink-0">
-            <Button variant="ghost" size="sm" onClick={() => setViewingAnalysis(null)}>
+            <Button variant="ghost" size="sm" onClick={() => {
+              setViewingAnalysis(null);
+              setShowChat(false);
+              setChatMessages([]);
+            }}>
               <ChevronLeft className="mr-2 h-4 w-4" />
               Voltar
             </Button>
@@ -452,25 +670,33 @@ const AIAnalysisDialog = ({
                           <span>{item.opportunities_count} oport.</span>
                           <span>{item.tasks_count} tarefas</span>
                           <span>{item.contacts_count} contatos</span>
+                          {item.profiles?.full_name && (
+                            <span className="text-primary">por {item.profiles.full_name}</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setViewingAnalysis(item)}
+                          onClick={() => {
+                            setViewingAnalysis(item);
+                            setChatMessages([]);
+                          }}
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           Ver
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={(e) => handleDeleteAnalysis(item.id, e)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canDeleteAnalysis(item) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => handleDeleteAnalysis(item.id, e)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
