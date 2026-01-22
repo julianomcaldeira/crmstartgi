@@ -219,18 +219,20 @@ const AIAnalysisDialog = ({
     setIsComparing(true);
   };
 
-  const handleSendMessage = async () => {
-    if (!chatInput.trim() || chatLoading) return;
+  const handleSendMessage = async (directMessage?: string) => {
+    const messageToSend = directMessage || chatInput.trim();
+    if (!messageToSend || chatLoading) return;
 
-    const userMessage = chatInput.trim();
-    setChatInput("");
-    setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    if (!directMessage) {
+      setChatInput("");
+    }
+    setChatMessages(prev => [...prev, { role: "user", content: messageToSend }]);
     setChatLoading(true);
 
     try {
       const { data, error } = await supabase.functions.invoke("prospect-chat", {
         body: {
-          question: userMessage,
+          question: messageToSend,
           client,
           opportunities,
           tasks,
@@ -465,10 +467,33 @@ const AIAnalysisDialog = ({
                   className="flex-1 overflow-y-auto p-4 space-y-4"
                 >
                   {chatMessages.length === 0 && (
-                    <div className="text-center text-muted-foreground text-sm py-8">
-                      <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p>Pergunte algo sobre esta conta.</p>
-                      <p className="text-xs mt-1">Ex: "Como devo abordar o decisor?"</p>
+                    <div className="space-y-4 py-4">
+                      <div className="text-center text-muted-foreground text-sm">
+                        <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="font-medium">Como posso ajudar?</p>
+                        <p className="text-xs mt-1">Clique em uma sugestão ou digite sua pergunta</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {[
+                          "Como devo abordar o decisor?",
+                          "Qual a melhor estratégia para avançar?",
+                          "Quais objeções posso enfrentar?",
+                          "Como justificar o valor da proposta?",
+                          "Qual o próximo passo ideal?",
+                          "Como me diferenciar da concorrência?",
+                        ].map((suggestion) => (
+                          <Button
+                            key={suggestion}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-auto py-2 px-3 whitespace-normal text-left"
+                            onClick={() => handleSendMessage(suggestion)}
+                            disabled={chatLoading}
+                          >
+                            {suggestion}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {chatMessages.map((msg, index) => (
@@ -528,7 +553,7 @@ const AIAnalysisDialog = ({
                     />
                     <Button
                       size="icon"
-                      onClick={handleSendMessage}
+                      onClick={() => handleSendMessage()}
                       disabled={!chatInput.trim() || chatLoading}
                     >
                       <Send className="h-4 w-4" />
