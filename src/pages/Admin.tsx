@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { AlertsTester } from "@/components/AlertsTester";
 import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
+import { IndicadoresFundoTab } from "@/components/IndicadoresFundoTab";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -867,11 +868,12 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="users">Gerenciar Usuários</TabsTrigger>
-          <TabsTrigger value="transfer">Transferir Prospects</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="users">Usuários</TabsTrigger>
+          <TabsTrigger value="transfer">Transferir</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
+          <TabsTrigger value="indicadores">Indicadores Fundo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -1377,6 +1379,10 @@ const Admin = () => {
               )}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="indicadores" className="space-y-4">
+          <IndicadoresFundoTab />
         </TabsContent>
 
       </Tabs>
