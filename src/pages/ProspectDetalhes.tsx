@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { formatDateLocaleBR } from "@/lib/dateUtils";
 import { Input } from "@/components/ui/input";
-import { PhoneInput, CurrencyInput } from "@/components/ui/masked-input";
+import { PhoneInput, CurrencyInput, formatCNPJ, formatPhone } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -662,7 +662,7 @@ const ClienteDetalhes = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">CNPJ</p>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">{client.cnpj}</p>
+                <p className="text-sm font-medium text-foreground">{formatCNPJ(client.cnpj)}</p>
                 {client.cnpj && (
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.cnpj, "cnpj")} title="Copiar">
                     {copiedField === "cnpj" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
@@ -724,7 +724,7 @@ const ClienteDetalhes = () => {
             <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground mb-1">Telefone</p>
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">{client.phone || "-"}</p>
+                <p className="text-sm font-medium text-foreground">{client.phone ? formatPhone(client.phone) : "-"}</p>
                 {client.phone && (
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleCopy(client.phone, "phone")} title="Copiar">
                     {copiedField === "phone" ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
