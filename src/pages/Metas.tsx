@@ -141,20 +141,54 @@ const Metas = () => {
     }
   };
 
+  // Helper to parse date as local (avoiding timezone shifts)
+  const parseDateOnly = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Get calculation window based on goal period
+  const getCalculationWindow = (goal: any) => {
+    const now = new Date();
+    const goalStart = parseDateOnly(goal.start_date);
+    const goalEnd = parseDateOnly(goal.end_date);
+    
+    if (goal.period === "mensal") {
+      // For monthly goals, calculate for the current month within the goal period
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      // Use goal boundaries if current month is outside goal period
+      const effectiveStart = currentMonthStart < goalStart ? goalStart : currentMonthStart;
+      const effectiveEnd = currentMonthEnd > goalEnd ? goalEnd : currentMonthEnd;
+      
+      return { start: effectiveStart, end: effectiveEnd };
+    }
+    
+    // For semestral/anual, use full goal period
+    return { start: goalStart, end: goalEnd };
+  };
+
   const fetchGoalsProgress = async () => {
     try {
+      const now = new Date();
+      
       const progressData = await Promise.all(
         goals.map(async (goal) => {
           let currentValue = 0;
+          const { start: windowStart, end: windowEnd } = getCalculationWindow(goal);
+          
+          const startStr = windowStart.toISOString().split("T")[0];
+          const endStr = windowEnd.toISOString().split("T")[0];
 
           if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
-            // Fetch won opportunities in the goal period - using updated_at to capture when status changed to won
+            // Fetch won opportunities in the calculation window
             let query = supabase
               .from("opportunities")
               .select("implementation_value, monthly_value, updated_at")
               .eq("status", "won")
-              .gte("updated_at", `${goal.start_date}T00:00:00`)
-              .lte("updated_at", `${goal.end_date}T23:59:59`);
+              .gte("updated_at", `${startStr}T00:00:00`)
+              .lte("updated_at", `${endStr}T23:59:59`);
 
             if (goal.assigned_to) {
               query = query.eq("assigned_to", goal.assigned_to);
@@ -165,62 +199,90 @@ const Metas = () => {
             if (opportunities) {
               currentValue = opportunities.reduce((sum, opp) => {
                 if (goal.goal_type === "revenue") {
-                  // Use implementation_value for revenue (receita caixa)
                   return sum + (Number(opp.implementation_value) || 0);
                 } else {
-                  // Use monthly_value * 12 for annualized sales
                   return sum + ((Number(opp.monthly_value) || 0) * 12);
                 }
               }, 0);
             }
           } else if (goal.goal_type === "tasks") {
-            // Fetch completed tasks in the goal period using count
+            // Fetch completed tasks in the calculation window with optional type filter
             let query = supabase
               .from("tasks")
               .select("id", { count: "exact", head: true })
               .eq("status", "completed")
-              .gte("completed_at", `${goal.start_date}T00:00:00`)
-              .lte("completed_at", `${goal.end_date}T23:59:59`);
+              .gte("completed_at", `${startStr}T00:00:00`)
+              .lte("completed_at", `${endStr}T23:59:59`);
 
             if (goal.assigned_to) {
               query = query.eq("assigned_to", goal.assigned_to);
+            }
+            
+            // Apply task type filter if set
+            if (goal.task_type_filter) {
+              query = query.eq("task_type", goal.task_type_filter as any);
             }
 
             const { count } = await query;
             currentValue = count || 0;
           } else if (goal.goal_type === "activities") {
-            // Fetch opportunity activities in the goal period
+            // Fetch opportunity activities in the calculation window with optional type filter
             let query = supabase
               .from("opportunity_activities")
               .select("id", { count: "exact", head: true })
-              .gte("created_at", `${goal.start_date}T00:00:00`)
-              .lte("created_at", `${goal.end_date}T23:59:59`);
+              .gte("created_at", `${startStr}T00:00:00`)
+              .lte("created_at", `${endStr}T23:59:59`);
 
             if (goal.assigned_to) {
               query = query.eq("created_by", goal.assigned_to);
+            }
+            
+            // Apply activity type filter if set
+            if (goal.activity_type_filter) {
+              query = query.eq("activity_type", goal.activity_type_filter);
             }
 
             const { count } = await query;
             currentValue = count || 0;
           }
 
-          const progress = (currentValue / goal.target_value) * 100;
-          const daysInPeriod = Math.ceil(
-            (new Date(goal.end_date).getTime() - new Date(goal.start_date).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          const daysPassed = Math.ceil(
-            (new Date().getTime() - new Date(goal.start_date).getTime()) / (1000 * 60 * 60 * 24)
-          );
-          const expectedProgress = Math.min(100, (daysPassed / daysInPeriod) * 100);
-          const projection = daysPassed > 0 ? (currentValue / daysPassed) * daysInPeriod : 0;
+          // Calculate days for projection
+          const daysInWindow = Math.max(1, Math.ceil(
+            (windowEnd.getTime() - windowStart.getTime()) / (1000 * 60 * 60 * 24)
+          ) + 1);
+          
+          const daysPassed = Math.max(0, Math.ceil(
+            (now.getTime() - windowStart.getTime()) / (1000 * 60 * 60 * 24)
+          ) + 1);
+          
+          const clampedDaysPassed = Math.min(daysPassed, daysInWindow);
+          
+          const progress = goal.target_value > 0 
+            ? (currentValue / goal.target_value) * 100 
+            : 0;
+          
+          const expectedProgress = daysInWindow > 0 
+            ? Math.min(100, (clampedDaysPassed / daysInWindow) * 100) 
+            : 0;
+          
+          // Projection: if days passed > 0, extrapolate current pace to end of window
+          const projection = clampedDaysPassed > 0 
+            ? (currentValue / clampedDaysPassed) * daysInWindow 
+            : 0;
+          
+          // Remaining to hit goal
+          const remaining = Math.max(0, goal.target_value - currentValue);
 
           return {
             ...goal,
             currentValue,
+            remaining,
             progress: Math.min(100, progress),
             expectedProgress: Math.max(0, expectedProgress),
             projection,
             isOnTrack: progress >= expectedProgress,
+            windowStart: startStr,
+            windowEnd: endStr,
           };
         })
       );
@@ -302,6 +364,11 @@ const Metas = () => {
               if (goal.assigned_to) {
                 query = query.eq("assigned_to", goal.assigned_to);
               }
+              
+              // Apply task type filter if set
+              if (goal.task_type_filter) {
+                query = query.eq("task_type", goal.task_type_filter as any);
+              }
 
               const { count } = await query;
               currentValue = count || 0;
@@ -314,6 +381,11 @@ const Metas = () => {
 
               if (goal.assigned_to) {
                 query = query.eq("created_by", goal.assigned_to);
+              }
+              
+              // Apply activity type filter if set
+              if (goal.activity_type_filter) {
+                query = query.eq("activity_type", goal.activity_type_filter);
               }
 
               const { count } = await query;
@@ -1053,8 +1125,9 @@ const Metas = () => {
                         <TableHead>Tipo</TableHead>
                         <TableHead>Responsável</TableHead>
                         <TableHead>Período</TableHead>
-                        <TableHead className="text-right">Valor Alvo</TableHead>
+                        <TableHead className="text-right">Alvo</TableHead>
                         <TableHead className="text-right">Atual</TableHead>
+                        <TableHead className="text-right text-orange-600">Falta</TableHead>
                         <TableHead className="text-right">Progresso</TableHead>
                         <TableHead className="text-right">Projeção</TableHead>
                         <TableHead>Status</TableHead>
@@ -1064,13 +1137,21 @@ const Metas = () => {
                     <TableBody>
                       {goalsProgress
                         .filter(goal => {
+                          let match = true;
                           if (filterSeller !== "all") {
-                            if (filterSeller === "unassigned") return !goal.assigned_to;
-                            return goal.assigned_to === filterSeller;
+                            if (filterSeller === "unassigned") {
+                              match = match && !goal.assigned_to;
+                            } else {
+                              match = match && goal.assigned_to === filterSeller;
+                            }
                           }
-                          if (filterGoalType !== "all") return goal.goal_type === filterGoalType;
-                          if (filterPeriod !== "all") return goal.period === filterPeriod;
-                          return true;
+                          if (filterGoalType !== "all") {
+                            match = match && goal.goal_type === filterGoalType;
+                          }
+                          if (filterPeriod !== "all") {
+                            match = match && goal.period === filterPeriod;
+                          }
+                          return match;
                         })
                         .map((goal) => {
                           const Icon = getGoalIcon(goal.goal_type);
@@ -1081,7 +1162,12 @@ const Metas = () => {
                                   <div className="p-1.5 bg-primary/10 rounded">
                                     <Icon className="h-4 w-4 text-primary" />
                                   </div>
-                                  <span className="font-medium">{goal.title}</span>
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{goal.title}</span>
+                                    {goal.task_type_filter && (
+                                      <span className="text-xs text-muted-foreground">Tipo: {goal.task_type_filter}</span>
+                                    )}
+                                  </div>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -1093,15 +1179,26 @@ const Metas = () => {
                                 {goal.profiles?.full_name || goal.assigned_user?.full_name || "Não atribuído"}
                               </TableCell>
                               <TableCell>
-                                <span className="text-xs">
-                                  {new Date(goal.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - {new Date(goal.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                                </span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-medium">
+                                    {goal.period === "mensal" ? "Mês atual" : getPeriodLabel(goal.period)}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {goal.windowStart && goal.windowEnd 
+                                      ? `${parseDateOnly(goal.windowStart).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${parseDateOnly(goal.windowEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`
+                                      : `${parseDateOnly(goal.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${parseDateOnly(goal.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}`
+                                    }
+                                  </span>
+                                </div>
                               </TableCell>
                               <TableCell className="text-right font-medium">
                                 {formatValue(goal.target_value, goal.goal_type)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right font-bold text-primary">
                                 {formatValue(goal.currentValue, goal.goal_type)}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold text-orange-600">
+                                {goal.remaining > 0 ? formatValue(goal.remaining, goal.goal_type) : "✓"}
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">
@@ -1110,7 +1207,7 @@ const Metas = () => {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right text-muted-foreground">
-                                {formatValue(goal.projection, goal.goal_type)}
+                                {formatValue(Math.round(goal.projection), goal.goal_type)}
                               </TableCell>
                               <TableCell>
                                 <Badge 
@@ -1382,7 +1479,7 @@ const Metas = () => {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-muted-foreground mb-1">Meta</p>
                               <p className="font-bold text-primary">
@@ -1391,14 +1488,20 @@ const Metas = () => {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Atual</p>
-                              <p className="font-bold">
+                              <p className="font-bold text-foreground">
                                 {formatValue(goal.currentValue, goal.goal_type)}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Falta</p>
+                              <p className="font-bold text-orange-600">
+                                {goal.remaining > 0 ? formatValue(goal.remaining, goal.goal_type) : "✓ Atingido"}
                               </p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Projeção</p>
                               <p className="font-bold text-chart-2">
-                                {formatValue(goal.projection, goal.goal_type)}
+                                {formatValue(Math.round(goal.projection), goal.goal_type)}
                               </p>
                             </div>
                           </div>
