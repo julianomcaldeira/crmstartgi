@@ -455,6 +455,7 @@ export type Database = {
       }
       goals: {
         Row: {
+          activity_type_filter: string | null
           assigned_to: string | null
           created_at: string | null
           created_by: string
@@ -465,10 +466,12 @@ export type Database = {
           period: string
           start_date: string
           target_value: number
+          task_type_filter: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
+          activity_type_filter?: string | null
           assigned_to?: string | null
           created_at?: string | null
           created_by: string
@@ -479,10 +482,12 @@ export type Database = {
           period?: string
           start_date: string
           target_value: number
+          task_type_filter?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
+          activity_type_filter?: string | null
           assigned_to?: string | null
           created_at?: string | null
           created_by?: string
@@ -493,6 +498,7 @@ export type Database = {
           period?: string
           start_date?: string
           target_value?: number
+          task_type_filter?: string | null
           title?: string
           updated_at?: string | null
         }

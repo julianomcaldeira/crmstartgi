@@ -14,18 +14,50 @@ interface GoalProgress {
   assignedTo: string | null;
 }
 
+// Helper to parse date as local (avoiding timezone shifts)
+const parseDateOnly = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+// Get calculation window based on goal period
+const getCalculationWindow = (goal: { period: string; start_date: string; end_date: string }) => {
+  const now = new Date();
+  const goalStart = parseDateOnly(goal.start_date);
+  const goalEnd = parseDateOnly(goal.end_date);
+  
+  if (goal.period === "mensal") {
+    // For monthly goals, calculate for the current month within the goal period
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
+    // Use goal boundaries if current month is outside goal period
+    const effectiveStart = currentMonthStart < goalStart ? goalStart : currentMonthStart;
+    const effectiveEnd = currentMonthEnd > goalEnd ? goalEnd : currentMonthEnd;
+    
+    return { start: effectiveStart, end: effectiveEnd };
+  }
+  
+  // For semestral/anual, use full goal period
+  return { start: goalStart, end: goalEnd };
+};
+
 export const calculateGoalProgress = async (
   goalId: string,
   goalType: string,
   targetValue: number,
   assignedTo: string | null,
   startDate: string,
-  endDate: string
+  endDate: string,
+  period: string = "mensal",
+  taskTypeFilter?: string | null,
+  activityTypeFilter?: string | null
 ): Promise<number> => {
   if (!assignedTo) return 0;
 
-  const startDateTime = new Date(startDate).toISOString();
-  const endDateTime = new Date(endDate + "T23:59:59").toISOString();
+  const { start: windowStart, end: windowEnd } = getCalculationWindow({ period, start_date: startDate, end_date: endDate });
+  const startStr = windowStart.toISOString().split("T")[0];
+  const endStr = windowEnd.toISOString().split("T")[0];
 
   switch (goalType) {
     case "revenue": {
@@ -35,8 +67,8 @@ export const calculateGoalProgress = async (
         .select("implementation_value")
         .eq("assigned_to", assignedTo)
         .eq("status", "won")
-        .gte("updated_at", startDateTime)
-        .lte("updated_at", endDateTime);
+        .gte("updated_at", `${startStr}T00:00:00`)
+        .lte("updated_at", `${endStr}T23:59:59`);
 
       if (error) {
         console.error("Error fetching revenue:", error);
@@ -53,8 +85,8 @@ export const calculateGoalProgress = async (
         .select("monthly_value")
         .eq("assigned_to", assignedTo)
         .eq("status", "won")
-        .gte("updated_at", startDateTime)
-        .lte("updated_at", endDateTime);
+        .gte("updated_at", `${startStr}T00:00:00`)
+        .lte("updated_at", `${endStr}T23:59:59`);
 
       if (error) {
         console.error("Error fetching annualized sales:", error);
@@ -65,14 +97,20 @@ export const calculateGoalProgress = async (
     }
 
     case "tasks": {
-      // Count of completed tasks in the period
-      const { count, error } = await supabase
+      // Count of completed tasks in the period with optional type filter
+      let query = supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
         .eq("assigned_to", assignedTo)
         .eq("status", "completed")
-        .gte("completed_at", startDateTime)
-        .lte("completed_at", endDateTime);
+        .gte("completed_at", `${startStr}T00:00:00`)
+        .lte("completed_at", `${endStr}T23:59:59`);
+
+      if (taskTypeFilter) {
+        query = query.eq("task_type", taskTypeFilter as any);
+      }
+
+      const { count, error } = await query;
 
       if (error) {
         console.error("Error fetching tasks:", error);
@@ -83,13 +121,19 @@ export const calculateGoalProgress = async (
     }
 
     case "activities": {
-      // Count of opportunity activities (proposals, presentations, etc.) in the period
-      const { count, error } = await supabase
+      // Count of opportunity activities in the period with optional type filter
+      let query = supabase
         .from("opportunity_activities")
         .select("*", { count: "exact", head: true })
         .eq("created_by", assignedTo)
-        .gte("created_at", startDateTime)
-        .lte("created_at", endDateTime);
+        .gte("created_at", `${startStr}T00:00:00`)
+        .lte("created_at", `${endStr}T23:59:59`);
+
+      if (activityTypeFilter) {
+        query = query.eq("activity_type", activityTypeFilter);
+      }
+
+      const { count, error } = await query;
 
       if (error) {
         console.error("Error fetching activities:", error);
@@ -137,7 +181,10 @@ export const useGoalProgress = (userId: string | null, period?: string) => {
           Number(goal.target_value),
           goal.assigned_to,
           goal.start_date,
-          goal.end_date
+          goal.end_date,
+          goal.period || "mensal",
+          (goal as any).task_type_filter,
+          (goal as any).activity_type_filter
         );
 
         const targetValue = Number(goal.target_value);
@@ -187,7 +234,10 @@ export const checkGoalAchievements = async (userId: string): Promise<GoalProgres
       Number(goal.target_value),
       goal.assigned_to,
       goal.start_date,
-      goal.end_date
+      goal.end_date,
+      goal.period || "mensal",
+      (goal as any).task_type_filter,
+      (goal as any).activity_type_filter
     );
 
     const targetValue = Number(goal.target_value);
