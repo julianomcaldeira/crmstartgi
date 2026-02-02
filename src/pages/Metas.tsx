@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List, X } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
@@ -902,6 +902,27 @@ const Metas = () => {
             </div>
           )}
         </div>
+        
+        {/* Clear Filters Button */}
+        {(filterSeller !== "all" || filterGoalType !== "all" || filterPeriod !== "all" || filterStartDate || filterEndDate) && (
+          <div className="mt-4 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setFilterSeller("all");
+                setFilterGoalType("all");
+                setFilterPeriod("all");
+                setFilterStartDate("");
+                setFilterEndDate("");
+              }}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpar Filtros
+            </Button>
+          </div>
+        )}
       </Card>
 
       <Tabs defaultValue="lista" className="space-y-6">
