@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, isToday as isTodayFn } from "date-fns";
+import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay, isToday as isTodayFn } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { DraggableCard } from "@/components/DraggableCard";
@@ -25,6 +25,7 @@ import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 import AudioRecorder from "@/components/AudioRecorder";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
 import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachments";
+import { parseDateOnly } from "@/lib/dateUtils";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -491,6 +492,10 @@ const Tarefas = () => {
     if (task.status === "completed") {
       return "border-l-success bg-success/5";
     }
+
+    if (!task.due_date) {
+      return "border-l-primary bg-background";
+    }
     
     const taskDate = new Date(task.due_date);
     const now = new Date();
@@ -529,28 +534,67 @@ const Tarefas = () => {
     return <Clock className="h-4 w-4 text-muted-foreground" />;
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    const taskDate = task.due_date ? new Date(task.due_date) : null;
-    
-    const matchesStatus = 
-      filter === "all" ? true :
-      filter === "pending" ? task.status !== "completed" && (!taskDate || !isPast(taskDate)) :
-      filter === "overdue" ? task.status !== "completed" && taskDate && isPast(taskDate) :
-      task.status === "completed";
-    
+  const getTaskDate = (task: any) => (task?.due_date ? new Date(task.due_date) : null);
+
+  // Comparações por dia (evita que tarefas "de hoje" sumam da aba Pendentes após o horário passar)
+  const todayStart = startOfDay(new Date());
+  const getTaskDay = (task: any) => {
+    const dt = getTaskDate(task);
+    return dt ? startOfDay(dt) : null;
+  };
+
+  const matchesStatusFilter = (task: any, statusFilter: typeof filter) => {
+    const taskDay = getTaskDay(task);
+
+    if (statusFilter === "all") return true;
+    if (statusFilter === "completed") return task.status === "completed";
+
+    // pending/overdue consideram qualquer status != completed
+    const isNotCompleted = task.status !== "completed";
+    if (!isNotCompleted) return false;
+
+    if (statusFilter === "pending") {
+      return !taskDay || taskDay >= todayStart;
+    }
+
+    // overdue
+    return !!taskDay && taskDay < todayStart;
+  };
+
+  const startBoundary = startDate ? startOfDay(parseDateOnly(startDate)) : null;
+  const endBoundary = endDate ? endOfDay(parseDateOnly(endDate)) : null;
+
+  const matchesNonStatusFilters = (task: any) => {
+    const taskDate = getTaskDate(task);
+
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
     const matchesUser = selectedUser === "all" || task.assigned_to === selectedUser;
-    
-    const matchesStartDate = !startDate || !taskDate || taskDate >= new Date(startDate);
-    const matchesEndDate = !endDate || !taskDate || taskDate <= new Date(endDate);
-    
-    // Quick filters
+
+    const matchesStartDate = !startBoundary || !taskDate || taskDate >= startBoundary;
+    const matchesEndDate = !endBoundary || !taskDate || taskDate <= endBoundary;
+
     const matchesQuickTaskType = quickTaskTypeFilter === "all" || task.task_type === quickTaskTypeFilter;
     const matchesQuickPriority = quickPriorityFilter === "all" || task.priority === quickPriorityFilter;
-    
-    return matchesStatus && matchesClient && matchesUser && matchesStartDate && matchesEndDate &&
-      matchesQuickTaskType && matchesQuickPriority;
-  });
+
+    return (
+      matchesClient &&
+      matchesUser &&
+      matchesStartDate &&
+      matchesEndDate &&
+      matchesQuickTaskType &&
+      matchesQuickPriority
+    );
+  };
+
+  const tasksFilteredWithoutStatus = tasks.filter(matchesNonStatusFilters);
+  const filteredTasks = tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, filter));
+
+  const taskCounts = {
+    all: tasksFilteredWithoutStatus.length,
+    pending: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "pending")).length,
+    overdue: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "overdue")).length,
+    completed: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "completed")).length,
+  };
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
@@ -569,24 +613,14 @@ const Tarefas = () => {
   };
 
   const getTasksForDay = (day: Date) => {
-    return tasks.filter((task) => {
-      if (!task.due_date) return false;
-      
-      const taskDate = startOfDay(new Date(task.due_date));
-      const matchesDay = isSameDay(taskDate, day);
-      
-      if (!matchesDay) return false;
-      
-      if (filter === "completed") {
-        return task.status === "completed";
-      } else if (filter === "pending") {
-        return task.status === "pending" && !isPast(taskDate);
-      } else if (filter === "overdue") {
-        return task.status !== "completed" && isPast(taskDate);
-      }
-      
-      return true;
-    });
+    return tasks
+      .filter(matchesNonStatusFilters)
+      .filter((task) => {
+        if (!task.due_date) return false;
+        const taskDay = startOfDay(new Date(task.due_date));
+        if (!isSameDay(taskDay, day)) return false;
+        return matchesStatusFilter(task, filter);
+      });
   };
 
   const weekDays = getWeekDays();
@@ -814,29 +848,45 @@ const Tarefas = () => {
                 variant={filter === "all" ? "default" : "outline"}
                 onClick={() => setFilter("all")}
                 size="sm"
+                className="gap-2"
               >
                 Todas
+                <Badge variant="secondary" className="ml-1">
+                  {taskCounts.all}
+                </Badge>
               </Button>
               <Button
                 variant={filter === "pending" ? "default" : "outline"}
                 onClick={() => setFilter("pending")}
                 size="sm"
+                className="gap-2"
               >
                 Pendentes
+                <Badge variant="secondary" className="ml-1">
+                  {taskCounts.pending}
+                </Badge>
               </Button>
               <Button
                 variant={filter === "overdue" ? "default" : "outline"}
                 onClick={() => setFilter("overdue")}
                 size="sm"
+                className="gap-2"
               >
                 Atrasadas
+                <Badge variant="secondary" className="ml-1">
+                  {taskCounts.overdue}
+                </Badge>
               </Button>
               <Button
                 variant={filter === "completed" ? "default" : "outline"}
                 onClick={() => setFilter("completed")}
                 size="sm"
+                className="gap-2"
               >
                 Concluídas
+                <Badge variant="secondary" className="ml-1">
+                  {taskCounts.completed}
+                </Badge>
               </Button>
               
               {cardViewMode === 'compact' && (
@@ -1140,8 +1190,12 @@ const Tarefas = () => {
               variant={filter === "all" ? "default" : "outline"}
               size="sm"
               onClick={() => setFilter("all")}
+              className="gap-2"
             >
               Todas
+              <Badge variant="secondary" className="ml-1">
+                {taskCounts.all}
+              </Badge>
             </Button>
             <Button
               variant={filter === "pending" ? "default" : "outline"}
@@ -1151,6 +1205,9 @@ const Tarefas = () => {
             >
               <Clock className="h-4 w-4" />
               Pendentes
+              <Badge variant="secondary" className="ml-1">
+                {taskCounts.pending}
+              </Badge>
             </Button>
             <Button
               variant={filter === "overdue" ? "default" : "outline"}
@@ -1160,6 +1217,9 @@ const Tarefas = () => {
             >
               <AlertCircle className="h-4 w-4" />
               Atrasadas
+              <Badge variant="secondary" className="ml-1">
+                {taskCounts.overdue}
+              </Badge>
             </Button>
             <Button
               variant={filter === "completed" ? "default" : "outline"}
@@ -1169,6 +1229,9 @@ const Tarefas = () => {
             >
               <CheckCircle2 className="h-4 w-4" />
               Concluídas
+              <Badge variant="secondary" className="ml-1">
+                {taskCounts.completed}
+              </Badge>
             </Button>
           </div>
 
