@@ -148,13 +148,13 @@ const Metas = () => {
           let currentValue = 0;
 
           if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
-            // Fetch won opportunities in the goal period
+            // Fetch won opportunities in the goal period - using updated_at to capture when status changed to won
             let query = supabase
               .from("opportunities")
-              .select("value, monthly_value, created_at")
+              .select("implementation_value, monthly_value, updated_at")
               .eq("status", "won")
-              .gte("created_at", goal.start_date)
-              .lte("created_at", goal.end_date);
+              .gte("updated_at", `${goal.start_date}T00:00:00`)
+              .lte("updated_at", `${goal.end_date}T23:59:59`);
 
             if (goal.assigned_to) {
               query = query.eq("assigned_to", goal.assigned_to);
@@ -165,41 +165,42 @@ const Metas = () => {
             if (opportunities) {
               currentValue = opportunities.reduce((sum, opp) => {
                 if (goal.goal_type === "revenue") {
-                  return sum + (opp.value || 0);
+                  // Use implementation_value for revenue (receita caixa)
+                  return sum + (Number(opp.implementation_value) || 0);
                 } else {
-                  return sum + ((opp.monthly_value || 0) * 12);
+                  // Use monthly_value * 12 for annualized sales
+                  return sum + ((Number(opp.monthly_value) || 0) * 12);
                 }
               }, 0);
             }
           } else if (goal.goal_type === "tasks") {
-            // Fetch completed tasks in the goal period
+            // Fetch completed tasks in the goal period using count
             let query = supabase
               .from("tasks")
-              .select("id")
+              .select("id", { count: "exact", head: true })
               .eq("status", "completed")
-              .gte("completed_at", goal.start_date)
-              .lte("completed_at", goal.end_date);
+              .gte("completed_at", `${goal.start_date}T00:00:00`)
+              .lte("completed_at", `${goal.end_date}T23:59:59`);
 
             if (goal.assigned_to) {
               query = query.eq("assigned_to", goal.assigned_to);
             }
 
-            const { data: tasks, count } = await query;
+            const { count } = await query;
             currentValue = count || 0;
           } else if (goal.goal_type === "activities") {
-            // Fetch all completed tasks as activities
+            // Fetch opportunity activities in the goal period
             let query = supabase
-              .from("tasks")
-              .select("id")
-              .eq("status", "completed")
-              .gte("completed_at", goal.start_date)
-              .lte("completed_at", goal.end_date);
+              .from("opportunity_activities")
+              .select("id", { count: "exact", head: true })
+              .gte("created_at", `${goal.start_date}T00:00:00`)
+              .lte("created_at", `${goal.end_date}T23:59:59`);
 
             if (goal.assigned_to) {
-              query = query.eq("assigned_to", goal.assigned_to);
+              query = query.eq("created_by", goal.assigned_to);
             }
 
-            const { data: tasks, count } = await query;
+            const { count } = await query;
             currentValue = count || 0;
           }
 
@@ -270,10 +271,10 @@ const Metas = () => {
             if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
               let query = supabase
                 .from("opportunities")
-                .select("value, monthly_value, created_at")
+                .select("implementation_value, monthly_value, updated_at")
                 .eq("status", "won")
-                .gte("created_at", goal.start_date)
-                .lte("created_at", goal.end_date);
+                .gte("updated_at", `${goal.start_date}T00:00:00`)
+                .lte("updated_at", `${goal.end_date}T23:59:59`);
 
               if (goal.assigned_to) {
                 query = query.eq("assigned_to", goal.assigned_to);
@@ -284,25 +285,38 @@ const Metas = () => {
               if (opportunities) {
                 currentValue = opportunities.reduce((sum, opp) => {
                   if (goal.goal_type === "revenue") {
-                    return sum + (opp.value || 0);
+                    return sum + (Number(opp.implementation_value) || 0);
                   } else {
-                    return sum + ((opp.monthly_value || 0) * 12);
+                    return sum + ((Number(opp.monthly_value) || 0) * 12);
                   }
                 }, 0);
               }
-            } else if (goal.goal_type === "tasks" || goal.goal_type === "activities") {
+            } else if (goal.goal_type === "tasks") {
               let query = supabase
                 .from("tasks")
-                .select("id")
+                .select("id", { count: "exact", head: true })
                 .eq("status", "completed")
-                .gte("completed_at", goal.start_date)
-                .lte("completed_at", goal.end_date);
+                .gte("completed_at", `${goal.start_date}T00:00:00`)
+                .lte("completed_at", `${goal.end_date}T23:59:59`);
 
               if (goal.assigned_to) {
                 query = query.eq("assigned_to", goal.assigned_to);
               }
 
-              const { data: tasks, count } = await query;
+              const { count } = await query;
+              currentValue = count || 0;
+            } else if (goal.goal_type === "activities") {
+              let query = supabase
+                .from("opportunity_activities")
+                .select("id", { count: "exact", head: true })
+                .gte("created_at", `${goal.start_date}T00:00:00`)
+                .lte("created_at", `${goal.end_date}T23:59:59`);
+
+              if (goal.assigned_to) {
+                query = query.eq("created_by", goal.assigned_to);
+              }
+
+              const { count } = await query;
               currentValue = count || 0;
             }
 

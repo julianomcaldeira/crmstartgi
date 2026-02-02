@@ -29,7 +29,7 @@ export const calculateGoalProgress = async (
 
   switch (goalType) {
     case "revenue": {
-      // Sum of implementation_value for won opportunities in the period
+      // Sum of implementation_value for won opportunities in the period (using updated_at)
       const { data, error } = await supabase
         .from("opportunities")
         .select("implementation_value")
@@ -47,7 +47,7 @@ export const calculateGoalProgress = async (
     }
 
     case "annualized_sales": {
-      // Sum of monthly_value * 12 for won opportunities in the period
+      // Sum of monthly_value * 12 for won opportunities in the period (using updated_at)
       const { data, error } = await supabase
         .from("opportunities")
         .select("monthly_value")
