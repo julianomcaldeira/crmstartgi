@@ -178,9 +178,9 @@ const Tarefas = () => {
           .lte("due_date", weekEnd.toISOString())
           .order("due_date", { ascending: true });
         
-        // Only filter by assigned_to for vendedor role
+        // Only filter by assigned_to or created_by for vendedor role
         if (!isAdminOrGestor) {
-          tasksQuery = tasksQuery.eq("assigned_to", user.id);
+          tasksQuery = tasksQuery.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
         }
       } else {
         tasksQuery = supabase
@@ -194,9 +194,9 @@ const Tarefas = () => {
           `)
           .order("due_date", { ascending: true });
         
-        // Only filter by assigned_to for vendedor role
+        // Only filter by assigned_to or created_by for vendedor role
         if (!isAdminOrGestor) {
-          tasksQuery = tasksQuery.eq("assigned_to", user.id);
+          tasksQuery = tasksQuery.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
         }
       }
 
