@@ -33,6 +33,8 @@ const Metas = () => {
   const [filterSeller, setFilterSeller] = useState<string>("all");
   const [filterGoalType, setFilterGoalType] = useState<string>("all");
   const [filterPeriod, setFilterPeriod] = useState<string>("all");
+  const [filterStartDate, setFilterStartDate] = useState<string>("");
+  const [filterEndDate, setFilterEndDate] = useState<string>("");
   const [groupBySeller, setGroupBySeller] = useState(false);
   
   // Form states
@@ -561,8 +563,18 @@ const Metas = () => {
       filtered = filtered.filter(g => g.period === filterPeriod);
     }
 
+    // Filter by start date
+    if (filterStartDate) {
+      filtered = filtered.filter(g => g.start_date >= filterStartDate);
+    }
+
+    // Filter by end date
+    if (filterEndDate) {
+      filtered = filtered.filter(g => g.end_date <= filterEndDate);
+    }
+
     return filtered;
-  }, [goals, filterSeller, filterGoalType, filterPeriod]);
+  }, [goals, filterSeller, filterGoalType, filterPeriod, filterStartDate, filterEndDate]);
 
   // Group goals by seller
   const groupedGoals = useMemo(() => {
@@ -792,7 +804,7 @@ const Metas = () => {
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Filter className="h-4 w-4" />
@@ -852,11 +864,31 @@ const Metas = () => {
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label>Data Início</Label>
+            <Input
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              placeholder="Data início"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data Fim</Label>
+            <Input
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              placeholder="Data fim"
+            />
+          </div>
+
           {(isAdmin || isGestor) && (
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                Agrupar por vendedor
+                Agrupar
               </Label>
               <div className="flex items-center space-x-2 h-10">
                 <Switch
@@ -864,7 +896,7 @@ const Metas = () => {
                   onCheckedChange={setGroupBySeller}
                 />
                 <span className="text-sm text-muted-foreground">
-                  {groupBySeller ? "Ativado" : "Desativado"}
+                  {groupBySeller ? "Sim" : "Não"}
                 </span>
               </div>
             </div>
