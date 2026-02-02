@@ -59,6 +59,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { formatCNPJ } from "@/components/ui/masked-input";
 import {
   Select,
   SelectContent,
@@ -1522,7 +1523,7 @@ const InteligenciaMercado = () => {
                                   <h4 className="font-medium">{competitor.name}</h4>
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                  CNPJ: {competitor.cnpj}
+                                  CNPJ: {formatCNPJ(competitor.cnpj)}
                                 </p>
                               </div>
                               <div className="text-right">

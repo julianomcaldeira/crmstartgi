@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
+import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -1825,7 +1825,7 @@ const Prospects = () => {
                       <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-muted-foreground">CNPJ:</span>
-                          <span className="text-foreground">{client.cnpj}</span>
+                          <span className="text-foreground">{formatCNPJ(client.cnpj)}</span>
                         </div>
                         
                         {client.segment && (
@@ -1861,7 +1861,7 @@ const Prospects = () => {
                         {client.phone && (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Phone size={16} />
-                            <span>{client.phone}</span>
+                            <span>{formatPhone(client.phone)}</span>
                           </div>
                         )}
 
@@ -1976,7 +1976,7 @@ const Prospects = () => {
                           {client.company_name || client.trade_name}
                         </h3>
                         <p className="text-xs text-muted-foreground truncate">
-                          {client.cnpj}
+                          {formatCNPJ(client.cnpj)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
+import { formatPhone } from "@/components/ui/masked-input";
 
 const Clientes = () => {
   const navigate = useNavigate();
@@ -276,7 +277,7 @@ const Clientes = () => {
                     {cliente.phone && (
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{cliente.phone}</span>
+                        <span>{formatPhone(cliente.phone)}</span>
                       </div>
                     )}
 
