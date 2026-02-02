@@ -26,6 +26,7 @@ import AudioRecorder from "@/components/AudioRecorder";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
 import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachments";
 import { parseDateOnly } from "@/lib/dateUtils";
+import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
 const Tarefas = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -148,72 +149,91 @@ const Tarefas = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       // Check user role to determine if they can see all tasks
-      const { data: roleData } = await supabase
+      const { data: roleRows, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .single();
 
-      const isAdminOrGestor = roleData?.role === "admin" || roleData?.role === "gestor";
-
-      let tasksQuery;
-      
-      if (viewMode === "calendar") {
-        const weekStart = startOfWeek(currentDate, { locale: ptBR });
-        const weekEnd = endOfWeek(currentDate, { locale: ptBR });
-        
-        tasksQuery = supabase
-          .from("tasks")
-          .select(`
-            *,
-            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
-            opportunities(title),
-            contacts(id, name, email, phone, mobile, role),
-            profiles:assigned_to(full_name)
-          `)
-          .gte("due_date", weekStart.toISOString())
-          .lte("due_date", weekEnd.toISOString())
-          .order("due_date", { ascending: true });
-        
-        // Only filter by assigned_to or created_by for vendedor role
-        if (!isAdminOrGestor) {
-          tasksQuery = tasksQuery.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
-        }
-      } else {
-        tasksQuery = supabase
-          .from("tasks")
-          .select(`
-            *,
-            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
-            opportunities(title),
-            contacts(id, name, email, phone, mobile, role),
-            profiles:assigned_to(full_name)
-          `)
-          .order("due_date", { ascending: true });
-        
-        // Only filter by assigned_to or created_by for vendedor role
-        if (!isAdminOrGestor) {
-          tasksQuery = tasksQuery.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
-        }
+      if (roleError) {
+        console.warn("Erro ao buscar roles do usuário:", roleError);
       }
 
-      const [tasksResponse, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
-        tasksQuery,
+      const resolvedRole = (() => {
+        const roles = (roleRows || []).map((r: any) => r.role);
+        if (roles.includes("admin")) return "admin";
+        if (roles.includes("gestor")) return "gestor";
+        if (roles.includes("vendedor")) return "vendedor";
+        return null;
+      })();
+
+      const isAdminOrGestor = resolvedRole === "admin" || resolvedRole === "gestor";
+
+      const buildTasksQuery = () => {
+        if (viewMode === "calendar") {
+          const weekStart = startOfWeek(currentDate, { locale: ptBR });
+          const weekEnd = endOfWeek(currentDate, { locale: ptBR });
+
+          let q = supabase
+            .from("tasks")
+            .select(`
+              *,
+              clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+              opportunities(title),
+              contacts(id, name, email, phone, mobile, role),
+              profiles:assigned_to(full_name)
+            `)
+            .gte("due_date", weekStart.toISOString())
+            .lte("due_date", weekEnd.toISOString())
+            .order("due_date", { ascending: true });
+
+          if (!isAdminOrGestor) {
+            q = q.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
+          }
+
+          return q;
+        }
+
+        let q = supabase
+          .from("tasks")
+          .select(`
+            *,
+            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+            opportunities(title),
+            contacts(id, name, email, phone, mobile, role),
+            profiles:assigned_to(full_name)
+          `)
+          // importante para paginação: ordenação estável
+          .order("due_date", { ascending: true });
+
+        if (!isAdminOrGestor) {
+          q = q.or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`);
+        }
+
+        return q;
+      };
+      
+      const [tasksData, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
+        // Lista pode ultrapassar 1000 linhas; paginamos para não "sumir" tarefa pendente
+        fetchAllPaged(async (from, to) => {
+          const { data, error } = await buildTasksQuery().range(from, to);
+          if (error) throw error;
+          return (data || []) as any[];
+        }),
         supabase.from("clients").select("id, company_name, trade_name, cnpj"),
         supabase.from("opportunities").select("id, title"),
         supabase.from("profiles").select("id, full_name").or("is_deleted.is.null,is_deleted.eq.false"),
       ]);
 
-      if (tasksResponse.error) throw tasksResponse.error;
       if (clientsResponse.error) throw clientsResponse.error;
       if (oppsResponse.error) throw oppsResponse.error;
       if (usersResponse.error) throw usersResponse.error;
 
-      const normalizedTasks = (tasksResponse.data || []).map((t: any) => ({
+      const normalizedTasks = (tasksData || []).map((t: any) => ({
         ...t,
         client: t.client ?? t.clients,
         contact: t.contact ?? t.contacts,
@@ -224,6 +244,9 @@ const Tarefas = () => {
       setClients(clientsResponse.data || []);
       setOpportunities(oppsResponse.data || []);
       setUsers(usersResponse.data || []);
+
+      // Mantém userRole do estado alinhada com a role real (evita admin/gestor serem tratados como vendedor)
+      setUserRole(resolvedRole);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar tarefas");
@@ -359,13 +382,25 @@ const Tarefas = () => {
 
       setCurrentUserId(user.id);
 
-      const { data: roleData } = await supabase
+      const { data: roleRows, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .single();
 
-      setUserRole(roleData?.role || null);
+      if (roleError) {
+        console.warn("Erro ao buscar roles do usuário:", roleError);
+      }
+
+      const roles = (roleRows || []).map((r: any) => r.role);
+      const resolvedRole = roles.includes("admin")
+        ? "admin"
+        : roles.includes("gestor")
+          ? "gestor"
+          : roles.includes("vendedor")
+            ? "vendedor"
+            : null;
+
+      setUserRole(resolvedRole);
     } catch (error) {
       console.error("Error checking user role:", error);
     }
@@ -493,18 +528,24 @@ const Tarefas = () => {
       return "border-l-success bg-success/5";
     }
 
+    if (task.status === "cancelled") {
+      return "border-l-muted bg-muted/20";
+    }
+
     if (!task.due_date) {
       return "border-l-primary bg-background";
     }
-    
+
     const taskDate = new Date(task.due_date);
-    const now = new Date();
-    
-    if (isPast(taskDate) && task.status !== "completed") {
+    const taskDay = startOfDay(taskDate);
+    const todayStartLocal = startOfDay(new Date());
+
+    // Atrasada só se for dia anterior (não por hora)
+    if (taskDay < todayStartLocal) {
       return "border-l-destructive bg-destructive/10";
     }
-    
-    const hoursUntilDue = (taskDate.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    const hoursUntilDue = (taskDate.getTime() - new Date().getTime()) / (1000 * 60 * 60);
     if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
       return "border-l-warning bg-warning/10";
     }
@@ -516,13 +557,20 @@ const Tarefas = () => {
     if (task.status === "completed") {
       return <CheckCircle2 className="h-4 w-4 text-success" />;
     }
+
+    if (task.status === "cancelled") {
+      return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
+    }
     
     if (!task.due_date) {
       return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
     
     const taskDate = new Date(task.due_date);
-    if (isPast(taskDate)) {
+    const taskDay = startOfDay(taskDate);
+    const todayStartLocal = startOfDay(new Date());
+
+    if (taskDay < todayStartLocal) {
       return <AlertCircle className="h-4 w-4 text-destructive" />;
     }
     
@@ -549,11 +597,12 @@ const Tarefas = () => {
     if (statusFilter === "all") return true;
     if (statusFilter === "completed") return task.status === "completed";
 
-    // pending/overdue consideram qualquer status != completed
-    const isNotCompleted = task.status !== "completed";
-    if (!isNotCompleted) return false;
+    // Pendentes/Atrasadas: apenas tarefas "abertas" (evita canceladas entrarem)
+    const isOpen = task.status === "pending" || task.status === "in_progress";
+    if (!isOpen) return false;
 
     if (statusFilter === "pending") {
+      // inclui sem data e datas hoje/futuro
       return !taskDay || taskDay >= todayStart;
     }
 
