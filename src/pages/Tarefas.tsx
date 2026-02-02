@@ -46,6 +46,7 @@ const Tarefas = () => {
   
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
+  const [selectedUser, setSelectedUser] = useState<string>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   
@@ -529,6 +530,7 @@ const Tarefas = () => {
       task.status === "completed";
     
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
+    const matchesUser = selectedUser === "all" || task.assigned_to === selectedUser;
     
     const matchesStartDate = !startDate || !taskDate || taskDate >= new Date(startDate);
     const matchesEndDate = !endDate || !taskDate || taskDate <= new Date(endDate);
@@ -537,7 +539,7 @@ const Tarefas = () => {
     const matchesQuickTaskType = quickTaskTypeFilter === "all" || task.task_type === quickTaskTypeFilter;
     const matchesQuickPriority = quickPriorityFilter === "all" || task.priority === quickPriorityFilter;
     
-    return matchesStatus && matchesClient && matchesStartDate && matchesEndDate &&
+    return matchesStatus && matchesClient && matchesUser && matchesStartDate && matchesEndDate &&
       matchesQuickTaskType && matchesQuickPriority;
   });
 
@@ -550,7 +552,7 @@ const Tarefas = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, selectedClient, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter]);
+  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
@@ -882,7 +884,7 @@ const Tarefas = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Select value={selectedClient} onValueChange={setSelectedClient}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por cliente" />
@@ -896,6 +898,22 @@ const Tarefas = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {(userRole === "admin" || userRole === "gestor") && (
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por vendedor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os vendedores</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <Input
                 type="date"
