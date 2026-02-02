@@ -441,7 +441,7 @@ const ClienteDetalhes = () => {
         return;
       }
 
-      const { error } = await supabase.from("contacts").insert([
+      const { data, error } = await supabase.from("contacts").insert([
         {
           client_id: id,
           name: contactFormData.name,
@@ -453,17 +453,22 @@ const ClienteDetalhes = () => {
           is_primary: contactFormData.is_primary,
           created_by: user.id,
         },
-      ]);
+      ]).select();
 
       if (error) throw error;
 
+      // Verificar se o contato foi realmente criado
+      if (!data || data.length === 0) {
+        throw new Error("Contato não foi salvo corretamente");
+      }
+
       toast.success("Contato criado com sucesso!");
-      setContactDialogOpen(false);
       resetContactForm();
-      fetchClientDetails();
-    } catch (error) {
+      setContactDialogOpen(false);
+      await fetchClientDetails();
+    } catch (error: any) {
       console.error("Error creating contact:", error);
-      toast.error("Erro ao criar contato");
+      toast.error(error.message || "Erro ao criar contato");
     }
   };
 
@@ -488,7 +493,7 @@ const ClienteDetalhes = () => {
         return;
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("contacts")
         .update({
           name: contactFormData.name,
@@ -499,18 +504,23 @@ const ClienteDetalhes = () => {
           rating: contactFormData.rating,
           is_primary: contactFormData.is_primary,
         })
-        .eq("id", editingContact.id);
+        .eq("id", editingContact.id)
+        .select();
 
       if (error) throw error;
 
+      if (!data || data.length === 0) {
+        throw new Error("Contato não foi atualizado corretamente");
+      }
+
       toast.success("Contato atualizado com sucesso!");
-      setContactDialogOpen(false);
       resetContactForm();
       setEditingContact(null);
-      fetchClientDetails();
-    } catch (error) {
+      setContactDialogOpen(false);
+      await fetchClientDetails();
+    } catch (error: any) {
       console.error("Error updating contact:", error);
-      toast.error("Erro ao atualizar contato");
+      toast.error(error.message || "Erro ao atualizar contato");
     }
   };
 
