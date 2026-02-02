@@ -40,10 +40,32 @@ interface PhoneInputProps {
   className?: string;
 }
 
+// Função para determinar o formato do telefone baseado na quantidade de dígitos
+const getPhoneFormat = (digits: string): string => {
+  const len = digits.length;
+  
+  // Com DDD (padrão brasileiro)
+  if (len >= 11) {
+    return "(##) #####-####"; // Celular com DDD: (11) 91234-5678
+  }
+  if (len >= 10) {
+    return "(##) ####-####"; // Fixo com DDD: (11) 1234-5678
+  }
+  
+  // Sem DDD
+  if (len >= 9) {
+    return "#####-####"; // Celular sem DDD: 91234-5678
+  }
+  
+  // Fixo sem DDD ou parcial
+  return "####-####"; // Fixo sem DDD: 1234-5678
+};
+
 export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
   ({ value, onValueChange, ...props }, ref) => {
     const digits = (value || "").toString().replace(/\D/g, "");
-    const phoneFormat = digits.length > 10 ? "(##) #####-####" : "(##) ####-####";
+    const phoneFormat = getPhoneFormat(digits);
+    
     return (
       <PatternFormat
         format={phoneFormat}
