@@ -129,7 +129,7 @@ const Relatorios = () => {
 
       let oppsQuery = supabase
         .from("opportunities")
-        .select("status, value, close_cycle_days")
+        .select("status, implementation_value, monthly_value, close_cycle_days, updated_at")
         .gte("created_at", startDate)
         .lte("created_at", endDate);
 
@@ -142,7 +142,8 @@ const Relatorios = () => {
       const totalOpps = oppsData?.length || 0;
       const wonOpps = oppsData?.filter(o => o.status === "won") || [];
       const lostOpps = oppsData?.filter(o => o.status === "lost") || [];
-      const totalVal = wonOpps.reduce((sum, o) => sum + (Number(o.value) || 0), 0);
+      // Use implementation_value for revenue calculation (receita caixa)
+      const totalVal = wonOpps.reduce((sum, o) => sum + (Number(o.implementation_value) || 0), 0);
       const convRate = totalOpps > 0 ? (wonOpps.length / totalOpps) * 100 : 0;
       const avgSize = wonOpps.length > 0 ? totalVal / wonOpps.length : 0;
       const avgCycle = wonOpps.filter(o => o.close_cycle_days).reduce((sum, o) => sum + (o.close_cycle_days || 0), 0) / (wonOpps.filter(o => o.close_cycle_days).length || 1);
@@ -164,7 +165,7 @@ const Relatorios = () => {
     try {
       let query = supabase
         .from("opportunities")
-        .select("status, value")
+        .select("status, implementation_value, monthly_value")
         .gte("created_at", startDate)
         .lte("created_at", endDate);
 
@@ -178,9 +179,11 @@ const Relatorios = () => {
       data?.forEach(opp => {
         const status = opp.status || 'unknown';
         const existing = statusMap.get(status) || { count: 0, value: 0 };
+        // Use implementation_value for consistency
+        const oppValue = Number(opp.implementation_value) || 0;
         statusMap.set(status, {
           count: existing.count + 1,
-          value: existing.value + (Number(opp.value) || 0),
+          value: existing.value + oppValue,
         });
       });
 
@@ -277,13 +280,14 @@ const Relatorios = () => {
         .select(`
           product_id,
           status,
-          value,
+          implementation_value,
+          monthly_value,
           product:products(name, logo_url)
         `)
         .eq("status", "won")
         .not("product_id", "is", null)
-        .gte("created_at", startDate)
-        .lte("created_at", endDate);
+        .gte("updated_at", `${startDate}T00:00:00`)
+        .lte("updated_at", `${endDate}T23:59:59`);
 
       if (selectedSeller !== 'all') {
         query = query.or(`created_by.eq.${selectedSeller},assigned_to.eq.${selectedSeller}`);
@@ -304,7 +308,7 @@ const Relatorios = () => {
         };
 
         existing.quantity += 1;
-        existing.totalValue += Number(opp.value) || 0;
+        existing.totalValue += Number(opp.implementation_value) || 0;
 
         productMap.set(opp.product_id, existing);
       });
@@ -340,18 +344,18 @@ const Relatorios = () => {
           
           supabase
             .from("opportunities")
-            .select("id, value", { count: "exact" })
+            .select("id, implementation_value", { count: "exact" })
             .or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`)
             .gte("created_at", startDate)
             .lte("created_at", endDate),
           
           supabase
             .from("opportunities")
-            .select("id, value", { count: "exact" })
+            .select("id, implementation_value", { count: "exact" })
             .or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`)
             .eq("status", "won")
-            .gte("created_at", startDate)
-            .lte("created_at", endDate),
+            .gte("updated_at", `${startDate}T00:00:00`)
+            .lte("updated_at", `${endDate}T23:59:59`),
 
           supabase
             .from("tasks")
@@ -370,7 +374,7 @@ const Relatorios = () => {
             .lte("completed_at", `${endDate}T23:59:59`),
         ]);
 
-        const wonValue = wonOppsRes.data?.reduce((sum, opp) => sum + (Number(opp.value) || 0), 0) || 0;
+        const wonValue = wonOppsRes.data?.reduce((sum, opp) => sum + (Number(opp.implementation_value) || 0), 0) || 0;
         const convRate = oppsRes.count ? ((wonOppsRes.count || 0) / oppsRes.count) * 100 : 0;
         // Use completed_at based counting for consistency with goals
         const completedTasks = completedTasksRes.count || 0;
