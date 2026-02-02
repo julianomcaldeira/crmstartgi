@@ -884,7 +884,7 @@ const Tarefas = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Select value={selectedClient} onValueChange={setSelectedClient}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por cliente" />
@@ -914,6 +914,25 @@ const Tarefas = () => {
                   </SelectContent>
                 </Select>
               )}
+
+              <Select value={quickTaskTypeFilter} onValueChange={setQuickTaskTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  <SelectItem value="ligacao">Ligação</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                  <SelectItem value="linkedin">LinkedIn</SelectItem>
+                  <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                  <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                  <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                  <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                  <SelectItem value="apresentacao">Apresentação</SelectItem>
+                  <SelectItem value="proposta">Proposta</SelectItem>
+                </SelectContent>
+              </Select>
 
               <Input
                 type="date"
