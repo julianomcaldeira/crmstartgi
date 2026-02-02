@@ -283,13 +283,20 @@ const ClienteDetalhes = () => {
       
       const title = taskTypeLabels[taskFormData.task_type] || "Tarefa";
 
+      // Converter datetime-local para ISO preservando o horário local
+      let dueDateISO = null;
+      if (taskFormData.due_date) {
+        const localDate = new Date(taskFormData.due_date);
+        dueDateISO = localDate.toISOString();
+      }
+
       const { error } = await supabase.from("tasks").insert([
         {
           title,
           description: taskFormData.description,
           client_id: id,
           task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
-          due_date: taskFormData.due_date,
+          due_date: dueDateISO,
           priority: taskFormData.priority as "low" | "medium" | "high",
           status: taskFormData.status as "pending" | "in_progress" | "completed",
           assigned_to: user.id,
