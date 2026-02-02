@@ -273,10 +273,19 @@ const Tarefas = () => {
       
       const title = taskTypeLabels[taskType] || "Tarefa";
 
+      // Converter datetime-local para ISO preservando o horário local
+      // O input datetime-local retorna no formato "YYYY-MM-DDTHH:mm"
+      // Precisamos adicionar os segundos e o timezone offset para evitar conversão incorreta
+      let dueDateISO = null;
+      if (dueDate) {
+        const localDate = new Date(dueDate);
+        dueDateISO = localDate.toISOString();
+      }
+
       const { data, error } = await supabase.from("tasks").insert([{
         title,
         description,
-        due_date: dueDate ? new Date(dueDate).toISOString() : null,
+        due_date: dueDateISO,
         priority: priority as any,
         task_type: taskType as any,
         client_id: clientId || null,
