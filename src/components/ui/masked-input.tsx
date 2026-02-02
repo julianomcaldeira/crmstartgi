@@ -42,9 +42,11 @@ interface PhoneInputProps {
 
 export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
   ({ value, onValueChange, ...props }, ref) => {
+    const digits = (value || "").toString().replace(/\D/g, "");
+    const phoneFormat = digits.length > 10 ? "(##) #####-####" : "(##) ####-####";
     return (
       <PatternFormat
-        format="(##) #####-####"
+        format={phoneFormat}
         mask="_"
         value={value}
         onValueChange={(values) => onValueChange(values.value)}
@@ -161,7 +163,27 @@ export const formatCNPJ = (cnpj: string) => {
 export const formatPhone = (phone: string) => {
   if (!phone) return '';
   const cleaned = phone.replace(/\D/g, '');
-  return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+
+  // Com DDD
+  if (cleaned.length === 11) {
+    // Celular: (11) 91234-5678
+    return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+  }
+  if (cleaned.length === 10) {
+    // Fixo: (11) 1234-5678
+    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+  }
+
+  // Sem DDD (fallback)
+  if (cleaned.length === 9) {
+    return cleaned.replace(/(\d{5})(\d{4})/, '$1-$2');
+  }
+  if (cleaned.length === 8) {
+    return cleaned.replace(/(\d{4})(\d{4})/, '$1-$2');
+  }
+
+  // Se vier em formato inesperado, não “quebra” a UI
+  return cleaned;
 };
 
 export const formatCEP = (cep: string) => {
