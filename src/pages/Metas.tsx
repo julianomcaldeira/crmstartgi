@@ -925,6 +925,16 @@ const Metas = () => {
         )}
       </Card>
 
+      {/* Goals Count */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Exibindo <span className="font-semibold text-foreground">{filteredGoals.length}</span> {filteredGoals.length === 1 ? "meta" : "metas"}
+          {goals.length !== filteredGoals.length && (
+            <span> de <span className="font-semibold text-foreground">{goals.length}</span> no total</span>
+          )}
+        </p>
+      </div>
+
       <Tabs defaultValue="lista" className="space-y-6">
         <TabsList className="grid w-full max-w-lg grid-cols-3">
           <TabsTrigger value="lista" className="gap-2">
