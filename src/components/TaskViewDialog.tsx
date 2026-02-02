@@ -8,6 +8,7 @@ import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcas
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhone, formatCNPJ } from "@/components/ui/masked-input";
 
 import {
   AlertDialog,
@@ -330,7 +331,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                         href={`tel:${task.contacts.mobile || task.contacts.phone}`} 
                         className="hover:text-primary transition-colors"
                       >
-                        {task.contacts.mobile || task.contacts.phone}
+                        {formatPhone(task.contacts.mobile || task.contacts.phone)}
                       </a>
                     </div>
                   )}
@@ -431,7 +432,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                   {task.clients.cnpj && (
                     <div className="flex items-center gap-2">
                       <FileText className="h-3 w-3" />
-                      CNPJ: {task.clients.cnpj}
+                      CNPJ: {formatCNPJ(task.clients.cnpj)}
                     </div>
                   )}
                   {task.clients.email && (
@@ -446,7 +447,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                     <div className="flex items-center gap-2">
                       <Phone className="h-3 w-3" />
                       <a href={`tel:${task.clients.phone}`} className="hover:text-primary transition-colors">
-                        {task.clients.phone}
+                        {formatPhone(task.clients.phone)}
                       </a>
                     </div>
                   )}
@@ -515,7 +516,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Phone className="h-3 w-3" />
                             <a href={`tel:${contact.phone}`} className="hover:text-primary transition-colors">
-                              {contact.phone}
+                              {formatPhone(contact.phone)}
                             </a>
                           </div>
                         )}
@@ -523,7 +524,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <Phone className="h-3 w-3" />
                             <a href={`tel:${contact.mobile}`} className="hover:text-primary transition-colors">
-                              {contact.mobile} (Celular)
+                              {formatPhone(contact.mobile)} (Celular)
                             </a>
                           </div>
                         )}

@@ -1647,13 +1647,16 @@ const ClienteDetalhes = () => {
                     {!editingContact && (
                       <BusinessCardScanner
                         onContactExtracted={(contact) => {
+                          // Limpa os telefones para conter apenas dígitos (para a máscara funcionar corretamente)
+                          const cleanPhone = contact.phone?.replace(/\D/g, '') || '';
+                          const cleanMobile = contact.mobile?.replace(/\D/g, '') || '';
                           setContactFormData({
                             ...contactFormData,
                             name: contact.name || contactFormData.name,
                             role: contact.role || contactFormData.role,
                             email: contact.email || contactFormData.email,
-                            phone: contact.phone || contactFormData.phone,
-                            mobile: contact.mobile || contactFormData.mobile,
+                            phone: cleanPhone || contactFormData.phone,
+                            mobile: cleanMobile || contactFormData.mobile,
                           });
                         }}
                       />

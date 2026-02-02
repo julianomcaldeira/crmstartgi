@@ -45,6 +45,7 @@ import {
   UserX,
   MoreVertical,
 } from "lucide-react";
+import { formatPhone } from "@/components/ui/masked-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -984,7 +985,7 @@ const Admin = () => {
                           {user.phone && (
                             <span className="flex items-center gap-1">
                               <Phone className="h-4 w-4" />
-                              {user.phone}
+                              {formatPhone(user.phone)}
                             </span>
                           )}
                         </div>

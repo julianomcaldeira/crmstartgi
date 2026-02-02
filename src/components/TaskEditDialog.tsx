@@ -28,6 +28,7 @@ import { ptBR } from "date-fns/locale";
 import TaskQuickMessages from "@/components/TaskQuickMessages";
 import AudioRecorder from "@/components/AudioRecorder";
 import TaskAttachments from "@/components/TaskAttachments";
+import { formatPhone } from "@/components/ui/masked-input";
 
 interface TaskEditDialogProps {
   task: any;
@@ -743,7 +744,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                               <div className="flex items-center gap-2">
                                 <Phone className="h-3 w-3" />
                                 <a href={`tel:${c.phone}`} className="hover:text-primary transition-colors">
-                                  {c.phone}
+                                  {formatPhone(c.phone)}
                                 </a>
                               </div>
                             )}
@@ -751,7 +752,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                               <div className="flex items-center gap-2">
                                 <Phone className="h-3 w-3" />
                                 <a href={`tel:${c.mobile}`} className="hover:text-primary transition-colors">
-                                  {c.mobile} (Celular)
+                                  {formatPhone(c.mobile)} (Celular)
                                 </a>
                               </div>
                             )}
