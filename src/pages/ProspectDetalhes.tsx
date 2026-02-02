@@ -903,7 +903,7 @@ const ClienteDetalhes = () => {
                     {contact.phone && (
                       <div className="flex items-center gap-2">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-sm text-foreground">{contact.phone}</p>
+                        <p className="text-sm text-foreground">{formatPhone(contact.phone)}</p>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.phone, `contact-phone-${idx}`)} title="Copiar telefone">
                           {copiedField === `contact-phone-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                         </Button>
@@ -912,7 +912,7 @@ const ClienteDetalhes = () => {
                     {contact.mobile && (
                       <div className="flex items-center gap-2">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        <p className="text-sm text-foreground">{contact.mobile}</p>
+                        <p className="text-sm text-foreground">{formatPhone(contact.mobile)}</p>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.mobile, `contact-mobile-${idx}`)} title="Copiar celular">
                           {copiedField === `contact-mobile-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                         </Button>
@@ -1834,13 +1834,13 @@ const ClienteDetalhes = () => {
                       {contact.phone && (
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{contact.phone}</span>
+                          <span className="text-muted-foreground">{formatPhone(contact.phone)}</span>
                         </div>
                       )}
                       {contact.mobile && (
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{contact.mobile}</span>
+                          <span className="text-muted-foreground">{formatPhone(contact.mobile)}</span>
                         </div>
                       )}
                       {contact.rating && (
