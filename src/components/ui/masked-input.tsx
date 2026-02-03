@@ -44,18 +44,16 @@ interface PhoneInputProps {
 const getPhoneFormat = (digits: string): string => {
   const len = digits.length;
   
+  // Com código de país ou formato estendido (12 dígitos)
+  if (len >= 12) {
+    return "## (##) #####-####"; // Ex: 55 (11) 91234-5678
+  }
   // Com DDD (padrão brasileiro)
   if (len >= 11) {
     return "(##) #####-####"; // Celular com DDD: (11) 91234-5678
   }
   if (len >= 10) {
     return "(##) ####-####"; // Fixo com DDD: (11) 1234-5678
-  }
-  if (len >= 9) {
-    return "(##) #####-####"; // Parcial celular com DDD
-  }
-  if (len >= 8) {
-    return "(##) ####-####"; // Parcial fixo com DDD
   }
   
   // Parcial - sempre permite formato completo para não bloquear digitação
