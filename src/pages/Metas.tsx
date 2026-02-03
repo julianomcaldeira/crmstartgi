@@ -262,8 +262,9 @@ const Metas = () => {
                 const value = Number(opp?.value) || 0;
 
                 if (goal.goal_type === "annualized_sales") {
+                  // Venda Anualizada: impl + (monthly*12), ignora pontual
                   if (isPontual) return sum;
-                  return sum + monthly * 12;
+                  return sum + impl + monthly * 12;
                 }
 
                 // revenue (Meta Caixa)
@@ -441,8 +442,9 @@ const Metas = () => {
                   const value = Number(opp?.value) || 0;
 
                   if (goal.goal_type === "annualized_sales") {
+                    // Venda Anualizada: impl + (monthly*12), ignora pontual
                     if (isPontual) return sum;
-                    return sum + monthly * 12;
+                    return sum + impl + monthly * 12;
                   }
 
                   if (isPontual) return sum + (value || impl);
