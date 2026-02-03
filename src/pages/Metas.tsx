@@ -85,7 +85,22 @@ const Metas = () => {
     start_date: "",
     end_date: "",
     assigned_to: "none",
+    task_type_filter: "",
   });
+
+  // Task types for filter
+  const taskTypes = [
+    { value: "ligacao", label: "Ligação" },
+    { value: "email", label: "E-mail" },
+    { value: "whatsapp", label: "WhatsApp" },
+    { value: "visita_presencial", label: "Visita Presencial" },
+    { value: "reuniao_online", label: "Reunião Online" },
+    { value: "visita_feira", label: "Visita Feira" },
+    { value: "visita_evento", label: "Visita Evento" },
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "proposta", label: "Proposta" },
+    { value: "apresentacao", label: "Apresentação" },
+  ];
 
   useEffect(() => {
     const initializeData = async () => {
@@ -527,6 +542,7 @@ const Metas = () => {
         end_date: formData.end_date,
         assigned_to: formData.assigned_to || null,
         created_by: user.id,
+        task_type_filter: formData.goal_type === "tasks" && formData.task_type_filter ? formData.task_type_filter : null,
       };
 
       if (editingGoal) {
@@ -584,6 +600,7 @@ const Metas = () => {
       start_date: goal.start_date,
       end_date: goal.end_date,
       assigned_to: goal.assigned_to || "none",
+      task_type_filter: goal.task_type_filter || "",
     });
     setDialogOpen(true);
   };
@@ -599,6 +616,7 @@ const Metas = () => {
       start_date: "",
       end_date: "",
       assigned_to: "none",
+      task_type_filter: "",
     });
   };
 
@@ -818,7 +836,7 @@ const Metas = () => {
                     <Label htmlFor="goal_type">Tipo de Meta *</Label>
                     <Select
                       value={formData.goal_type}
-                      onValueChange={(value) => setFormData({ ...formData, goal_type: value })}
+                      onValueChange={(value) => setFormData({ ...formData, goal_type: value, task_type_filter: "" })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -832,6 +850,32 @@ const Metas = () => {
                     </Select>
                   </div>
                 </div>
+
+                {/* Task Type Filter - only shown when goal_type is "tasks" */}
+                {formData.goal_type === "tasks" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="task_type_filter">Tipo de Tarefa (opcional)</Label>
+                    <Select
+                      value={formData.task_type_filter || "all"}
+                      onValueChange={(value) => setFormData({ ...formData, task_type_filter: value === "all" ? "" : value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas as tarefas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as tarefas</SelectItem>
+                        {taskTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Selecione um tipo específico para contar apenas tarefas desse tipo
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Descrição</Label>
