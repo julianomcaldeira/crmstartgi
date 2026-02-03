@@ -94,10 +94,10 @@ export const calculateGoalProgress = async (
     }
 
     case "annualized_sales": {
-      // Venda Anualizada: monthly_value * 12 (ONLY when billing_type != 'pontual')
+      // Venda Anualizada: impl + (monthly*12) (ONLY when billing_type != 'pontual')
       const { data, error } = await supabase
         .from("opportunities")
-        .select("monthly_value, billing_type")
+        .select("implementation_value, monthly_value, billing_type")
         .eq("assigned_to", assignedTo)
         .eq("status", "won")
         .gte("updated_at", `${startStr}T00:00:00`)
@@ -112,7 +112,9 @@ export const calculateGoalProgress = async (
         data?.reduce((sum: number, opp: any) => {
           const billingType = (opp?.billing_type as string | null | undefined) ?? null;
           if (billingType === "pontual") return sum;
-          return sum + (Number(opp?.monthly_value) || 0) * 12;
+          const impl = Number(opp?.implementation_value) || 0;
+          const monthly = Number(opp?.monthly_value) || 0;
+          return sum + impl + monthly * 12;
         }, 0) || 0
       );
     }
