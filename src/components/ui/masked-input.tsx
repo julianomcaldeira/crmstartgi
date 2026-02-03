@@ -51,14 +51,15 @@ const getPhoneFormat = (digits: string): string => {
   if (len >= 10) {
     return "(##) ####-####"; // Fixo com DDD: (11) 1234-5678
   }
-  
-  // Sem DDD
   if (len >= 9) {
-    return "#####-####"; // Celular sem DDD: 91234-5678
+    return "(##) #####-####"; // Parcial celular com DDD
+  }
+  if (len >= 8) {
+    return "(##) ####-####"; // Parcial fixo com DDD
   }
   
-  // Fixo sem DDD ou parcial
-  return "####-####"; // Fixo sem DDD: 1234-5678
+  // Parcial - sempre permite formato completo para não bloquear digitação
+  return "(##) #####-####";
 };
 
 export const PhoneInput = React.forwardRef<HTMLInputElement, PhoneInputProps>(
