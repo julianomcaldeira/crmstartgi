@@ -234,9 +234,14 @@ const Metas = () => {
 
           if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
             // Fetch won opportunities in the calculation window
+            // Rules:
+            // - Venda Anualizada: monthly_value * 12 (ONLY when billing_type != 'pontual')
+            // - Meta Caixa (Receita):
+            //    - pontual: value (fallback implementation_value)
+            //    - recorrente: implementation_value + (monthly_value * 12)
             let query = supabase
               .from("opportunities")
-              .select("implementation_value, monthly_value, updated_at")
+              .select("implementation_value, monthly_value, billing_type, value, updated_at")
               .eq("status", "won")
               .gte("updated_at", `${startStr}T00:00:00`)
               .lte("updated_at", `${endStr}T23:59:59`);
@@ -248,22 +253,33 @@ const Metas = () => {
             const { data: opportunities } = await query;
 
             if (opportunities) {
-              currentValue = opportunities.reduce((sum, opp) => {
-                if (goal.goal_type === "revenue") {
-                  return sum + (Number(opp.implementation_value) || 0);
-                } else {
-                  return sum + ((Number(opp.monthly_value) || 0) * 12);
+              currentValue = opportunities.reduce((sum, opp: any) => {
+                const billingType = (opp?.billing_type as string | null | undefined) ?? null;
+                const isPontual = billingType === "pontual";
+
+                const impl = Number(opp?.implementation_value) || 0;
+                const monthly = Number(opp?.monthly_value) || 0;
+                const value = Number(opp?.value) || 0;
+
+                if (goal.goal_type === "annualized_sales") {
+                  if (isPontual) return sum;
+                  return sum + monthly * 12;
                 }
+
+                // revenue (Meta Caixa)
+                if (isPontual) return sum + (value || impl);
+                return sum + impl + monthly * 12;
               }, 0);
             }
           } else if (goal.goal_type === "tasks") {
             // Fetch completed tasks in the calculation window with optional type filter
+            const startTs = `${startStr}T00:00:00`;
+            const endTs = `${endStr}T23:59:59`;
+
             let query = supabase
               .from("tasks")
               .select("id", { count: "exact", head: true })
-              .eq("status", "completed")
-              .gte("completed_at", `${startStr}T00:00:00`)
-              .lte("completed_at", `${endStr}T23:59:59`);
+              .eq("status", "completed");
 
             if (goal.assigned_to) {
               query = query.eq("assigned_to", goal.assigned_to);
@@ -273,6 +289,12 @@ const Metas = () => {
             if (goal.task_type_filter) {
               query = query.eq("task_type", goal.task_type_filter as any);
             }
+
+            // Many existing completed tasks have completed_at = null.
+            // We fallback to updated_at as completion timestamp when completed_at is missing.
+            query = query.or(
+              `and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`
+            );
 
             const { count } = await query;
             currentValue = count || 0;
@@ -398,7 +420,7 @@ const Metas = () => {
             if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
               let query = supabase
                 .from("opportunities")
-                .select("implementation_value, monthly_value, updated_at")
+                .select("implementation_value, monthly_value, billing_type, value, updated_at")
                 .eq("status", "won")
                 .gte("updated_at", `${goal.start_date}T00:00:00`)
                 .lte("updated_at", `${goal.end_date}T23:59:59`);
@@ -410,21 +432,31 @@ const Metas = () => {
               const { data: opportunities } = await query;
 
               if (opportunities) {
-                currentValue = opportunities.reduce((sum, opp) => {
-                  if (goal.goal_type === "revenue") {
-                    return sum + (Number(opp.implementation_value) || 0);
-                  } else {
-                    return sum + ((Number(opp.monthly_value) || 0) * 12);
+                currentValue = opportunities.reduce((sum, opp: any) => {
+                  const billingType = (opp?.billing_type as string | null | undefined) ?? null;
+                  const isPontual = billingType === "pontual";
+
+                  const impl = Number(opp?.implementation_value) || 0;
+                  const monthly = Number(opp?.monthly_value) || 0;
+                  const value = Number(opp?.value) || 0;
+
+                  if (goal.goal_type === "annualized_sales") {
+                    if (isPontual) return sum;
+                    return sum + monthly * 12;
                   }
+
+                  if (isPontual) return sum + (value || impl);
+                  return sum + impl + monthly * 12;
                 }, 0);
               }
             } else if (goal.goal_type === "tasks") {
+              const startTs = `${goal.start_date}T00:00:00`;
+              const endTs = `${goal.end_date}T23:59:59`;
+
               let query = supabase
                 .from("tasks")
                 .select("id", { count: "exact", head: true })
-                .eq("status", "completed")
-                .gte("completed_at", `${goal.start_date}T00:00:00`)
-                .lte("completed_at", `${goal.end_date}T23:59:59`);
+                .eq("status", "completed");
 
               if (goal.assigned_to) {
                 query = query.eq("assigned_to", goal.assigned_to);
@@ -434,6 +466,10 @@ const Metas = () => {
               if (goal.task_type_filter) {
                 query = query.eq("task_type", goal.task_type_filter as any);
               }
+
+              query = query.or(
+                `and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`
+              );
 
               const { count } = await query;
               currentValue = count || 0;

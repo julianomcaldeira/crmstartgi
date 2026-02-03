@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 interface GoalProgress {
   goalId: string;
@@ -56,15 +57,18 @@ export const calculateGoalProgress = async (
   if (!assignedTo) return 0;
 
   const { start: windowStart, end: windowEnd } = getCalculationWindow({ period, start_date: startDate, end_date: endDate });
-  const startStr = windowStart.toISOString().split("T")[0];
-  const endStr = windowEnd.toISOString().split("T")[0];
+  // IMPORTANT: avoid toISOString() here (UTC shift may change the date)
+  const startStr = format(windowStart, "yyyy-MM-dd");
+  const endStr = format(windowEnd, "yyyy-MM-dd");
 
   switch (goalType) {
     case "revenue": {
-      // Sum of implementation_value for won opportunities in the period (using updated_at)
+      // Meta Caixa (Receita):
+      // - pontual: value (fallback implementation_value)
+      // - recorrente: implementation_value + (monthly_value * 12)
       const { data, error } = await supabase
         .from("opportunities")
-        .select("implementation_value")
+        .select("implementation_value, monthly_value, billing_type, value")
         .eq("assigned_to", assignedTo)
         .eq("status", "won")
         .gte("updated_at", `${startStr}T00:00:00`)
@@ -75,14 +79,25 @@ export const calculateGoalProgress = async (
         return 0;
       }
 
-      return data?.reduce((sum, opp) => sum + (Number(opp.implementation_value) || 0), 0) || 0;
+      return (
+        data?.reduce((sum: number, opp: any) => {
+          const billingType = (opp?.billing_type as string | null | undefined) ?? null;
+          const isPontual = billingType === "pontual";
+          const impl = Number(opp?.implementation_value) || 0;
+          const monthly = Number(opp?.monthly_value) || 0;
+          const value = Number(opp?.value) || 0;
+
+          if (isPontual) return sum + (value || impl);
+          return sum + impl + monthly * 12;
+        }, 0) || 0
+      );
     }
 
     case "annualized_sales": {
-      // Sum of monthly_value * 12 for won opportunities in the period (using updated_at)
+      // Venda Anualizada: monthly_value * 12 (ONLY when billing_type != 'pontual')
       const { data, error } = await supabase
         .from("opportunities")
-        .select("monthly_value")
+        .select("monthly_value, billing_type")
         .eq("assigned_to", assignedTo)
         .eq("status", "won")
         .gte("updated_at", `${startStr}T00:00:00`)
@@ -93,22 +108,34 @@ export const calculateGoalProgress = async (
         return 0;
       }
 
-      return data?.reduce((sum, opp) => sum + (Number(opp.monthly_value) || 0) * 12, 0) || 0;
+      return (
+        data?.reduce((sum: number, opp: any) => {
+          const billingType = (opp?.billing_type as string | null | undefined) ?? null;
+          if (billingType === "pontual") return sum;
+          return sum + (Number(opp?.monthly_value) || 0) * 12;
+        }, 0) || 0
+      );
     }
 
     case "tasks": {
-      // Count of completed tasks in the period with optional type filter
+      // Count of completed tasks in the period with optional type filter.
+      // NOTE: many legacy tasks have completed_at = null; use updated_at as fallback.
+      const startTs = `${startStr}T00:00:00`;
+      const endTs = `${endStr}T23:59:59`;
+
       let query = supabase
         .from("tasks")
         .select("*", { count: "exact", head: true })
         .eq("assigned_to", assignedTo)
-        .eq("status", "completed")
-        .gte("completed_at", `${startStr}T00:00:00`)
-        .lte("completed_at", `${endStr}T23:59:59`);
+        .eq("status", "completed");
 
       if (taskTypeFilter) {
         query = query.eq("task_type", taskTypeFilter as any);
       }
+
+      query = query.or(
+        `and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`
+      );
 
       const { count, error } = await query;
 
