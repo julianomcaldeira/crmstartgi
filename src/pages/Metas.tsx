@@ -27,6 +27,34 @@ const getFirstBusinessDay = (date: Date): Date => {
   return firstDay;
 };
 
+const normalizeDateOnly = (value?: string | null): string => {
+  if (!value) return "";
+  // Works for both YYYY-MM-DD and full ISO timestamps
+  return value.substring(0, 10);
+};
+
+// True if [start, end] overlaps [rangeStart, rangeEnd] (date-only strings)
+const isDateRangeOverlap = (
+  start?: string | null,
+  end?: string | null,
+  rangeStart?: string,
+  rangeEnd?: string
+): boolean => {
+  const s = normalizeDateOnly(start);
+  const e = normalizeDateOnly(end);
+
+  // If dates are missing, don't block results
+  if (!s || !e) return true;
+
+  const rs = rangeStart ? normalizeDateOnly(rangeStart) : "";
+  const re = rangeEnd ? normalizeDateOnly(rangeEnd) : "";
+
+  // No overlap if ends before range starts OR starts after range ends
+  if (rs && e < rs) return false;
+  if (re && s > re) return false;
+  return true;
+};
+
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -190,8 +218,8 @@ const Metas = () => {
           let currentValue = 0;
           const { start: windowStart, end: windowEnd } = getCalculationWindow(goal);
           
-          const startStr = windowStart.toISOString().split("T")[0];
-          const endStr = windowEnd.toISOString().split("T")[0];
+          const startStr = format(windowStart, "yyyy-MM-dd");
+          const endStr = format(windowEnd, "yyyy-MM-dd");
 
           if (goal.goal_type === "revenue" || goal.goal_type === "annualized_sales") {
             // Fetch won opportunities in the calculation window
@@ -573,18 +601,51 @@ const Metas = () => {
       filtered = filtered.filter(g => g.period === filterPeriod);
     }
 
-    // Filter by start date
-    if (filterStartDate) {
-      filtered = filtered.filter(g => g.start_date >= filterStartDate);
-    }
-
-    // Filter by end date
-    if (filterEndDate) {
-      filtered = filtered.filter(g => g.end_date <= filterEndDate);
+    // Filter by date range (metas ativas no período selecionado)
+    if (filterStartDate || filterEndDate) {
+      const rs = filterStartDate || undefined;
+      const re = filterEndDate || undefined;
+      filtered = filtered.filter((g) => isDateRangeOverlap(g.start_date, g.end_date, rs, re));
     }
 
     return filtered;
   }, [goals, filterSeller, filterGoalType, filterPeriod, filterStartDate, filterEndDate]);
+
+  // Same filters applied to progress view (lista + dashboard)
+  const filteredGoalsProgress = useMemo(() => {
+    let filtered = [...goalsProgress];
+
+    if (filterSeller !== "all") {
+      if (filterSeller === "unassigned") {
+        filtered = filtered.filter((g) => !g.assigned_to);
+      } else {
+        filtered = filtered.filter((g) => g.assigned_to === filterSeller);
+      }
+    }
+
+    if (filterGoalType !== "all") {
+      filtered = filtered.filter((g) => g.goal_type === filterGoalType);
+    }
+
+    if (filterPeriod !== "all") {
+      filtered = filtered.filter((g) => g.period === filterPeriod);
+    }
+
+    if (filterStartDate || filterEndDate) {
+      const rs = filterStartDate || undefined;
+      const re = filterEndDate || undefined;
+      filtered = filtered.filter((g) =>
+        isDateRangeOverlap(
+          (g.windowStart ?? g.start_date) as string,
+          (g.windowEnd ?? g.end_date) as string,
+          rs,
+          re
+        )
+      );
+    }
+
+    return filtered;
+  }, [goalsProgress, filterSeller, filterGoalType, filterPeriod, filterStartDate, filterEndDate]);
 
   // Group goals by seller
   const groupedGoals = useMemo(() => {
@@ -605,11 +666,11 @@ const Metas = () => {
 
   // Chart data for seller comparison
   const sellerComparisonData = useMemo(() => {
-    if (!goalsProgress.length) return [];
+    if (!filteredGoalsProgress.length) return [];
 
     const sellerMap = new Map<string, { name: string; meta: number; atual: number; previsao: number }>();
 
-    goalsProgress.forEach((goal) => {
+    filteredGoalsProgress.forEach((goal) => {
       const sellerId = goal.assigned_to || "unassigned";
       const sellerName = goal.profiles?.full_name || "Não atribuído";
 
@@ -624,18 +685,20 @@ const Metas = () => {
     });
 
     return Array.from(sellerMap.values());
-  }, [goalsProgress]);
+  }, [filteredGoalsProgress]);
 
   // Monthly evolution data
   const monthlyEvolutionData = useMemo(() => {
-    if (!goalsProgress.length) return [];
+    if (!filteredGoalsProgress.length) return [];
 
     // Group by month
     const monthlyData = new Map<string, { month: string; meta: number; realizado: number }>();
 
-    goalsProgress.forEach((goal) => {
-      const startDate = new Date(goal.start_date);
-      const endDate = new Date(goal.end_date);
+    filteredGoalsProgress.forEach((goal) => {
+      const effectiveStart = (goal.windowStart || goal.start_date) as string;
+      const effectiveEnd = (goal.windowEnd || goal.end_date) as string;
+      const startDate = new Date(effectiveStart);
+      const endDate = new Date(effectiveEnd);
       const monthKey = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
       const monthLabel = startDate.toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
 
@@ -649,7 +712,7 @@ const Metas = () => {
     });
 
     return Array.from(monthlyData.values()).sort((a, b) => a.month.localeCompare(b.month));
-  }, [goalsProgress]);
+  }, [filteredGoalsProgress]);
 
   return (
     <div className="space-y-6">
@@ -1208,25 +1271,17 @@ const Metas = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {goalsProgress
-                        .filter(goal => {
-                          let match = true;
-                          if (filterSeller !== "all") {
-                            if (filterSeller === "unassigned") {
-                              match = match && !goal.assigned_to;
-                            } else {
-                              match = match && goal.assigned_to === filterSeller;
-                            }
-                          }
-                          if (filterGoalType !== "all") {
-                            match = match && goal.goal_type === filterGoalType;
-                          }
-                          if (filterPeriod !== "all") {
-                            match = match && goal.period === filterPeriod;
-                          }
-                          return match;
-                        })
-                        .map((goal) => {
+                      {filteredGoalsProgress.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={isAdmin ? 11 : 10}
+                            className="py-8 text-center text-muted-foreground"
+                          >
+                            Nenhuma meta encontrada para o período selecionado
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredGoalsProgress.map((goal) => {
                           const Icon = getGoalIcon(goal.goal_type);
                           return (
                             <TableRow key={goal.id} className="hover:bg-muted/50">
@@ -1318,7 +1373,8 @@ const Metas = () => {
                               )}
                             </TableRow>
                           );
-                        })}
+                        })
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -1349,7 +1405,7 @@ const Metas = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{filteredGoals.length}</div>
+                    <div className="text-2xl font-bold">{filteredGoalsProgress.length}</div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Ativas no período selecionado
                     </p>
@@ -1365,7 +1421,7 @@ const Metas = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-green-600">
-                      {goalsProgress.filter(g => g.isOnTrack).length}
+                      {filteredGoalsProgress.filter(g => g.isOnTrack).length}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Acima do esperado
@@ -1382,7 +1438,7 @@ const Metas = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-600">
-                      {goalsProgress.filter(g => !g.isOnTrack).length}
+                      {filteredGoalsProgress.filter(g => !g.isOnTrack).length}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Abaixo do esperado
@@ -1511,17 +1567,12 @@ const Metas = () => {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {goalsProgress
-                    .filter(goal => {
-                      if (filterSeller !== "all") {
-                        if (filterSeller === "unassigned") return !goal.assigned_to;
-                        return goal.assigned_to === filterSeller;
-                      }
-                      if (filterGoalType !== "all") return goal.goal_type === filterGoalType;
-                      if (filterPeriod !== "all") return goal.period === filterPeriod;
-                      return true;
-                    })
-                    .map((goal) => {
+                  {filteredGoalsProgress.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground">
+                      Nenhuma meta encontrada para o período selecionado
+                    </div>
+                  ) : (
+                    filteredGoalsProgress.map((goal) => {
                       const Icon = getGoalIcon(goal.goal_type);
                       return (
                         <div key={goal.id} className="space-y-3 p-4 border rounded-lg hover:shadow-sm transition-shadow">
@@ -1612,7 +1663,8 @@ const Metas = () => {
                           )}
                         </div>
                       );
-                    })}
+                    })
+                  )}
                 </CardContent>
               </Card>
             </>
