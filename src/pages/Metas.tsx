@@ -103,7 +103,7 @@ const Metas = () => {
       fetchGoalsProgress();
       fetchHistoricalData();
     }
-  }, [goals]);
+  }, [goals, filterStartDate, filterEndDate]);
 
   const checkAdminStatus = async () => {
     try {
@@ -187,25 +187,34 @@ const Metas = () => {
     return new Date(year, month - 1, day);
   };
 
-  // Get calculation window based on goal period
-  const getCalculationWindow = (goal: any) => {
+  // Get calculation window based on goal period and optional filter dates
+  const getCalculationWindow = (goal: any, filterStart?: string, filterEnd?: string) => {
     const now = new Date();
     const goalStart = parseDateOnly(goal.start_date);
     const goalEnd = parseDateOnly(goal.end_date);
     
+    // If filter dates are provided, use them as the reference window
+    const refStart = filterStart ? parseDateOnly(filterStart) : new Date(now.getFullYear(), now.getMonth(), 1);
+    const refEnd = filterEnd ? parseDateOnly(filterEnd) : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    
     if (goal.period === "mensal") {
-      // For monthly goals, calculate for the current month within the goal period
-      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      
-      // Use goal boundaries if current month is outside goal period
-      const effectiveStart = currentMonthStart < goalStart ? goalStart : currentMonthStart;
-      const effectiveEnd = currentMonthEnd > goalEnd ? goalEnd : currentMonthEnd;
+      // For monthly goals, calculate within the filter/current month window
+      // Use goal boundaries if filter window is outside goal period
+      const effectiveStart = refStart < goalStart ? goalStart : refStart;
+      const effectiveEnd = refEnd > goalEnd ? goalEnd : refEnd;
       
       return { start: effectiveStart, end: effectiveEnd };
     }
     
-    // For semestral/anual, use full goal period
+    // For semestral/anual goals, also respect the filter window for progress calculation
+    // This allows showing proportional progress for the filtered period
+    if (filterStart || filterEnd) {
+      const effectiveStart = refStart < goalStart ? goalStart : refStart;
+      const effectiveEnd = refEnd > goalEnd ? goalEnd : refEnd;
+      return { start: effectiveStart, end: effectiveEnd, isPartial: true };
+    }
+    
+    // No filter - use full goal period
     return { start: goalStart, end: goalEnd };
   };
 
@@ -216,7 +225,9 @@ const Metas = () => {
       const progressData = await Promise.all(
         goals.map(async (goal) => {
           let currentValue = 0;
-          const { start: windowStart, end: windowEnd } = getCalculationWindow(goal);
+          const calcResult = getCalculationWindow(goal, filterStartDate || undefined, filterEndDate || undefined);
+          const { start: windowStart, end: windowEnd } = calcResult;
+          const isPartialPeriod = 'isPartial' in calcResult && calcResult.isPartial;
           
           const startStr = format(windowStart, "yyyy-MM-dd");
           const endStr = format(windowEnd, "yyyy-MM-dd");
@@ -297,8 +308,20 @@ const Metas = () => {
           
           const clampedDaysPassed = Math.min(daysPassed, daysInWindow);
           
-          const progress = goal.target_value > 0 
-            ? (currentValue / goal.target_value) * 100 
+          // For partial periods (anual/semestral goals filtered by month), calculate proportional target
+          let effectiveTarget = goal.target_value;
+          if (isPartialPeriod && (goal.period === "anual" || goal.period === "semestral")) {
+            const goalStart = parseDateOnly(goal.start_date);
+            const goalEnd = parseDateOnly(goal.end_date);
+            const totalGoalDays = Math.max(1, Math.ceil(
+              (goalEnd.getTime() - goalStart.getTime()) / (1000 * 60 * 60 * 24)
+            ) + 1);
+            // Proportional target for the filtered window
+            effectiveTarget = (goal.target_value / totalGoalDays) * daysInWindow;
+          }
+          
+          const progress = effectiveTarget > 0 
+            ? (currentValue / effectiveTarget) * 100 
             : 0;
           
           const expectedProgress = daysInWindow > 0 
@@ -310,13 +333,15 @@ const Metas = () => {
             ? (currentValue / clampedDaysPassed) * daysInWindow 
             : 0;
           
-          // Remaining to hit goal
-          const remaining = Math.max(0, goal.target_value - currentValue);
+          // Remaining to hit effective target
+          const remaining = Math.max(0, effectiveTarget - currentValue);
 
           return {
             ...goal,
             currentValue,
             remaining,
+            effectiveTarget,
+            isPartialPeriod,
             progress: Math.min(100, progress),
             expectedProgress: Math.max(0, expectedProgress),
             projection,
@@ -612,6 +637,8 @@ const Metas = () => {
   }, [goals, filterSeller, filterGoalType, filterPeriod, filterStartDate, filterEndDate]);
 
   // Same filters applied to progress view (lista + dashboard)
+  // Note: Date filtering uses original start_date/end_date (not windowStart/windowEnd)
+  // because we want to show goals that are ACTIVE during the filter period
   const filteredGoalsProgress = useMemo(() => {
     let filtered = [...goalsProgress];
 
@@ -631,16 +658,13 @@ const Metas = () => {
       filtered = filtered.filter((g) => g.period === filterPeriod);
     }
 
+    // Use original goal dates for visibility filtering
+    // Goals active during the filter period should be visible
     if (filterStartDate || filterEndDate) {
       const rs = filterStartDate || undefined;
       const re = filterEndDate || undefined;
       filtered = filtered.filter((g) =>
-        isDateRangeOverlap(
-          (g.windowStart ?? g.start_date) as string,
-          (g.windowEnd ?? g.end_date) as string,
-          rs,
-          re
-        )
+        isDateRangeOverlap(g.start_date, g.end_date, rs, re)
       );
     }
 
@@ -1309,7 +1333,7 @@ const Metas = () => {
                               <TableCell>
                                 <div className="flex flex-col">
                                   <span className="text-xs font-medium">
-                                    {goal.period === "mensal" ? "Mês atual" : getPeriodLabel(goal.period)}
+                                    {goal.isPartialPeriod ? `${getPeriodLabel(goal.period)} (proporcional)` : (goal.period === "mensal" ? "Mês atual" : getPeriodLabel(goal.period))}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
                                     {goal.windowStart && goal.windowEnd 
@@ -1320,7 +1344,14 @@ const Metas = () => {
                                 </div>
                               </TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatValue(goal.target_value, goal.goal_type)}
+                                <div className="flex flex-col items-end">
+                                  <span>{formatValue(goal.effectiveTarget ?? goal.target_value, goal.goal_type)}</span>
+                                  {goal.isPartialPeriod && goal.effectiveTarget !== goal.target_value && (
+                                    <span className="text-xs text-muted-foreground">
+                                      (total: {formatValue(goal.target_value, goal.goal_type)})
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-right font-bold text-primary">
                                 {formatValue(goal.currentValue, goal.goal_type)}
