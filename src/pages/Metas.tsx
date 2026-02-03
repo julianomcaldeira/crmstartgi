@@ -16,6 +16,16 @@ import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { startOfMonth, endOfMonth, isWeekend, addDays, format } from "date-fns";
+
+// Helper function to get the first business day of the month
+const getFirstBusinessDay = (date: Date): Date => {
+  let firstDay = startOfMonth(date);
+  while (isWeekend(firstDay)) {
+    firstDay = addDays(firstDay, 1);
+  }
+  return firstDay;
+};
 
 const Metas = () => {
   const [goals, setGoals] = useState<any[]>([]);
@@ -29,12 +39,12 @@ const Metas = () => {
   const [goalsProgress, setGoalsProgress] = useState<any[]>([]);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   
-  // Filter states
+  // Filter states - default to first business day and last day of current month
   const [filterSeller, setFilterSeller] = useState<string>("all");
   const [filterGoalType, setFilterGoalType] = useState<string>("all");
   const [filterPeriod, setFilterPeriod] = useState<string>("all");
-  const [filterStartDate, setFilterStartDate] = useState<string>("");
-  const [filterEndDate, setFilterEndDate] = useState<string>("");
+  const [filterStartDate, setFilterStartDate] = useState<string>(() => format(getFirstBusinessDay(new Date()), "yyyy-MM-dd"));
+  const [filterEndDate, setFilterEndDate] = useState<string>(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [groupBySeller, setGroupBySeller] = useState(false);
   
   // Form states
