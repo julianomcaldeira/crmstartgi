@@ -582,9 +582,9 @@ export function ProspectDiagnosticDialog({
 
           {/* Step: Questions */}
           {step === "questions" && currentQuestion && (
-            <div className="space-y-6 p-4">
-              {/* Progress */}
-              <div className="space-y-2">
+            <div className="flex flex-col h-[65vh]">
+              {/* Progress - Fixed at top */}
+              <div className="space-y-2 pb-4 flex-shrink-0 px-4">
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Pergunta {currentQuestionIndex + 1} de {selectedRole?.questions.length}</span>
                   <span>{Math.round(progress)}% completo</span>
@@ -592,88 +592,93 @@ export function ProspectDiagnosticDialog({
                 <Progress value={progress} className="h-2" />
               </div>
 
-              {/* Question Card */}
-              <Card className="border-2 border-primary/20">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shrink-0">
-                      <span className="font-bold text-lg">{currentQuestionIndex + 1}</span>
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg leading-relaxed">
-                        {currentQuestion.question}
-                      </CardTitle>
-                      {currentQuestion.multiSelect && (
-                        <Badge variant="outline" className="mt-2">
-                          Múltipla escolha
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {currentQuestion.multiSelect ? (
-                      currentQuestion.options.map((option, index) => (
-                        <label
-                          key={index}
-                          className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                            currentSelections.includes(option)
-                              ? "border-primary bg-primary/5"
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <Checkbox
-                            checked={currentSelections.includes(option)}
-                            onCheckedChange={() => handleOptionToggle(option)}
-                          />
-                          <span className="flex-1">{option}</span>
-                        </label>
-                      ))
-                    ) : (
-                      <RadioGroup
-                        value={currentSelections[0] || ""}
-                        onValueChange={(value) => setCurrentSelections([value])}
-                      >
-                        {currentQuestion.options.map((option, index) => (
-                          <label
-                            key={index}
-                            className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                              currentSelections.includes(option)
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:border-primary/50"
-                            }`}
+              {/* Scrollable content area */}
+              <ScrollArea className="flex-1 px-4">
+                <div className="space-y-4 pb-4">
+                  {/* Question Card */}
+                  <Card className="border-2">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                          <span className="font-bold text-lg">{currentQuestionIndex + 1}</span>
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg leading-relaxed">
+                            {currentQuestion.question}
+                          </CardTitle>
+                          {currentQuestion.multiSelect && (
+                            <Badge variant="outline" className="mt-2">
+                              Múltipla escolha
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {currentQuestion.multiSelect ? (
+                          currentQuestion.options.map((option, index) => (
+                            <label
+                              key={index}
+                              className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                currentSelections.includes(option)
+                                  ? "border-primary bg-primary/5"
+                                  : "border-border hover:border-primary/50"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={currentSelections.includes(option)}
+                                onCheckedChange={() => handleOptionToggle(option)}
+                              />
+                              <span className="flex-1">{option}</span>
+                            </label>
+                          ))
+                        ) : (
+                          <RadioGroup
+                            value={currentSelections[0] || ""}
+                            onValueChange={(value) => setCurrentSelections([value])}
                           >
-                            <RadioGroupItem value={option} />
-                            <span className="flex-1">{option}</span>
-                          </label>
-                        ))}
-                      </RadioGroup>
-                    )}
-                  </div>
+                            {currentQuestion.options.map((option, index) => (
+                              <label
+                                key={index}
+                                className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                                  currentSelections.includes(option)
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                              >
+                                <RadioGroupItem value={option} />
+                                <span className="flex-1">{option}</span>
+                              </label>
+                            ))}
+                          </RadioGroup>
+                        )}
+                      </div>
 
-                  {/* Seller Observation Field */}
-                  <Separator className="my-4" />
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm font-medium">
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      Observação do Vendedor (opcional)
-                    </Label>
-                    <Textarea
-                      placeholder="Adicione sua percepção sobre esta resposta do cliente... Ex: O cliente demonstrou frustração ao falar sobre isso."
-                      value={currentObservation}
-                      onChange={(e) => setCurrentObservation(e.target.value)}
-                      className="min-h-[80px] resize-none"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Sua observação será considerada pela IA na análise final do diagnóstico.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                      {/* Seller Observation Field */}
+                      <Separator className="my-4" />
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-sm font-medium">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                          Observação do Vendedor (opcional)
+                        </Label>
+                        <Textarea
+                          placeholder="Adicione sua percepção sobre esta resposta do cliente... Ex: O cliente demonstrou frustração ao falar sobre isso."
+                          value={currentObservation}
+                          onChange={(e) => setCurrentObservation(e.target.value)}
+                          className="min-h-[80px] resize-none"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Sua observação será considerada pela IA na análise final do diagnóstico.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </ScrollArea>
 
-              {/* Navigation */}
-              <div className="flex justify-between">
+              {/* Navigation - Fixed at bottom */}
+              <div className="flex justify-between pt-4 flex-shrink-0 px-4 border-t">
                 <Button
                   variant="outline"
                   onClick={handlePreviousQuestion}
