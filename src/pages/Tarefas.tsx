@@ -16,6 +16,7 @@ import { ptBR } from "date-fns/locale";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { DraggableCard } from "@/components/DraggableCard";
 import { DroppableColumn } from "@/components/DroppableColumn";
+import TaskHoverPreview from "@/components/TaskHoverPreview";
 import TaskViewDialog from "@/components/TaskViewDialog";
 import { TaskEditDialog } from "@/components/TaskEditDialog";
 import { SwipeableCard } from "@/components/SwipeableCard";
@@ -1076,82 +1077,83 @@ const Tarefas = () => {
                 className="space-y-3 animate-fade-in"
               >
                 {paginatedTasks.map((task) => (
-                  <SwipeableCard
-                    key={task.id}
-                    onEdit={() => {
-                      setSelectedTask(task);
-                      setEditDialogOpen(true);
-                    }}
-                  >
-                  <Card 
-                    className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
-                    onClick={() => {
-                      setSelectedTask(task);
-                      setEditDialogOpen(true);
-                    }}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleTaskStatus(task.id, task.status);
-                            }}
-                            className="mt-1"
-                          >
-                            {task.status === "completed" ? (
-                              <CheckCircle2 className="h-5 w-5 text-success" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
-                            )}
-                          </button>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              {getTaskTypeIcon(task.task_type)}
-                              <span className="font-medium">{task.title}</span>
-                              <Badge className={getPriorityColor(task.priority)}>
-                                {getPriorityLabel(task.priority)}
-                              </Badge>
-                            </div>
+                  <TaskHoverPreview key={task.id} task={task}>
+                    <SwipeableCard
+                      onEdit={() => {
+                        setSelectedTask(task);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                    <Card 
+                      className={`cursor-pointer hover:shadow-md transition-shadow border-l-4 ${getTaskStatusColor(task)}`}
+                      onClick={() => {
+                        setSelectedTask(task);
+                        setEditDialogOpen(true);
+                      }}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleTaskStatus(task.id, task.status);
+                              }}
+                              className="mt-1"
+                            >
+                              {task.status === "completed" ? (
+                                <CheckCircle2 className="h-5 w-5 text-success" />
+                              ) : (
+                                <Circle className="h-5 w-5 text-muted-foreground hover:text-primary" />
+                              )}
+                            </button>
                             
-                            {task.description && (
-                              <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
-                                {task.description}
-                              </p>
-                            )}
-                            
-                            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                              {task.due_date && (
-                                <div className="flex items-center gap-1">
-                                  {getTaskStatusIcon(task)}
-                                  <span>
-                                    {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                  </span>
-                                </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getTaskTypeIcon(task.task_type)}
+                                <span className="font-medium">{task.title}</span>
+                                <Badge className={getPriorityColor(task.priority)}>
+                                  {getPriorityLabel(task.priority)}
+                                </Badge>
+                              </div>
+                              
+                              {task.description && (
+                                <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
+                                  {task.description}
+                                </p>
                               )}
-                              {task.clients && (
-                                <div className="flex items-center gap-1">
-                                  <Building2 size={14} />
-                                  <span>{task.clients.company_name || task.clients.trade_name}</span>
-                                </div>
-                              )}
-                              {task.contacts && (
-                                <div className="flex items-center gap-1">
-                                  <Users size={14} />
-                                  <span>{task.contacts.name}</span>
-                                </div>
-                              )}
+                              
+                              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                                {task.due_date && (
+                                  <div className="flex items-center gap-1">
+                                    {getTaskStatusIcon(task)}
+                                    <span>
+                                      {format(new Date(task.due_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    </span>
+                                  </div>
+                                )}
+                                {task.clients && (
+                                  <div className="flex items-center gap-1">
+                                    <Building2 size={14} />
+                                    <span>{task.clients.company_name || task.clients.trade_name}</span>
+                                  </div>
+                                )}
+                                {task.contacts && (
+                                  <div className="flex items-center gap-1">
+                                    <Users size={14} />
+                                    <span>{task.contacts.name}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          
+                          <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
                         </div>
-                        
-                        <Badge variant="outline">{getTaskTypeLabel(task.task_type)}</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  </SwipeableCard>
+                      </CardContent>
+                    </Card>
+                    </SwipeableCard>
+                  </TaskHoverPreview>
                 ))}
               </div>
 

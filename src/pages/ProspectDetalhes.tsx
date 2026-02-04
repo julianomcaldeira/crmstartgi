@@ -57,6 +57,7 @@ import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { ClipboardList } from "lucide-react";
+import TaskHoverPreview from "@/components/TaskHoverPreview";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -1498,132 +1499,133 @@ const ClienteDetalhes = () => {
                       const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
                       
                       return (
-                        <div 
-                          key={task.id} 
-                          className={`group relative p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
-                            task.status === "completed" ? "opacity-70" : ""
-                          } ${isOverdue ? "border-destructive/50" : "border-border hover:border-primary/30"}`}
-                        >
-                          {/* Priority indicator bar */}
-                          <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                            task.priority === "high" ? "bg-destructive" : 
-                            task.priority === "medium" ? "bg-warning" : "bg-muted-foreground/30"
-                          }`} />
-                          
-                          <div className="pl-3">
-                            {/* Header */}
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <div 
-                                className="flex items-start gap-3 flex-1 cursor-pointer min-w-0"
-                                onClick={() => {
-                                  setSelectedTask(task);
-                                  setTaskViewDialogOpen(true);
-                                }}
-                              >
-                                <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color} shrink-0`}>
-                                  <TaskIcon className="h-4 w-4" />
+                        <TaskHoverPreview key={task.id} task={task}>
+                          <div 
+                            className={`group relative p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+                              task.status === "completed" ? "opacity-70" : ""
+                            } ${isOverdue ? "border-destructive/50" : "border-border hover:border-primary/30"}`}
+                          >
+                            {/* Priority indicator bar */}
+                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                              task.priority === "high" ? "bg-destructive" : 
+                              task.priority === "medium" ? "bg-warning" : "bg-muted-foreground/30"
+                            }`} />
+                            
+                            <div className="pl-3">
+                              {/* Header */}
+                              <div className="flex items-start justify-between gap-3 mb-3">
+                                <div 
+                                  className="flex items-start gap-3 flex-1 cursor-pointer min-w-0"
+                                  onClick={() => {
+                                    setSelectedTask(task);
+                                    setTaskViewDialogOpen(true);
+                                  }}
+                                >
+                                  <div className={`p-2 rounded-lg bg-muted/50 ${typeInfo.color} shrink-0`}>
+                                    <TaskIcon className="h-4 w-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <h4 className={`font-semibold text-foreground leading-tight ${task.status === "completed" ? "line-through" : ""}`}>
+                                      {task.title}
+                                    </h4>
+                                    <span className={`text-xs ${typeInfo.color}`}>{typeInfo.label}</span>
+                                  </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <h4 className={`font-semibold text-foreground leading-tight ${task.status === "completed" ? "line-through" : ""}`}>
-                                    {task.title}
-                                  </h4>
-                                  <span className={`text-xs ${typeInfo.color}`}>{typeInfo.label}</span>
+                                
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {getStatusBadge(task.status)}
+                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTaskForNotes(task);
+                                        setTaskNotesDialogOpen(true);
+                                      }}
+                                      title="Ver notas"
+                                    >
+                                      <MessageSquare className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-7 w-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditTask(task);
+                                      }}
+                                      title="Editar tarefa"
+                                    >
+                                      <Edit className="h-3.5 w-3.5" />
+                                    </Button>
+
+                                    {canDeleteTask(task) && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
+                                            handleDeleteTask(task.id);
+                                          }
+                                        }}
+                                        title="Excluir tarefa"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+
+                                    {task.status !== "completed" && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
+                                        onClick={(e) => handleCompleteTask(task.id, e)}
+                                        title="Marcar como realizada"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-2 shrink-0">
-                                {getStatusBadge(task.status)}
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7 text-primary hover:text-primary hover:bg-primary/10"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedTaskForNotes(task);
-                                      setTaskNotesDialogOpen(true);
-                                    }}
-                                    title="Ver notas"
-                                  >
-                                    <MessageSquare className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-7 w-7"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEditTask(task);
-                                    }}
-                                    title="Editar tarefa"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-
-                                  {canDeleteTask(task) && (
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm("Tem certeza que deseja excluir esta tarefa?")) {
-                                          handleDeleteTask(task.id);
-                                        }
-                                      }}
-                                      title="Excluir tarefa"
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
-
-                                  {task.status !== "completed" && (
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
-                                      onClick={(e) => handleCompleteTask(task.id, e)}
-                                      title="Marcar como realizada"
-                                    >
-                                      <Check className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
+                              {/* Meta info */}
+                              <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap min-w-0 [overflow-wrap:anywhere]">
+                                {task.due_date && (
+                                  <span className={`flex items-center gap-1.5 ${isOverdue ? "text-destructive font-medium" : ""}`}>
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    {new Date(task.due_date).toLocaleDateString('pt-BR')} às {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {isOverdue && <span className="text-[10px] bg-destructive/10 px-1.5 py-0.5 rounded">Atrasada</span>}
+                                  </span>
+                                )}
+                                {priorityInfo && (
+                                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${priorityInfo.bgColor} ${priorityInfo.textColor}`}>
+                                    {priorityInfo.label}
+                                  </span>
+                                )}
+                                {task.assigned_user?.full_name && (
+                                  <span className="flex items-center gap-1.5">
+                                    <User className="h-3.5 w-3.5" />
+                                    {task.assigned_user.full_name}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Description */}
+                              {task.description && (
+                                <div className="mt-3 pt-3 border-t border-border/50">
+                                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden line-clamp-3">
+                                    {task.description}
+                                  </p>
                                 </div>
-                              </div>
-                            </div>
-                            
-                            {/* Meta info */}
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap min-w-0 [overflow-wrap:anywhere]">
-                              {task.due_date && (
-                                <span className={`flex items-center gap-1.5 ${isOverdue ? "text-destructive font-medium" : ""}`}>
-                                  <Calendar className="h-3.5 w-3.5" />
-                                  {new Date(task.due_date).toLocaleDateString('pt-BR')} às {new Date(task.due_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                  {isOverdue && <span className="text-[10px] bg-destructive/10 px-1.5 py-0.5 rounded">Atrasada</span>}
-                                </span>
-                              )}
-                              {priorityInfo && (
-                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${priorityInfo.bgColor} ${priorityInfo.textColor}`}>
-                                  {priorityInfo.label}
-                                </span>
-                              )}
-                              {task.assigned_user?.full_name && (
-                                <span className="flex items-center gap-1.5">
-                                  <User className="h-3.5 w-3.5" />
-                                  {task.assigned_user.full_name}
-                                </span>
                               )}
                             </div>
-                            
-                            {/* Description */}
-                            {task.description && (
-                              <div className="mt-3 pt-3 border-t border-border/50">
-                                <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden line-clamp-3">
-                                  {task.description}
-                                </p>
-                              </div>
-                            )}
                           </div>
-                        </div>
+                        </TaskHoverPreview>
                       );
                     })}
                   </div>
