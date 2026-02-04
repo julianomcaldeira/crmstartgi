@@ -55,6 +55,7 @@ import AudioRecorder from "@/components/AudioRecorder";
 import BusinessCardScanner from "@/components/BusinessCardScanner";
 import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
+import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { ClipboardList } from "lucide-react";
 
 const ClienteDetalhes = () => {
@@ -978,10 +979,11 @@ const ClienteDetalhes = () => {
 
       {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="opportunities" className="space-y-4">
@@ -1872,6 +1874,22 @@ const ClienteDetalhes = () => {
                 );
               })()
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="diagnostics" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Histórico de Diagnósticos</h3>
+              <Button size="sm" onClick={() => setDiagnosticDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Diagnóstico
+              </Button>
+            </div>
+            <DiagnosticHistoryList 
+              clientId={id || ""}
+              clientName={client?.company_name || client?.trade_name || ""}
+            />
           </Card>
         </TabsContent>
       </Tabs>

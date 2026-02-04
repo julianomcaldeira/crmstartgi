@@ -346,230 +346,284 @@ export function ProspectDiagnosticDialog({
     try {
       toast.info("Gerando PDF...");
       
-      // Create a hidden container for the PDF content
-      const container = document.createElement("div");
-      container.id = "pdf-content";
-      container.style.cssText = `
-        position: absolute;
-        left: -9999px;
-        top: 0;
-        width: 794px;
-        background: white;
-        padding: 40px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      `;
-      
-      // Parse AI analysis into sections
-      const sections = aiAnalysis.split('\n').filter(line => line.trim());
-      let problemsHtml = '';
-      let solutionsHtml = '';
-      let impactHtml = '';
-      let nextStepHtml = '';
-      
-      let currentSection = '';
-      sections.forEach(line => {
-        const trimmed = line.trim();
-        if (trimmed.includes('PROBLEMAS IDENTIFICADOS')) {
-          currentSection = 'problems';
-        } else if (trimmed.includes('SOLUÇÕES') || trimmed.includes('SOLUCOES')) {
-          currentSection = 'solutions';
-        } else if (trimmed.includes('IMPACTO')) {
-          currentSection = 'impact';
-        } else if (trimmed.includes('PRÓXIMO PASSO') || trimmed.includes('PROXIMO PASSO')) {
-          currentSection = 'next';
-        } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
-          const text = trimmed.replace(/^[•\-]\s*/, '');
-          if (currentSection === 'problems') {
-            problemsHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-              <div style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
-              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
-            </div>`;
-          } else if (currentSection === 'solutions') {
-            problemsHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-              <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
-              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
-            </div>`;
-          } else if (currentSection === 'impact') {
-            impactHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
-              <div style="width: 8px; height: 8px; background: #6366f1; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
-              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
-            </div>`;
-          }
-        } else if (currentSection === 'next' && trimmed.length > 0) {
-          nextStepHtml = trimmed;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = margin;
+
+      // Colors
+      const emerald = [16, 185, 129] as [number, number, number];
+      const red = [220, 38, 38] as [number, number, number];
+      const gray = [107, 114, 128] as [number, number, number];
+      const darkGray = [55, 65, 81] as [number, number, number];
+
+      // Helper to check page break
+      const checkPageBreak = (neededHeight: number) => {
+        if (y + neededHeight > pageHeight - margin) {
+          pdf.addPage();
+          y = margin;
+          return true;
         }
-      });
+        return false;
+      };
 
       // Format currency
       const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
       };
 
+      // Load logo as base64
+      const loadImage = (src: string): Promise<string> => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx?.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/jpeg"));
+          };
+          img.onerror = () => resolve("");
+          img.src = src;
+        });
+      };
+
+      const logoBase64 = await loadImage(logoIGanhei);
+
+      // ========== HEADER ==========
+      if (logoBase64) {
+        // Larger logo - 60mm width
+        pdf.addImage(logoBase64, "JPEG", margin, y, 60, 24);
+      }
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(...gray);
+      pdf.text("Diagnóstico de Licitações", pageWidth - margin, y + 5, { align: "right" });
+      pdf.setFontSize(12);
+      pdf.setTextColor(...darkGray);
+      pdf.text(new Date().toLocaleDateString("pt-BR"), pageWidth - margin, y + 12, { align: "right" });
+      
+      y += 32;
+
+      // Separator line
+      pdf.setDrawColor(...emerald);
+      pdf.setLineWidth(1.5);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 15;
+
+      // ========== TITLE ==========
+      pdf.setFontSize(24);
+      pdf.setTextColor(...darkGray);
+      pdf.text("Diagnóstico Personalizado", margin, y);
+      y += 12;
+
+      pdf.setFontSize(14);
+      pdf.setTextColor(...emerald);
+      const clientNameText = clientName.length > 40 ? clientName.substring(0, 40) + "..." : clientName;
+      pdf.text(clientNameText, margin, y);
+      pdf.setTextColor(...gray);
+      pdf.text(` | ${selectedRole?.label}`, margin + pdf.getTextWidth(clientNameText) + 3, y);
+      y += 18;
+
+      // ========== ESTIMATED LOSSES BOX ==========
+      const lossBoxHeight = 60;
+      checkPageBreak(lossBoxHeight + 10);
+
+      // Red gradient background effect
+      pdf.setFillColor(254, 242, 242);
+      pdf.roundedRect(margin, y, contentWidth, lossBoxHeight, 4, 4, "F");
+      pdf.setDrawColor(...red);
+      pdf.setLineWidth(0.8);
+      pdf.roundedRect(margin, y, contentWidth, lossBoxHeight, 4, 4, "S");
+
+      // Warning icon and title
+      pdf.setFontSize(16);
+      pdf.setTextColor(153, 27, 27);
+      pdf.text("⚠ Quanto você está deixando na mesa?", margin + 10, y + 14);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(185, 28, 28);
+      const teamSize = estimatedLosses?.teamSize || 3;
+      const hoursWeek = estimatedLosses?.hoursWeek || 10;
+      pdf.text(`Baseado em ${teamSize} pessoa(s) gastando ~${hoursWeek}h/semana em processos manuais`, margin + 10, y + 24);
+
+      // Loss values
+      const colWidth = contentWidth / 3;
+      const lossY = y + 38;
+      
       const dailyLoss = estimatedLosses?.daily || 0;
       const monthlyLoss = estimatedLosses?.monthly || 0;
       const yearlyLoss = monthlyLoss * 12;
-      const teamSize = estimatedLosses?.teamSize || 3;
-      const hoursWeek = estimatedLosses?.hoursWeek || 10;
 
-      container.innerHTML = `
-        <!-- Header -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 3px solid #10b981;">
-          <img src="${logoIGanhei}" alt="i-Ganhei" style="height: 60px; object-fit: contain;" crossorigin="anonymous" />
-          <div style="text-align: right;">
-            <div style="font-size: 12px; color: #6b7280;">Diagnóstico de Licitações</div>
-            <div style="font-size: 14px; color: #111827; font-weight: 600; margin-top: 4px;">${new Date().toLocaleDateString("pt-BR")}</div>
-          </div>
-        </div>
+      const lossData = [
+        { label: "POR DIA", value: dailyLoss },
+        { label: "POR MÊS", value: monthlyLoss },
+        { label: "POR ANO", value: yearlyLoss },
+      ];
 
-        <!-- Title -->
-        <div style="margin-bottom: 32px;">
-          <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Diagnóstico Personalizado</h1>
-          <div style="font-size: 16px; color: #6b7280;">
-            <span style="font-weight: 600; color: #10b981;">${clientName}</span>
-            <span style="margin: 0 8px;">|</span>
-            <span>${selectedRole?.label}</span>
-          </div>
-        </div>
-
-        <!-- ESTIMATED LOSSES - BIG HIGHLIGHT SECTION -->
-        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #ef4444; position: relative; overflow: hidden;">
-          <div style="position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; background: rgba(239, 68, 68, 0.1); border-radius: 50%;"></div>
-          <div style="position: absolute; right: 40px; top: 40px; width: 60px; height: 60px; background: rgba(239, 68, 68, 0.15); border-radius: 50%;"></div>
-          
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-            <div style="width: 48px; height: 48px; background: #ef4444; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-            </div>
-            <div>
-              <h3 style="font-size: 18px; font-weight: 700; color: #991b1b; margin: 0;">Quanto você está deixando na mesa?</h3>
-              <p style="font-size: 13px; color: #b91c1c; margin: 4px 0 0 0;">Baseado em ${teamSize} pessoa(s) gastando ~${hoursWeek}h/semana em processos manuais</p>
-            </div>
-          </div>
-          
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
-            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
-              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Dia</div>
-              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(dailyLoss)}</div>
-            </div>
-            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
-              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Mês</div>
-              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(monthlyLoss)}</div>
-            </div>
-            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
-              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Ano</div>
-              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(yearlyLoss)}</div>
-            </div>
-          </div>
-          
-          <div style="background: rgba(255,255,255,0.7); border-radius: 8px; padding: 12px; font-size: 11px; color: #7f1d1d;">
-            <strong>Metodologia:</strong> Custo médio/hora R$42 × ${hoursWeek}h/semana × 50% economia de tempo + custos de oportunidades perdidas por ineficiências detectadas.
-          </div>
-        </div>
-
-        <!-- Two Column Layout -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
-          
-          <!-- Problems -->
-          <div style="background: #fef2f2; border-radius: 12px; padding: 24px; border-left: 4px solid #ef4444;">
-            <h3 style="font-size: 14px; font-weight: 700; color: #991b1b; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-              Desafios Identificados
-            </h3>
-            ${problemsHtml || '<p style="color: #6b7280; font-size: 14px;">Nenhum problema crítico identificado.</p>'}
-          </div>
-
-          <!-- Solutions -->
-          <div style="background: #ecfdf5; border-radius: 12px; padding: 24px; border-left: 4px solid #10b981;">
-            <h3 style="font-size: 14px; font-weight: 700; color: #065f46; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-              Soluções i-Ganhei
-            </h3>
-            ${solutionsHtml || problemsHtml.replace(/#ef4444/g, '#10b981').replace(/#fef2f2/g, '#ecfdf5')}
-          </div>
-        </div>
-
-        <!-- Impact Section -->
-        <div style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-radius: 12px; padding: 24px; margin-bottom: 32px;">
-          <h3 style="font-size: 14px; font-weight: 700; color: #3730a3; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
-            Impacto Esperado
-          </h3>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-            ${impactHtml || `
-              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
-                <div style="font-size: 28px; font-weight: 800; color: #10b981;">+300%</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Oportunidades</div>
-              </div>
-              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
-                <div style="font-size: 28px; font-weight: 800; color: #10b981;">-70%</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Esforço Operacional</div>
-              </div>
-              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
-                <div style="font-size: 28px; font-weight: 800; color: #10b981;">-90%</div>
-                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Tempo em Peças</div>
-              </div>
-            `}
-          </div>
-        </div>
-
-        <!-- Next Step CTA -->
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 32px;">
-          <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0 0 8px 0;">
-            Próximo Passo Recomendado
-          </h3>
-          <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin: 0;">
-            ${nextStepHtml || 'Agende uma demonstração personalizada do i-Ganhei para ver a plataforma em ação.'}
-          </p>
-        </div>
-
-        <!-- Footer -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid #e5e7eb;">
-          <div style="font-size: 12px; color: #6b7280;">
-            © ${new Date().getFullYear()} i-Ganhei - Gestão Inteligente de Licitações
-          </div>
-          <div style="font-size: 12px; color: #10b981; font-weight: 600;">
-            www.iganhei.com.br
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(container);
-
-      // Wait for images to load
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Render to canvas
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
-        backgroundColor: '#ffffff',
+      lossData.forEach((item, i) => {
+        const colX = margin + (i * colWidth) + (colWidth / 2);
+        pdf.setFontSize(9);
+        pdf.setTextColor(...gray);
+        pdf.text(item.label, colX, lossY, { align: "center" });
+        pdf.setFontSize(16);
+        pdf.setTextColor(...red);
+        pdf.text(formatCurrency(item.value), colX, lossY + 10, { align: "center" });
       });
 
-      // Remove container
-      document.body.removeChild(container);
+      y += lossBoxHeight + 15;
 
-      // Create PDF
-      const pdf = new jsPDF("p", "mm", "a4");
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      // ========== AI ANALYSIS ==========
+      // Parse analysis sections
+      const sections = aiAnalysis.split("\n").filter(line => line.trim());
+      let problems: string[] = [];
+      let solutions: string[] = [];
+      let impacts: string[] = [];
+      let nextStep = "";
+      let currentSection = "";
+
+      sections.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.includes("PROBLEMAS IDENTIFICADOS")) {
+          currentSection = "problems";
+        } else if (trimmed.includes("SOLUÇÕES") || trimmed.includes("SOLUCOES")) {
+          currentSection = "solutions";
+        } else if (trimmed.includes("IMPACTO")) {
+          currentSection = "impact";
+        } else if (trimmed.includes("PRÓXIMO PASSO") || trimmed.includes("PROXIMO PASSO")) {
+          currentSection = "next";
+        } else if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
+          const text = trimmed.replace(/^[•\-]\s*/, "");
+          if (currentSection === "problems") problems.push(text);
+          else if (currentSection === "solutions") solutions.push(text);
+          else if (currentSection === "impact") impacts.push(text);
+        } else if (currentSection === "next" && trimmed.length > 0) {
+          nextStep = trimmed;
+        }
+      });
+
+      // ========== PROBLEMS SECTION ==========
+      const halfWidth = contentWidth / 2 - 5;
+      const sectionMinHeight = 55;
       
-      let heightLeft = imgHeight;
-      let position = 0;
+      // Calculate heights
+      let problemsTextHeight = 25;
+      problems.forEach(p => {
+        const lines = pdf.splitTextToSize(`• ${p}`, halfWidth - 12);
+        problemsTextHeight += lines.length * 6;
+      });
+      
+      let solutionsTextHeight = 25;
+      solutions.forEach(s => {
+        const lines = pdf.splitTextToSize(`• ${s}`, halfWidth - 12);
+        solutionsTextHeight += lines.length * 6;
+      });
 
-      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      const sectionHeight = Math.max(problemsTextHeight, solutionsTextHeight, sectionMinHeight);
+      checkPageBreak(sectionHeight + 10);
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+      // Problems box
+      pdf.setFillColor(254, 242, 242);
+      pdf.roundedRect(margin, y, halfWidth, sectionHeight, 3, 3, "F");
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(153, 27, 27);
+      pdf.text("DESAFIOS IDENTIFICADOS", margin + 6, y + 12);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(...darkGray);
+      let problemY = y + 22;
+      problems.forEach((p) => {
+        const lines = pdf.splitTextToSize(`• ${p}`, halfWidth - 12);
+        lines.forEach((line: string) => {
+          if (problemY < y + sectionHeight - 5) {
+            pdf.text(line, margin + 6, problemY);
+            problemY += 6;
+          }
+        });
+      });
 
+      // Solutions box
+      const solutionsX = margin + halfWidth + 10;
+      pdf.setFillColor(236, 253, 245);
+      pdf.roundedRect(solutionsX, y, halfWidth, sectionHeight, 3, 3, "F");
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(6, 95, 70);
+      pdf.text("SOLUÇÕES I-GANHEI", solutionsX + 6, y + 12);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(...darkGray);
+      let solutionY = y + 22;
+      solutions.forEach((s) => {
+        const lines = pdf.splitTextToSize(`• ${s}`, halfWidth - 12);
+        lines.forEach((line: string) => {
+          if (solutionY < y + sectionHeight - 5) {
+            pdf.text(line, solutionsX + 6, solutionY);
+            solutionY += 6;
+          }
+        });
+      });
+
+      y += sectionHeight + 12;
+
+      // ========== IMPACT SECTION ==========
+      checkPageBreak(55);
+      pdf.setFillColor(238, 242, 255);
+      pdf.roundedRect(margin, y, contentWidth, 50, 3, 3, "F");
+      
+      pdf.setFontSize(11);
+      pdf.setTextColor(55, 48, 163);
+      pdf.text("IMPACTO ESPERADO", margin + 6, y + 12);
+
+      // Impact stats
+      const impactStats = [
+        { value: "+300%", label: "Oportunidades" },
+        { value: "-70%", label: "Esforço Operacional" },
+        { value: "-90%", label: "Tempo em Peças" },
+      ];
+
+      const impactColWidth = contentWidth / 3;
+      impactStats.forEach((stat, i) => {
+        const colX = margin + (i * impactColWidth) + (impactColWidth / 2);
+        pdf.setFontSize(20);
+        pdf.setTextColor(...emerald);
+        pdf.text(stat.value, colX, y + 32, { align: "center" });
+        pdf.setFontSize(9);
+        pdf.setTextColor(...gray);
+        pdf.text(stat.label, colX, y + 42, { align: "center" });
+      });
+
+      y += 60;
+
+      // ========== NEXT STEP ==========
+      checkPageBreak(35);
+      pdf.setFillColor(...emerald);
+      pdf.roundedRect(margin, y, contentWidth, 28, 3, 3, "F");
+      
+      pdf.setFontSize(13);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text("Próximo Passo Recomendado", pageWidth / 2, y + 12, { align: "center" });
+      pdf.setFontSize(11);
+      const nextStepText = nextStep || "Agende uma demonstração personalizada do i-Ganhei";
+      const nextStepLines = pdf.splitTextToSize(nextStepText, contentWidth - 20);
+      pdf.text(nextStepLines[0], pageWidth / 2, y + 22, { align: "center" });
+
+      y += 38;
+
+      // ========== FOOTER ==========
+      const footerY = pageHeight - 15;
+      pdf.setFontSize(9);
+      pdf.setTextColor(...gray);
+      pdf.text(`© ${new Date().getFullYear()} i-Ganhei - Gestão Inteligente de Licitações`, margin, footerY);
+      pdf.setTextColor(...emerald);
+      pdf.text("www.iganhei.com.br", pageWidth - margin, footerY, { align: "right" });
+
+      // Save
       pdf.save(`diagnostico-${clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
