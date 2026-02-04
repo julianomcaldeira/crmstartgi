@@ -69,46 +69,43 @@ serve(async (req) => {
 - ROI mensurável em vendas públicas
 `;
 
-    const systemPrompt = `Você é um consultor especialista em vendas para o governo e licitações públicas. Você representa o i-Ganhei, a plataforma mais completa de gestão de vendas governamentais impulsionada por IA.
+    const systemPrompt = `Você é um consultor objetivo e direto em vendas governamentais. Analise as respostas e gere um relatório CURTO e IMPACTANTE.
 
-Sua missão é analisar as respostas do diagnóstico e:
-1. Identificar os problemas e dores do prospect com base nas respostas
-2. Mostrar como o i-Ganhei resolve cada problema identificado
-3. Ser específico e conectar cada problema com uma solução concreta
+REGRAS:
+- Seja EXTREMAMENTE objetivo e conciso
+- NO MÁXIMO 3 problemas principais identificados
+- Para cada problema, UMA solução específica do i-Ganhei
+- Use frases curtas e diretas
+- NÃO use emojis no texto
+- NÃO repita informações
+- Foque apenas nos problemas REAIS identificados nas respostas
 
-${knowledgeBase}
+${knowledgeBase}`;
 
-IMPORTANTE:
-- Seja direto e objetivo
-- Use emojis para tornar a leitura mais agradável
-- Estruture em seções claras
-- Destaque os benefícios quantitativos quando possível
-- Personalize a análise com base nas respostas específicas
-- Use linguagem persuasiva mas profissional
-- Foque nos problemas que realmente apareceram nas respostas`;
+    const prompt = `Empresa: "${clientName}" | Cargo: ${role}
 
-    const prompt = `Analise o diagnóstico de licitações para a empresa "${clientName}".
-
-**Perfil do Contato:** ${role}
-
-**Respostas do Diagnóstico:**
+Respostas:
 ${answersContext}
 
----
+Gere um relatório OBJETIVO com exatamente este formato:
 
-Com base nas respostas acima, gere uma análise estruturada com:
+PROBLEMAS IDENTIFICADOS
+• [Problema 1 em 1 linha]
+• [Problema 2 em 1 linha]  
+• [Problema 3 em 1 linha - se houver]
 
-## 🔍 Problemas Identificados
-Liste os principais problemas/dores que você identificou com base nas respostas.
+SOLUÇÕES i-GANHEI
+• [Para problema 1]: [Solução em 1 linha]
+• [Para problema 2]: [Solução em 1 linha]
+• [Para problema 3]: [Solução em 1 linha - se houver]
 
-## 💡 Como o i-Ganhei Resolve
-Para cada problema, explique como o i-Ganhei resolve de forma específica.
+IMPACTO ESPERADO
+• [Resultado 1 com número/percentual]
+• [Resultado 2 com número/percentual]
+• [Resultado 3 com número/percentual]
 
-## 🎯 Benefícios Esperados
-Liste os benefícios concretos que a empresa pode esperar ao adotar o i-Ganhei.
-
-## 📈 Próximos Passos Recomendados
-Sugira os próximos passos para avançar com a solução.`;
+PRÓXIMO PASSO
+[Uma única ação recomendada em 1 linha]`;
 
     console.log("Calling Lovable AI Gateway for diagnostic analysis...");
     
