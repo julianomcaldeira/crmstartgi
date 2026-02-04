@@ -75,7 +75,7 @@ export function ProspectDiagnosticDialog({
   const [currentSelections, setCurrentSelections] = useState<string[]>([]);
   const [currentObservation, setCurrentObservation] = useState<string>("");
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
-  const [estimatedLosses, setEstimatedLosses] = useState<{ daily: number; monthly: number } | null>(null);
+  const [estimatedLosses, setEstimatedLosses] = useState<{ daily: number; monthly: number; teamSize: number; hoursWeek: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
 
@@ -203,43 +203,92 @@ export function ProspectDiagnosticDialog({
     }
   };
 
-  // Calculate estimated losses based on role and answers
-  const calculateEstimatedLosses = (role: string, answersData: Answer[]): { daily: number; monthly: number } => {
-    // Base values per role (more senior = higher impact)
-    const roleMultiplier: Record<string, number> = {
-      analista: 1.0,
-      gerente: 1.5,
-      diretor: 2.5,
-    };
+  // Calculate estimated losses based on team size, time spent, and answers
+  const calculateEstimatedLosses = (role: string, answersData: Answer[]): { daily: number; monthly: number; teamSize: number; hoursWeek: number } => {
+    // Extract team size from answers
+    let teamSize = 3; // Default
+    const teamAnswer = answersData.find(a => 
+      a.questionId.includes('_equipe') || a.questionId.includes('_faturamento')
+    );
+    if (teamAnswer) {
+      const option = teamAnswer.selectedOptions[0] || "";
+      if (option.includes("1 a 2") || option.includes("1 a 3")) teamSize = 2;
+      else if (option.includes("3 a 5") || option.includes("4 a 8")) teamSize = 4;
+      else if (option.includes("6 a 10") || option.includes("9 a 15")) teamSize = 8;
+      else if (option.includes("Mais de 10") || option.includes("Mais de 15")) teamSize = 15;
+    }
 
-    // Calculate severity score from answers
-    let severityScore = 0;
+    // Extract weekly hours from answers (analyst and manager have time questions)
+    let hoursWeek = 10; // Default
+    const timeAnswer = answersData.find(a => 
+      a.questionId.includes('_tempo')
+    );
+    if (timeAnswer) {
+      const option = timeAnswer.selectedOptions[0] || "";
+      if (option.includes("Menos de 5") || option.includes("Menos de 3")) hoursWeek = 4;
+      else if (option.includes("5 a 10") || option.includes("3 a 8")) hoursWeek = 8;
+      else if (option.includes("10 a 20") || option.includes("8 a 15")) hoursWeek = 15;
+      else if (option.includes("Mais de 20") || option.includes("Mais de 15")) hoursWeek = 25;
+    }
+
+    // Calculate efficiency loss based on problem severity
+    let inefficiencyMultiplier = 1.0;
     answersData.forEach(answer => {
-      // Last options typically indicate worse scenarios
+      // Skip the quantitative questions for this calculation
+      if (answer.questionId.includes('_equipe') || 
+          answer.questionId.includes('_tempo') || 
+          answer.questionId.includes('_faturamento')) {
+        return;
+      }
+      
       const optionIndices = answer.selectedOptions.map(opt => {
         const question = diagnosticRoles
           .find(r => r.id === role)
           ?.questions.find(q => q.id === answer.questionId);
         return question?.options.indexOf(opt) ?? 0;
       });
-      severityScore += optionIndices.reduce((sum, idx) => sum + (idx + 1), 0);
       
-      // Add extra weight if observation was provided (indicates bigger concern)
+      // Last options indicate worse scenarios, add to inefficiency
+      optionIndices.forEach(idx => {
+        if (idx >= 1) inefficiencyMultiplier += 0.1;
+        if (idx >= 2) inefficiencyMultiplier += 0.15;
+      });
+      
+      // If observation was provided, add extra weight
       if (answer.observation) {
-        severityScore += 2;
+        inefficiencyMultiplier += 0.1;
       }
     });
 
-    // Base daily loss calculation (R$ 500 to R$ 5,000 per day)
-    const baseDailyLoss = 500 + (severityScore * 150);
-    const multiplier = roleMultiplier[role] || 1;
+    // Cap the multiplier at reasonable levels
+    inefficiencyMultiplier = Math.min(inefficiencyMultiplier, 2.5);
+
+    // Average cost per hour of a professional in the area (R$ 35-50/hour average)
+    const avgHourlyCost = 42;
     
-    const dailyLoss = Math.round(baseDailyLoss * multiplier);
-    const monthlyLoss = dailyLoss * 22; // Working days
+    // Calculate time that could be saved (assuming 40-60% efficiency gain with i-Ganhei)
+    const efficiencyGain = 0.5; // 50% time savings
+    const hoursRecoveredPerWeek = hoursWeek * efficiencyGain * teamSize;
+    
+    // Base weekly savings from recovered time
+    const weeklyTimeSavings = hoursRecoveredPerWeek * avgHourlyCost;
+    
+    // Additional opportunity cost (missed bids, poor analysis, etc.)
+    const opportunityCostPerPerson = 150 * inefficiencyMultiplier; // R$ per week per person
+    const weeklyOpportunityCost = opportunityCostPerPerson * teamSize;
+    
+    // Total weekly loss
+    const weeklyLoss = weeklyTimeSavings + weeklyOpportunityCost;
+    
+    // Convert to daily (5 working days)
+    const dailyLoss = Math.round(weeklyLoss / 5);
+    const monthlyLoss = Math.round(weeklyLoss * 4.3); // 4.3 weeks per month
 
     return {
       daily: dailyLoss,
       monthly: monthlyLoss,
+      teamSize,
+      hoursWeek: Math.round(hoursWeek * teamSize),
     };
   };
 
@@ -359,6 +408,8 @@ export function ProspectDiagnosticDialog({
       const dailyLoss = estimatedLosses?.daily || 0;
       const monthlyLoss = estimatedLosses?.monthly || 0;
       const yearlyLoss = monthlyLoss * 12;
+      const teamSize = estimatedLosses?.teamSize || 3;
+      const hoursWeek = estimatedLosses?.hoursWeek || 10;
 
       container.innerHTML = `
         <!-- Header -->
@@ -385,7 +436,7 @@ export function ProspectDiagnosticDialog({
           <div style="position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; background: rgba(239, 68, 68, 0.1); border-radius: 50%;"></div>
           <div style="position: absolute; right: 40px; top: 40px; width: 60px; height: 60px; background: rgba(239, 68, 68, 0.15); border-radius: 50%;"></div>
           
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
             <div style="width: 48px; height: 48px; background: #ef4444; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -395,11 +446,11 @@ export function ProspectDiagnosticDialog({
             </div>
             <div>
               <h3 style="font-size: 18px; font-weight: 700; color: #991b1b; margin: 0;">Quanto você está deixando na mesa?</h3>
-              <p style="font-size: 13px; color: #b91c1c; margin: 4px 0 0 0;">Estimativa baseada no seu diagnóstico</p>
+              <p style="font-size: 13px; color: #b91c1c; margin: 4px 0 0 0;">Baseado em ${teamSize} pessoa(s) gastando ~${hoursWeek}h/semana em processos manuais</p>
             </div>
           </div>
           
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px;">
             <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
               <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Dia</div>
               <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(dailyLoss)}</div>
@@ -414,9 +465,9 @@ export function ProspectDiagnosticDialog({
             </div>
           </div>
           
-          <p style="font-size: 12px; color: #7f1d1d; margin: 16px 0 0 0; text-align: center; font-style: italic;">
-            *Estimativa considera tempo perdido em processos manuais, oportunidades não identificadas e ineficiências operacionais
-          </p>
+          <div style="background: rgba(255,255,255,0.7); border-radius: 8px; padding: 12px; font-size: 11px; color: #7f1d1d;">
+            <strong>Metodologia:</strong> Custo médio/hora R$42 × ${hoursWeek}h/semana × 50% economia de tempo + custos de oportunidades perdidas por ineficiências detectadas.
+          </div>
         </div>
 
         <!-- Two Column Layout -->
@@ -809,6 +860,9 @@ export function ProspectDiagnosticDialog({
                         <TrendingDown className="h-5 w-5" />
                         Quanto você está deixando na mesa?
                       </CardTitle>
+                      <CardDescription className="text-destructive/70">
+                        Baseado em {estimatedLosses.teamSize} pessoa(s) gastando ~{estimatedLosses.hoursWeek}h/semana em processos manuais
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-3 gap-4">
@@ -831,9 +885,11 @@ export function ProspectDiagnosticDialog({
                           </div>
                         </div>
                       </div>
-                      <p className="text-xs text-center text-muted-foreground mt-4">
-                        *Estimativa baseada em ineficiências operacionais, oportunidades perdidas e tempo gasto em processos manuais
-                      </p>
+                      <div className="mt-4 p-3 bg-destructive/5 rounded-lg">
+                        <p className="text-xs text-muted-foreground">
+                          <strong>Metodologia:</strong> Custo médio/hora R$42 × {estimatedLosses.hoursWeek}h/semana × 50% economia de tempo estimada + custos de oportunidades perdidas por ineficiências detectadas no diagnóstico.
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 )}

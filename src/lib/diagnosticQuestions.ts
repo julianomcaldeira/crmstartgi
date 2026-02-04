@@ -23,6 +23,28 @@ export const diagnosticRoles: DiagnosticRole[] = [
     icon: "FileSearch",
     questions: [
       {
+        id: "analista_equipe",
+        question: "Quantas pessoas trabalham diretamente com licitações na sua empresa?",
+        options: [
+          "1 a 2 pessoas",
+          "3 a 5 pessoas",
+          "6 a 10 pessoas",
+          "Mais de 10 pessoas"
+        ],
+        multiSelect: false
+      },
+      {
+        id: "analista_tempo",
+        question: "Em média, quantas horas por semana você gasta buscando e filtrando editais?",
+        options: [
+          "Menos de 5 horas",
+          "5 a 10 horas",
+          "10 a 20 horas",
+          "Mais de 20 horas"
+        ],
+        multiSelect: false
+      },
+      {
         id: "analista_q1",
         question: "Hoje, como normalmente chegam os avisos de licitação pra você?",
         options: [
@@ -113,6 +135,28 @@ export const diagnosticRoles: DiagnosticRole[] = [
     icon: "Users",
     questions: [
       {
+        id: "gerente_equipe",
+        question: "Quantas pessoas você gerencia diretamente na área de licitações?",
+        options: [
+          "1 a 2 pessoas",
+          "3 a 5 pessoas",
+          "6 a 10 pessoas",
+          "Mais de 10 pessoas"
+        ],
+        multiSelect: false
+      },
+      {
+        id: "gerente_tempo_gestao",
+        question: "Quanto tempo por semana você gasta cobrando status e consolidando informações?",
+        options: [
+          "Menos de 3 horas",
+          "3 a 8 horas",
+          "8 a 15 horas",
+          "Mais de 15 horas"
+        ],
+        multiSelect: false
+      },
+      {
         id: "gerente_q1",
         question: "Hoje você consegue saber facilmente em que pé estão as licitações?",
         options: [
@@ -180,6 +224,28 @@ export const diagnosticRoles: DiagnosticRole[] = [
     description: "Para diretores e executivos",
     icon: "Briefcase",
     questions: [
+      {
+        id: "diretor_equipe",
+        question: "Quantas pessoas trabalham na área de licitações/vendas ao governo?",
+        options: [
+          "1 a 3 pessoas",
+          "4 a 8 pessoas",
+          "9 a 15 pessoas",
+          "Mais de 15 pessoas"
+        ],
+        multiSelect: false
+      },
+      {
+        id: "diretor_faturamento",
+        question: "Qual a representatividade das vendas ao governo no faturamento total?",
+        options: [
+          "Menos de 20%",
+          "20% a 40%",
+          "40% a 70%",
+          "Mais de 70%"
+        ],
+        multiSelect: false
+      },
       {
         id: "diretor_q1",
         question: "Hoje, quando você olha para vendas ao governo, você vê…",
