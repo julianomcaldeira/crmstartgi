@@ -68,6 +68,8 @@ const Oportunidades = () => {
   const [initialFilterApplied, setInitialFilterApplied] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [opportunityToDelete, setOpportunityToDelete] = useState<any>(null);
+  const [proposalRequiredDialogOpen, setProposalRequiredDialogOpen] = useState(false);
+  const [pendingProposalOpportunity, setPendingProposalOpportunity] = useState<any>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -434,6 +436,22 @@ const Oportunidades = () => {
       return;
     }
 
+    // Check if changing to "proposal" status - require proposal attachment
+    if (newStatus === "proposal") {
+      const { data: oppAttachments } = await supabase
+        .from("opportunity_attachments")
+        .select("id")
+        .eq("opportunity_id", oppId)
+        .limit(1);
+
+      if (!oppAttachments || oppAttachments.length === 0) {
+        const opp = opportunities.find(o => o.id === oppId);
+        setPendingProposalOpportunity(opp);
+        setProposalRequiredDialogOpen(true);
+        return;
+      }
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
@@ -692,6 +710,15 @@ const Oportunidades = () => {
       setPendingStatus("lost");
       setLossReasonDialogOpen(true);
       return;
+    }
+
+    // Check if status is being changed to "proposal" - require attachment
+    if (status === "proposal" && editingOpportunity.status !== "proposal") {
+      // Check if there are any attachments
+      if (attachments.length === 0) {
+        toast.error("É obrigatório anexar uma proposta para mover para a etapa de Proposta. Por favor, adicione um arquivo na aba Anexos.");
+        return;
+      }
     }
 
     try {
@@ -2028,6 +2055,49 @@ const Oportunidades = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Proposal Required Dialog */}
+      <AlertDialog open={proposalRequiredDialogOpen} onOpenChange={(open) => {
+        setProposalRequiredDialogOpen(open);
+        if (!open) setPendingProposalOpportunity(null);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Paperclip className="h-5 w-5 text-primary" />
+              Proposta Obrigatória
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Para mover a oportunidade para a etapa de <strong>Proposta</strong>, é necessário anexar pelo menos um arquivo de proposta.</p>
+              {pendingProposalOpportunity && (
+                <div className="mt-2 p-3 bg-muted rounded-md text-sm">
+                  <strong>{pendingProposalOpportunity.title}</strong>
+                  <br />
+                  <span className="text-muted-foreground">
+                    Cliente: {pendingProposalOpportunity.client?.company_name || pendingProposalOpportunity.client?.trade_name}
+                  </span>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingProposalOpportunity) {
+                  handleEditOpportunity(pendingProposalOpportunity);
+                  setProposalRequiredDialogOpen(false);
+                  // Switch to attachments tab - the user needs to upload a file first
+                  toast.info("Adicione a proposta na aba 'Anexos' e depois altere o estágio para 'Proposta'.");
+                }
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Editar e Anexar Proposta
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
