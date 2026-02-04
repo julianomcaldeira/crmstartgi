@@ -54,6 +54,8 @@ import TaskTemplateSelector from "@/components/TaskTemplateSelector";
 import AudioRecorder from "@/components/AudioRecorder";
 import BusinessCardScanner from "@/components/BusinessCardScanner";
 import AIAnalysisDialog from "@/components/AIAnalysisDialog";
+import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
+import { ClipboardList } from "lucide-react";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -89,6 +91,7 @@ const ClienteDetalhes = () => {
   const [taskNotesDialogOpen, setTaskNotesDialogOpen] = useState(false);
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
   const [aiAnalysisDialogOpen, setAiAnalysisDialogOpen] = useState(false);
+  const [diagnosticDialogOpen, setDiagnosticDialogOpen] = useState(false);
   
 
   const handleCopy = async (value: string, field: string) => {
@@ -639,6 +642,15 @@ const ClienteDetalhes = () => {
           </div>
           <p className="text-muted-foreground">{client.trade_name}</p>
         </div>
+        <Button 
+          variant="default" 
+          size="sm"
+          onClick={() => setDiagnosticDialogOpen(true)}
+          className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
+        >
+          <ClipboardList className="mr-2 h-4 w-4" />
+          Diagnóstico
+        </Button>
         {opportunities.length > 0 && (
           <Button 
             variant="default" 
@@ -1941,6 +1953,15 @@ const ClienteDetalhes = () => {
         opportunities={opportunities}
         tasks={tasks}
         contacts={contacts}
+      />
+
+      {/* Prospect Diagnostic Dialog */}
+      <ProspectDiagnosticDialog
+        open={diagnosticDialogOpen}
+        onOpenChange={setDiagnosticDialogOpen}
+        clientId={id || ""}
+        clientName={client?.company_name || client?.trade_name || ""}
+        onComplete={fetchClientDetails}
       />
     </div>
   );

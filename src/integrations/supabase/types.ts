@@ -1341,6 +1341,95 @@ export type Database = {
           },
         ]
       }
+      prospect_diagnostic_answers: {
+        Row: {
+          created_at: string
+          diagnostic_id: string
+          id: string
+          question_id: string
+          question_text: string
+          selected_options: string[]
+        }
+        Insert: {
+          created_at?: string
+          diagnostic_id: string
+          id?: string
+          question_id: string
+          question_text: string
+          selected_options?: string[]
+        }
+        Update: {
+          created_at?: string
+          diagnostic_id?: string
+          id?: string
+          question_id?: string
+          question_text?: string
+          selected_options?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_diagnostic_answers_diagnostic_id_fkey"
+            columns: ["diagnostic_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_diagnostics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_diagnostics: {
+        Row: {
+          ai_analysis: string | null
+          client_id: string
+          completed_at: string | null
+          contact_role: string
+          created_at: string
+          created_by: string
+          id: string
+          pdf_url: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          client_id: string
+          completed_at?: string | null
+          contact_role: string
+          created_at?: string
+          created_by: string
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          client_id?: string
+          completed_at?: string | null
+          contact_role?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_diagnostics_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_diagnostics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       radar_leads: {
         Row: {
           assigned_to: string | null
