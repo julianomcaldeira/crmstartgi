@@ -941,6 +941,7 @@ export type Database = {
           charge_commission: boolean | null
           client_id: string
           close_cycle_days: number | null
+          commission_percentage: number | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -963,6 +964,7 @@ export type Database = {
           charge_commission?: boolean | null
           client_id: string
           close_cycle_days?: number | null
+          commission_percentage?: number | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -985,6 +987,7 @@ export type Database = {
           charge_commission?: boolean | null
           client_id?: string
           close_cycle_days?: number | null
+          commission_percentage?: number | null
           created_at?: string | null
           created_by?: string
           description?: string | null
