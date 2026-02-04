@@ -109,7 +109,8 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
       apresentacao: "Apresentação",
-      proposta: "Proposta"
+      proposta: "Proposta",
+      pesquisa_inicial: "Pesquisa Inicial"
     };
     return types[type] || type;
   };
@@ -170,7 +171,8 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
       apresentacao: "Apresentação",
-      proposta: "Proposta"
+      proposta: "Proposta",
+      pesquisa_inicial: "Pesquisa Inicial"
     };
 
     const priorityLabels: any = {

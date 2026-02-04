@@ -46,6 +46,7 @@ const taskTypes = [
   { value: "visita_evento", label: "Visita a Evento", icon: Users },
   { value: "apresentacao", label: "Apresentação", icon: Briefcase },
   { value: "proposta", label: "Proposta", icon: Briefcase },
+  { value: "pesquisa_inicial", label: "Pesquisa Inicial", icon: Globe },
 ];
 
 const priorities = [

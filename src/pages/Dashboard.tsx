@@ -270,6 +270,7 @@ const Dashboard = () => {
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
       proposta: "Proposta",
+      pesquisa_inicial: "Pesquisa Inicial",
     };
     return labels[type] || type;
   };

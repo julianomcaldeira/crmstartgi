@@ -179,7 +179,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
       apresentacao: "Apresentação",
-      proposta: "Proposta"
+      proposta: "Proposta",
+      pesquisa_inicial: "Pesquisa Inicial"
     };
 
     const priorityLabels: any = {
@@ -292,7 +293,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
         visita_evento: "Visita a Evento",
-        proposta: "Proposta"
+        proposta: "Proposta",
+        pesquisa_inicial: "Pesquisa Inicial"
       };
       
       const title = taskTypeLabels[taskType] || "Tarefa";
@@ -421,6 +423,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                   <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                   <SelectItem value="apresentacao">Apresentação</SelectItem>
                   <SelectItem value="proposta">Proposta</SelectItem>
+                  <SelectItem value="pesquisa_inicial">Pesquisa Inicial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
