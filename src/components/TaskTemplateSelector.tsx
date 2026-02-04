@@ -31,6 +31,7 @@ const taskTypeIcons: Record<string, any> = {
   visita_evento: Users,
   apresentacao: Briefcase,
   proposta: Briefcase,
+  pesquisa_inicial: FolderOpen,
 };
 
 const priorityLabels: Record<string, { label: string; color: string }> = {

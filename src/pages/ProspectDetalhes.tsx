@@ -283,7 +283,8 @@ const ClienteDetalhes = () => {
         visita_presencial: "Visita Presencial",
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
-        visita_evento: "Visita a Evento"
+        visita_evento: "Visita a Evento",
+        pesquisa_inicial: "Pesquisa Inicial"
       };
       
       const title = taskTypeLabels[taskFormData.task_type] || "Tarefa";
@@ -1275,6 +1276,7 @@ const ClienteDetalhes = () => {
                           <SelectItem value="visita_feira">Visita a Feira</SelectItem>
                           <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                           <SelectItem value="proposta">Proposta</SelectItem>
+                          <SelectItem value="pesquisa_inicial">Pesquisa Inicial</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1484,6 +1486,7 @@ const ClienteDetalhes = () => {
                         visita_evento: { icon: Flag, label: "Visita Evento", color: "text-pink-500" },
                         linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-blue-600" },
                         proposta: { icon: Briefcase, label: "Proposta", color: "text-emerald-500" },
+                        pesquisa_inicial: { icon: Search, label: "Pesquisa Inicial", color: "text-indigo-500" },
                       };
                       
                       const priorityConfig: Record<string, { label: string; bgColor: string; textColor: string }> = {

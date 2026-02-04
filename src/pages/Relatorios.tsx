@@ -449,6 +449,7 @@ const Relatorios = () => {
       visita_evento: "Visita a Evento",
       proposta: "Proposta",
       apresentacao: "Apresentação",
+      pesquisa_inicial: "Pesquisa Inicial",
     };
     return labels[type] || type;
   };

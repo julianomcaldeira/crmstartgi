@@ -29,7 +29,8 @@ const TaskHoverPreview = ({ task, children, enabled = true }: TaskHoverPreviewPr
       visita_feira: "Visita a Feira",
       visita_evento: "Visita a Evento",
       apresentacao: "Apresentação",
-      proposta: "Proposta"
+      proposta: "Proposta",
+      pesquisa_inicial: "Pesquisa Inicial"
     };
     return types[type] || type;
   };

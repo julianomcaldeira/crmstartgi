@@ -293,7 +293,8 @@ const Tarefas = () => {
         visita_presencial: "Visita Presencial",
         reuniao_online: "Reunião Online",
         visita_feira: "Visita a Feira",
-        visita_evento: "Visita a Evento"
+        visita_evento: "Visita a Evento",
+        pesquisa_inicial: "Pesquisa Inicial"
       };
       
       const title = taskTypeLabels[taskType] || "Tarefa";
@@ -504,6 +505,7 @@ const Tarefas = () => {
       case "visita_evento": return <Users size={16} />;
       case "apresentacao": return <Briefcase size={16} />;
       case "proposta": return <Briefcase size={16} />;
+      case "pesquisa_inicial": return <Search size={16} />;
       default: return <Circle size={16} />;
     }
   };
@@ -520,6 +522,7 @@ const Tarefas = () => {
       case "visita_evento": return "Visita a Evento";
       case "apresentacao": return "Apresentação";
       case "proposta": return "Proposta";
+      case "pesquisa_inicial": return "Pesquisa Inicial";
       default: return type;
     }
   };
@@ -726,6 +729,7 @@ const Tarefas = () => {
                       <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                       <SelectItem value="apresentacao">Apresentação</SelectItem>
                       <SelectItem value="proposta">Proposta</SelectItem>
+                      <SelectItem value="pesquisa_inicial">Pesquisa Inicial</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -957,6 +961,7 @@ const Tarefas = () => {
                     <option value="visita_evento">Visita a Evento</option>
                     <option value="apresentacao">Apresentação</option>
                     <option value="proposta">Proposta</option>
+                    <option value="pesquisa_inicial">Pesquisa Inicial</option>
                   </select>
                   <select 
                     value={quickPriorityFilter} 
@@ -1040,6 +1045,7 @@ const Tarefas = () => {
                   <SelectItem value="visita_evento">Visita a Evento</SelectItem>
                   <SelectItem value="apresentacao">Apresentação</SelectItem>
                   <SelectItem value="proposta">Proposta</SelectItem>
+                  <SelectItem value="pesquisa_inicial">Pesquisa Inicial</SelectItem>
                 </SelectContent>
               </Select>
 

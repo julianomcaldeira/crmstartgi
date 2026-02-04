@@ -100,6 +100,7 @@ const Metas = () => {
     { value: "linkedin", label: "LinkedIn" },
     { value: "proposta", label: "Proposta" },
     { value: "apresentacao", label: "Apresentação" },
+    { value: "pesquisa_inicial", label: "Pesquisa Inicial" },
   ];
 
   useEffect(() => {
