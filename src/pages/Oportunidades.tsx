@@ -116,6 +116,7 @@ const Oportunidades = () => {
   const [expectedCloseDate, setExpectedCloseDate] = useState("");
   const [businessType, setBusinessType] = useState("cliente_novo");
   const [chargeCommission, setChargeCommission] = useState(false);
+  const [commissionPercentage, setCommissionPercentage] = useState("");
   const [billingType, setBillingType] = useState("recorrente");
 
   const stages = [
@@ -538,6 +539,7 @@ const Oportunidades = () => {
     setExpectedCloseDate(opp.expected_close_date || "");
     setBusinessType(opp.business_type || "cliente_novo");
     setChargeCommission(opp.charge_commission || false);
+    setCommissionPercentage(opp.commission_percentage?.toString() || "");
     setBillingType(opp.billing_type || "recorrente");
     
     // Fetch attachments
@@ -746,6 +748,7 @@ const Oportunidades = () => {
         expected_close_date: expectedCloseDate || null,
         business_type: businessType as any,
         charge_commission: chargeCommission,
+        commission_percentage: chargeCommission && commissionPercentage ? parseFloat(commissionPercentage) : null,
         billing_type: billingType,
       };
 
@@ -1990,6 +1993,8 @@ const Oportunidades = () => {
         setBusinessType={setBusinessType}
         chargeCommission={chargeCommission}
         setChargeCommission={setChargeCommission}
+        commissionPercentage={commissionPercentage}
+        setCommissionPercentage={setCommissionPercentage}
         billingType={billingType}
         setBillingType={setBillingType}
         attachments={attachments}

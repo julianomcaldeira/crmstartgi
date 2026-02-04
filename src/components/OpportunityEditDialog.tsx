@@ -37,6 +37,8 @@ interface OpportunityEditDialogProps {
   setBusinessType: (value: string) => void;
   chargeCommission: boolean;
   setChargeCommission: (value: boolean) => void;
+  commissionPercentage: string;
+  setCommissionPercentage: (value: string) => void;
   billingType: string;
   setBillingType: (value: string) => void;
   // Attachments
@@ -75,6 +77,8 @@ export function OpportunityEditDialog({
   setBusinessType,
   chargeCommission,
   setChargeCommission,
+  commissionPercentage,
+  setCommissionPercentage,
   billingType,
   setBillingType,
   attachments,
@@ -261,17 +265,44 @@ export function OpportunityEditDialog({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="edit-chargeCommission"
-                  checked={chargeCommission}
-                  onChange={(e) => setChargeCommission(e.target.checked)}
-                  className="h-4 w-4 rounded border-border"
-                />
-                <Label htmlFor="edit-chargeCommission" className="text-sm font-normal cursor-pointer">
-                  Cobrar comissão do cliente
-                </Label>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-chargeCommission"
+                    checked={chargeCommission}
+                    onChange={(e) => {
+                      setChargeCommission(e.target.checked);
+                      if (!e.target.checked) {
+                        setCommissionPercentage("");
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="edit-chargeCommission" className="text-sm font-normal cursor-pointer">
+                    Cobrar comissão do cliente
+                  </Label>
+                </div>
+                
+                {chargeCommission && (
+                  <div className="ml-6 space-y-2">
+                    <Label htmlFor="edit-commissionPercentage">Percentual de Comissão (%)</Label>
+                    <Input
+                      id="edit-commissionPercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={commissionPercentage}
+                      onChange={(e) => setCommissionPercentage(e.target.value)}
+                      placeholder="Ex: 5.5"
+                      className="w-32"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Informe o percentual de comissão a ser cobrado
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
