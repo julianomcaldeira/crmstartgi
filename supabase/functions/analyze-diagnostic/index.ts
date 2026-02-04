@@ -9,6 +9,12 @@ interface Answer {
   questionId: string;
   questionText: string;
   selectedOptions: string[];
+  observation?: string;
+}
+
+interface EstimatedLosses {
+  daily: number;
+  monthly: number;
 }
 
 serve(async (req) => {
@@ -17,10 +23,12 @@ serve(async (req) => {
   }
 
   try {
-    const { clientName, role, answers } = await req.json() as {
+    const { clientName, role, roleId, answers, estimatedLosses } = await req.json() as {
       clientName: string;
       role: string;
+      roleId: string;
       answers: Answer[];
+      estimatedLosses: EstimatedLosses;
     };
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -28,10 +36,14 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Build the context from answers
-    const answersContext = answers.map((a, i) => 
-      `${i + 1}. ${a.questionText}\n   Resposta: ${a.selectedOptions.join(", ")}`
-    ).join("\n\n");
+    // Build the context from answers including observations
+    const answersContext = answers.map((a, i) => {
+      let text = `${i + 1}. ${a.questionText}\n   Resposta: ${a.selectedOptions.join(", ")}`;
+      if (a.observation) {
+        text += `\n   Observação do Vendedor: "${a.observation}"`;
+      }
+      return text;
+    }).join("\n\n");
 
     // Problem-solution knowledge base based on i-Ganhei differentials
     const knowledgeBase = `
@@ -79,6 +91,7 @@ REGRAS:
 - NÃO use emojis no texto
 - NÃO repita informações
 - Foque apenas nos problemas REAIS identificados nas respostas
+- IMPORTANTE: Quando o vendedor incluir observações, considere essas percepções comerciais na análise. As observações do vendedor trazem contexto do campo que é valioso.
 
 ${knowledgeBase}`;
 

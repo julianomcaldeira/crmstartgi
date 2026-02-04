@@ -14,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   FileSearch,
   Users,
@@ -31,6 +32,10 @@ import {
   BarChart3,
   Clock,
   Award,
+  MessageSquare,
+  TrendingDown,
+  DollarSign,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +58,7 @@ interface Answer {
   questionId: string;
   questionText: string;
   selectedOptions: string[];
+  observation?: string;
 }
 
 export function ProspectDiagnosticDialog({
@@ -67,7 +73,9 @@ export function ProspectDiagnosticDialog({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [currentSelections, setCurrentSelections] = useState<string[]>([]);
+  const [currentObservation, setCurrentObservation] = useState<string>("");
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
+  const [estimatedLosses, setEstimatedLosses] = useState<{ daily: number; monthly: number } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
 
@@ -79,7 +87,9 @@ export function ProspectDiagnosticDialog({
       setCurrentQuestionIndex(0);
       setAnswers([]);
       setCurrentSelections([]);
+      setCurrentObservation("");
       setAiAnalysis("");
+      setEstimatedLosses(null);
       setDiagnosticId(null);
     }
   }, [open]);
@@ -148,6 +158,7 @@ export function ProspectDiagnosticDialog({
       questionId: currentQuestion!.id,
       questionText: currentQuestion!.question,
       selectedOptions: currentSelections,
+      observation: currentObservation.trim() || undefined,
     };
     
     const updatedAnswers = [...answers, newAnswer];
@@ -171,6 +182,7 @@ export function ProspectDiagnosticDialog({
     if (currentQuestionIndex < selectedRole!.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setCurrentSelections([]);
+      setCurrentObservation("");
     } else {
       // All questions answered - generate AI analysis
       setStep("analyzing");
@@ -185,19 +197,71 @@ export function ProspectDiagnosticDialog({
       const previousAnswer = answers[currentQuestionIndex - 1];
       if (previousAnswer) {
         setCurrentSelections(previousAnswer.selectedOptions);
+        setCurrentObservation(previousAnswer.observation || "");
         setAnswers(prev => prev.slice(0, -1));
       }
     }
   };
 
+  // Calculate estimated losses based on role and answers
+  const calculateEstimatedLosses = (role: string, answersData: Answer[]): { daily: number; monthly: number } => {
+    // Base values per role (more senior = higher impact)
+    const roleMultiplier: Record<string, number> = {
+      analista: 1.0,
+      gerente: 1.5,
+      diretor: 2.5,
+    };
+
+    // Calculate severity score from answers
+    let severityScore = 0;
+    answersData.forEach(answer => {
+      // Last options typically indicate worse scenarios
+      const optionIndices = answer.selectedOptions.map(opt => {
+        const question = diagnosticRoles
+          .find(r => r.id === role)
+          ?.questions.find(q => q.id === answer.questionId);
+        return question?.options.indexOf(opt) ?? 0;
+      });
+      severityScore += optionIndices.reduce((sum, idx) => sum + (idx + 1), 0);
+      
+      // Add extra weight if observation was provided (indicates bigger concern)
+      if (answer.observation) {
+        severityScore += 2;
+      }
+    });
+
+    // Base daily loss calculation (R$ 500 to R$ 5,000 per day)
+    const baseDailyLoss = 500 + (severityScore * 150);
+    const multiplier = roleMultiplier[role] || 1;
+    
+    const dailyLoss = Math.round(baseDailyLoss * multiplier);
+    const monthlyLoss = dailyLoss * 22; // Working days
+
+    return {
+      daily: dailyLoss,
+      monthly: monthlyLoss,
+    };
+  };
+
   const generateAnalysis = async (finalAnswers: Answer[]) => {
     setIsLoading(true);
     try {
+      // Calculate estimated losses
+      const losses = calculateEstimatedLosses(selectedRole?.id || "analista", finalAnswers);
+      setEstimatedLosses(losses);
+
       const response = await supabase.functions.invoke("analyze-diagnostic", {
         body: {
           clientName,
           role: selectedRole?.label,
-          answers: finalAnswers,
+          roleId: selectedRole?.id,
+          answers: finalAnswers.map(a => ({
+            questionId: a.questionId,
+            questionText: a.questionText,
+            selectedOptions: a.selectedOptions,
+            observation: a.observation,
+          })),
+          estimatedLosses: losses,
         },
       });
 
@@ -287,6 +351,15 @@ export function ProspectDiagnosticDialog({
         }
       });
 
+      // Format currency
+      const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+      };
+
+      const dailyLoss = estimatedLosses?.daily || 0;
+      const monthlyLoss = estimatedLosses?.monthly || 0;
+      const yearlyLoss = monthlyLoss * 12;
+
       container.innerHTML = `
         <!-- Header -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 3px solid #10b981;">
@@ -305,6 +378,45 @@ export function ProspectDiagnosticDialog({
             <span style="margin: 0 8px;">|</span>
             <span>${selectedRole?.label}</span>
           </div>
+        </div>
+
+        <!-- ESTIMATED LOSSES - BIG HIGHLIGHT SECTION -->
+        <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; padding: 32px; margin-bottom: 32px; border: 2px solid #ef4444; position: relative; overflow: hidden;">
+          <div style="position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; background: rgba(239, 68, 68, 0.1); border-radius: 50%;"></div>
+          <div style="position: absolute; right: 40px; top: 40px; width: 60px; height: 60px; background: rgba(239, 68, 68, 0.15); border-radius: 50%;"></div>
+          
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+            <div style="width: 48px; height: 48px; background: #ef4444; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div>
+              <h3 style="font-size: 18px; font-weight: 700; color: #991b1b; margin: 0;">Quanto você está deixando na mesa?</h3>
+              <p style="font-size: 13px; color: #b91c1c; margin: 4px 0 0 0;">Estimativa baseada no seu diagnóstico</p>
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Dia</div>
+              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(dailyLoss)}</div>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Mês</div>
+              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(monthlyLoss)}</div>
+            </div>
+            <div style="background: white; border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+              <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Por Ano</div>
+              <div style="font-size: 28px; font-weight: 800; color: #dc2626;">${formatCurrency(yearlyLoss)}</div>
+            </div>
+          </div>
+          
+          <p style="font-size: 12px; color: #7f1d1d; margin: 16px 0 0 0; text-align: center; font-style: italic;">
+            *Estimativa considera tempo perdido em processos manuais, oportunidades não identificadas e ineficiências operacionais
+          </p>
         </div>
 
         <!-- Two Column Layout -->
@@ -499,7 +611,7 @@ export function ProspectDiagnosticDialog({
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   <div className="space-y-3">
                     {currentQuestion.multiSelect ? (
                       currentQuestion.options.map((option, index) => (
@@ -538,6 +650,24 @@ export function ProspectDiagnosticDialog({
                         ))}
                       </RadioGroup>
                     )}
+                  </div>
+
+                  {/* Seller Observation Field */}
+                  <Separator className="my-4" />
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      Observação do Vendedor (opcional)
+                    </Label>
+                    <Textarea
+                      placeholder="Adicione sua percepção sobre esta resposta do cliente... Ex: O cliente demonstrou frustração ao falar sobre isso."
+                      value={currentObservation}
+                      onChange={(e) => setCurrentObservation(e.target.value)}
+                      className="min-h-[80px] resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Sua observação será considerada pela IA na análise final do diagnóstico.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -665,6 +795,43 @@ export function ProspectDiagnosticDialog({
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Estimated Losses Card */}
+                {estimatedLosses && (
+                  <Card className="border-2 border-destructive/30 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/30">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-destructive">
+                        <TrendingDown className="h-5 w-5" />
+                        Quanto você está deixando na mesa?
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-white dark:bg-background rounded-lg shadow-sm">
+                          <div className="text-sm text-muted-foreground mb-1">Por Dia</div>
+                          <div className="text-2xl font-bold text-destructive">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedLosses.daily)}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-white dark:bg-background rounded-lg shadow-sm">
+                          <div className="text-sm text-muted-foreground mb-1">Por Mês</div>
+                          <div className="text-2xl font-bold text-destructive">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedLosses.monthly)}
+                          </div>
+                        </div>
+                        <div className="text-center p-4 bg-white dark:bg-background rounded-lg shadow-sm">
+                          <div className="text-sm text-muted-foreground mb-1">Por Ano</div>
+                          <div className="text-2xl font-bold text-destructive">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(estimatedLosses.monthly * 12)}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground mt-4">
+                        *Estimativa baseada em ineficiências operacionais, oportunidades perdidas e tempo gasto em processos manuais
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Differentials */}
                 <Card>
