@@ -35,8 +35,9 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { diagnosticRoles, DiagnosticRole, DiagnosticQuestion, iGanheiBenefits } from "@/lib/diagnosticQuestions";
-import logoIGanhei from "@/assets/logo-iganhei.png";
+import logoIGanhei from "@/assets/logo-iganhei.jpg";
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 interface ProspectDiagnosticDialogProps {
   open: boolean;
@@ -230,149 +231,183 @@ export function ProspectDiagnosticDialog({
 
   const generatePDF = async () => {
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      let yPos = margin;
-
-      // Helper function to add new page if needed
-      const checkPageBreak = (requiredSpace: number) => {
-        if (yPos + requiredSpace > pageHeight - margin) {
-          doc.addPage();
-          yPos = margin;
-          return true;
-        }
-        return false;
-      };
-
-      // Add logo
-      try {
-        doc.addImage(logoIGanhei, "PNG", margin, yPos, 40, 40);
-      } catch (e) {
-        console.log("Could not add logo");
-      }
+      toast.info("Gerando PDF...");
       
-      // Header
-      doc.setFontSize(24);
-      doc.setTextColor(34, 139, 87); // Green
-      doc.text("Diagnóstico de Licitações", margin + 50, yPos + 20);
+      // Create a hidden container for the PDF content
+      const container = document.createElement("div");
+      container.id = "pdf-content";
+      container.style.cssText = `
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        width: 794px;
+        background: white;
+        padding: 40px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      `;
       
-      doc.setFontSize(12);
-      doc.setTextColor(100);
-      doc.text(`Empresa: ${clientName}`, margin + 50, yPos + 30);
-      doc.text(`Cargo: ${selectedRole?.label}`, margin + 50, yPos + 38);
-      doc.text(`Data: ${new Date().toLocaleDateString("pt-BR")}`, margin + 50, yPos + 46);
-      
-      yPos += 60;
-
-      // Separator line
-      doc.setDrawColor(34, 139, 87);
-      doc.setLineWidth(0.5);
-      doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 15;
-
-      // Hero section
-      doc.setFontSize(14);
-      doc.setTextColor(0);
-      doc.setFont("helvetica", "bold");
-      const heroTitle = iGanheiBenefits.hero.title;
-      doc.text(heroTitle, margin, yPos);
-      yPos += 8;
-      
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(80);
-      const heroLines = doc.splitTextToSize(iGanheiBenefits.hero.subtitle, pageWidth - 2 * margin);
-      doc.text(heroLines, margin, yPos);
-      yPos += heroLines.length * 5 + 15;
-
-      // Problemas identificados e soluções
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(34, 139, 87);
-      doc.text("🎯 Diagnóstico e Soluções", margin, yPos);
-      yPos += 12;
-
       // Parse AI analysis into sections
-      const sections = aiAnalysis.split(/##\s+/).filter(Boolean);
+      const sections = aiAnalysis.split('\n').filter(line => line.trim());
+      let problemsHtml = '';
+      let solutionsHtml = '';
+      let impactHtml = '';
+      let nextStepHtml = '';
       
-      for (const section of sections) {
-        checkPageBreak(40);
-        
-        const lines = section.split("\n").filter(Boolean);
-        const title = lines[0]?.replace(/[*#]/g, "").trim();
-        const content = lines.slice(1).join("\n");
-
-        if (title) {
-          doc.setFontSize(12);
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(51, 51, 51);
-          doc.text(title, margin, yPos);
-          yPos += 8;
-        }
-
-        if (content) {
-          doc.setFontSize(10);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(80);
-          const contentLines = doc.splitTextToSize(content.replace(/[*]/g, ""), pageWidth - 2 * margin);
-          
-          for (const line of contentLines) {
-            checkPageBreak(6);
-            doc.text(line, margin, yPos);
-            yPos += 5;
+      let currentSection = '';
+      sections.forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed.includes('PROBLEMAS IDENTIFICADOS')) {
+          currentSection = 'problems';
+        } else if (trimmed.includes('SOLUÇÕES') || trimmed.includes('SOLUCOES')) {
+          currentSection = 'solutions';
+        } else if (trimmed.includes('IMPACTO')) {
+          currentSection = 'impact';
+        } else if (trimmed.includes('PRÓXIMO PASSO') || trimmed.includes('PROXIMO PASSO')) {
+          currentSection = 'next';
+        } else if (trimmed.startsWith('•') || trimmed.startsWith('-')) {
+          const text = trimmed.replace(/^[•\-]\s*/, '');
+          if (currentSection === 'problems') {
+            problemsHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+              <div style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
+              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
+            </div>`;
+          } else if (currentSection === 'solutions') {
+            problemsHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+              <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
+              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
+            </div>`;
+          } else if (currentSection === 'impact') {
+            impactHtml += `<div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+              <div style="width: 8px; height: 8px; background: #6366f1; border-radius: 50%; margin-top: 6px; flex-shrink: 0;"></div>
+              <span style="color: #374151; font-size: 14px; line-height: 1.5;">${text}</span>
+            </div>`;
           }
-          yPos += 5;
+        } else if (currentSection === 'next' && trimmed.length > 0) {
+          nextStepHtml = trimmed;
         }
-      }
-
-      // Stats section
-      checkPageBreak(50);
-      yPos += 10;
-      doc.setDrawColor(34, 139, 87);
-      doc.line(margin, yPos, pageWidth - margin, yPos);
-      yPos += 15;
-
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(34, 139, 87);
-      doc.text("📊 Resultados Esperados com o i-Ganhei", margin, yPos);
-      yPos += 15;
-
-      const statsWidth = (pageWidth - 2 * margin) / 3;
-      iGanheiBenefits.stats.forEach((stat, index) => {
-        const xPos = margin + (index * statsWidth);
-        doc.setFontSize(20);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(34, 139, 87);
-        doc.text(stat.value, xPos, yPos);
-        
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(80);
-        const labelLines = doc.splitTextToSize(stat.label, statsWidth - 10);
-        doc.text(labelLines, xPos, yPos + 8);
       });
 
-      yPos += 30;
+      container.innerHTML = `
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 3px solid #10b981;">
+          <img src="${logoIGanhei}" alt="i-Ganhei" style="height: 60px; object-fit: contain;" crossorigin="anonymous" />
+          <div style="text-align: right;">
+            <div style="font-size: 12px; color: #6b7280;">Diagnóstico de Licitações</div>
+            <div style="font-size: 14px; color: #111827; font-weight: 600; margin-top: 4px;">${new Date().toLocaleDateString("pt-BR")}</div>
+          </div>
+        </div>
 
-      // Footer
-      checkPageBreak(30);
-      doc.setDrawColor(200);
-      doc.line(margin, pageHeight - 25, pageWidth - margin, pageHeight - 25);
-      
-      doc.setFontSize(10);
-      doc.setTextColor(34, 139, 87);
-      doc.setFont("helvetica", "bold");
-      doc.text("i-Ganhei - Gestão Inteligente de Licitações", margin, pageHeight - 15);
-      
-      doc.setTextColor(100);
-      doc.setFont("helvetica", "normal");
-      doc.text("www.iganhei.com.br", pageWidth - margin - 40, pageHeight - 15);
+        <!-- Title -->
+        <div style="margin-bottom: 32px;">
+          <h1 style="font-size: 28px; font-weight: 700; color: #111827; margin: 0 0 8px 0;">Diagnóstico Personalizado</h1>
+          <div style="font-size: 16px; color: #6b7280;">
+            <span style="font-weight: 600; color: #10b981;">${clientName}</span>
+            <span style="margin: 0 8px;">|</span>
+            <span>${selectedRole?.label}</span>
+          </div>
+        </div>
 
-      // Save PDF
-      doc.save(`diagnostico-${clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
+        <!-- Two Column Layout -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+          
+          <!-- Problems -->
+          <div style="background: #fef2f2; border-radius: 12px; padding: 24px; border-left: 4px solid #ef4444;">
+            <h3 style="font-size: 14px; font-weight: 700; color: #991b1b; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+              Desafios Identificados
+            </h3>
+            ${problemsHtml || '<p style="color: #6b7280; font-size: 14px;">Nenhum problema crítico identificado.</p>'}
+          </div>
+
+          <!-- Solutions -->
+          <div style="background: #ecfdf5; border-radius: 12px; padding: 24px; border-left: 4px solid #10b981;">
+            <h3 style="font-size: 14px; font-weight: 700; color: #065f46; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+              Soluções i-Ganhei
+            </h3>
+            ${solutionsHtml || problemsHtml.replace(/#ef4444/g, '#10b981').replace(/#fef2f2/g, '#ecfdf5')}
+          </div>
+        </div>
+
+        <!-- Impact Section -->
+        <div style="background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%); border-radius: 12px; padding: 24px; margin-bottom: 32px;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #3730a3; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+            Impacto Esperado
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+            ${impactHtml || `
+              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
+                <div style="font-size: 28px; font-weight: 800; color: #10b981;">+300%</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Oportunidades</div>
+              </div>
+              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
+                <div style="font-size: 28px; font-weight: 800; color: #10b981;">-70%</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Esforço Operacional</div>
+              </div>
+              <div style="text-align: center; padding: 16px; background: white; border-radius: 8px;">
+                <div style="font-size: 28px; font-weight: 800; color: #10b981;">-90%</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Tempo em Peças</div>
+              </div>
+            `}
+          </div>
+        </div>
+
+        <!-- Next Step CTA -->
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 32px;">
+          <h3 style="font-size: 16px; font-weight: 700; color: white; margin: 0 0 8px 0;">
+            Próximo Passo Recomendado
+          </h3>
+          <p style="font-size: 14px; color: rgba(255,255,255,0.9); margin: 0;">
+            ${nextStepHtml || 'Agende uma demonstração personalizada do i-Ganhei para ver a plataforma em ação.'}
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+          <div style="font-size: 12px; color: #6b7280;">
+            © ${new Date().getFullYear()} i-Ganhei - Gestão Inteligente de Licitações
+          </div>
+          <div style="font-size: 12px; color: #10b981; font-weight: 600;">
+            www.iganhei.com.br
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(container);
+
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Render to canvas
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      });
+
+      // Remove container
+      document.body.removeChild(container);
+
+      // Create PDF
+      const pdf = new jsPDF("p", "mm", "a4");
+      const imgWidth = 210;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`diagnostico-${clientName.replace(/\s+/g, "-").toLowerCase()}.pdf`);
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
       console.error("Error generating PDF:", error);
