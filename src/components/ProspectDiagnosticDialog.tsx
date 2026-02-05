@@ -487,33 +487,140 @@ export function ProspectDiagnosticDialog({
       y += lossBoxHeight + 15;
 
       // ========== AI ANALYSIS ==========
-      // Parse analysis sections
-      const sections = aiAnalysis.split("\n").filter(line => line.trim());
+      console.log("Parsing AI analysis for PDF:", aiAnalysis?.substring(0, 200));
+      
+      // Parse the Markdown format from the AI
+      const parseMarkdownAnalysis = (markdown: string) => {
+        const lines = markdown.split("\n");
+        let diagnosticSummary = "";
+        let problems: { name: string; situation: string; impact: string }[] = [];
+        let solutionsTable: { problem: string; solution: string; result: string }[] = [];
+        let projectedGains: string[] = [];
+        let recommendation = "";
+        
+        let currentSection = "";
+        let currentProblem: { name: string; situation: string; impact: string } | null = null;
+        
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          
+          // Detect sections by keywords
+          if (line.includes("DIAGNÓSTICO DA OPERAÇÃO") || line.includes("DIAGNOSTICO DA OPERACAO")) {
+            currentSection = "summary";
+            continue;
+          } else if (line.includes("PROBLEMAS IDENTIFICADOS")) {
+            currentSection = "problems";
+            continue;
+          } else if ((line.includes("SOLUÇÕES") || line.includes("SOLUCOES")) && (line.includes("I-GANHEI") || line.includes("IGANHEI"))) {
+            currentSection = "solutions";
+            continue;
+          } else if (line.includes("GANHOS PROJETADOS")) {
+            currentSection = "gains";
+            continue;
+          } else if (line.includes("RECOMENDAÇÃO") || line.includes("RECOMENDACAO")) {
+            currentSection = "recommendation";
+            continue;
+          }
+          
+          // Skip empty lines and main section headers
+          if (!line) continue;
+          if (line.startsWith("## ") && !line.startsWith("### ")) continue;
+          
+          // Parse content based on section
+          if (currentSection === "summary" && !line.startsWith("#")) {
+            if (diagnosticSummary) diagnosticSummary += " ";
+            diagnosticSummary += line.replace(/\*\*/g, "");
+          } else if (currentSection === "problems") {
+            // Detect problem titles (### 1. Problem Name or just "1. Problem Name")
+            if (line.startsWith("###") || /^\d+\.\s/.test(line)) {
+              if (currentProblem && currentProblem.name) problems.push(currentProblem);
+              const name = line.replace(/^###\s*/, "").replace(/^\d+\.\s*/, "").replace(/\*\*/g, "").replace(/\[|\]/g, "").trim();
+              currentProblem = { name, situation: "", impact: "" };
+            } else if (currentProblem) {
+              const cleanLine = line.replace(/\*\*/g, "").trim();
+              if (cleanLine.toLowerCase().includes("situação atual:") || cleanLine.toLowerCase().includes("situacao atual:")) {
+                currentProblem.situation = cleanLine.replace(/situação atual:\s*/i, "").replace(/situacao atual:\s*/i, "").trim();
+              } else if (cleanLine.toLowerCase().includes("impacto")) {
+                currentProblem.impact = cleanLine.replace(/impacto no negócio:\s*/i, "").replace(/impacto:\s*/i, "").trim();
+              }
+            }
+          } else if (currentSection === "solutions") {
+            // Parse table rows (| Problem | Solution | Result |)
+            if (line.startsWith("|") && !line.includes("---") && !line.toLowerCase().includes("problema")) {
+              const cells = line.split("|").map(c => c.trim()).filter(c => c);
+              if (cells.length >= 3) {
+                solutionsTable.push({
+                  problem: cells[0].replace(/\[|\]/g, ""),
+                  solution: cells[1].replace(/\[|\]/g, ""),
+                  result: cells[2].replace(/\[|\]/g, "")
+                });
+              }
+            }
+          } else if (currentSection === "gains") {
+            if (line.startsWith("-") || line.startsWith("*")) {
+              const gain = line.replace(/^[-*]\s*/, "").replace(/\*\*/g, "").trim();
+              if (gain) projectedGains.push(gain);
+            }
+          } else if (currentSection === "recommendation") {
+            if (!line.startsWith("#")) {
+              if (recommendation) recommendation += " ";
+              recommendation += line.replace(/\*\*/g, "").trim();
+            }
+          }
+        }
+        
+        // Push last problem
+        if (currentProblem && currentProblem.name) problems.push(currentProblem);
+        
+        return { diagnosticSummary, problems, solutionsTable, projectedGains, recommendation };
+      };
+
+      const parsedAnalysis = parseMarkdownAnalysis(aiAnalysis);
+      console.log("Parsed analysis:", {
+        problemCount: parsedAnalysis.problems.length,
+        solutionCount: parsedAnalysis.solutionsTable.length,
+        hasRecommendation: !!parsedAnalysis.recommendation
+      });
+      
+      // Build display arrays
       let problems: string[] = [];
       let solutions: string[] = [];
-      let impacts: string[] = [];
-      let nextStep = "";
-      let currentSection = "";
-
-      sections.forEach(line => {
-        const trimmed = line.trim();
-        if (trimmed.includes("PROBLEMAS IDENTIFICADOS")) {
-          currentSection = "problems";
-        } else if (trimmed.includes("SOLUÇÕES") || trimmed.includes("SOLUCOES")) {
-          currentSection = "solutions";
-        } else if (trimmed.includes("IMPACTO")) {
-          currentSection = "impact";
-        } else if (trimmed.includes("PRÓXIMO PASSO") || trimmed.includes("PROXIMO PASSO")) {
-          currentSection = "next";
-        } else if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
-          const text = trimmed.replace(/^[•\-]\s*/, "");
-          if (currentSection === "problems") problems.push(text);
-          else if (currentSection === "solutions") solutions.push(text);
-          else if (currentSection === "impact") impacts.push(text);
-        } else if (currentSection === "next" && trimmed.length > 0) {
-          nextStep = trimmed;
-        }
-      });
+      
+      if (parsedAnalysis.problems.length > 0) {
+        // New format: use parsed problems with details
+        problems = parsedAnalysis.problems.map(p => {
+          if (p.situation) return `${p.name}: ${p.situation}`;
+          if (p.impact) return `${p.name}: ${p.impact}`;
+          return p.name;
+        });
+        solutions = parsedAnalysis.solutionsTable.length > 0 
+          ? parsedAnalysis.solutionsTable.map(s => `${s.solution} → ${s.result}`)
+          : parsedAnalysis.projectedGains;
+      }
+      
+      // Fallback: try legacy bullet point format
+      if (problems.length === 0) {
+        console.log("Using legacy parser for old format");
+        const sections = aiAnalysis.split("\n").filter(line => line.trim());
+        let currentSection = "";
+        sections.forEach(line => {
+          const trimmed = line.trim();
+          if (trimmed.includes("PROBLEMAS") || trimmed.includes("DESAFIOS")) {
+            currentSection = "problems";
+          } else if (trimmed.includes("SOLUÇÕES") || trimmed.includes("SOLUCOES")) {
+            currentSection = "solutions";
+          } else if (trimmed.startsWith("•") || trimmed.startsWith("-") || trimmed.startsWith("*")) {
+            const text = trimmed.replace(/^[•\-*]\s*/, "").replace(/\*\*/g, "");
+            if (currentSection === "problems" && text) problems.push(text);
+            else if (currentSection === "solutions" && text) solutions.push(text);
+          }
+        });
+      }
+      
+      console.log("Final problems count:", problems.length);
+      console.log("Final solutions count:", solutions.length);
+      
+      const nextStep = parsedAnalysis.recommendation || "Agende uma demonstração personalizada do i-Ganhei";
 
       // ========== PROBLEMS SECTION ==========
       const halfWidth = contentWidth / 2 - 5;
