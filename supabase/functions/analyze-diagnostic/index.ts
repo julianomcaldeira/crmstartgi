@@ -81,44 +81,63 @@ serve(async (req) => {
 - ROI mensurável em vendas públicas
 `;
 
-    const systemPrompt = `Você é um consultor objetivo e direto em vendas governamentais. Analise as respostas e gere um relatório CURTO e IMPACTANTE.
+    const systemPrompt = `Você é um consultor especialista em vendas governamentais e licitações. Analise as respostas do diagnóstico e gere um relatório DIRETO, PROFISSIONAL e com SUBSTÂNCIA.
 
 REGRAS:
-- Seja EXTREMAMENTE objetivo e conciso
-- NO MÁXIMO 3 problemas principais identificados
-- Para cada problema, UMA solução específica do i-Ganhei
-- Use frases curtas e diretas
-- NÃO use emojis no texto
-- NÃO repita informações
-- Foque apenas nos problemas REAIS identificados nas respostas
-- IMPORTANTE: Quando o vendedor incluir observações, considere essas percepções comerciais na análise. As observações do vendedor trazem contexto do campo que é valioso.
+- Seja objetivo mas não superficial - cada ponto precisa ter contexto suficiente para convencer
+- Identifique 3-5 problemas principais com explicação clara do impacto no negócio
+- Conecte cada problema com uma solução específica do i-Ganhei
+- Use dados e percentuais quando possível para quantificar impactos
+- NÃO use emojis
+- IMPORTANTE: Considere as observações do vendedor como insights valiosos do campo
+- Adapte a linguagem ao cargo do interlocutor (mais estratégico para Diretores, mais operacional para Analistas)
 
 ${knowledgeBase}`;
 
-    const prompt = `Empresa: "${clientName}" | Cargo: ${role}
+    const prompt = `Empresa: "${clientName}" | Cargo do Interlocutor: ${role}
 
-Respostas:
+RESPOSTAS DO DIAGNÓSTICO:
 ${answersContext}
 
-Gere um relatório OBJETIVO com exatamente este formato:
+Gere um relatório de diagnóstico comercial seguindo EXATAMENTE este formato:
 
-PROBLEMAS IDENTIFICADOS
-• [Problema 1 em 1 linha]
-• [Problema 2 em 1 linha]  
-• [Problema 3 em 1 linha - se houver]
+## DIAGNÓSTICO DA OPERAÇÃO
 
-SOLUÇÕES i-GANHEI
-• [Para problema 1]: [Solução em 1 linha]
-• [Para problema 2]: [Solução em 1 linha]
-• [Para problema 3]: [Solução em 1 linha - se houver]
+Resumo em 2-3 frases do cenário atual identificado, destacando o nível de maturidade e principais desafios.
 
-IMPACTO ESPERADO
-• [Resultado 1 com número/percentual]
-• [Resultado 2 com número/percentual]
-• [Resultado 3 com número/percentual]
+## PROBLEMAS IDENTIFICADOS
 
-PRÓXIMO PASSO
-[Uma única ação recomendada em 1 linha]`;
+### 1. [Nome do Problema]
+**Situação atual:** Descrição objetiva do problema identificado nas respostas (2 linhas)
+**Impacto no negócio:** Qual o custo/consequência desse problema (1-2 linhas)
+
+### 2. [Nome do Problema]
+**Situação atual:** Descrição objetiva do problema (2 linhas)
+**Impacto no negócio:** Consequência mensurável (1-2 linhas)
+
+### 3. [Nome do Problema]
+**Situação atual:** Descrição objetiva do problema (2 linhas)
+**Impacto no negócio:** Consequência mensurável (1-2 linhas)
+
+## SOLUÇÕES i-GANHEI
+
+Para cada problema identificado, apresente a solução específica:
+
+| Problema | Solução i-Ganhei | Resultado Esperado |
+|----------|------------------|-------------------|
+| [Problema 1] | [Funcionalidade específica] | [Ganho quantificável] |
+| [Problema 2] | [Funcionalidade específica] | [Ganho quantificável] |
+| [Problema 3] | [Funcionalidade específica] | [Ganho quantificável] |
+
+## GANHOS PROJETADOS
+
+- **Eficiência Operacional:** [Estimativa de redução de tempo/esforço em %]
+- **Aumento de Oportunidades:** [Estimativa de ganho em captação]
+- **ROI Esperado:** [Prazo estimado para retorno do investimento]
+
+## RECOMENDAÇÃO
+
+Conclusão em 2-3 frases com a recomendação principal e próximo passo sugerido, adaptada ao cargo do interlocutor.`;
 
     console.log("Calling Lovable AI Gateway for diagnostic analysis...");
     
