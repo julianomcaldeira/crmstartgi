@@ -68,6 +68,7 @@ import { toast } from "sonner";
 import { AlertsTester } from "@/components/AlertsTester";
 import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
+import { DiagnosticQuestionsManager } from "@/components/admin/DiagnosticQuestionsManager";
 import { IndicadoresFundoTab } from "@/components/IndicadoresFundoTab";
 
 const Admin = () => {
@@ -869,12 +870,13 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="transfer">Transferir</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
-          <TabsTrigger value="indicadores">Indicadores Fundo</TabsTrigger>
+          <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
+          <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -1380,6 +1382,10 @@ const Admin = () => {
               )}
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="diagnostic" className="space-y-4">
+          <DiagnosticQuestionsManager />
         </TabsContent>
 
         <TabsContent value="indicadores" className="space-y-4">
