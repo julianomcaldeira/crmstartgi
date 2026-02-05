@@ -31,7 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { diagnosticRoles, iGanheiBenefits } from "@/lib/diagnosticQuestions";
 import jsPDF from "jspdf";
-import logoIGanhei from "@/assets/logo-iganhei.jpg";
+import logoIGanhei from "@/assets/logo-iganhei.png";
 
 interface DiagnosticHistoryListProps {
   clientId: string;
@@ -219,15 +219,19 @@ export function DiagnosticHistoryList({ clientId, clientName }: DiagnosticHistor
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.onload = () => {
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+
             const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext("2d");
-            ctx?.drawImage(img, 0, 0);
-            resolve({ 
-              base64: canvas.toDataURL("image/jpeg"),
-              width: img.width,
-              height: img.height
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            resolve({
+              base64: canvas.toDataURL("image/png"),
+              width,
+              height,
             });
           };
           img.onerror = () => resolve({ base64: "", width: 0, height: 0 });
@@ -239,12 +243,11 @@ export function DiagnosticHistoryList({ clientId, clientName }: DiagnosticHistor
 
       // ========== HEADER ==========
       if (logoData.base64) {
-        // Calculate proportional height based on desired width
-        const logoWidth = 55; // mm
-        const aspectRatio = logoData.height / logoData.width;
-        const logoHeight = logoWidth * aspectRatio;
-        
-        pdf.addImage(logoData.base64, "JPEG", margin, y, logoWidth, logoHeight);
+        // Keep aspect ratio (no stretching)
+        const logoWidth = 60; // mm
+        const logoHeight = (logoWidth * logoData.height) / logoData.width;
+
+        pdf.addImage(logoData.base64, "PNG", margin, y, logoWidth, logoHeight);
         y += logoHeight + 8;
       } else {
         y += 25;
