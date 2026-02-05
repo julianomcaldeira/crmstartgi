@@ -213,8 +213,8 @@ export function DiagnosticHistoryList({ clientId, clientName }: DiagnosticHistor
         return false;
       };
 
-      // Load logo as base64
-      const loadImage = (src: string): Promise<string> => {
+      // Load logo as base64 with dimensions
+      const loadImageWithDimensions = (src: string): Promise<{ base64: string; width: number; height: number }> => {
         return new Promise((resolve) => {
           const img = new Image();
           img.crossOrigin = "anonymous";
@@ -224,29 +224,38 @@ export function DiagnosticHistoryList({ clientId, clientName }: DiagnosticHistor
             canvas.height = img.height;
             const ctx = canvas.getContext("2d");
             ctx?.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL("image/jpeg"));
+            resolve({ 
+              base64: canvas.toDataURL("image/jpeg"),
+              width: img.width,
+              height: img.height
+            });
           };
-          img.onerror = () => resolve("");
+          img.onerror = () => resolve({ base64: "", width: 0, height: 0 });
           img.src = src;
         });
       };
 
-      const logoBase64 = await loadImage(logoIGanhei);
+      const logoData = await loadImageWithDimensions(logoIGanhei);
 
       // ========== HEADER ==========
-      if (logoBase64) {
-        // Larger logo - 60mm width
-        pdf.addImage(logoBase64, "JPEG", margin, y, 60, 24);
+      if (logoData.base64) {
+        // Calculate proportional height based on desired width
+        const logoWidth = 55; // mm
+        const aspectRatio = logoData.height / logoData.width;
+        const logoHeight = logoWidth * aspectRatio;
+        
+        pdf.addImage(logoData.base64, "JPEG", margin, y, logoWidth, logoHeight);
+        y += logoHeight + 8;
+      } else {
+        y += 25;
       }
       
       pdf.setFontSize(10);
       pdf.setTextColor(...gray);
-      pdf.text("Diagnóstico de Licitações", pageWidth - margin, y + 5, { align: "right" });
+      pdf.text("Diagnóstico de Licitações", pageWidth - margin, margin + 5, { align: "right" });
       pdf.setFontSize(11);
       pdf.setTextColor(...darkGray);
-      pdf.text(new Date(diagnostic.created_at).toLocaleDateString("pt-BR"), pageWidth - margin, y + 12, { align: "right" });
-      
-      y += 32;
+      pdf.text(new Date(diagnostic.created_at).toLocaleDateString("pt-BR"), pageWidth - margin, margin + 12, { align: "right" });
 
       // Separator line
       pdf.setDrawColor(...emerald);
