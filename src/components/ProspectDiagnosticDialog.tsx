@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { diagnosticRoles, DiagnosticRole, iGanheiBenefits } from "@/lib/diagnosticQuestions";
+import { diagnosticRoles, DiagnosticRole } from "@/lib/diagnosticQuestions";
 import { DiagnosticQuestionnaire } from "@/components/diagnostic/DiagnosticQuestionnaire";
 import logoIGanhei from "@/assets/logo-iganhei.png";
 import jsPDF from "jspdf";
@@ -712,21 +712,41 @@ export function ProspectDiagnosticDialog({
                   </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-3 gap-4">
-                  {iGanheiBenefits.stats.map((stat, index) => (
-                    <Card key={index} className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
+                {/* Dynamic Stats Cards based on diagnostic */}
+                {estimatedLosses && (
+                  <div className="grid grid-cols-3 gap-4">
+                    <Card className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
                       <CardContent className="pt-6">
                         <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                          {stat.value}
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(estimatedLosses.monthly * 12)}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {stat.label}
+                          Economia potencial/ano
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                    <Card className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
+                      <CardContent className="pt-6">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                          -{Math.round((estimatedLosses.hoursWeek / estimatedLosses.teamSize) * 0.5 * 4.3)}h/mês
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Redução em trabalho manual
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-emerald-200 dark:border-emerald-800">
+                      <CardContent className="pt-6">
+                        <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+                          {estimatedLosses.teamSize}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          Pessoa(s) beneficiada(s)
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
 
                 {/* AI Analysis */}
                 <Card className="border-2 border-primary/20">
@@ -822,14 +842,20 @@ export function ProspectDiagnosticDialog({
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {iGanheiBenefits.differentials.map((diff, index) => (
+                      {[
+                        { title: "Customização Total", description: "Cada implementação é única, adaptada aos processos e necessidades específicas do seu negócio", icon: 0 },
+                        { title: "Múltiplas Fontes Integradas", description: "Comprasnet, portais estaduais, municipais, Diário Oficial e outras fontes relevantes", icon: 1 },
+                        { title: "IA que Filtra e Prioriza", description: "Elimina 80-90% dos editais irrelevantes, deixando apenas oportunidades compatíveis", icon: 2 },
+                        { title: "Geração Automática de Peças", description: "Recursos, impugnações e esclarecimentos com qualidade jurídica em minutos", icon: 3 },
+                        { title: "Ciclo Completo", description: "Da captação ao pós-venda: contratos, empenhos e pagamentos", icon: 4 },
+                      ].map((diff, index) => (
                         <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
                           <div className="p-2 rounded-full bg-primary/10 text-primary shrink-0">
-                            {index === 0 && <Zap className="h-4 w-4" />}
-                            {index === 1 && <Target className="h-4 w-4" />}
-                            {index === 2 && <Sparkles className="h-4 w-4" />}
-                            {index === 3 && <Clock className="h-4 w-4" />}
-                            {index === 4 && <BarChart3 className="h-4 w-4" />}
+                            {diff.icon === 0 && <Zap className="h-4 w-4" />}
+                            {diff.icon === 1 && <Target className="h-4 w-4" />}
+                            {diff.icon === 2 && <Sparkles className="h-4 w-4" />}
+                            {diff.icon === 3 && <Clock className="h-4 w-4" />}
+                            {diff.icon === 4 && <BarChart3 className="h-4 w-4" />}
                           </div>
                           <div>
                             <h4 className="font-semibold text-sm">{diff.title}</h4>
