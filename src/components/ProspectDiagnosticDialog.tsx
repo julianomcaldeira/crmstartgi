@@ -8,19 +8,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
 import {
   FileSearch,
   Users,
   Briefcase,
-  ChevronRight,
-  ChevronLeft,
   Sparkles,
   Loader2,
   CheckCircle2,
@@ -32,17 +24,16 @@ import {
   BarChart3,
   Clock,
   Award,
-  MessageSquare,
   TrendingDown,
   DollarSign,
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { diagnosticRoles, DiagnosticRole, DiagnosticQuestion, iGanheiBenefits } from "@/lib/diagnosticQuestions";
-import logoIGanhei from "@/assets/logo-iganhei.jpg";
+import { diagnosticRoles, DiagnosticRole, iGanheiBenefits } from "@/lib/diagnosticQuestions";
+import { DiagnosticQuestionnaire } from "@/components/diagnostic/DiagnosticQuestionnaire";
+import logoIGanhei from "@/assets/logo-iganhei.png";
 import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 
 interface ProspectDiagnosticDialogProps {
   open: boolean;
@@ -70,12 +61,13 @@ export function ProspectDiagnosticDialog({
 }: ProspectDiagnosticDialogProps) {
   const [step, setStep] = useState<Step>("role");
   const [selectedRole, setSelectedRole] = useState<DiagnosticRole | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Answer[]>([]);
-  const [currentSelections, setCurrentSelections] = useState<string[]>([]);
-  const [currentObservation, setCurrentObservation] = useState<string>("");
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
-  const [estimatedLosses, setEstimatedLosses] = useState<{ daily: number; monthly: number; teamSize: number; hoursWeek: number } | null>(null);
+  const [estimatedLosses, setEstimatedLosses] = useState<{
+    daily: number;
+    monthly: number;
+    teamSize: number;
+    hoursWeek: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
 
@@ -84,32 +76,38 @@ export function ProspectDiagnosticDialog({
     if (open) {
       setStep("role");
       setSelectedRole(null);
-      setCurrentQuestionIndex(0);
-      setAnswers([]);
-      setCurrentSelections([]);
-      setCurrentObservation("");
       setAiAnalysis("");
       setEstimatedLosses(null);
       setDiagnosticId(null);
+      setIsLoading(false);
     }
   }, [open]);
 
   const getRoleIcon = (iconName: string) => {
     switch (iconName) {
-      case "FileSearch": return <FileSearch className="h-8 w-8" />;
-      case "Users": return <Users className="h-8 w-8" />;
-      case "Briefcase": return <Briefcase className="h-8 w-8" />;
-      default: return <FileSearch className="h-8 w-8" />;
+      case "FileSearch":
+        return <FileSearch className="h-8 w-8" />;
+      case "Users":
+        return <Users className="h-8 w-8" />;
+      case "Briefcase":
+        return <Briefcase className="h-8 w-8" />;
+      default:
+        return <FileSearch className="h-8 w-8" />;
     }
   };
 
   const handleRoleSelect = async (role: DiagnosticRole) => {
     setSelectedRole(role);
     setStep("questions");
-    
+    setAiAnalysis("");
+    setEstimatedLosses(null);
+    setDiagnosticId(null);
+
     // Create diagnostic record in database
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data, error } = await supabase
@@ -130,77 +128,32 @@ export function ProspectDiagnosticDialog({
     }
   };
 
-  const currentQuestion = selectedRole?.questions[currentQuestionIndex];
-  const progress = selectedRole 
-    ? ((currentQuestionIndex + 1) / selectedRole.questions.length) * 100 
-    : 0;
-
-  const handleOptionToggle = (option: string) => {
-    if (currentQuestion?.multiSelect) {
-      setCurrentSelections(prev => 
-        prev.includes(option) 
-          ? prev.filter(o => o !== option)
-          : [...prev, option]
-      );
-    } else {
-      setCurrentSelections([option]);
-    }
-  };
-
-  const handleNextQuestion = async () => {
-    if (currentSelections.length === 0) {
-      toast.error("Selecione pelo menos uma opção");
+  const handleSubmitAnswers = async (finalAnswers: Answer[]) => {
+    if (!diagnosticId) {
+      toast.error("Aguarde um instante e tente novamente.");
       return;
     }
 
-    // Save answer
-    const newAnswer: Answer = {
-      questionId: currentQuestion!.id,
-      questionText: currentQuestion!.question,
-      selectedOptions: currentSelections,
-      observation: currentObservation.trim() || undefined,
-    };
-    
-    const updatedAnswers = [...answers, newAnswer];
-    setAnswers(updatedAnswers);
-    
-    // Save to database
-    if (diagnosticId) {
-      try {
-        await supabase.from("prospect_diagnostic_answers").insert({
+    // Save all answers in one batch
+    try {
+      const { error } = await supabase.from("prospect_diagnostic_answers").insert(
+        finalAnswers.map((a) => ({
           diagnostic_id: diagnosticId,
-          question_id: currentQuestion!.id,
-          question_text: currentQuestion!.question,
-          selected_options: currentSelections,
-        });
-      } catch (error) {
-        console.error("Error saving answer:", error);
-      }
+          question_id: a.questionId,
+          question_text: a.questionText,
+          selected_options: a.selectedOptions,
+        })),
+      );
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error saving answers:", error);
+      toast.error("Não foi possível salvar as respostas. Tente novamente.");
+      return;
     }
 
-    // Move to next question or finish
-    if (currentQuestionIndex < selectedRole!.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setCurrentSelections([]);
-      setCurrentObservation("");
-    } else {
-      // All questions answered - generate AI analysis
-      setStep("analyzing");
-      await generateAnalysis(updatedAnswers);
-    }
-  };
-
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
-      // Restore previous answer
-      const previousAnswer = answers[currentQuestionIndex - 1];
-      if (previousAnswer) {
-        setCurrentSelections(previousAnswer.selectedOptions);
-        setCurrentObservation(previousAnswer.observation || "");
-        setAnswers(prev => prev.slice(0, -1));
-      }
-    }
+    setStep("analyzing");
+    await generateAnalysis(finalAnswers);
   };
 
   // Calculate estimated losses based on team size, time spent, and answers
@@ -336,7 +289,6 @@ export function ProspectDiagnosticDialog({
       console.error("Error generating analysis:", error);
       toast.error("Erro ao gerar análise. Tente novamente.");
       setStep("questions");
-      setCurrentQuestionIndex(0);
     } finally {
       setIsLoading(false);
     }
@@ -380,15 +332,19 @@ export function ProspectDiagnosticDialog({
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.onload = () => {
+            const width = img.naturalWidth || img.width;
+            const height = img.naturalHeight || img.height;
+
             const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
+            canvas.width = width;
+            canvas.height = height;
             const ctx = canvas.getContext("2d");
-            ctx?.drawImage(img, 0, 0);
-            resolve({ 
-              base64: canvas.toDataURL("image/jpeg"),
-              width: img.width,
-              height: img.height
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            resolve({
+              base64: canvas.toDataURL("image/png"),
+              width,
+              height,
             });
           };
           img.onerror = () => resolve({ base64: "", width: 0, height: 0 });
@@ -400,12 +356,11 @@ export function ProspectDiagnosticDialog({
 
       // ========== HEADER ==========
       if (logoData.base64) {
-        // Calculate proportional height based on desired width
-        const logoWidth = 55; // mm
-        const aspectRatio = logoData.height / logoData.width;
-        const logoHeight = logoWidth * aspectRatio;
-        
-        pdf.addImage(logoData.base64, "JPEG", margin, y, logoWidth, logoHeight);
+        // Keep aspect ratio (no stretching)
+        const logoWidth = 60; // mm
+        const logoHeight = (logoWidth * logoData.height) / logoData.width;
+
+        pdf.addImage(logoData.base64, "PNG", margin, y, logoWidth, logoHeight);
         y += logoHeight + 8;
       } else {
         y += 25;
@@ -802,130 +757,13 @@ export function ProspectDiagnosticDialog({
           )}
 
           {/* Step: Questions */}
-          {step === "questions" && currentQuestion && (
-            <div className="flex flex-col h-[65vh]">
-              {/* Progress - Fixed at top */}
-              <div className="space-y-2 pb-4 flex-shrink-0 px-4">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Pergunta {currentQuestionIndex + 1} de {selectedRole?.questions.length}</span>
-                  <span>{Math.round(progress)}% completo</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </div>
-
-              {/* Scrollable content area */}
-              <ScrollArea className="flex-1 px-4">
-                <div className="space-y-4 pb-4">
-                  {/* Question Card */}
-                  <Card className="border-2">
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                          <span className="font-bold text-lg">{currentQuestionIndex + 1}</span>
-                        </div>
-                        <div>
-                          <CardTitle className="text-lg leading-relaxed">
-                            {currentQuestion.question}
-                          </CardTitle>
-                          {currentQuestion.multiSelect && (
-                            <Badge variant="outline" className="mt-2">
-                              Múltipla escolha
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-3">
-                        {currentQuestion.multiSelect ? (
-                          currentQuestion.options.map((option, index) => (
-                            <label
-                              key={index}
-                              className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                                currentSelections.includes(option)
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover:border-primary/50"
-                              }`}
-                            >
-                              <Checkbox
-                                checked={currentSelections.includes(option)}
-                                onCheckedChange={() => handleOptionToggle(option)}
-                              />
-                              <span className="flex-1">{option}</span>
-                            </label>
-                          ))
-                        ) : (
-                          <RadioGroup
-                            value={currentSelections[0] || ""}
-                            onValueChange={(value) => setCurrentSelections([value])}
-                          >
-                            {currentQuestion.options.map((option, index) => (
-                              <label
-                                key={index}
-                                className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                                  currentSelections.includes(option)
-                                    ? "border-primary bg-primary/5"
-                                    : "border-border hover:border-primary/50"
-                                }`}
-                              >
-                                <RadioGroupItem value={option} />
-                                <span className="flex-1">{option}</span>
-                              </label>
-                            ))}
-                          </RadioGroup>
-                        )}
-                      </div>
-
-                      {/* Seller Observation Field */}
-                      <Separator className="my-4" />
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-sm font-medium">
-                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                          Observação do Vendedor (opcional)
-                        </Label>
-                        <Textarea
-                          placeholder="Adicione sua percepção sobre esta resposta do cliente... Ex: O cliente demonstrou frustração ao falar sobre isso."
-                          value={currentObservation}
-                          onChange={(e) => setCurrentObservation(e.target.value)}
-                          className="min-h-[80px] resize-none"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Sua observação será considerada pela IA na análise final do diagnóstico.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </ScrollArea>
-
-              {/* Navigation - Fixed at bottom */}
-              <div className="flex justify-between pt-4 flex-shrink-0 px-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={handlePreviousQuestion}
-                  disabled={currentQuestionIndex === 0}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Anterior
-                </Button>
-                <Button
-                  onClick={handleNextQuestion}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
-                >
-                  {currentQuestionIndex === selectedRole!.questions.length - 1 ? (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Gerar Diagnóstico
-                    </>
-                  ) : (
-                    <>
-                      Próxima
-                      <ChevronRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+          {step === "questions" && selectedRole && (
+            <DiagnosticQuestionnaire
+              role={selectedRole}
+              onSubmit={handleSubmitAnswers}
+              submitDisabled={!diagnosticId || isLoading}
+              submitDisabledReason={!diagnosticId ? "Preparando o diagnóstico..." : undefined}
+            />
           )}
 
           {/* Step: Analyzing */}
