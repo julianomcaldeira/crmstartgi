@@ -30,8 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { diagnosticRoles, DiagnosticRole } from "@/lib/diagnosticQuestions";
-import { DiagnosticQuestionnaire } from "@/components/diagnostic/DiagnosticQuestionnaire";
+import { DiagnosticQuestionnaire, useDiagnosticRoles, DbDiagnosticRole } from "@/components/diagnostic/DiagnosticQuestionnaire";
 import logoIGanhei from "@/assets/logo-iganhei.png";
 import jsPDF from "jspdf";
 
@@ -60,7 +59,7 @@ export function ProspectDiagnosticDialog({
   onComplete,
 }: ProspectDiagnosticDialogProps) {
   const [step, setStep] = useState<Step>("role");
-  const [selectedRole, setSelectedRole] = useState<DiagnosticRole | null>(null);
+  const [selectedRole, setSelectedRole] = useState<DbDiagnosticRole | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
   const [estimatedLosses, setEstimatedLosses] = useState<{
     daily: number;
@@ -70,6 +69,9 @@ export function ProspectDiagnosticDialog({
   } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [diagnosticId, setDiagnosticId] = useState<string | null>(null);
+
+  // Fetch roles from database
+  const { roles: diagnosticRoles, loading: rolesLoading } = useDiagnosticRoles();
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -96,7 +98,7 @@ export function ProspectDiagnosticDialog({
     }
   };
 
-  const handleRoleSelect = async (role: DiagnosticRole) => {
+  const handleRoleSelect = async (role: DbDiagnosticRole) => {
     setSelectedRole(role);
     setStep("questions");
     setAiAnalysis("");
@@ -115,7 +117,7 @@ export function ProspectDiagnosticDialog({
         .insert({
           client_id: clientId,
           created_by: user.id,
-          contact_role: role.id,
+          contact_role: role.role_key,
           status: "in_progress",
         })
         .select()
@@ -157,11 +159,11 @@ export function ProspectDiagnosticDialog({
   };
 
   // Calculate estimated losses based on team size, time spent, and answers
-  const calculateEstimatedLosses = (role: string, answersData: Answer[]): { daily: number; monthly: number; teamSize: number; hoursWeek: number } => {
+  const calculateEstimatedLosses = (roleKey: string, answersData: Answer[]): { daily: number; monthly: number; teamSize: number; hoursWeek: number } => {
     // Extract team size from answers
     let teamSize = 3; // Default
     const teamAnswer = answersData.find(a => 
-      a.questionId.includes('_equipe') || a.questionId.includes('_faturamento')
+      a.questionText.toLowerCase().includes('quantas pessoas')
     );
     if (teamAnswer) {
       const option = teamAnswer.selectedOptions[0] || "";
@@ -174,7 +176,7 @@ export function ProspectDiagnosticDialog({
     // Extract weekly hours from answers (analyst and manager have time questions)
     let hoursWeek = 10; // Default
     const timeAnswer = answersData.find(a => 
-      a.questionId.includes('_tempo')
+      a.questionText.toLowerCase().includes('horas') || a.questionText.toLowerCase().includes('tempo')
     );
     if (timeAnswer) {
       const option = timeAnswer.selectedOptions[0] || "";
@@ -188,23 +190,23 @@ export function ProspectDiagnosticDialog({
     let inefficiencyMultiplier = 1.0;
     answersData.forEach(answer => {
       // Skip the quantitative questions for this calculation
-      if (answer.questionId.includes('_equipe') || 
-          answer.questionId.includes('_tempo') || 
-          answer.questionId.includes('_faturamento')) {
+      if (answer.questionText.toLowerCase().includes('quantas pessoas') || 
+          answer.questionText.toLowerCase().includes('horas') || 
+          answer.questionText.toLowerCase().includes('faturamento')) {
         return;
       }
       
-      const optionIndices = answer.selectedOptions.map(opt => {
-        const question = diagnosticRoles
-          .find(r => r.id === role)
-          ?.questions.find(q => q.id === answer.questionId);
-        return question?.options.indexOf(opt) ?? 0;
-      });
-      
-      // Last options indicate worse scenarios, add to inefficiency
-      optionIndices.forEach(idx => {
-        if (idx >= 1) inefficiencyMultiplier += 0.1;
-        if (idx >= 2) inefficiencyMultiplier += 0.15;
+      // Assume later options in the list indicate worse scenarios
+      // Since we don't have the option index readily available, we'll base on keywords
+      answer.selectedOptions.forEach(opt => {
+        const lowerOpt = opt.toLowerCase();
+        if (lowerOpt.includes('difícil') || lowerOpt.includes('não') || lowerOpt.includes('raramente') || 
+            lowerOpt.includes('caos') || lowerOpt.includes('demais') || lowerOpt.includes('aposta')) {
+          inefficiencyMultiplier += 0.25;
+        } else if (lowerOpt.includes('às vezes') || lowerOpt.includes('parcial') || lowerOpt.includes('parte') ||
+                   lowerOpt.includes('um pouco') || lowerOpt.includes('pesada')) {
+          inefficiencyMultiplier += 0.15;
+        }
       });
       
       // If observation was provided, add extra weight
@@ -249,7 +251,7 @@ export function ProspectDiagnosticDialog({
     setIsLoading(true);
     try {
       // Calculate estimated losses
-      const losses = calculateEstimatedLosses(selectedRole?.id || "analista", finalAnswers);
+      const losses = calculateEstimatedLosses(selectedRole?.role_key || "analista", finalAnswers);
       setEstimatedLosses(losses);
 
       const response = await supabase.functions.invoke("analyze-diagnostic", {
@@ -641,6 +643,11 @@ export function ProspectDiagnosticDialog({
                 </p>
               </div>
 
+              {rolesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {diagnosticRoles.map((role) => (
                   <Card
@@ -657,19 +664,21 @@ export function ProspectDiagnosticDialog({
                     </CardHeader>
                     <CardContent className="text-center">
                       <Badge variant="secondary">
-                        {role.questions.length} perguntas
+                        Clique para iniciar
                       </Badge>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+              )}
             </div>
           )}
 
           {/* Step: Questions */}
           {step === "questions" && selectedRole && (
             <DiagnosticQuestionnaire
-              role={selectedRole}
+              roleId={selectedRole.id}
+              roleLabel={selectedRole.label}
               onSubmit={handleSubmitAnswers}
               submitDisabled={!diagnosticId || isLoading}
               submitDisabledReason={!diagnosticId ? "Preparando o diagnóstico..." : undefined}
