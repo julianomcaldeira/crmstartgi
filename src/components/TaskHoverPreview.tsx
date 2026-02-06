@@ -64,9 +64,11 @@ const TaskHoverPreview = ({ task, children, enabled = true }: TaskHoverPreviewPr
       </HoverCardTrigger>
       <HoverCardContent 
         className="w-96 p-4 z-50" 
-        side="right" 
-        align="start"
+        side="top" 
+        align="center"
         sideOffset={8}
+        collisionPadding={16}
+        avoidCollisions={true}
       >
         <div className="space-y-3">
           {/* Header */}
