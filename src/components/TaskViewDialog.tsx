@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase, Trash2, History, MapPin, Globe, Users } from "lucide-react";
+import { Calendar, Clock, User, Building2, FileText, Flag, Mail, Phone, Briefcase, Trash2, History, MapPin, Globe, Users, Pencil } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +27,10 @@ interface TaskViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onDelete?: (taskId: string) => void;
+  onEdit?: () => void;
 }
 
-const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogProps) => {
+const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskViewDialogProps) => {
   const [history, setHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [activeTab, setActiveTab] = useState("tarefa");
@@ -547,30 +548,41 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete }: TaskViewDialogPr
           </TabsContent>
         </Tabs>
 
-        {onDelete && (
-          <DialogFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir Tarefa
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => onDelete(task.id)}>
-                    Excluir
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+        {(onEdit || onDelete) && (
+          <DialogFooter className="flex justify-between sm:justify-between">
+            {onEdit && (
+              <Button variant="outline" size="sm" onClick={() => {
+                onOpenChange(false);
+                onEdit();
+              }}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar Tarefa
+              </Button>
+            )}
+            {onDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Tarefa
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => onDelete(task.id)}>
+                      Excluir
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </DialogFooter>
         )}
       </DialogContent>
