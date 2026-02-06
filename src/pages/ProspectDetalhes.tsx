@@ -56,6 +56,7 @@ import BusinessCardScanner from "@/components/BusinessCardScanner";
 import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
+import { AIAnalysisHistoryList } from "@/components/AIAnalysisHistoryList";
 import { ClipboardList } from "lucide-react";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 
@@ -981,10 +982,11 @@ const ClienteDetalhes = () => {
 
       {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
+          <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
         </TabsList>
 
@@ -1879,6 +1881,19 @@ const ClienteDetalhes = () => {
                 );
               })()
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-analyses" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">Histórico de Análises de IA</h3>
+              <Button size="sm" onClick={() => setAiAnalysisDialogOpen(true)}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Nova Análise
+              </Button>
+            </div>
+            <AIAnalysisHistoryList clientId={id || ""} />
           </Card>
         </TabsContent>
 
