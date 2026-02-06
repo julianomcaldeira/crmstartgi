@@ -56,6 +56,7 @@ const Tarefas = () => {
   // Quick filters for list view
   const [quickTaskTypeFilter, setQuickTaskTypeFilter] = useState("all");
   const [quickPriorityFilter, setQuickPriorityFilter] = useState("all");
+  const [calendarCompanySearch, setCalendarCompanySearch] = useState("");
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -666,13 +667,20 @@ const Tarefas = () => {
   };
 
   const getTasksForDay = (day: Date) => {
+    const normalizedSearch = calendarCompanySearch.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     return tasks
       .filter(matchesNonStatusFilters)
       .filter((task) => {
         if (!task.due_date) return false;
         const taskDay = startOfDay(new Date(task.due_date));
         if (!isSameDay(taskDay, day)) return false;
-        return matchesStatusFilter(task, filter);
+        if (!matchesStatusFilter(task, filter)) return false;
+        if (normalizedSearch) {
+          const companyName = (task.clients?.company_name || task.clients?.trade_name || "")
+            .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (!companyName.includes(normalizedSearch)) return false;
+        }
+        return true;
       });
   };
 
@@ -1290,6 +1298,16 @@ const Tarefas = () => {
                 {taskCounts.completed}
               </Badge>
             </Button>
+          </div>
+
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por empresa..."
+              value={calendarCompanySearch}
+              onChange={(e) => setCalendarCompanySearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
 
           <Card>
