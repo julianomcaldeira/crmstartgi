@@ -1366,7 +1366,7 @@ const Tarefas = () => {
                             </div>
                           </div>
                           
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto">
                             {dayTasks.map((task) => (
                               <DraggableCard 
                                 key={task.id} 
