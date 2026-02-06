@@ -1404,6 +1404,10 @@ const Tarefas = () => {
               }
             }}
             onDelete={canDeleteTask(selectedTask) ? handleDeleteTask : undefined}
+            onEdit={() => {
+              setViewDialogOpen(false);
+              setEditDialogOpen(true);
+            }}
           />
           
           <TaskEditDialog
