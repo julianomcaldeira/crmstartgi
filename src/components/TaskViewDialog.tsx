@@ -227,7 +227,7 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskView
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl overflow-x-hidden">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl">{task.title}</DialogTitle>
           {/* Status and Priority Badges */}
