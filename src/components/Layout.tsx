@@ -204,9 +204,9 @@ const Layout = ({ children }: LayoutProps) => {
       </aside>
 
       {/* Main Content */}
-      <div className="lg:ml-64">
+      <div className="lg:ml-64 flex flex-col h-screen">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
+        <header className="sticky top-0 z-30 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-foreground lg:hidden"
@@ -252,7 +252,7 @@ const Layout = ({ children }: LayoutProps) => {
         </header>
 
         {/* Page Content */}
-        <main className="px-4 py-4 md:px-6 md:py-6">{children}</main>
+        <main className="px-4 py-4 md:px-6 md:py-6 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
