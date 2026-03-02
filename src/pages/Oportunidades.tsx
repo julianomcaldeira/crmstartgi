@@ -25,6 +25,7 @@ import { OpportunityActivityLog } from "@/components/OpportunityActivityLog";
 import { ProposalViewer } from "@/components/ProposalViewer";
 import OpportunityViewDialog from "@/components/OpportunityViewDialog";
 import { LossReasonDialog } from "@/components/LossReasonDialog";
+import { WonFormDialog } from "@/components/WonFormDialog";
 import { DroppableColumn } from "@/components/DroppableColumn";
 import { DraggableCard } from "@/components/DraggableCard";
 import { SwipeableCard } from "@/components/SwipeableCard";
@@ -70,6 +71,8 @@ const Oportunidades = () => {
   const [opportunityToDelete, setOpportunityToDelete] = useState<any>(null);
   const [proposalRequiredDialogOpen, setProposalRequiredDialogOpen] = useState(false);
   const [pendingProposalOpportunity, setPendingProposalOpportunity] = useState<any>(null);
+  const [wonFormDialogOpen, setWonFormDialogOpen] = useState(false);
+  const [wonFormOpportunity, setWonFormOpportunity] = useState<any>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -429,6 +432,14 @@ const Oportunidades = () => {
   };
 
   const updateOpportunityStatus = async (oppId: string, newStatus: string, showToast = true) => {
+    // Check if changing to "won" status - show won form dialog
+    if (newStatus === "won") {
+      const opp = opportunities.find(o => o.id === oppId);
+      setWonFormOpportunity(opp);
+      setWonFormDialogOpen(true);
+      return;
+    }
+
     // Check if changing to "lost" status - show loss reason dialog
     if (newStatus === "lost") {
       setPendingOpportunityId(oppId);
@@ -706,6 +717,14 @@ const Oportunidades = () => {
 
   const handleUpdateOpportunity = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Check if status is being changed to "won" via edit dialog
+    if (status === "won" && editingOpportunity.status !== "won") {
+      setEditDialogOpen(false);
+      setWonFormOpportunity(editingOpportunity);
+      setWonFormDialogOpen(true);
+      return;
+    }
 
     // Check if status is being changed to "lost"
     if (status === "lost" && editingOpportunity.status !== "lost" && !selectedLossReason) {
@@ -2015,6 +2034,20 @@ const Oportunidades = () => {
           }
         }}
         onReasonSelected={handleLossReasonSelected}
+      />
+
+      <WonFormDialog
+        open={wonFormDialogOpen}
+        onOpenChange={(open) => {
+          setWonFormDialogOpen(open);
+          if (!open) setWonFormOpportunity(null);
+        }}
+        opportunity={wonFormOpportunity}
+        onSubmitSuccess={() => {
+          setWonFormDialogOpen(false);
+          setWonFormOpportunity(null);
+          fetchData();
+        }}
       />
 
       {showActivityLog && selectedOpportunityForLog && (
