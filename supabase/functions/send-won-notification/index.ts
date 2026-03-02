@@ -106,7 +106,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "CRM StartGI <noreply@startgi.com.br>",
+          from: "CRM StartGI <onboarding@resend.dev>",
           to: recipients,
           cc: ccRecipients,
           subject: `🎉 Nova Venda - ${clientName} | ${productName}`,
