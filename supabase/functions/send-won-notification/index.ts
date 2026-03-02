@@ -96,8 +96,11 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     
     if (RESEND_API_KEY) {
-      const recipients = ["financeiro@ganheilicitacao.com.br", "juliano@startgi.com.br"];
-      const ccRecipients = sellerEmail ? [sellerEmail] : [];
+      // NOTA: Enquanto o domínio não estiver verificado no Resend, só é possível enviar para o email da conta.
+      // Após verificar o domínio startgi.com.br no Resend, altere os destinatários abaixo:
+      // const recipients = ["financeiro@ganheilicitacao.com.br", "juliano@startgi.com.br"];
+      const recipients = ["juliano.montesino.caldeira@gmail.com"];
+      const ccRecipients: string[] = [];
 
       const emailResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
