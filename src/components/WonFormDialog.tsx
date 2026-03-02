@@ -100,7 +100,7 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
         const sanitizedName = file.name
           .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
           .replace(/[^a-zA-Z0-9._-]/g, "_");
-        const filePath = `${opportunity.id}/${Date.now()}-${sanitizedName}`;
+        const filePath = `${user.id}/${opportunity.id}-${Date.now()}-${sanitizedName}`;
         
         const { error: uploadError } = await supabase.storage
           .from("opportunity-attachments")
