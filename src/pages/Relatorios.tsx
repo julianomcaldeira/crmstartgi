@@ -162,22 +162,35 @@ const Relatorios = () => {
       const totalOpps = oppsData?.length || 0;
       const wonOpps = oppsData?.filter(o => o.status === "won") || [];
       const lostOpps = oppsData?.filter(o => o.status === "lost") || [];
-      // Use implementation_value for revenue calculation (receita caixa)
       const totalVal = wonOpps.reduce((sum, o) => sum + (Number(o.implementation_value) || 0), 0);
       const convRate = totalOpps > 0 ? (wonOpps.length / totalOpps) * 100 : 0;
       const avgSize = wonOpps.length > 0 ? totalVal / wonOpps.length : 0;
       const avgCycle = wonOpps.filter(o => o.close_cycle_days).reduce((sum, o) => sum + (o.close_cycle_days || 0), 0) / (wonOpps.filter(o => o.close_cycle_days).length || 1);
 
-      setTotalClients(clientsCount || 0);
-      setTotalOpportunities(totalOpps);
-      setWonOpportunities(wonOpps.length);
-      setLostOpportunities(lostOpps.length);
-      setTotalValue(totalVal);
-      setConversionRate(convRate);
-      setAvgDealSize(avgSize);
-      setAvgCloseCycle(Math.round(avgCycle));
+      const result = {
+        totalClients: clientsCount || 0,
+        totalOpportunities: totalOpps,
+        wonOpportunities: wonOpps.length,
+        lostOpportunities: lostOpps.length,
+        totalValue: totalVal,
+        conversionRate: convRate,
+        avgDealSize: avgSize,
+        avgCloseCycle: Math.round(avgCycle),
+      };
+
+      setTotalClients(result.totalClients);
+      setTotalOpportunities(result.totalOpportunities);
+      setWonOpportunities(result.wonOpportunities);
+      setLostOpportunities(result.lostOpportunities);
+      setTotalValue(result.totalValue);
+      setConversionRate(result.conversionRate);
+      setAvgDealSize(result.avgDealSize);
+      setAvgCloseCycle(result.avgCloseCycle);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching sales metrics:", error);
+      return {};
     }
   };
 
