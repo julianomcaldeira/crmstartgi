@@ -576,9 +576,43 @@ export default function RadarLeads() {
                           {(() => {
                             const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
                             const capital = shareCapitalMap[cleanCnpj] ?? (lead.source_data as any)?.share_capital;
-                            return capital
-                              ? `R$ ${Number(capital).toLocaleString('pt-BR')}`
-                              : "-";
+                            if (capital) {
+                              return `R$ ${Number(capital).toLocaleString('pt-BR')}`;
+                            }
+                            return (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 gap-1 text-xs text-muted-foreground hover:text-primary"
+                                disabled={consultingCnpjId === lead.id}
+                                onClick={async () => {
+                                  setConsultingCnpjId(lead.id);
+                                  try {
+                                    const { data: cnpjData, error } = await supabase.functions.invoke("buscar-cnpj", {
+                                      body: { cnpj: cleanCnpj },
+                                    });
+                                    if (error) throw error;
+                                    if (cnpjData?.share_capital != null) {
+                                      setShareCapitalMap(prev => ({ ...prev, [cleanCnpj]: cnpjData.share_capital }));
+                                      toast.success("Capital social consultado com sucesso!");
+                                    } else {
+                                      toast.info("Capital social não disponível para este CNPJ.");
+                                    }
+                                  } catch (err: any) {
+                                    toast.error("Erro ao consultar CNPJ: " + (err.message || "Tente novamente"));
+                                  } finally {
+                                    setConsultingCnpjId(null);
+                                  }
+                                }}
+                              >
+                                {consultingCnpjId === lead.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Search className="h-3 w-3" />
+                                )}
+                                Consultar
+                              </Button>
+                            );
                           })()}
                         </TableCell>
                        <TableCell className="text-sm">
