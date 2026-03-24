@@ -92,6 +92,10 @@ export function OpportunityEditDialog({
   onDownloadAttachment,
   onDeleteAttachment,
   uploadingFiles,
+  hasNegotiatedFees,
+  setHasNegotiatedFees,
+  negotiatedFeeValues,
+  setNegotiatedFeeValues,
 }: OpportunityEditDialogProps) {
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
