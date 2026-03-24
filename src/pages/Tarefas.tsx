@@ -74,6 +74,7 @@ const Tarefas = () => {
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
