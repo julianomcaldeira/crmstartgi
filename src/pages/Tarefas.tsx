@@ -719,10 +719,10 @@ const Tarefas = () => {
   const filteredTasks = tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, filter));
 
   const taskCounts = {
-    all: tasksFilteredWithoutStatus.length,
-    pending: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "pending")).length,
-    overdue: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "overdue")).length,
-    completed: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "completed")).length,
+    all: tasksAfterAiFilter.length,
+    pending: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "pending")).length,
+    overdue: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "overdue")).length,
+    completed: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "completed")).length,
   };
 
   // Pagination logic
