@@ -174,6 +174,21 @@ export const PercentageInput = React.forwardRef<HTMLInputElement, PercentageInpu
 );
 PercentageInput.displayName = "PercentageInput";
 
+// Auto-add "9" prefix to mobile numbers (Brazilian standard)
+// If the user types 8 digits after DDD (10 total), auto-inserts "9" to make it 11 digits
+export const autoAddMobileNine = (digits: string): string => {
+  const cleaned = digits.replace(/\D/g, "");
+  // If 10 digits (DDD + 8 digit number), and 3rd digit is NOT 9, add 9
+  if (cleaned.length === 10) {
+    const thirdDigit = cleaned[2];
+    // Only add 9 if it looks like a mobile (starts with 6,7,8,9 after DDD)
+    if (["6", "7", "8"].includes(thirdDigit)) {
+      return cleaned.slice(0, 2) + "9" + cleaned.slice(2);
+    }
+  }
+  return cleaned;
+};
+
 // Format functions for display
 export const formatCNPJ = (cnpj: string) => {
   if (!cnpj) return '';

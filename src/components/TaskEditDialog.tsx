@@ -29,6 +29,7 @@ import TaskQuickMessages from "@/components/TaskQuickMessages";
 import AudioRecorder from "@/components/AudioRecorder";
 import TaskAttachments from "@/components/TaskAttachments";
 import { formatPhone } from "@/components/ui/masked-input";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 
 interface TaskEditDialogProps {
   task: any;
@@ -55,6 +56,12 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
+  // Editable client/opportunity fields
+  const [editClientId, setEditClientId] = useState<string>("");
+  const [editOpportunityId, setEditOpportunityId] = useState<string>("");
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [allOpportunities, setAllOpportunities] = useState<any[]>([]);
+
   const clientDisplay = task?.client ?? task?.clients;
   const contactDisplay = task?.contact ?? task?.contacts;
   const resolvedClientId: string | undefined = task?.client_id ?? clientDisplay?.id;
@@ -63,10 +70,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   useEffect(() => {
     if (task?.id && open) {
       setTaskType(task.task_type || "ligacao");
-      // Converter UTC do banco para formato local para o input datetime-local
       if (task.due_date) {
         const utcDate = new Date(task.due_date);
-        // Ajusta para o timezone local subtraindo o offset
         const localDate = new Date(utcDate.getTime() - utcDate.getTimezoneOffset() * 60000);
         setDueDate(localDate.toISOString().slice(0, 16));
       } else {
@@ -75,13 +80,28 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
       setDescription(task.description || "");
-      // Reset notes before fetching to prevent showing old task's notes
+      setEditClientId(task.client_id || "");
+      setEditOpportunityId(task.opportunity_id || "");
       setNotes([]);
       setNewNote("");
       fetchNotesForTask(task.id);
       fetchTaskHistoryForTask(task.id);
     }
   }, [task?.id, open]);
+
+  // Fetch clients and opportunities for editing
+  useEffect(() => {
+    if (!open) return;
+    const fetchLists = async () => {
+      const [clientsRes, oppsRes] = await Promise.all([
+        supabase.from("clients").select("id, company_name, trade_name, cnpj").order("company_name"),
+        supabase.from("opportunities").select("id, title").order("title"),
+      ]);
+      setAllClients(clientsRes.data || []);
+      setAllOpportunities(oppsRes.data || []);
+    };
+    fetchLists();
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -311,6 +331,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           priority: priority as any,
           status: status as any,
           description: description.trim() || null,
+          client_id: editClientId || null,
+          opportunity_id: editOpportunityId || null,
         })
         .eq("id", task.id);
 
@@ -463,6 +485,41 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                   <SelectItem value="completed">Realizada</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+           </div>
+
+          {/* Client & Opportunity linking */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cliente / Prospect</Label>
+              <SearchableCombobox
+                items={allClients.map((c) => ({
+                  value: c.id,
+                  label: c.company_name || c.trade_name,
+                  subLabel: c.cnpj || undefined,
+                  searchText: `${c.company_name ?? ""} ${c.trade_name ?? ""} ${c.cnpj ?? ""}`.trim(),
+                }))}
+                value={editClientId}
+                onValueChange={setEditClientId}
+                placeholder="Vincular cliente"
+                searchPlaceholder="Buscar cliente por nome ou CNPJ..."
+                emptyText="Nenhum cliente encontrado."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Oportunidade</Label>
+              <SearchableCombobox
+                items={allOpportunities.map((o) => ({
+                  value: o.id,
+                  label: o.title,
+                  searchText: o.title,
+                }))}
+                value={editOpportunityId}
+                onValueChange={setEditOpportunityId}
+                placeholder="Vincular oportunidade"
+                searchPlaceholder="Buscar oportunidade..."
+                emptyText="Nenhuma oportunidade encontrada."
+              />
             </div>
           </div>
 

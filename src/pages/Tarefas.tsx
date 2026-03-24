@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +31,7 @@ import { parseDateOnly } from "@/lib/dateUtils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
 const Tarefas = () => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -1147,9 +1149,15 @@ const Tarefas = () => {
                                   </div>
                                 )}
                                 {task.clients && (
-                                  <div className="flex items-center gap-1">
+                                  <div 
+                                    className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/clientes/${task.client_id}`);
+                                    }}
+                                  >
                                     <Building2 size={14} />
-                                    <span>{task.clients.company_name || task.clients.trade_name}</span>
+                                    <span className="hover:underline">{task.clients.company_name || task.clients.trade_name}</span>
                                   </div>
                                 )}
                                 {task.contacts && (

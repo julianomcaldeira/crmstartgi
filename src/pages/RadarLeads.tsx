@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { useRadarLeads, useRadarLeadsStats, useRadarLeadsCities, SortColumn, Sor
 import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
@@ -206,6 +207,10 @@ export default function RadarLeads() {
         toast.info(`A empresa "${result.companyName}" já está cadastrada como prospect. Lead removido do radar.`);
       } else {
         toast.success("Lead convertido em prospect com sucesso! Dados completos obtidos da Receita Federal.");
+        // Redirect to the new prospect
+        if (result.newClient?.id) {
+          navigate(`/clientes/${result.newClient.id}`);
+        }
       }
       
       queryClient.invalidateQueries({ queryKey: ["radar-leads"] });
@@ -508,20 +513,30 @@ export default function RadarLeads() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader column="company_name">Empresa</SortableHeader>
-                    <SortableHeader column="cnpj">CNPJ</SortableHeader>
-                    <SortableHeader column="city">Localização</SortableHeader>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell className="font-medium">{lead.company_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
-                      <TableCell>
-                        {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                      </TableCell>
+                     <SortableHeader column="company_name">Empresa</SortableHeader>
+                     <SortableHeader column="cnpj">CNPJ</SortableHeader>
+                     <SortableHeader column="city">Localização</SortableHeader>
+                     <TableHead>Capital Social</TableHead>
+                     <TableHead>Região</TableHead>
+                     <TableHead>Ações</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {leads.map((lead) => (
+                     <TableRow key={lead.id}>
+                       <TableCell className="font-medium">{lead.company_name}</TableCell>
+                       <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
+                       <TableCell>
+                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
+                       </TableCell>
+                       <TableCell className="text-sm">
+                         {(lead.source_data as any)?.share_capital 
+                           ? `R$ ${Number((lead.source_data as any).share_capital).toLocaleString('pt-BR')}` 
+                           : "-"}
+                       </TableCell>
+                       <TableCell className="text-sm">
+                         {(lead.source_data as any)?.region || "-"}
+                       </TableCell>
                       <TableCell>
                         <Button
                           variant="default"
