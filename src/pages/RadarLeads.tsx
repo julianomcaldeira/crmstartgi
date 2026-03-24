@@ -571,11 +571,15 @@ export default function RadarLeads() {
                        <TableCell>
                          {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
                        </TableCell>
-                       <TableCell className="text-sm">
-                         {(lead.source_data as any)?.share_capital 
-                           ? `R$ ${Number((lead.source_data as any).share_capital).toLocaleString('pt-BR')}` 
-                           : "-"}
-                       </TableCell>
+                        <TableCell className="text-sm">
+                          {(() => {
+                            const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+                            const capital = shareCapitalMap[cleanCnpj] ?? (lead.source_data as any)?.share_capital;
+                            return capital
+                              ? `R$ ${Number(capital).toLocaleString('pt-BR')}`
+                              : "-";
+                          })()}
+                        </TableCell>
                        <TableCell className="text-sm">
                          {(lead.source_data as any)?.region || "-"}
                        </TableCell>
