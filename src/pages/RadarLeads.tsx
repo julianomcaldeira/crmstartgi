@@ -206,6 +206,10 @@ export default function RadarLeads() {
         toast.info(`A empresa "${result.companyName}" já está cadastrada como prospect. Lead removido do radar.`);
       } else {
         toast.success("Lead convertido em prospect com sucesso! Dados completos obtidos da Receita Federal.");
+        // Redirect to the new prospect
+        if (result.newClient?.id) {
+          navigate(`/clientes/${result.newClient.id}`);
+        }
       }
       
       queryClient.invalidateQueries({ queryKey: ["radar-leads"] });

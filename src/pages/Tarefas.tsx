@@ -1147,9 +1147,15 @@ const Tarefas = () => {
                                   </div>
                                 )}
                                 {task.clients && (
-                                  <div className="flex items-center gap-1">
+                                  <div 
+                                    className="flex items-center gap-1 cursor-pointer hover:text-primary transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/clientes/${task.client_id}`);
+                                    }}
+                                  >
                                     <Building2 size={14} />
-                                    <span>{task.clients.company_name || task.clients.trade_name}</span>
+                                    <span className="hover:underline">{task.clients.company_name || task.clients.trade_name}</span>
                                   </div>
                                 )}
                                 {task.contacts && (
