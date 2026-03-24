@@ -38,8 +38,9 @@ export default function RadarLeads() {
   const totalCount = leadsData?.totalCount || 0;
   const totalPages = leadsData?.totalPages || 1;
 
-  // Buscar capital social do cnpj_cache para os leads exibidos
+  // Buscar capital social e localização do cnpj_cache para os leads exibidos
   const [shareCapitalMap, setShareCapitalMap] = useState<Record<string, number | null>>({});
+  const [cachedLocationMap, setCachedLocationMap] = useState<Record<string, { city?: string; state?: string }>>({});
   
   useEffect(() => {
     if (leads.length === 0) return;
@@ -48,15 +49,20 @@ export default function RadarLeads() {
     
     supabase
       .from("cnpj_cache")
-      .select("cnpj, share_capital")
+      .select("cnpj, share_capital, city, state")
       .in("cnpj", cnpjs)
       .then(({ data }) => {
         if (data) {
-          const map: Record<string, number | null> = {};
+          const capitalMap: Record<string, number | null> = {};
+          const locMap: Record<string, { city?: string; state?: string }> = {};
           data.forEach((item: any) => {
-            map[item.cnpj] = item.share_capital;
+            capitalMap[item.cnpj] = item.share_capital;
+            if (item.city || item.state) {
+              locMap[item.cnpj] = { city: item.city, state: item.state };
+            }
           });
-          setShareCapitalMap(map);
+          setShareCapitalMap(capitalMap);
+          setCachedLocationMap(locMap);
         }
       });
   }, [leads]);
@@ -570,8 +576,14 @@ export default function RadarLeads() {
                         </TableCell>
                        <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
                        <TableCell>
-                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                       </TableCell>
+                         {(() => {
+                           const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+                           const cached = cachedLocationMap[cleanCnpj];
+                           const city = cached?.city || lead.city;
+                           const state = cached?.state || lead.state;
+                           return city && state ? `${city}/${state}` : city || state || "-";
+                         })()}
+                        </TableCell>
                         <TableCell className="text-sm">
                           {(() => {
                             const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
@@ -594,10 +606,19 @@ export default function RadarLeads() {
                                     if (error) throw error;
                                     if (cnpjData?.share_capital != null) {
                                       setShareCapitalMap(prev => ({ ...prev, [cleanCnpj]: cnpjData.share_capital }));
-                                      toast.success("Capital social consultado com sucesso!");
-                                    } else {
-                                      toast.info("Capital social não disponível para este CNPJ.");
                                     }
+                                    if (cnpjData?.city || cnpjData?.state) {
+                                      setCachedLocationMap(prev => ({ ...prev, [cleanCnpj]: { city: cnpjData.city, state: cnpjData.state } }));
+                                      // Also update the radar_leads record with city/state
+                                      await supabase
+                                        .from("radar_leads")
+                                        .update({ 
+                                          city: cnpjData.city || lead.city, 
+                                          state: cnpjData.state || lead.state 
+                                        })
+                                        .eq("id", lead.id);
+                                    }
+                                    toast.success("Dados consultados com sucesso!");
                                   } catch (err: any) {
                                     toast.error("Erro ao consultar CNPJ: " + (err.message || "Tente novamente"));
                                   } finally {

@@ -113,6 +113,26 @@ const Relatorios = () => {
     }
   };
 
+  // Version that returns data directly (for report generation without race condition)
+  const fetchAllReportsData = async () => {
+    const [salesResult, tasksResult, productsResult, sellersResult, feirasResult, oppsStatusResult] = await Promise.all([
+      fetchSalesMetrics(),
+      fetchTasksMetrics(),
+      fetchProductsRanking(),
+      fetchSellersPerformance(),
+      fetchFeirasReport(),
+      fetchOpportunitiesByStatus(),
+    ]);
+    return { 
+      sales: salesResult, 
+      tasks: tasksResult, 
+      products: productsResult, 
+      sellers: sellersResult, 
+      feiras: feirasResult, 
+      oppsStatus: oppsStatusResult 
+    };
+  };
+
   const fetchSalesMetrics = async () => {
     try {
       let clientsQuery = supabase
@@ -142,22 +162,35 @@ const Relatorios = () => {
       const totalOpps = oppsData?.length || 0;
       const wonOpps = oppsData?.filter(o => o.status === "won") || [];
       const lostOpps = oppsData?.filter(o => o.status === "lost") || [];
-      // Use implementation_value for revenue calculation (receita caixa)
       const totalVal = wonOpps.reduce((sum, o) => sum + (Number(o.implementation_value) || 0), 0);
       const convRate = totalOpps > 0 ? (wonOpps.length / totalOpps) * 100 : 0;
       const avgSize = wonOpps.length > 0 ? totalVal / wonOpps.length : 0;
       const avgCycle = wonOpps.filter(o => o.close_cycle_days).reduce((sum, o) => sum + (o.close_cycle_days || 0), 0) / (wonOpps.filter(o => o.close_cycle_days).length || 1);
 
-      setTotalClients(clientsCount || 0);
-      setTotalOpportunities(totalOpps);
-      setWonOpportunities(wonOpps.length);
-      setLostOpportunities(lostOpps.length);
-      setTotalValue(totalVal);
-      setConversionRate(convRate);
-      setAvgDealSize(avgSize);
-      setAvgCloseCycle(Math.round(avgCycle));
+      const result = {
+        totalClients: clientsCount || 0,
+        totalOpportunities: totalOpps,
+        wonOpportunities: wonOpps.length,
+        lostOpportunities: lostOpps.length,
+        totalValue: totalVal,
+        conversionRate: convRate,
+        avgDealSize: avgSize,
+        avgCloseCycle: Math.round(avgCycle),
+      };
+
+      setTotalClients(result.totalClients);
+      setTotalOpportunities(result.totalOpportunities);
+      setWonOpportunities(result.wonOpportunities);
+      setLostOpportunities(result.lostOpportunities);
+      setTotalValue(result.totalValue);
+      setConversionRate(result.conversionRate);
+      setAvgDealSize(result.avgDealSize);
+      setAvgCloseCycle(result.avgCloseCycle);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching sales metrics:", error);
+      return {};
     }
   };
 
@@ -179,7 +212,6 @@ const Relatorios = () => {
       data?.forEach(opp => {
         const status = opp.status || 'unknown';
         const existing = statusMap.get(status) || { count: 0, value: 0 };
-        // Use implementation_value for consistency
         const oppValue = Number(opp.implementation_value) || 0;
         statusMap.set(status, {
           count: existing.count + 1,
@@ -198,21 +230,22 @@ const Relatorios = () => {
         lost: 'Perdido',
       };
 
-      setOpportunitiesByStatus(
-        Array.from(statusMap.entries()).map(([status, data]) => ({
-          status: statusLabels[status] || status,
-          count: data.count,
-          value: data.value,
-        }))
-      );
+      const result = Array.from(statusMap.entries()).map(([status, data]) => ({
+        status: statusLabels[status] || status,
+        count: data.count,
+        value: data.value,
+      }));
+
+      setOpportunitiesByStatus(result);
+      return result;
     } catch (error) {
       console.error("Error fetching opportunities by status:", error);
+      return [];
     }
   };
 
   const fetchTasksMetrics = async () => {
     try {
-      // Fetch tasks created in period
       let query = supabase
         .from("tasks")
         .select("status, due_date, task_type, completed_at, created_at")
@@ -225,7 +258,6 @@ const Relatorios = () => {
 
       const { data: tasksData } = await query;
 
-      // Also fetch tasks completed in period (even if created before)
       let completedQuery = supabase
         .from("tasks")
         .select("status, due_date, task_type, completed_at")
@@ -240,7 +272,6 @@ const Relatorios = () => {
       const { data: completedTasksData } = await completedQuery;
 
       const total = tasksData?.length || 0;
-      // Use completed_at based counting for consistency with goals
       const completed = completedTasksData?.length || 0;
       const pending = tasksData?.filter(t => t.status === "pending").length || 0;
       
@@ -263,13 +294,18 @@ const Relatorios = () => {
         label: getTaskTypeLabel(type)
       })).sort((a, b) => b.count - a.count);
 
+      const result = { totalTasks: total, completedTasks: completed, pendingTasks: pending, overdueTasks: overdue, tasksByType: typesList };
+
       setTotalTasks(total);
       setCompletedTasks(completed);
       setPendingTasks(pending);
       setOverdueTasks(overdue);
       setTasksByType(typesList);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching tasks metrics:", error);
+      return {};
     }
   };
 
@@ -318,8 +354,10 @@ const Relatorios = () => {
         .slice(0, 5);
       
       setTopProducts(ranking);
+      return ranking;
     } catch (error) {
       console.error("Error fetching products ranking:", error);
+      return [];
     }
   };
 
@@ -364,7 +402,6 @@ const Relatorios = () => {
             .gte("created_at", startDate)
             .lte("created_at", endDate),
           
-          // Fetch tasks completed in period for this user (consistent with goals)
           supabase
             .from("tasks")
             .select("id", { count: "exact", head: true })
@@ -376,7 +413,6 @@ const Relatorios = () => {
 
         const wonValue = wonOppsRes.data?.reduce((sum, opp) => sum + (Number(opp.implementation_value) || 0), 0) || 0;
         const convRate = oppsRes.count ? ((wonOppsRes.count || 0) / oppsRes.count) * 100 : 0;
-        // Use completed_at based counting for consistency with goals
         const completedTasks = completedTasksRes.count || 0;
 
         return {
@@ -392,9 +428,12 @@ const Relatorios = () => {
       }) || [];
 
       const performance = await Promise.all(performancePromises);
-      setSellersPerformance(performance.sort((a, b) => b.wonValue - a.wonValue));
+      const sorted = performance.sort((a, b) => b.wonValue - a.wonValue);
+      setSellersPerformance(sorted);
+      return sorted;
     } catch (error) {
       console.error("Error fetching sellers performance:", error);
+      return [];
     }
   };
 
@@ -431,9 +470,12 @@ const Relatorios = () => {
         })
       );
 
-      setFeirasReport(feirasWithClients.filter(f => f.clientsCount > 0));
+      const filtered = feirasWithClients.filter(f => f.clientsCount > 0);
+      setFeirasReport(filtered);
+      return filtered;
     } catch (error) {
       console.error("Error fetching feiras report:", error);
+      return [];
     }
   };
 
@@ -489,31 +531,26 @@ const Relatorios = () => {
     setLoading(true);
     
     try {
-      await fetchAllReports();
+      const results = await fetchAllReportsData();
       
-      // Build report data object
+      const salesData = results.sales || {};
+      const tasksResult = results.tasks || {};
+      const productsResult = results.products || [];
+      const sellersResult = results.sellers || [];
+      const feirasResult = results.feiras || [];
+      const oppsStatusResult = results.oppsStatus || [];
+
       const data = {
         startDate,
         endDate,
-        totalClients,
-        totalOpportunities,
-        wonOpportunities,
-        lostOpportunities,
-        totalValue,
-        conversionRate,
-        avgDealSize,
-        avgCloseCycle,
-        totalTasks,
-        completedTasks,
-        pendingTasks,
-        overdueTasks,
-        tasksByType,
-        topProducts: topProducts.map(p => ({
+        ...salesData,
+        ...tasksResult,
+        topProducts: (productsResult as any[]).map((p: any) => ({
           name: p.productName,
           quantity: p.quantity,
           value: p.totalValue,
         })),
-        sellersPerformance: sellersPerformance.map(s => ({
+        sellersPerformance: (sellersResult as any[]).map((s: any) => ({
           id: s.id,
           name: s.full_name,
           clients: s.clientsCount,
@@ -524,7 +561,7 @@ const Relatorios = () => {
           tasks: s.totalTasks,
           completedTasks: s.completedTasksCount,
         })),
-        feirasReport: feirasReport.map(f => ({
+        feirasReport: (feirasResult as any[]).map((f: any) => ({
           id: f.id,
           name: f.name,
           city: f.city,
@@ -536,7 +573,7 @@ const Relatorios = () => {
             createdAt: c.created_at,
           })),
         })),
-        opportunitiesByStatus,
+        opportunitiesByStatus: oppsStatusResult,
       };
       
       setReportData(data);
