@@ -531,31 +531,26 @@ const Relatorios = () => {
     setLoading(true);
     
     try {
-      await fetchAllReports();
+      const results = await fetchAllReportsData();
       
-      // Build report data object
+      const salesData = results.sales || {};
+      const tasksResult = results.tasks || {};
+      const productsResult = results.products || [];
+      const sellersResult = results.sellers || [];
+      const feirasResult = results.feiras || [];
+      const oppsStatusResult = results.oppsStatus || [];
+
       const data = {
         startDate,
         endDate,
-        totalClients,
-        totalOpportunities,
-        wonOpportunities,
-        lostOpportunities,
-        totalValue,
-        conversionRate,
-        avgDealSize,
-        avgCloseCycle,
-        totalTasks,
-        completedTasks,
-        pendingTasks,
-        overdueTasks,
-        tasksByType,
-        topProducts: topProducts.map(p => ({
+        ...salesData,
+        ...tasksResult,
+        topProducts: (productsResult as any[]).map((p: any) => ({
           name: p.productName,
           quantity: p.quantity,
           value: p.totalValue,
         })),
-        sellersPerformance: sellersPerformance.map(s => ({
+        sellersPerformance: (sellersResult as any[]).map((s: any) => ({
           id: s.id,
           name: s.full_name,
           clients: s.clientsCount,
@@ -566,7 +561,7 @@ const Relatorios = () => {
           tasks: s.totalTasks,
           completedTasks: s.completedTasksCount,
         })),
-        feirasReport: feirasReport.map(f => ({
+        feirasReport: (feirasResult as any[]).map((f: any) => ({
           id: f.id,
           name: f.name,
           city: f.city,
@@ -578,7 +573,7 @@ const Relatorios = () => {
             createdAt: c.created_at,
           })),
         })),
-        opportunitiesByStatus,
+        opportunitiesByStatus: oppsStatusResult,
       };
       
       setReportData(data);
