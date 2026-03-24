@@ -74,6 +74,7 @@ const Tarefas = () => {
   const [assignedTo, setAssignedTo] = useState("");
   const [contactId, setContactId] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<File[]>([]);
+  const [saving, setSaving] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -282,6 +283,8 @@ const Tarefas = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -343,6 +346,8 @@ const Tarefas = () => {
     } catch (error: any) {
       console.error("Error creating task:", error);
       toast.error(error.message || "Erro ao criar tarefa");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -886,7 +891,9 @@ const Tarefas = () => {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Tarefa</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Salvando..." : "Criar Tarefa"}
+                </Button>
               </div>
             </form>
           </DialogContent>
