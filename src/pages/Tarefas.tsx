@@ -31,6 +31,7 @@ import { parseDateOnly } from "@/lib/dateUtils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
 const Tarefas = () => {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
