@@ -274,7 +274,12 @@ const Oportunidades = () => {
         business_type: businessType as any,
         charge_commission: chargeCommission,
         billing_type: billingType,
-      }]);
+        has_negotiated_fees: hasNegotiatedFees,
+        negotiated_fee_values: hasNegotiatedFees ? negotiatedFeeValues : [],
+        negotiated_fee_average: hasNegotiatedFees && negotiatedFeeValues.length > 0
+          ? negotiatedFeeValues.reduce((a, b) => a + b, 0) / negotiatedFeeValues.length
+          : null,
+      } as any]);
 
       if (error) throw error;
 
