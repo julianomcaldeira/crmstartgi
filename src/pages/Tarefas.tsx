@@ -60,6 +60,12 @@ const Tarefas = () => {
   const [quickPriorityFilter, setQuickPriorityFilter] = useState("all");
   const [calendarCompanySearch, setCalendarCompanySearch] = useState("");
   
+  // AI Search
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiMatchedIds, setAiMatchedIds] = useState<string[] | null>(null);
+  const [aiExplanation, setAiExplanation] = useState("");
+  
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
