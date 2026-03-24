@@ -37,6 +37,29 @@ export default function RadarLeads() {
   const totalCount = leadsData?.totalCount || 0;
   const totalPages = leadsData?.totalPages || 1;
 
+  // Buscar capital social do cnpj_cache para os leads exibidos
+  const [shareCapitalMap, setShareCapitalMap] = useState<Record<string, number | null>>({});
+  
+  useEffect(() => {
+    if (leads.length === 0) return;
+    const cnpjs = leads.map((l: any) => l.cnpj?.replace(/\D/g, "") || "").filter(Boolean);
+    if (cnpjs.length === 0) return;
+    
+    supabase
+      .from("cnpj_cache")
+      .select("cnpj, share_capital")
+      .in("cnpj", cnpjs)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, number | null> = {};
+          data.forEach((item: any) => {
+            map[item.cnpj] = item.share_capital;
+          });
+          setShareCapitalMap(map);
+        }
+      });
+  }, [leads]);
+
   // Reset página ao mudar filtros
   const handleFilterChange = (setter: (value: string) => void, value: string, resetCity?: boolean) => {
     setter(value);
