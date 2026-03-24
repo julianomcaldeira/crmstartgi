@@ -21,6 +21,7 @@ export default function RadarLeads() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [consultingCnpjId, setConsultingCnpjId] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
