@@ -782,6 +782,11 @@ const Oportunidades = () => {
         charge_commission: chargeCommission,
         commission_percentage: chargeCommission && commissionPercentage ? parseFloat(commissionPercentage) : null,
         billing_type: billingType,
+        has_negotiated_fees: hasNegotiatedFees,
+        negotiated_fee_values: hasNegotiatedFees ? negotiatedFeeValues : [],
+        negotiated_fee_average: hasNegotiatedFees && negotiatedFeeValues.length > 0
+          ? negotiatedFeeValues.reduce((a, b) => a + b, 0) / negotiatedFeeValues.length
+          : null,
       };
 
       // Add loss_reason_id if status is "lost"
