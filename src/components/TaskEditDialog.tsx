@@ -29,6 +29,7 @@ import TaskQuickMessages from "@/components/TaskQuickMessages";
 import AudioRecorder from "@/components/AudioRecorder";
 import TaskAttachments from "@/components/TaskAttachments";
 import { formatPhone } from "@/components/ui/masked-input";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 
 interface TaskEditDialogProps {
   task: any;
