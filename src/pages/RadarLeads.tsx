@@ -606,10 +606,19 @@ export default function RadarLeads() {
                                     if (error) throw error;
                                     if (cnpjData?.share_capital != null) {
                                       setShareCapitalMap(prev => ({ ...prev, [cleanCnpj]: cnpjData.share_capital }));
-                                      toast.success("Capital social consultado com sucesso!");
-                                    } else {
-                                      toast.info("Capital social não disponível para este CNPJ.");
                                     }
+                                    if (cnpjData?.city || cnpjData?.state) {
+                                      setCachedLocationMap(prev => ({ ...prev, [cleanCnpj]: { city: cnpjData.city, state: cnpjData.state } }));
+                                      // Also update the radar_leads record with city/state
+                                      await supabase
+                                        .from("radar_leads")
+                                        .update({ 
+                                          city: cnpjData.city || lead.city, 
+                                          state: cnpjData.state || lead.state 
+                                        })
+                                        .eq("id", lead.id);
+                                    }
+                                    toast.success("Dados consultados com sucesso!");
                                   } catch (err: any) {
                                     toast.error("Erro ao consultar CNPJ: " + (err.message || "Tente novamente"));
                                   } finally {
