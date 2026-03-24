@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
-import { Upload, X, Download, Paperclip } from "lucide-react";
+import { Upload, X, Download, Paperclip, Plus, Trash2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CurrencyInput } from "@/components/ui/masked-input";
+import { CurrencyInput, formatCurrency } from "@/components/ui/masked-input";
+import { Badge } from "@/components/ui/badge";
 
 interface OpportunityEditDialogProps {
   open: boolean;
