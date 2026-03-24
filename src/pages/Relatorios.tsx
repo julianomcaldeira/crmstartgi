@@ -212,7 +212,6 @@ const Relatorios = () => {
       data?.forEach(opp => {
         const status = opp.status || 'unknown';
         const existing = statusMap.get(status) || { count: 0, value: 0 };
-        // Use implementation_value for consistency
         const oppValue = Number(opp.implementation_value) || 0;
         statusMap.set(status, {
           count: existing.count + 1,
@@ -231,21 +230,22 @@ const Relatorios = () => {
         lost: 'Perdido',
       };
 
-      setOpportunitiesByStatus(
-        Array.from(statusMap.entries()).map(([status, data]) => ({
-          status: statusLabels[status] || status,
-          count: data.count,
-          value: data.value,
-        }))
-      );
+      const result = Array.from(statusMap.entries()).map(([status, data]) => ({
+        status: statusLabels[status] || status,
+        count: data.count,
+        value: data.value,
+      }));
+
+      setOpportunitiesByStatus(result);
+      return result;
     } catch (error) {
       console.error("Error fetching opportunities by status:", error);
+      return [];
     }
   };
 
   const fetchTasksMetrics = async () => {
     try {
-      // Fetch tasks created in period
       let query = supabase
         .from("tasks")
         .select("status, due_date, task_type, completed_at, created_at")
@@ -258,7 +258,6 @@ const Relatorios = () => {
 
       const { data: tasksData } = await query;
 
-      // Also fetch tasks completed in period (even if created before)
       let completedQuery = supabase
         .from("tasks")
         .select("status, due_date, task_type, completed_at")
@@ -273,7 +272,6 @@ const Relatorios = () => {
       const { data: completedTasksData } = await completedQuery;
 
       const total = tasksData?.length || 0;
-      // Use completed_at based counting for consistency with goals
       const completed = completedTasksData?.length || 0;
       const pending = tasksData?.filter(t => t.status === "pending").length || 0;
       
@@ -296,13 +294,18 @@ const Relatorios = () => {
         label: getTaskTypeLabel(type)
       })).sort((a, b) => b.count - a.count);
 
+      const result = { totalTasks: total, completedTasks: completed, pendingTasks: pending, overdueTasks: overdue, tasksByType: typesList };
+
       setTotalTasks(total);
       setCompletedTasks(completed);
       setPendingTasks(pending);
       setOverdueTasks(overdue);
       setTasksByType(typesList);
+      
+      return result;
     } catch (error) {
       console.error("Error fetching tasks metrics:", error);
+      return {};
     }
   };
 
@@ -351,8 +354,10 @@ const Relatorios = () => {
         .slice(0, 5);
       
       setTopProducts(ranking);
+      return ranking;
     } catch (error) {
       console.error("Error fetching products ranking:", error);
+      return [];
     }
   };
 
@@ -397,7 +402,6 @@ const Relatorios = () => {
             .gte("created_at", startDate)
             .lte("created_at", endDate),
           
-          // Fetch tasks completed in period for this user (consistent with goals)
           supabase
             .from("tasks")
             .select("id", { count: "exact", head: true })
@@ -409,7 +413,6 @@ const Relatorios = () => {
 
         const wonValue = wonOppsRes.data?.reduce((sum, opp) => sum + (Number(opp.implementation_value) || 0), 0) || 0;
         const convRate = oppsRes.count ? ((wonOppsRes.count || 0) / oppsRes.count) * 100 : 0;
-        // Use completed_at based counting for consistency with goals
         const completedTasks = completedTasksRes.count || 0;
 
         return {
@@ -425,9 +428,12 @@ const Relatorios = () => {
       }) || [];
 
       const performance = await Promise.all(performancePromises);
-      setSellersPerformance(performance.sort((a, b) => b.wonValue - a.wonValue));
+      const sorted = performance.sort((a, b) => b.wonValue - a.wonValue);
+      setSellersPerformance(sorted);
+      return sorted;
     } catch (error) {
       console.error("Error fetching sellers performance:", error);
+      return [];
     }
   };
 
@@ -464,9 +470,12 @@ const Relatorios = () => {
         })
       );
 
-      setFeirasReport(feirasWithClients.filter(f => f.clientsCount > 0));
+      const filtered = feirasWithClients.filter(f => f.clientsCount > 0);
+      setFeirasReport(filtered);
+      return filtered;
     } catch (error) {
       console.error("Error fetching feiras report:", error);
+      return [];
     }
   };
 
