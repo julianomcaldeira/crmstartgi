@@ -556,6 +556,10 @@ const Oportunidades = () => {
     setChargeCommission(opp.charge_commission || false);
     setCommissionPercentage(opp.commission_percentage?.toString() || "");
     setBillingType(opp.billing_type || "recorrente");
+    setHasNegotiatedFees(opp.has_negotiated_fees || false);
+    setNegotiatedFeeValues(
+      Array.isArray(opp.negotiated_fee_values) ? opp.negotiated_fee_values : []
+    );
     
     // Fetch attachments
     fetchAttachments(opp.id);
