@@ -12,18 +12,23 @@ serve(async (req) => {
   }
 
   try {
-    const { cnpjs, userId } = await req.json();
+    // Auth check
+    const _authHeader = req.headers.get('Authorization');
+    if (!_authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const _authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: _authHeader } } });
+    const { data: _claimsData, error: _authError } = await _authClient.auth.getClaims(_authHeader.replace('Bearer ', ''));
+    if (_authError || !_claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { cnpjs } = await req.json();
+    const userId = _claimsData.claims.sub as string;
 
     if (!cnpjs || !Array.isArray(cnpjs) || cnpjs.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Lista de CNPJs é obrigatória' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ error: 'userId é obrigatório' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }

@@ -12,6 +12,17 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const _authHeader = req.headers.get('Authorization');
+    if (!_authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const _authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: _authHeader } } });
+    const { data: _claimsData, error: _authError } = await _authClient.auth.getClaims(_authHeader.replace('Bearer ', ''));
+    if (_authError || !_claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     console.log("=== BUSCAR-CNPJ: Iniciando requisição ===");
     const requestBody = await req.json();
     console.log("Request body:", requestBody);

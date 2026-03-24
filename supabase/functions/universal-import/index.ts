@@ -114,9 +114,19 @@ serve(async (req) => {
       throw new Error('Formato de requisição inválido. Atualize a tela de importação e tente novamente.');
     }
 
+    // Auth check
+    const _authHeader = req.headers.get('Authorization');
+    if (!_authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const _authClient = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_ANON_KEY') ?? '', { global: { headers: { Authorization: _authHeader } } });
+    const { data: _claimsData, error: _authError } = await _authClient.auth.getClaims(_authHeader.replace('Bearer ', ''));
+    if (_authError || !_claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     const {
       rows,
-      userId,
       sessionId,
       importType,
       totalRows,
@@ -126,10 +136,11 @@ serve(async (req) => {
       rowOffset = 0,
       isLastChunk = false,
     } = payload;
+    const userId = _claimsData.claims.sub as string;
 
     sessionIdForFailUpdate = sessionId;
 
-    if (!Array.isArray(rows) || !userId || !sessionId || !importType) {
+    if (!Array.isArray(rows) || !sessionId || !importType) {
       throw new Error('Parâmetros obrigatórios faltando');
     }
 
