@@ -121,6 +121,8 @@ const Oportunidades = () => {
   const [chargeCommission, setChargeCommission] = useState(false);
   const [commissionPercentage, setCommissionPercentage] = useState("");
   const [billingType, setBillingType] = useState("recorrente");
+  const [hasNegotiatedFees, setHasNegotiatedFees] = useState(false);
+  const [negotiatedFeeValues, setNegotiatedFeeValues] = useState<number[]>([]);
 
   const stages = [
     { 
@@ -272,7 +274,12 @@ const Oportunidades = () => {
         business_type: businessType as any,
         charge_commission: chargeCommission,
         billing_type: billingType,
-      }]);
+        has_negotiated_fees: hasNegotiatedFees,
+        negotiated_fee_values: hasNegotiatedFees ? negotiatedFeeValues : [],
+        negotiated_fee_average: hasNegotiatedFees && negotiatedFeeValues.length > 0
+          ? negotiatedFeeValues.reduce((a, b) => a + b, 0) / negotiatedFeeValues.length
+          : null,
+      } as any]);
 
       if (error) throw error;
 
@@ -298,6 +305,8 @@ const Oportunidades = () => {
     setBusinessType("cliente_novo");
     setChargeCommission(false);
     setBillingType("recorrente");
+    setHasNegotiatedFees(false);
+    setNegotiatedFeeValues([]);
   };
 
   const getFilteredOpportunities = () => {
@@ -552,6 +561,10 @@ const Oportunidades = () => {
     setChargeCommission(opp.charge_commission || false);
     setCommissionPercentage(opp.commission_percentage?.toString() || "");
     setBillingType(opp.billing_type || "recorrente");
+    setHasNegotiatedFees(opp.has_negotiated_fees || false);
+    setNegotiatedFeeValues(
+      Array.isArray(opp.negotiated_fee_values) ? opp.negotiated_fee_values : []
+    );
     
     // Fetch attachments
     fetchAttachments(opp.id);
@@ -769,6 +782,11 @@ const Oportunidades = () => {
         charge_commission: chargeCommission,
         commission_percentage: chargeCommission && commissionPercentage ? parseFloat(commissionPercentage) : null,
         billing_type: billingType,
+        has_negotiated_fees: hasNegotiatedFees,
+        negotiated_fee_values: hasNegotiatedFees ? negotiatedFeeValues : [],
+        negotiated_fee_average: hasNegotiatedFees && negotiatedFeeValues.length > 0
+          ? negotiatedFeeValues.reduce((a, b) => a + b, 0) / negotiatedFeeValues.length
+          : null,
       };
 
       // Add loss_reason_id if status is "lost"
@@ -2021,6 +2039,10 @@ const Oportunidades = () => {
         onDownloadAttachment={handleDownloadAttachment}
         onDeleteAttachment={handleDeleteAttachment}
         uploadingFiles={uploadingFiles}
+        hasNegotiatedFees={hasNegotiatedFees}
+        setHasNegotiatedFees={setHasNegotiatedFees}
+        negotiatedFeeValues={negotiatedFeeValues}
+        setNegotiatedFeeValues={setNegotiatedFeeValues}
       />
 
       <LossReasonDialog

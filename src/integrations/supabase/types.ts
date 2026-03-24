@@ -1076,10 +1076,13 @@ export type Database = {
           created_by: string
           description: string | null
           expected_close_date: string | null
+          has_negotiated_fees: boolean | null
           id: string
           implementation_value: number | null
           loss_reason_id: string | null
           monthly_value: number | null
+          negotiated_fee_average: number | null
+          negotiated_fee_values: Json | null
           probability: number | null
           product_id: string | null
           status: Database["public"]["Enums"]["opportunity_status"] | null
@@ -1099,10 +1102,13 @@ export type Database = {
           created_by: string
           description?: string | null
           expected_close_date?: string | null
+          has_negotiated_fees?: boolean | null
           id?: string
           implementation_value?: number | null
           loss_reason_id?: string | null
           monthly_value?: number | null
+          negotiated_fee_average?: number | null
+          negotiated_fee_values?: Json | null
           probability?: number | null
           product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
@@ -1122,10 +1128,13 @@ export type Database = {
           created_by?: string
           description?: string | null
           expected_close_date?: string | null
+          has_negotiated_fees?: boolean | null
           id?: string
           implementation_value?: number | null
           loss_reason_id?: string | null
           monthly_value?: number | null
+          negotiated_fee_average?: number | null
+          negotiated_fee_values?: Json | null
           probability?: number | null
           product_id?: string | null
           status?: Database["public"]["Enums"]["opportunity_status"] | null
