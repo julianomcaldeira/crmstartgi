@@ -734,7 +734,7 @@ const Tarefas = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter]);
+  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
