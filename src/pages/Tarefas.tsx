@@ -891,7 +891,9 @@ const Tarefas = () => {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">Criar Tarefa</Button>
+                <Button type="submit" disabled={saving}>
+                  {saving ? "Salvando..." : "Criar Tarefa"}
+                </Button>
               </div>
             </form>
           </DialogContent>

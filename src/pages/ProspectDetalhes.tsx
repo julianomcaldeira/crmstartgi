@@ -472,7 +472,13 @@ const ClienteDetalhes = () => {
       toast.success("Contato criado com sucesso!");
       resetContactForm();
       setContactDialogOpen(false);
-      await fetchClientDetails();
+      // Re-fetch only contacts to avoid full page reload race condition
+      const { data: updatedContacts } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", id)
+        .order("name");
+      setContacts(updatedContacts || []);
     } catch (error: any) {
       console.error("Error creating contact:", error);
       toast.error(error.message || "Erro ao criar contato");
