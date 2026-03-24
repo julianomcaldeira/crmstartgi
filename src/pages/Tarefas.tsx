@@ -283,6 +283,8 @@ const Tarefas = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
+    setSaving(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
