@@ -1148,6 +1148,53 @@ const Tarefas = () => {
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
+
+            {/* AI Search */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                  <Input
+                    placeholder="Busca inteligente com IA... (ex: 'tarefas sobre proposta de preço', 'reuniões com cliente X')"
+                    value={aiSearchQuery}
+                    onChange={(e) => setAiSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+                    className="pl-10 pr-10"
+                  />
+                  {aiSearchQuery && (
+                    <button
+                      onClick={clearAiSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Button 
+                  onClick={handleAiSearch} 
+                  disabled={aiSearching || !aiSearchQuery.trim()}
+                  className="gap-2"
+                  variant="secondary"
+                >
+                  {aiSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Buscar com IA
+                </Button>
+              </div>
+              {aiMatchedIds !== null && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary" className="gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    {aiMatchedIds.length} resultado(s)
+                  </Badge>
+                  {aiExplanation && (
+                    <span className="text-muted-foreground">{aiExplanation}</span>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={clearAiSearch} className="h-6 px-2 text-xs">
+                    Limpar busca IA
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {loading ? (
