@@ -331,6 +331,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           priority: priority as any,
           status: status as any,
           description: description.trim() || null,
+          client_id: editClientId || null,
+          opportunity_id: editOpportunityId || null,
         })
         .eq("id", task.id);
 
