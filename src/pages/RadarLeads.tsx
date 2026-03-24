@@ -524,7 +524,26 @@ export default function RadarLeads() {
                  <TableBody>
                    {leads.map((lead) => (
                      <TableRow key={lead.id}>
-                       <TableCell className="font-medium">{lead.company_name}</TableCell>
+                        <TableCell className="font-medium">
+                          <button
+                            className="text-left hover:text-primary hover:underline cursor-pointer transition-colors"
+                            onClick={async () => {
+                              const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+                              const { data: client } = await supabase
+                                .from("clients")
+                                .select("id")
+                                .eq("cnpj", cleanCnpj)
+                                .maybeSingle();
+                              if (client) {
+                                navigate(`/prospect/${client.id}`);
+                              } else {
+                                toast.info("Este lead ainda não foi convertido em prospect.");
+                              }
+                            }}
+                          >
+                            {lead.company_name}
+                          </button>
+                        </TableCell>
                        <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
                        <TableCell>
                          {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
