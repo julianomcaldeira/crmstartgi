@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { Plus, Calendar, CheckCircle2, Circle, ListTodo, Phone, Mail, MessageCircle, MapPin, Video, Briefcase, Users, Building2, CalendarIcon, ChevronLeft, ChevronRight, Clock, AlertCircle, LayoutGrid, List as ListIcon, Search, ChevronsLeft, ChevronsRight, Sparkles, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInHours, isPast, startOfWeek, endOfWeek, addDays, isSameDay, parseISO, startOfDay, endOfDay, isToday as isTodayFn, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,6 +59,12 @@ const Tarefas = () => {
   const [quickTaskTypeFilter, setQuickTaskTypeFilter] = useState("all");
   const [quickPriorityFilter, setQuickPriorityFilter] = useState("all");
   const [calendarCompanySearch, setCalendarCompanySearch] = useState("");
+  
+  // AI Search
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const [aiSearching, setAiSearching] = useState(false);
+  const [aiMatchedIds, setAiMatchedIds] = useState<string[] | null>(null);
+  const [aiExplanation, setAiExplanation] = useState("");
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -444,6 +450,65 @@ const Tarefas = () => {
     }
   };
 
+  const handleAiSearch = async () => {
+    if (!aiSearchQuery.trim()) {
+      setAiMatchedIds(null);
+      setAiExplanation("");
+      return;
+    }
+    setAiSearching(true);
+    try {
+      const taskSummaries = tasks.map((t: any) => ({
+        id: t.id,
+        title: t.title || "",
+        description: t.description || "",
+        client_name: t.clients?.company_name || t.clients?.trade_name || "",
+        task_type: t.task_type || "",
+        status: t.status || "",
+        notes: "",
+      }));
+      const taskIds = tasks.map((t: any) => t.id);
+      const { data: notesData } = await supabase
+        .from("task_notes")
+        .select("task_id, note")
+        .in("task_id", taskIds.slice(0, 200));
+      const notesByTask: Record<string, string> = {};
+      (notesData || []).forEach((n: any) => {
+        notesByTask[n.task_id] = (notesByTask[n.task_id] || "") + " " + n.note;
+      });
+      const enrichedSummaries = taskSummaries.map((t) => ({
+        ...t,
+        notes: notesByTask[t.id] || "",
+      }));
+      const { data, error } = await supabase.functions.invoke("search-tasks-ai", {
+        body: { query: aiSearchQuery, tasks: enrichedSummaries },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      setAiMatchedIds(data.matching_ids || []);
+      setAiExplanation(data.explanation || "");
+      if ((data.matching_ids || []).length === 0) {
+        toast.info("Nenhuma tarefa encontrada para essa busca.");
+      } else {
+        toast.success(`${data.matching_ids.length} tarefa(s) encontrada(s)`);
+      }
+    } catch (error: any) {
+      console.error("AI search error:", error);
+      toast.error("Erro na busca inteligente: " + (error.message || "Tente novamente"));
+    } finally {
+      setAiSearching(false);
+    }
+  };
+
+  const clearAiSearch = () => {
+    setAiSearchQuery("");
+    setAiMatchedIds(null);
+    setAiExplanation("");
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
@@ -648,13 +713,16 @@ const Tarefas = () => {
   };
 
   const tasksFilteredWithoutStatus = tasks.filter(matchesNonStatusFilters);
-  const filteredTasks = tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, filter));
+  const tasksAfterAiFilter = aiMatchedIds !== null 
+    ? tasksFilteredWithoutStatus.filter((t) => aiMatchedIds.includes(t.id))
+    : tasksFilteredWithoutStatus;
+  const filteredTasks = tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, filter));
 
   const taskCounts = {
-    all: tasksFilteredWithoutStatus.length,
-    pending: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "pending")).length,
-    overdue: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "overdue")).length,
-    completed: tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, "completed")).length,
+    all: tasksAfterAiFilter.length,
+    pending: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "pending")).length,
+    overdue: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "overdue")).length,
+    completed: tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, "completed")).length,
   };
 
   // Pagination logic
@@ -666,7 +734,7 @@ const Tarefas = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter]);
+  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
@@ -1079,6 +1147,53 @@ const Tarefas = () => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
+            </div>
+
+            {/* AI Search */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Sparkles className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                  <Input
+                    placeholder="Busca inteligente com IA... (ex: 'tarefas sobre proposta de preço', 'reuniões com cliente X')"
+                    value={aiSearchQuery}
+                    onChange={(e) => setAiSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
+                    className="pl-10 pr-10"
+                  />
+                  {aiSearchQuery && (
+                    <button
+                      onClick={clearAiSearch}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                <Button 
+                  onClick={handleAiSearch} 
+                  disabled={aiSearching || !aiSearchQuery.trim()}
+                  className="gap-2"
+                  variant="secondary"
+                >
+                  {aiSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  Buscar com IA
+                </Button>
+              </div>
+              {aiMatchedIds !== null && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge variant="secondary" className="gap-1">
+                    <Sparkles className="h-3 w-3" />
+                    {aiMatchedIds.length} resultado(s)
+                  </Badge>
+                  {aiExplanation && (
+                    <span className="text-muted-foreground">{aiExplanation}</span>
+                  )}
+                  <Button variant="ghost" size="sm" onClick={clearAiSearch} className="h-6 px-2 text-xs">
+                    Limpar busca IA
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
