@@ -300,6 +300,8 @@ const Oportunidades = () => {
     setBusinessType("cliente_novo");
     setChargeCommission(false);
     setBillingType("recorrente");
+    setHasNegotiatedFees(false);
+    setNegotiatedFeeValues([]);
   };
 
   const getFilteredOpportunities = () => {
