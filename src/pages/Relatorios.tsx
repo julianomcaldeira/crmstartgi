@@ -115,15 +115,22 @@ const Relatorios = () => {
 
   // Version that returns data directly (for report generation without race condition)
   const fetchAllReportsData = async () => {
-    const [salesData, tasksData, productsData, sellersData, feirasData, oppsStatusData] = await Promise.all([
-      fetchSalesMetricsData(),
-      fetchTasksMetricsData(),
-      fetchProductsRankingData(),
-      fetchSellersPerformanceData(),
-      fetchFeirasReportData(),
-      fetchOpportunitiesByStatusData(),
+    const [salesResult, tasksResult, productsResult, sellersResult, feirasResult, oppsStatusResult] = await Promise.all([
+      fetchSalesMetrics(),
+      fetchTasksMetrics(),
+      fetchProductsRanking(),
+      fetchSellersPerformance(),
+      fetchFeirasReport(),
+      fetchOpportunitiesByStatus(),
     ]);
-    return { ...salesData, ...tasksData, ...productsData, ...sellersData, ...feirasData, ...oppsStatusData };
+    return { 
+      sales: salesResult, 
+      tasks: tasksResult, 
+      products: productsResult, 
+      sellers: sellersResult, 
+      feiras: feirasResult, 
+      oppsStatus: oppsStatusResult 
+    };
   };
 
   const fetchSalesMetrics = async () => {
