@@ -121,6 +121,8 @@ const Oportunidades = () => {
   const [chargeCommission, setChargeCommission] = useState(false);
   const [commissionPercentage, setCommissionPercentage] = useState("");
   const [billingType, setBillingType] = useState("recorrente");
+  const [hasNegotiatedFees, setHasNegotiatedFees] = useState(false);
+  const [negotiatedFeeValues, setNegotiatedFeeValues] = useState<number[]>([]);
 
   const stages = [
     { 
