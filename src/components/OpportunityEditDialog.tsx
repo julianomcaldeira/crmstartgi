@@ -315,6 +315,97 @@ export function OpportunityEditDialog({
                 )}
               </div>
 
+              {/* Negotiated Fees */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-hasNegotiatedFees"
+                    checked={hasNegotiatedFees}
+                    onChange={(e) => {
+                      setHasNegotiatedFees(e.target.checked);
+                      if (!e.target.checked) {
+                        setNegotiatedFeeValues([]);
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="edit-hasNegotiatedFees" className="text-sm font-normal cursor-pointer">
+                    Mensalidades negociadas (valores diferenciados por mês)
+                  </Label>
+                </div>
+
+                {hasNegotiatedFees && (
+                  <div className="ml-6 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Insira os valores de cada mensalidade negociada. O sistema calculará automaticamente a média.
+                    </p>
+
+                    {negotiatedFeeValues.map((val, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-16">Mês {idx + 1}</span>
+                        <CurrencyInput
+                          value={val.toString()}
+                          onValueChange={(v) => {
+                            const updated = [...negotiatedFeeValues];
+                            updated[idx] = v ? parseFloat(v) : 0;
+                            setNegotiatedFeeValues(updated);
+                          }}
+                          placeholder="R$ 0,00"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const updated = negotiatedFeeValues.filter((_, i) => i !== idx);
+                            setNegotiatedFeeValues(updated);
+                          }}
+                          className="h-8 w-8 p-0 text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setNegotiatedFeeValues([...negotiatedFeeValues, 0])}
+                      className="gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Adicionar mês
+                    </Button>
+
+                    {negotiatedFeeValues.length > 0 && (
+                      <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Total de meses:</span>
+                          <span className="font-medium">{negotiatedFeeValues.length}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Soma total:</span>
+                          <span className="font-medium">
+                            {formatCurrency(negotiatedFeeValues.reduce((a, b) => a + b, 0).toString())}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm font-semibold">
+                          <span className="text-primary">Média mensal:</span>
+                          <Badge variant="secondary" className="text-primary">
+                            {formatCurrency(
+                              (negotiatedFeeValues.reduce((a, b) => a + b, 0) / negotiatedFeeValues.length).toFixed(2)
+                            )}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button
                   type="button"
