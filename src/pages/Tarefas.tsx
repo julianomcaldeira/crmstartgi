@@ -450,6 +450,65 @@ const Tarefas = () => {
     }
   };
 
+  const handleAiSearch = async () => {
+    if (!aiSearchQuery.trim()) {
+      setAiMatchedIds(null);
+      setAiExplanation("");
+      return;
+    }
+    setAiSearching(true);
+    try {
+      const taskSummaries = tasks.map((t: any) => ({
+        id: t.id,
+        title: t.title || "",
+        description: t.description || "",
+        client_name: t.clients?.company_name || t.clients?.trade_name || "",
+        task_type: t.task_type || "",
+        status: t.status || "",
+        notes: "",
+      }));
+      const taskIds = tasks.map((t: any) => t.id);
+      const { data: notesData } = await supabase
+        .from("task_notes")
+        .select("task_id, note")
+        .in("task_id", taskIds.slice(0, 200));
+      const notesByTask: Record<string, string> = {};
+      (notesData || []).forEach((n: any) => {
+        notesByTask[n.task_id] = (notesByTask[n.task_id] || "") + " " + n.note;
+      });
+      const enrichedSummaries = taskSummaries.map((t) => ({
+        ...t,
+        notes: notesByTask[t.id] || "",
+      }));
+      const { data, error } = await supabase.functions.invoke("search-tasks-ai", {
+        body: { query: aiSearchQuery, tasks: enrichedSummaries },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      setAiMatchedIds(data.matching_ids || []);
+      setAiExplanation(data.explanation || "");
+      if ((data.matching_ids || []).length === 0) {
+        toast.info("Nenhuma tarefa encontrada para essa busca.");
+      } else {
+        toast.success(`${data.matching_ids.length} tarefa(s) encontrada(s)`);
+      }
+    } catch (error: any) {
+      console.error("AI search error:", error);
+      toast.error("Erro na busca inteligente: " + (error.message || "Tente novamente"));
+    } finally {
+      setAiSearching(false);
+    }
+  };
+
+  const clearAiSearch = () => {
+    setAiSearchQuery("");
+    setAiMatchedIds(null);
+    setAiExplanation("");
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
