@@ -22,6 +22,7 @@ import {
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportReport } from "@/lib/reportExport";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -586,12 +587,23 @@ const Relatorios = () => {
     }
   };
 
-  const handleExport = (format: 'pdf' | 'excel' | 'csv') => {
-    toast.info(`Exportando relatório em ${format.toUpperCase()}...`);
-    // TODO: Implement actual export functionality
-    setTimeout(() => {
-      toast.success(`Relatório exportado em ${format.toUpperCase()}`);
-    }, 1500);
+  const handleExport = async (format: 'pdf' | 'excel' | 'csv') => {
+    if (!currentConfig) {
+      toast.error("Gere o relatório antes de exportar.");
+      return;
+    }
+
+    try {
+      await exportReport({
+        format,
+        config: currentConfig,
+        data: reportData,
+      });
+      toast.success(`Relatório baixado em ${format.toUpperCase()}.`);
+    } catch (error) {
+      console.error(`Error exporting report as ${format}:`, error);
+      toast.error(`Erro ao baixar relatório em ${format.toUpperCase()}.`);
+    }
   };
 
   const handlePrint = () => {

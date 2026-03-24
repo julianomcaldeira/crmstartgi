@@ -579,8 +579,8 @@ export default function RadarLeads() {
                          {(() => {
                            const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
                            const cached = cachedLocationMap[cleanCnpj];
-                           const city = cached?.city || lead.city;
-                           const state = cached?.state || lead.state;
+                            const city = cached?.city || lead.city;
+                            const state = cached?.state || lead.state;
                            return city && state ? `${city}/${state}` : city || state || "-";
                          })()}
                         </TableCell>
@@ -588,7 +588,7 @@ export default function RadarLeads() {
                           {(() => {
                             const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
                             const capital = shareCapitalMap[cleanCnpj] ?? (lead.source_data as any)?.share_capital;
-                            if (capital) {
+                             if (capital != null) {
                               return `R$ ${Number(capital).toLocaleString('pt-BR')}`;
                             }
                             return (
@@ -601,7 +601,7 @@ export default function RadarLeads() {
                                   setConsultingCnpjId(lead.id);
                                   try {
                                     const { data: cnpjData, error } = await supabase.functions.invoke("buscar-cnpj", {
-                                      body: { cnpj: cleanCnpj },
+                                       body: { cnpj: cleanCnpj, leadId: lead.id },
                                     });
                                     if (error) throw error;
                                     if (cnpjData?.share_capital != null) {
@@ -609,15 +609,12 @@ export default function RadarLeads() {
                                     }
                                     if (cnpjData?.city || cnpjData?.state) {
                                       setCachedLocationMap(prev => ({ ...prev, [cleanCnpj]: { city: cnpjData.city, state: cnpjData.state } }));
-                                      // Also update the radar_leads record with city/state
-                                      await supabase
-                                        .from("radar_leads")
-                                        .update({ 
-                                          city: cnpjData.city || lead.city, 
-                                          state: cnpjData.state || lead.state 
-                                        })
-                                        .eq("id", lead.id);
                                     }
+                                     await Promise.all([
+                                       queryClient.invalidateQueries({ queryKey: ["radar-leads"] }),
+                                       queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] }),
+                                       queryClient.invalidateQueries({ queryKey: ["radar-leads-cities"] }),
+                                     ]);
                                     toast.success("Dados consultados com sucesso!");
                                   } catch (err: any) {
                                     toast.error("Erro ao consultar CNPJ: " + (err.message || "Tente novamente"));
