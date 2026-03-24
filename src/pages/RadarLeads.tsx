@@ -576,8 +576,14 @@ export default function RadarLeads() {
                         </TableCell>
                        <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
                        <TableCell>
-                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                       </TableCell>
+                         {(() => {
+                           const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+                           const cached = cachedLocationMap[cleanCnpj];
+                           const city = cached?.city || lead.city;
+                           const state = cached?.state || lead.state;
+                           return city && state ? `${city}/${state}` : city || state || "-";
+                         })()}
+                        </TableCell>
                         <TableCell className="text-sm">
                           {(() => {
                             const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
