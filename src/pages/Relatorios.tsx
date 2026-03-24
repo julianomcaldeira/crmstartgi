@@ -113,6 +113,19 @@ const Relatorios = () => {
     }
   };
 
+  // Version that returns data directly (for report generation without race condition)
+  const fetchAllReportsData = async () => {
+    const [salesData, tasksData, productsData, sellersData, feirasData, oppsStatusData] = await Promise.all([
+      fetchSalesMetricsData(),
+      fetchTasksMetricsData(),
+      fetchProductsRankingData(),
+      fetchSellersPerformanceData(),
+      fetchFeirasReportData(),
+      fetchOpportunitiesByStatusData(),
+    ]);
+    return { ...salesData, ...tasksData, ...productsData, ...sellersData, ...feirasData, ...oppsStatusData };
+  };
+
   const fetchSalesMetrics = async () => {
     try {
       let clientsQuery = supabase
