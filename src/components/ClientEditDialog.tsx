@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
+import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
