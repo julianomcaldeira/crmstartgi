@@ -48,6 +48,11 @@ interface OpportunityEditDialogProps {
   onDownloadAttachment: (attachment: any) => void;
   onDeleteAttachment: (attachment: any) => void;
   uploadingFiles: boolean;
+  // Negotiated fees
+  hasNegotiatedFees: boolean;
+  setHasNegotiatedFees: (value: boolean) => void;
+  negotiatedFeeValues: number[];
+  setNegotiatedFeeValues: (value: number[]) => void;
 }
 
 export function OpportunityEditDialog({
