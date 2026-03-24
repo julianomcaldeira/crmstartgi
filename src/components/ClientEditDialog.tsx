@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CNPJInput, PhoneInput, CEPInput, CurrencyInput } from "@/components/ui/masked-input";
+import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
@@ -221,8 +221,8 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           name: contact.name,
           role: contact.role,
           email: contact.email,
-          phone: contact.phone,
-          mobile: contact.mobile,
+          phone: contact.phone ? autoAddMobileNine(contact.phone) : contact.phone,
+          mobile: contact.mobile ? autoAddMobileNine(contact.mobile) : contact.mobile,
           is_primary: contact.is_primary,
           client_id: client.id,
           created_by: user.id,
