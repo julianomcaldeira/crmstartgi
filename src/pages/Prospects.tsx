@@ -487,6 +487,8 @@ const Prospects = () => {
       if (validContacts.length > 0) {
         const contactsData = validContacts.map(contact => ({
           ...contact,
+          phone: contact.phone ? autoAddMobileNine(contact.phone) : contact.phone,
+          mobile: contact.mobile ? autoAddMobileNine(contact.mobile) : contact.mobile,
           client_id: clientData.id,
           created_by: user.id,
         }));
