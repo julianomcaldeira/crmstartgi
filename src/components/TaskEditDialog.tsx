@@ -56,6 +56,12 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
 
+  // Editable client/opportunity fields
+  const [editClientId, setEditClientId] = useState<string>("");
+  const [editOpportunityId, setEditOpportunityId] = useState<string>("");
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [allOpportunities, setAllOpportunities] = useState<any[]>([]);
+
   const clientDisplay = task?.client ?? task?.clients;
   const contactDisplay = task?.contact ?? task?.contacts;
   const resolvedClientId: string | undefined = task?.client_id ?? clientDisplay?.id;
