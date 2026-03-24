@@ -346,6 +346,8 @@ const Tarefas = () => {
     } catch (error: any) {
       console.error("Error creating task:", error);
       toast.error(error.message || "Erro ao criar tarefa");
+    } finally {
+      setSaving(false);
     }
   };
 
