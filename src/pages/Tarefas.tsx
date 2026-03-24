@@ -713,7 +713,10 @@ const Tarefas = () => {
   };
 
   const tasksFilteredWithoutStatus = tasks.filter(matchesNonStatusFilters);
-  const filteredTasks = tasksFilteredWithoutStatus.filter((t) => matchesStatusFilter(t, filter));
+  const tasksAfterAiFilter = aiMatchedIds !== null 
+    ? tasksFilteredWithoutStatus.filter((t) => aiMatchedIds.includes(t.id))
+    : tasksFilteredWithoutStatus;
+  const filteredTasks = tasksAfterAiFilter.filter((t) => matchesStatusFilter(t, filter));
 
   const taskCounts = {
     all: tasksFilteredWithoutStatus.length,
