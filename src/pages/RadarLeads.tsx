@@ -38,13 +38,25 @@ export default function RadarLeads() {
   const totalCount = leadsData?.totalCount || 0;
   const totalPages = leadsData?.totalPages || 1;
 
+  const getCleanCnpj = (cnpj?: string | null) => cnpj?.replace(/\D/g, "") || "";
+
+  const getLeadLocation = (lead: any) => {
+    const cleanCnpj = getCleanCnpj(lead.cnpj);
+    const cached = cachedLocationMap[cleanCnpj];
+
+    return {
+      city: cached?.city || lead.city || "",
+      state: cached?.state || lead.state || "",
+    };
+  };
+
   // Buscar capital social e localização do cnpj_cache para os leads exibidos
   const [shareCapitalMap, setShareCapitalMap] = useState<Record<string, number | null>>({});
   const [cachedLocationMap, setCachedLocationMap] = useState<Record<string, { city?: string; state?: string }>>({});
   
   useEffect(() => {
     if (leads.length === 0) return;
-    const cnpjs = leads.map((l: any) => l.cnpj?.replace(/\D/g, "") || "").filter(Boolean);
+    const cnpjs = leads.map((l: any) => getCleanCnpj(l.cnpj)).filter(Boolean);
     if (cnpjs.length === 0) return;
     
     supabase
@@ -577,16 +589,13 @@ export default function RadarLeads() {
                        <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
                        <TableCell>
                          {(() => {
-                           const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
-                           const cached = cachedLocationMap[cleanCnpj];
-                            const city = cached?.city || lead.city;
-                            const state = cached?.state || lead.state;
+                            const { city, state } = getLeadLocation(lead);
                            return city && state ? `${city}/${state}` : city || state || "-";
                          })()}
                         </TableCell>
                         <TableCell className="text-sm">
                           {(() => {
-                            const cleanCnpj = lead.cnpj?.replace(/\D/g, "") || "";
+                            const cleanCnpj = getCleanCnpj(lead.cnpj);
                             const capital = shareCapitalMap[cleanCnpj] ?? (lead.source_data as any)?.share_capital;
                              if (capital != null) {
                               return `R$ ${Number(capital).toLocaleString('pt-BR')}`;
@@ -610,10 +619,26 @@ export default function RadarLeads() {
                                     if (cnpjData?.city || cnpjData?.state) {
                                       setCachedLocationMap(prev => ({ ...prev, [cleanCnpj]: { city: cnpjData.city, state: cnpjData.state } }));
                                     }
+                                      queryClient.setQueriesData({ queryKey: ["radar-leads"] }, (previous: any) => {
+                                        if (!previous?.leads) return previous;
+
+                                        return {
+                                          ...previous,
+                                          leads: previous.leads.map((item: any) =>
+                                            item.id === lead.id
+                                              ? {
+                                                  ...item,
+                                                  city: cnpjData?.city ?? item.city,
+                                                  state: cnpjData?.state ?? item.state,
+                                                }
+                                              : item,
+                                          ),
+                                        };
+                                      });
                                      await Promise.all([
-                                       queryClient.invalidateQueries({ queryKey: ["radar-leads"] }),
-                                       queryClient.invalidateQueries({ queryKey: ["radar-leads-stats"] }),
-                                       queryClient.invalidateQueries({ queryKey: ["radar-leads-cities"] }),
+                                        queryClient.refetchQueries({ queryKey: ["radar-leads"] }),
+                                        queryClient.refetchQueries({ queryKey: ["radar-leads-stats"] }),
+                                        queryClient.refetchQueries({ queryKey: ["radar-leads-cities"] }),
                                      ]);
                                     toast.success("Dados consultados com sucesso!");
                                   } catch (err: any) {
@@ -633,9 +658,9 @@ export default function RadarLeads() {
                             );
                           })()}
                         </TableCell>
-                       <TableCell className="text-sm">
-                         {(lead.source_data as any)?.region || "-"}
-                       </TableCell>
+                        <TableCell className="text-sm">
+                          {getLeadLocation(lead).state || "-"}
+                        </TableCell>
                       <TableCell>
                         <Button
                           variant="default"
