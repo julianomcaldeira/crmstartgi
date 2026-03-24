@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Loader2, Database, TrendingUp, Filter, Upload, FileSpreadsheet, ChevronLeft, ChevronRight, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useRadarLeads, useRadarLeadsStats, useRadarLeadsCities, SortColumn, SortDirection } from "@/hooks/useRadarLeads";
 import { formatCNPJ } from "@/components/ui/masked-input";
