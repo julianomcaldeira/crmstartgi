@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone } from "@/components/ui/masked-input";
+import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
