@@ -530,12 +530,12 @@ export default function RadarLeads() {
                          {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
                        </TableCell>
                        <TableCell className="text-sm">
-                         {lead.source_data?.share_capital 
-                           ? `R$ ${Number(lead.source_data.share_capital).toLocaleString('pt-BR')}` 
+                         {(lead.source_data as any)?.share_capital 
+                           ? `R$ ${Number((lead.source_data as any).share_capital).toLocaleString('pt-BR')}` 
                            : "-"}
                        </TableCell>
                        <TableCell className="text-sm">
-                         {lead.source_data?.region || "-"}
+                         {(lead.source_data as any)?.region || "-"}
                        </TableCell>
                       <TableCell>
                         <Button
