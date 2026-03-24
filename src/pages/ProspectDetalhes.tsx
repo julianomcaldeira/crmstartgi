@@ -302,7 +302,7 @@ const ClienteDetalhes = () => {
           title,
           description: taskFormData.description,
           client_id: id,
-          task_type: taskFormData.task_type as "ligacao" | "email" | "whatsapp" | "linkedin" | "visita_presencial" | "reuniao_online" | "visita_feira" | "visita_evento",
+          task_type: taskFormData.task_type as any,
           due_date: dueDateISO,
           priority: taskFormData.priority as "low" | "medium" | "high",
           status: taskFormData.status as "pending" | "in_progress" | "completed",
