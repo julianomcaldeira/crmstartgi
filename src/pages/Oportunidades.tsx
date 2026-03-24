@@ -2039,6 +2039,10 @@ const Oportunidades = () => {
         onDownloadAttachment={handleDownloadAttachment}
         onDeleteAttachment={handleDeleteAttachment}
         uploadingFiles={uploadingFiles}
+        hasNegotiatedFees={hasNegotiatedFees}
+        setHasNegotiatedFees={setHasNegotiatedFees}
+        negotiatedFeeValues={negotiatedFeeValues}
+        setNegotiatedFeeValues={setNegotiatedFeeValues}
       />
 
       <LossReasonDialog
