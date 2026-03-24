@@ -42,15 +42,26 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const _authHeader = req.headers.get('Authorization');
+    if (!_authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const _authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: _authHeader } } });
+    const { data: _claimsData, error: _authError } = await _authClient.auth.getClaims(_authHeader.replace('Bearer ', ''));
+    if (_authError || !_claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     console.log("=== IMPORT-PROSPECTS-MAPPED: Iniciando importação ===");
     
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const userId = formData.get("userId") as string;
+    const userId = _claimsData.claims.sub as string;
     const sessionId = formData.get("sessionId") as string;
     const mappingsJson = formData.get("mappings") as string;
     
-    if (!file || !userId || !sessionId || !mappingsJson) {
+    if (!file || !sessionId || !mappingsJson) {
       throw new Error("Parâmetros obrigatórios ausentes");
     }
 

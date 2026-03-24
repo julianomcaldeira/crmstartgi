@@ -31,18 +31,25 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const _authHeader = req.headers.get('Authorization');
+    if (!_authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const _authClient = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: _authHeader } } });
+    const { data: _claimsData, error: _authError } = await _authClient.auth.getClaims(_authHeader.replace('Bearer ', ''));
+    if (_authError || !_claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     console.log("=== IMPORT-PROSPECTS-COMPLETE: Iniciando importação completa ===");
     
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const userId = formData.get("userId") as string;
+    const userId = _claimsData.claims.sub as string;
     
     if (!file) {
       throw new Error("Arquivo não fornecido");
-    }
-    
-    if (!userId) {
-      throw new Error("ID do usuário não fornecido");
     }
 
     console.log("Arquivo recebido:", file.name);
