@@ -486,6 +486,41 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                 </SelectContent>
               </Select>
             </div>
+           </div>
+
+          {/* Client & Opportunity linking */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Cliente / Prospect</Label>
+              <SearchableCombobox
+                items={allClients.map((c) => ({
+                  value: c.id,
+                  label: c.company_name || c.trade_name,
+                  subLabel: c.cnpj || undefined,
+                  searchText: `${c.company_name ?? ""} ${c.trade_name ?? ""} ${c.cnpj ?? ""}`.trim(),
+                }))}
+                value={editClientId}
+                onValueChange={setEditClientId}
+                placeholder="Vincular cliente"
+                searchPlaceholder="Buscar cliente por nome ou CNPJ..."
+                emptyText="Nenhum cliente encontrado."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Oportunidade</Label>
+              <SearchableCombobox
+                items={allOpportunities.map((o) => ({
+                  value: o.id,
+                  label: o.title,
+                  searchText: o.title,
+                }))}
+                value={editOpportunityId}
+                onValueChange={setEditOpportunityId}
+                placeholder="Vincular oportunidade"
+                searchPlaceholder="Buscar oportunidade..."
+                emptyText="Nenhuma oportunidade encontrada."
+              />
+            </div>
           </div>
 
           <Separator />
