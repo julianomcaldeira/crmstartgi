@@ -14,6 +14,7 @@ import { useRadarLeads, useRadarLeadsStats, useRadarLeadsCities, SortColumn, Sor
 import { formatCNPJ } from "@/components/ui/masked-input";
 
 export default function RadarLeads() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [stateFilter, setStateFilter] = useState<string>("all");
   const [cityFilter, setCityFilter] = useState<string>("all");
