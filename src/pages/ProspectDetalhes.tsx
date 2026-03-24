@@ -455,7 +455,7 @@ const ClienteDetalhes = () => {
           role: contactFormData.role || null,
           email: contactFormData.email || null,
           phone: contactFormData.phone || null,
-          mobile: contactFormData.mobile || null,
+          mobile: contactFormData.mobile ? autoAddMobileNine(contactFormData.mobile) : null,
           rating: contactFormData.rating,
           is_primary: contactFormData.is_primary,
           created_by: user.id,
