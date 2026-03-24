@@ -70,10 +70,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   useEffect(() => {
     if (task?.id && open) {
       setTaskType(task.task_type || "ligacao");
-      // Converter UTC do banco para formato local para o input datetime-local
       if (task.due_date) {
         const utcDate = new Date(task.due_date);
-        // Ajusta para o timezone local subtraindo o offset
         const localDate = new Date(utcDate.getTime() - utcDate.getTimezoneOffset() * 60000);
         setDueDate(localDate.toISOString().slice(0, 16));
       } else {
@@ -82,13 +80,28 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
       setDescription(task.description || "");
-      // Reset notes before fetching to prevent showing old task's notes
+      setEditClientId(task.client_id || "");
+      setEditOpportunityId(task.opportunity_id || "");
       setNotes([]);
       setNewNote("");
       fetchNotesForTask(task.id);
       fetchTaskHistoryForTask(task.id);
     }
   }, [task?.id, open]);
+
+  // Fetch clients and opportunities for editing
+  useEffect(() => {
+    if (!open) return;
+    const fetchLists = async () => {
+      const [clientsRes, oppsRes] = await Promise.all([
+        supabase.from("clients").select("id, company_name, trade_name, cnpj").order("company_name"),
+        supabase.from("opportunities").select("id, title").order("title"),
+      ]);
+      setAllClients(clientsRes.data || []);
+      setAllOpportunities(oppsRes.data || []);
+    };
+    fetchLists();
+  }, [open]);
 
   useEffect(() => {
     if (open) {
