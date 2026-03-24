@@ -513,20 +513,30 @@ export default function RadarLeads() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <SortableHeader column="company_name">Empresa</SortableHeader>
-                    <SortableHeader column="cnpj">CNPJ</SortableHeader>
-                    <SortableHeader column="city">Localização</SortableHeader>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell className="font-medium">{lead.company_name}</TableCell>
-                      <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
-                      <TableCell>
-                        {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
-                      </TableCell>
+                     <SortableHeader column="company_name">Empresa</SortableHeader>
+                     <SortableHeader column="cnpj">CNPJ</SortableHeader>
+                     <SortableHeader column="city">Localização</SortableHeader>
+                     <TableHead>Capital Social</TableHead>
+                     <TableHead>Região</TableHead>
+                     <TableHead>Ações</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {leads.map((lead) => (
+                     <TableRow key={lead.id}>
+                       <TableCell className="font-medium">{lead.company_name}</TableCell>
+                       <TableCell className="font-mono text-sm">{formatCNPJ(lead.cnpj)}</TableCell>
+                       <TableCell>
+                         {lead.city && lead.state ? `${lead.city}/${lead.state}` : "-"}
+                       </TableCell>
+                       <TableCell className="text-sm">
+                         {lead.source_data?.share_capital 
+                           ? `R$ ${Number(lead.source_data.share_capital).toLocaleString('pt-BR')}` 
+                           : "-"}
+                       </TableCell>
+                       <TableCell className="text-sm">
+                         {lead.source_data?.region || "-"}
+                       </TableCell>
                       <TableCell>
                         <Button
                           variant="default"

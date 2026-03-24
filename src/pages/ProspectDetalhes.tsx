@@ -1205,7 +1205,21 @@ const ClienteDetalhes = () => {
                         <h4 className="font-medium text-foreground">{opp.title}</h4>
                         <p className="text-sm text-muted-foreground">{opp.description}</p>
                       </div>
-                      {getStatusBadge(opp.status)}
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(opp.status)}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/oportunidades?edit=${opp.id}`);
+                          }}
+                          title="Editar oportunidade"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
                     <Separator className="my-2" />
                     <div className="flex items-center justify-between text-sm">
