@@ -38,8 +38,9 @@ export default function RadarLeads() {
   const totalCount = leadsData?.totalCount || 0;
   const totalPages = leadsData?.totalPages || 1;
 
-  // Buscar capital social do cnpj_cache para os leads exibidos
+  // Buscar capital social e localização do cnpj_cache para os leads exibidos
   const [shareCapitalMap, setShareCapitalMap] = useState<Record<string, number | null>>({});
+  const [cachedLocationMap, setCachedLocationMap] = useState<Record<string, { city?: string; state?: string }>>({});
   
   useEffect(() => {
     if (leads.length === 0) return;
@@ -48,15 +49,20 @@ export default function RadarLeads() {
     
     supabase
       .from("cnpj_cache")
-      .select("cnpj, share_capital")
+      .select("cnpj, share_capital, city, state")
       .in("cnpj", cnpjs)
       .then(({ data }) => {
         if (data) {
-          const map: Record<string, number | null> = {};
+          const capitalMap: Record<string, number | null> = {};
+          const locMap: Record<string, { city?: string; state?: string }> = {};
           data.forEach((item: any) => {
-            map[item.cnpj] = item.share_capital;
+            capitalMap[item.cnpj] = item.share_capital;
+            if (item.city || item.state) {
+              locMap[item.cnpj] = { city: item.city, state: item.state };
+            }
           });
-          setShareCapitalMap(map);
+          setShareCapitalMap(capitalMap);
+          setCachedLocationMap(locMap);
         }
       });
   }, [leads]);
