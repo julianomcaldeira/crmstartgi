@@ -27,7 +27,7 @@ serve(async (req) => {
     const requestBody = await req.json();
     console.log("Request body:", requestBody);
     
-    const { cnpj } = requestBody;
+    const { cnpj, leadId } = requestBody;
     
     if (!cnpj) {
       console.error("CNPJ não fornecido");
@@ -48,6 +48,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const syncRadarLeadLocation = async (radarLeadId?: string, location?: { city?: string | null; state?: string | null }) => {
+      if (!radarLeadId) return;
+
+      const { error: radarLeadError } = await supabase
+        .from("radar_leads")
+        .update({
+          city: location?.city || null,
+          state: location?.state || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", radarLeadId);
+
+      if (radarLeadError) {
+        console.error("⚠️ Erro ao sincronizar cidade/estado no radar_leads:", radarLeadError);
+      }
+    };
+
     console.log("Verificando cache...");
     // Check cache first
     const { data: cachedData, error: cacheError } = await supabase
@@ -65,7 +82,12 @@ serve(async (req) => {
       const cacheAge = Date.now() - new Date(cachedData.cached_at).getTime();
       const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
       
-      if (cacheAge < thirtyDaysInMs) {
+        if (cacheAge < thirtyDaysInMs) {
+          await syncRadarLeadLocation(leadId, {
+            city: cachedData.city,
+            state: cachedData.state,
+          });
+
         console.log("✅ Retornando dados do cache (idade:", Math.floor(cacheAge / (1000 * 60 * 60 * 24)), "dias)");
         return new Response(JSON.stringify({
           source: "cache",
@@ -200,6 +222,8 @@ serve(async (req) => {
     } else {
       console.log("✅ Dados salvos no cache com sucesso");
     }
+
+    await syncRadarLeadLocation(leadId, transformedData);
 
     console.log("=== BUSCAR-CNPJ: Requisição concluída com sucesso ===");
 
