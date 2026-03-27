@@ -531,7 +531,13 @@ const ClienteDetalhes = () => {
       resetContactForm();
       setEditingContact(null);
       setContactDialogOpen(false);
-      await fetchClientDetails();
+      // Re-fetch only contacts to avoid full page reload flash
+      const { data: updatedContacts } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", id)
+        .order("name");
+      setContacts(updatedContacts || []);
     } catch (error: any) {
       console.error("Error updating contact:", error);
       toast.error(error.message || "Erro ao atualizar contato");
