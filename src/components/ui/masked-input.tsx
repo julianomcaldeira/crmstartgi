@@ -48,15 +48,15 @@ const getPhoneFormat = (digits: string): string => {
   if (len >= 12) {
     return "## (##) #####-####"; // Ex: 55 (11) 91234-5678
   }
-  // Com DDD (padrão brasileiro)
-  if (len >= 11) {
-    return "(##) #####-####"; // Celular com DDD: (11) 91234-5678
-  }
-  if (len >= 10) {
-    return "(##) ####-####"; // Fixo com DDD: (11) 1234-5678
+  // Exatamente 10 dígitos confirmados como fixo (3º dígito é 2,3,4,5)
+  if (len === 10) {
+    const thirdDigit = digits[2];
+    if (["2", "3", "4", "5"].includes(thirdDigit)) {
+      return "(##) ####-####"; // Fixo com DDD: (11) 1234-5678
+    }
   }
   
-  // Parcial - sempre permite formato completo para não bloquear digitação
+  // Padrão: sempre permite 11 dígitos (celular com DDD)
   return "(##) #####-####";
 };
 
