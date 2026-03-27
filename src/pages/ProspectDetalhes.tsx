@@ -137,7 +137,7 @@ const ClienteDetalhes = () => {
   });
 
   useEffect(() => {
-    fetchClientDetails();
+    fetchClientDetails(true);
     checkAdminRole();
   }, [id]);
 
@@ -173,9 +173,9 @@ const ClienteDetalhes = () => {
     }
   };
 
-  const fetchClientDetails = async () => {
+  const fetchClientDetails = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) setLoading(true);
       
       // Fetch client data
       const { data: clientData, error: clientError } = await supabase
@@ -191,7 +191,8 @@ const ClienteDetalhes = () => {
       const { data: contactsData } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id);
+        .eq("client_id", id)
+        .order("name");
       setContacts(contactsData || []);
 
       // Fetch opportunities with all related data
@@ -530,7 +531,13 @@ const ClienteDetalhes = () => {
       resetContactForm();
       setEditingContact(null);
       setContactDialogOpen(false);
-      await fetchClientDetails();
+      // Re-fetch only contacts to avoid full page reload flash
+      const { data: updatedContacts } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", id)
+        .order("name");
+      setContacts(updatedContacts || []);
     } catch (error: any) {
       console.error("Error updating contact:", error);
       toast.error(error.message || "Erro ao atualizar contato");
@@ -549,7 +556,13 @@ const ClienteDetalhes = () => {
       if (error) throw error;
 
       toast.success("Contato excluído com sucesso!");
-      fetchClientDetails();
+      // Re-fetch only contacts to avoid full page reload flash
+      const { data: updatedContacts } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("client_id", id)
+        .order("name");
+      setContacts(updatedContacts || []);
     } catch (error) {
       console.error("Error deleting contact:", error);
       toast.error("Erro ao excluir contato");
