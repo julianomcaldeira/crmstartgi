@@ -118,76 +118,66 @@ serve(async (req) => {
       console.log("Nenhum dado em cache, buscando na API...");
     }
 
-    // Call ReceitaWS API with timeout
-    console.log("Chamando ReceitaWS API para CNPJ:", cleanCnpj);
+    // Call publica.cnpj.ws API with timeout
+    console.log("Chamando publica.cnpj.ws para CNPJ:", cleanCnpj);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     let response;
     try {
-      response = await fetch(`https://receitaws.com.br/v1/cnpj/${cleanCnpj}`, {
+      response = await fetch(`https://publica.cnpj.ws/cnpj/${cleanCnpj}`, {
         signal: controller.signal,
         headers: {
-          'User-Agent': 'Mozilla/5.0',
-        }
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "application/json",
+        },
       });
       clearTimeout(timeoutId);
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
-      if (fetchError.name === 'AbortError') {
-        console.error("Timeout ao consultar ReceitaWS");
-        throw new Error("Timeout ao buscar dados. A API da Receita Federal pode estar temporariamente indisponível.");
+      if (fetchError.name === "AbortError") {
+        console.error("Timeout ao consultar publica.cnpj.ws");
+        throw new Error("Timeout ao buscar dados do CNPJ. Tente novamente em instantes.");
       }
       throw fetchError;
     }
-    
-    console.log("ReceitaWS response status:", response.status);
-    
-    if (!response.ok) {
-      console.error("ReceitaWS retornou status não OK:", response.status);
-      throw new Error(`Erro ao buscar dados do CNPJ (Status: ${response.status})`);
-    }
 
     const data = await response.json();
-    console.log("Dados recebidos da ReceitaWS:", { status: data.status, message: data.message });
+    console.log("Resposta da publica.cnpj.ws:", { status: response.status, message: data?.message });
 
-    if (data.status === "ERROR") {
-      console.error("ReceitaWS retornou erro:", data.message);
-      throw new Error(data.message || "CNPJ não encontrado ou inválido");
+    if (!response.ok) {
+      console.error("publica.cnpj.ws retornou status não OK:", response.status, data);
+      throw new Error(data?.message || `Erro ao buscar dados do CNPJ (Status: ${response.status})`);
     }
 
-    console.log("✅ Dados obtidos da ReceitaWS com sucesso");
+    console.log("✅ Dados obtidos da publica.cnpj.ws com sucesso");
 
-    // Convert foundation date from DD/MM/YYYY to YYYY-MM-DD format for database
-    let foundationDateISO = null;
-    if (data.abertura) {
-      const dateParts = data.abertura.split('/');
-      if (dateParts.length === 3) {
-        // Format: DD/MM/YYYY -> YYYY-MM-DD
-        foundationDateISO = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-        console.log("Data de abertura convertida:", data.abertura, "->", foundationDateISO);
-      }
-    }
+    const establishment = data?.estabelecimento || {};
+    const foundationDateISO = establishment?.data_inicio_atividade || null;
+    const primaryActivity = establishment?.atividade_principal || {};
+    const phone = establishment?.ddd1 && establishment?.telefone1
+      ? `${establishment.ddd1}${establishment.telefone1}`
+      : "";
 
     // Transform the response to match our database structure
     const transformedData = {
       source: "api",
-      cnpj: data.cnpj,
-      company_name: data.nome || "",
-      trade_name: data.fantasia || data.nome || "",
-      email: data.email || "",
-      phone: data.telefone || "",
-      address: `${data.logradouro || ""}, ${data.numero || ""} ${data.complemento || ""}`.trim(),
-      city: data.municipio || "",
-      state: data.uf || "",
-      zip_code: data.cep || "",
-      segment: data.atividade_principal?.[0]?.text || "",
-      share_capital: parseFloat(data.capital_social || "0"),
-      legal_nature: data.natureza_juridica || "",
-      registration_status: data.situacao || "",
+      cnpj: establishment?.cnpj || cleanCnpj,
+      company_name: data?.razao_social || "",
+      trade_name: establishment?.nome_fantasia || data?.razao_social || "",
+      email: establishment?.email || "",
+      phone,
+      address: `${establishment?.logradouro || ""}, ${establishment?.numero || ""} ${establishment?.complemento || ""}`.trim(),
+      city: establishment?.cidade?.nome || "",
+      state: establishment?.estado?.sigla || "",
+      zip_code: establishment?.cep || "",
+      segment: primaryActivity?.descricao || "",
+      share_capital: parseFloat(data?.capital_social || "0"),
+      legal_nature: data?.natureza_juridica?.descricao || "",
+      registration_status: establishment?.situacao_cadastral || "",
       foundation_date: foundationDateISO,
-      cnae_principal: data.atividade_principal?.[0]?.code || "",
-      cnae_description: data.atividade_principal?.[0]?.text || "",
+      cnae_principal: primaryActivity?.id || "",
+      cnae_description: primaryActivity?.descricao || "",
     };
 
     console.log("Salvando no cache...");
