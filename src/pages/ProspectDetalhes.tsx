@@ -173,9 +173,9 @@ const ClienteDetalhes = () => {
     }
   };
 
-  const fetchClientDetails = async () => {
+  const fetchClientDetails = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) setLoading(true);
       
       // Fetch client data
       const { data: clientData, error: clientError } = await supabase
