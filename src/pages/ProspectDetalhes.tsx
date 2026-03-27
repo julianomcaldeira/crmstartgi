@@ -191,7 +191,8 @@ const ClienteDetalhes = () => {
       const { data: contactsData } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id);
+        .eq("client_id", id)
+        .order("name");
       setContacts(contactsData || []);
 
       // Fetch opportunities with all related data
