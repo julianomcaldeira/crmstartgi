@@ -137,7 +137,7 @@ const ClienteDetalhes = () => {
   });
 
   useEffect(() => {
-    fetchClientDetails();
+    fetchClientDetails(true);
     checkAdminRole();
   }, [id]);
 
