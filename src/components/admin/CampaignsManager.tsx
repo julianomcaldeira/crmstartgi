@@ -466,7 +466,7 @@ export const CampaignsManager = () => {
               </div>
               <p className="text-xs text-muted-foreground">
                 Defina as tarefas que serão criadas automaticamente quando um vendedor vincular esta campanha a um prospect. 
-                O "Dia" indica quantos dias após o início da campanha a tarefa será agendada.
+                "Dia Início" e "Dia Fim" indicam quantos dias após o início da campanha a tarefa será agendada e deve ser concluída.
               </p>
 
               {taskTemplates.length === 0 ? (
@@ -476,7 +476,10 @@ export const CampaignsManager = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {taskTemplates.map((template, index) => (
+                  {taskTemplates.map((template, index) => {
+                    const instructionLabel = getInstructionLabel(template.task_type);
+                    const instructionPlaceholder = getInstructionPlaceholder(template.task_type);
+                    return (
                     <Card key={index} className="p-4 border-l-4 border-l-primary/50">
                       <div className="flex items-start gap-3">
                         <div className="flex items-center gap-1 mt-2 text-muted-foreground">
@@ -493,10 +496,10 @@ export const CampaignsManager = () => {
                                 onChange={e => updateTaskTemplate(index, "title", e.target.value)}
                               />
                             </div>
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                               <div>
                                 <Label className="text-xs">Tipo</Label>
-                                <Select value={template.task_type} onValueChange={v => updateTaskTemplate(index, "task_type", v)}>
+                                <Select value={template.task_type} onValueChange={v => { updateTaskTemplate(index, "task_type", v); }}>
                                   <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
                                   <SelectContent>
                                     {TASK_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
@@ -513,12 +516,21 @@ export const CampaignsManager = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label className="text-xs">Dia</Label>
+                                <Label className="text-xs">Dia Início</Label>
                                 <Input
                                   type="number"
                                   min={0}
-                                  value={template.day_offset}
-                                  onChange={e => updateTaskTemplate(index, "day_offset", parseInt(e.target.value) || 0)}
+                                  value={template.start_day_offset}
+                                  onChange={e => updateTaskTemplate(index, "start_day_offset", parseInt(e.target.value) || 0)}
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-xs">Dia Fim</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={template.end_day_offset}
+                                  onChange={e => updateTaskTemplate(index, "end_day_offset", parseInt(e.target.value) || 0)}
                                 />
                               </div>
                             </div>
@@ -526,11 +538,26 @@ export const CampaignsManager = () => {
                           <div>
                             <Label className="text-xs">Descrição</Label>
                             <Input
-                              placeholder="Instruções para o vendedor..."
+                              placeholder="Instruções gerais para o vendedor..."
                               value={template.description}
                               onChange={e => updateTaskTemplate(index, "description", e.target.value)}
                             />
                           </div>
+                          {instructionLabel && (
+                            <div>
+                              <Label className="text-xs text-primary">{instructionLabel}</Label>
+                              <Textarea
+                                placeholder={instructionPlaceholder}
+                                value={template.instructions}
+                                onChange={e => updateTaskTemplate(index, "instructions", e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                              />
+                              <p className="text-[10px] text-muted-foreground mt-1">
+                                Este conteúdo aparecerá como observação não editável para o vendedor na tarefa.
+                              </p>
+                            </div>
+                          )}
                         </div>
                         <Button
                           type="button"
@@ -543,6 +570,10 @@ export const CampaignsManager = () => {
                         </Button>
                       </div>
                     </Card>
+                    );
+                  })}
+                </div>
+              )}
                   ))}
                 </div>
               )}
