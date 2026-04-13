@@ -14,6 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
+      campaign_task_templates: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          day_offset: number
+          description: string | null
+          display_order: number
+          id: string
+          priority: string
+          task_type: string
+          title: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          day_offset?: number
+          description?: string | null
+          display_order?: number
+          id?: string
+          priority?: string
+          task_type?: string
+          title: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          day_offset?: number
+          description?: string | null
+          display_order?: number
+          id?: string
+          priority?: string
+          task_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_task_templates_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_campaigns: {
+        Row: {
+          campaign_id: string
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          linked_by: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          linked_by: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          linked_by?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_campaigns_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_feira_photos: {
         Row: {
           client_feira_id: string
