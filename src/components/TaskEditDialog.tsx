@@ -79,7 +79,15 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
-      setDescription(task.description || "");
+      // Strip campaign instructions from editable description
+      const fullDesc = task.description || "";
+      const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+      const markerIdx = fullDesc.indexOf(campaignMarker);
+      if (markerIdx > -1) {
+        setDescription(fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim());
+      } else {
+        setDescription(fullDesc);
+      }
       setEditClientId(task.client_id || "");
       setEditOpportunityId(task.opportunity_id || "");
       setNotes([]);
@@ -330,7 +338,15 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           due_date: dueDateUTC,
           priority: priority as any,
           status: status as any,
-          description: description.trim() || null,
+          description: (() => {
+            // Preserve campaign instructions on save
+            const fullDesc = task.description || "";
+            const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+            const markerIdx = fullDesc.indexOf(campaignMarker);
+            const campaignPart = markerIdx > -1 ? fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx)) : "";
+            const userDesc = description.trim();
+            return userDesc ? (userDesc + campaignPart) : (campaignPart.trim() || null);
+          })(),
           client_id: editClientId || null,
           opportunity_id: editOpportunityId || null,
         })
@@ -524,6 +540,25 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           </div>
 
           <Separator />
+
+          {/* Campaign Instructions (read-only) */}
+          {(() => {
+            const fullDesc = task?.description || "";
+            const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+            const markerIdx = fullDesc.indexOf(campaignMarker);
+            if (markerIdx === -1) return null;
+            const instructionsText = fullDesc.substring(markerIdx + campaignMarker.length).split("[Campanha:")[0].trim();
+            const campaignTag = fullDesc.match(/\[Campanha: (.+?)\]/)?.[1];
+            return (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <FileText className="h-4 w-4" />
+                  Orientações da Campanha{campaignTag ? ` — ${campaignTag}` : ""}
+                </div>
+                <p className="text-sm text-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">{instructionsText}</p>
+              </div>
+            );
+          })()}
 
           {/* Description Section */}
           <div className="space-y-2">
