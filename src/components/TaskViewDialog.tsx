@@ -265,16 +265,42 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskView
           </TabsList>
 
           <TabsContent value="tarefa" className="space-y-6 mt-4">
-            {/* Description */}
-            {task.description && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  Descrição
+            {/* Campaign Instructions (read-only) */}
+            {(() => {
+              const fullDesc = task.description || "";
+              const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+              const markerIdx = fullDesc.indexOf(campaignMarker);
+              if (markerIdx === -1) return null;
+              const instructionsText = fullDesc.substring(markerIdx + campaignMarker.length).split("[Campanha:")[0].trim();
+              const campaignTag = fullDesc.match(/\[Campanha: (.+?)\]/)?.[1];
+              return (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <FileText className="h-4 w-4" />
+                    Orientações da Campanha{campaignTag ? ` — ${campaignTag}` : ""}
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">{instructionsText}</p>
                 </div>
-                <p className="text-foreground pl-6 whitespace-pre-wrap [overflow-wrap:anywhere]">{task.description}</p>
-              </div>
-            )}
+              );
+            })()}
+
+            {/* Description */}
+            {(() => {
+              const fullDesc = task.description || "";
+              const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+              const markerIdx = fullDesc.indexOf(campaignMarker);
+              const userDesc = markerIdx > -1 ? fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim() : fullDesc;
+              if (!userDesc) return null;
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <FileText className="h-4 w-4" />
+                    Descrição
+                  </div>
+                  <p className="text-foreground pl-6 whitespace-pre-wrap [overflow-wrap:anywhere]">{userDesc}</p>
+                </div>
+              );
+            })()}
 
             {/* Date and Time */}
             {task.due_date && (
