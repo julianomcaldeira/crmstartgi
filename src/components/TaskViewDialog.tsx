@@ -288,8 +288,11 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskView
             {(() => {
               const fullDesc = task.description || "";
               const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+              const campaignTagRegex = /\n*\[Campanha: .+?\]\s*$/;
               const markerIdx = fullDesc.indexOf(campaignMarker);
-              const userDesc = markerIdx > -1 ? fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim() : fullDesc;
+              let userDesc = markerIdx > -1 
+                ? fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim() 
+                : fullDesc.replace(campaignTagRegex, "").trim();
               if (!userDesc) return null;
               return (
                 <div className="space-y-2">

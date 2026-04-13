@@ -79,15 +79,18 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
-      // Strip campaign instructions from editable description
+      // Strip campaign instructions and campaign tag from editable description
       const fullDesc = task.description || "";
       const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+      const campaignTagRegex = /\n*\[Campanha: .+?\]\s*$/;
       const markerIdx = fullDesc.indexOf(campaignMarker);
+      let userDesc = fullDesc;
       if (markerIdx > -1) {
-        setDescription(fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim());
+        userDesc = fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim();
       } else {
-        setDescription(fullDesc);
+        userDesc = fullDesc.replace(campaignTagRegex, "").trim();
       }
+      setDescription(userDesc);
       setEditClientId(task.client_id || "");
       setEditOpportunityId(task.opportunity_id || "");
       setNotes([]);
@@ -339,11 +342,17 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           priority: priority as any,
           status: status as any,
           description: (() => {
-            // Preserve campaign instructions on save
+            // Preserve campaign instructions and tag on save
             const fullDesc = task.description || "";
             const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+            const campaignTagMatch = fullDesc.match(/\n*(\[Campanha: .+?\])\s*$/);
             const markerIdx = fullDesc.indexOf(campaignMarker);
-            const campaignPart = markerIdx > -1 ? fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx)) : "";
+            let campaignPart = "";
+            if (markerIdx > -1) {
+              campaignPart = fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx));
+            } else if (campaignTagMatch) {
+              campaignPart = "\n\n" + campaignTagMatch[1];
+            }
             const userDesc = description.trim();
             return userDesc ? (userDesc + campaignPart) : (campaignPart.trim() || null);
           })(),
