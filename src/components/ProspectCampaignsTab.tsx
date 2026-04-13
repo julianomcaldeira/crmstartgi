@@ -114,7 +114,7 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
             title: `${TASK_TYPE_LABELS[tpl.task_type] || tpl.task_type} - ${tpl.title}`,
             description: `${tpl.description || ""}\n\n[Campanha: ${campaign.name}]`.trim(),
             client_id: clientId,
-            task_type: tpl.task_type,
+            task_type: tpl.task_type as any,
             priority: tpl.priority as "low" | "medium" | "high",
             due_date: dueDate.toISOString(),
             status: "pending" as const,
