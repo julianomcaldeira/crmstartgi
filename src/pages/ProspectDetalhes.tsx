@@ -57,8 +57,9 @@ import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { AIAnalysisHistoryList } from "@/components/AIAnalysisHistoryList";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Megaphone } from "lucide-react";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
+import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -1001,10 +1002,11 @@ const ClienteDetalhes = () => {
 
       {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
+          <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
           <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
         </TabsList>
@@ -1914,6 +1916,15 @@ const ClienteDetalhes = () => {
                 );
               })()
             )}
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="space-y-4">
+          <Card className="p-6">
+            <ProspectCampaignsTab
+              clientId={id || ""}
+              clientName={client?.company_name || client?.trade_name || ""}
+            />
           </Card>
         </TabsContent>
 

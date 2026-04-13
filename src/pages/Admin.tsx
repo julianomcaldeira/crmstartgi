@@ -70,6 +70,7 @@ import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
 import { DiagnosticQuestionsManager } from "@/components/admin/DiagnosticQuestionsManager";
 import { IndicadoresFundoTab } from "@/components/IndicadoresFundoTab";
+import { CampaignsManager } from "@/components/admin/CampaignsManager";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -870,12 +871,13 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="transfer">Transferir</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
           <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
+          <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
           <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
         </TabsList>
 
@@ -1386,6 +1388,10 @@ const Admin = () => {
 
         <TabsContent value="diagnostic" className="space-y-4">
           <DiagnosticQuestionsManager />
+        </TabsContent>
+
+        <TabsContent value="campaigns" className="space-y-4">
+          <CampaignsManager />
         </TabsContent>
 
         <TabsContent value="indicadores" className="space-y-4">
