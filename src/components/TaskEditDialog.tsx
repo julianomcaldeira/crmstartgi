@@ -30,6 +30,7 @@ import AudioRecorder from "@/components/AudioRecorder";
 import TaskAttachments from "@/components/TaskAttachments";
 import { formatPhone } from "@/components/ui/masked-input";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
+import { buildCampaignTaskDescription, parseCampaignTaskDescription } from "@/lib/campaignTaskDescription";
 
 interface TaskEditDialogProps {
   task: any;
@@ -79,18 +80,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       }
       setPriority(task.priority || "medium");
       setStatus(task.status || "pending");
-      // Strip campaign instructions and campaign tag from editable description
-      const fullDesc = task.description || "";
-      const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
-      const campaignTagRegex = /\n*\[Campanha: .+?\]\s*$/;
-      const markerIdx = fullDesc.indexOf(campaignMarker);
-      let userDesc = fullDesc;
-      if (markerIdx > -1) {
-        userDesc = fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim();
-      } else {
-        userDesc = fullDesc.replace(campaignTagRegex, "").trim();
-      }
-      setDescription(userDesc);
+      setDescription(parseCampaignTaskDescription(task.description).editableDescription);
       setEditClientId(task.client_id || "");
       setEditOpportunityId(task.opportunity_id || "");
       setNotes([]);
@@ -341,21 +331,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           due_date: dueDateUTC,
           priority: priority as any,
           status: status as any,
-          description: (() => {
-            // Preserve campaign instructions and tag on save
-            const fullDesc = task.description || "";
-            const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
-            const campaignTagMatch = fullDesc.match(/\n*(\[Campanha: .+?\])\s*$/);
-            const markerIdx = fullDesc.indexOf(campaignMarker);
-            let campaignPart = "";
-            if (markerIdx > -1) {
-              campaignPart = fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx));
-            } else if (campaignTagMatch) {
-              campaignPart = "\n\n" + campaignTagMatch[1];
-            }
-            const userDesc = description.trim();
-            return userDesc ? (userDesc + campaignPart) : (campaignPart.trim() || null);
-          })(),
+          description: buildCampaignTaskDescription(description, task.description),
           client_id: editClientId || null,
           opportunity_id: editOpportunityId || null,
         })
@@ -406,6 +382,8 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   };
 
   if (!task) return null;
+
+  const campaignTaskDetails = parseCampaignTaskDescription(task.description);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -550,25 +528,6 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
 
           <Separator />
 
-          {/* Campaign Instructions (read-only) */}
-          {(() => {
-            const fullDesc = task?.description || "";
-            const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
-            const markerIdx = fullDesc.indexOf(campaignMarker);
-            if (markerIdx === -1) return null;
-            const instructionsText = fullDesc.substring(markerIdx + campaignMarker.length).split("[Campanha:")[0].trim();
-            const campaignTag = fullDesc.match(/\[Campanha: (.+?)\]/)?.[1];
-            return (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
-                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                  <FileText className="h-4 w-4" />
-                  Orientações da Campanha{campaignTag ? ` — ${campaignTag}` : ""}
-                </div>
-                <p className="text-sm text-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">{instructionsText}</p>
-              </div>
-            );
-          })()}
-
           {/* Description Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -577,6 +536,16 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                 onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
               />
             </div>
+            {campaignTaskDetails.instructions && (
+              <div className="rounded-md border border-border bg-muted/40 p-3">
+                <p className="text-xs font-medium text-foreground">
+                  Orientação da Campanha{campaignTaskDetails.campaignName ? ` — ${campaignTaskDetails.campaignName}` : ""}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
+                  {campaignTaskDetails.instructions}
+                </p>
+              </div>
+            )}
             <TaskQuickMessages 
               taskType={taskType} 
               onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 

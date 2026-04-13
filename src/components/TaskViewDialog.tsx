@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, formatCNPJ } from "@/components/ui/masked-input";
+import { parseCampaignTaskDescription } from "@/lib/campaignTaskDescription";
 
 import {
   AlertDialog,
@@ -98,6 +99,8 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskView
   };
 
   if (!task) return null;
+
+  const campaignTaskDetails = parseCampaignTaskDescription(task.description);
 
   const getTaskTypeLabel = (type: string) => {
     const types: any = {
@@ -265,45 +268,32 @@ const TaskViewDialog = ({ task, open, onOpenChange, onDelete, onEdit }: TaskView
           </TabsList>
 
           <TabsContent value="tarefa" className="space-y-6 mt-4">
-            {/* Campaign Instructions (read-only) */}
-            {(() => {
-              const fullDesc = task.description || "";
-              const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
-              const markerIdx = fullDesc.indexOf(campaignMarker);
-              if (markerIdx === -1) return null;
-              const instructionsText = fullDesc.substring(markerIdx + campaignMarker.length).split("[Campanha:")[0].trim();
-              const campaignTag = fullDesc.match(/\[Campanha: (.+?)\]/)?.[1];
-              return (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-1">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <FileText className="h-4 w-4" />
-                    Orientações da Campanha{campaignTag ? ` — ${campaignTag}` : ""}
-                  </div>
-                  <p className="text-sm text-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">{instructionsText}</p>
-                </div>
-              );
-            })()}
-
             {/* Description */}
-            {(() => {
-              const fullDesc = task.description || "";
-              const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
-              const campaignTagRegex = /\n*\[Campanha: .+?\]\s*$/;
-              const markerIdx = fullDesc.indexOf(campaignMarker);
-              let userDesc = markerIdx > -1 
-                ? fullDesc.substring(0, fullDesc.lastIndexOf("\n\n", markerIdx)).trim() 
-                : fullDesc.replace(campaignTagRegex, "").trim();
-              if (!userDesc) return null;
-              return (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                    Descrição
-                  </div>
-                  <p className="text-foreground pl-6 whitespace-pre-wrap [overflow-wrap:anywhere]">{userDesc}</p>
+            {(campaignTaskDetails.editableDescription || campaignTaskDetails.instructions) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  Descrição
                 </div>
-              );
-            })()}
+                {campaignTaskDetails.editableDescription && (
+                  <p className="text-foreground pl-6 whitespace-pre-wrap [overflow-wrap:anywhere]">
+                    {campaignTaskDetails.editableDescription}
+                  </p>
+                )}
+                {campaignTaskDetails.instructions && (
+                  <div className="pl-6">
+                    <div className="rounded-md border border-border bg-muted/40 p-3">
+                      <p className="text-xs font-medium text-foreground">
+                        Orientação da Campanha{campaignTaskDetails.campaignName ? ` — ${campaignTaskDetails.campaignName}` : ""}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
+                        {campaignTaskDetails.instructions}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Date and Time */}
             {task.due_date && (
