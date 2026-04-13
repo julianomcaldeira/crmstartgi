@@ -44,7 +44,9 @@ interface TaskTemplate {
   description: string;
   task_type: string;
   priority: string;
-  day_offset: number;
+  start_day_offset: number;
+  end_day_offset: number;
+  instructions: string;
   display_order: number;
 }
 
@@ -136,7 +138,9 @@ export const CampaignsManager = () => {
         description: "",
         task_type: "ligacao",
         priority: "medium",
-        day_offset: prev.length > 0 ? Math.max(...prev.map(t => t.day_offset)) + 1 : 0,
+        start_day_offset: prev.length > 0 ? Math.max(...prev.map(t => t.end_day_offset)) + 1 : 0,
+        end_day_offset: prev.length > 0 ? Math.max(...prev.map(t => t.end_day_offset)) + 2 : 1,
+        instructions: "",
         display_order: prev.length,
       },
     ]);
@@ -218,7 +222,9 @@ export const CampaignsManager = () => {
           description: t.description?.trim() || null,
           task_type: t.task_type,
           priority: t.priority,
-          day_offset: t.day_offset,
+          start_day_offset: t.start_day_offset,
+          end_day_offset: t.end_day_offset,
+          instructions: t.instructions?.trim() || null,
           display_order: i,
         }));
         const { error: tplErr } = await supabase
