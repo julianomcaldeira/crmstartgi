@@ -303,7 +303,7 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
           <AlertDialogHeader>
             <AlertDialogTitle>Desvincular campanha?</AlertDialogTitle>
             <AlertDialogDescription>
-              A campanha será desvinculada deste prospect. As tarefas já criadas não serão excluídas.
+              A campanha será desvinculada deste prospect e todas as tarefas geradas por ela serão excluídas automaticamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
