@@ -71,8 +71,8 @@ interface TaskTemplate {
   description: string;
   task_type: string;
   priority: string;
-  start_day_offset: number;
-  end_day_offset: number;
+  start_date: string;
+  end_date: string;
   instructions: string;
   display_order: number;
 }
@@ -165,8 +165,8 @@ export const CampaignsManager = () => {
         description: "",
         task_type: "ligacao",
         priority: "medium",
-        start_day_offset: prev.length > 0 ? Math.max(...prev.map(t => t.end_day_offset)) + 1 : 0,
-        end_day_offset: prev.length > 0 ? Math.max(...prev.map(t => t.end_day_offset)) + 2 : 1,
+        start_date: formData.start_date || "",
+        end_date: formData.end_date || "",
         instructions: "",
         display_order: prev.length,
       },
@@ -249,8 +249,8 @@ export const CampaignsManager = () => {
           description: t.description?.trim() || null,
           task_type: t.task_type,
           priority: t.priority,
-          start_day_offset: t.start_day_offset,
-          end_day_offset: t.end_day_offset,
+          start_date: t.start_date || null,
+          end_date: t.end_date || null,
           instructions: t.instructions?.trim() || null,
           display_order: i,
         }));
@@ -543,21 +543,19 @@ export const CampaignsManager = () => {
                                 </Select>
                               </div>
                               <div>
-                                <Label className="text-xs">Dia Início</Label>
+                                <Label className="text-xs">Data Início</Label>
                                 <Input
-                                  type="number"
-                                  min={0}
-                                  value={template.start_day_offset}
-                                  onChange={e => updateTaskTemplate(index, "start_day_offset", parseInt(e.target.value) || 0)}
+                                  type="date"
+                                  value={template.start_date}
+                                  onChange={e => updateTaskTemplate(index, "start_date", e.target.value)}
                                 />
                               </div>
                               <div>
-                                <Label className="text-xs">Dia Fim</Label>
+                                <Label className="text-xs">Data Fim</Label>
                                 <Input
-                                  type="number"
-                                  min={0}
-                                  value={template.end_day_offset}
-                                  onChange={e => updateTaskTemplate(index, "end_day_offset", parseInt(e.target.value) || 0)}
+                                  type="date"
+                                  value={template.end_date}
+                                  onChange={e => updateTaskTemplate(index, "end_date", e.target.value)}
                                 />
                               </div>
                             </div>
