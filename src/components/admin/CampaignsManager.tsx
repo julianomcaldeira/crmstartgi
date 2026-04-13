@@ -492,8 +492,7 @@ export const CampaignsManager = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Defina as tarefas que serão criadas automaticamente quando um vendedor vincular esta campanha a um prospect. 
-                "Dia Início" e "Dia Fim" indicam quantos dias após o início da campanha a tarefa será agendada e deve ser concluída.
+                Defina as tarefas que serão criadas automaticamente quando um vendedor vincular esta campanha a um prospect.
               </p>
 
               {taskTemplates.length === 0 ? (
@@ -514,50 +513,52 @@ export const CampaignsManager = () => {
                           <span className="text-xs font-mono font-bold">#{index + 1}</span>
                         </div>
                         <div className="flex-1 space-y-3">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Row 1: Title */}
+                          <div>
+                            <Label className="text-xs">Título *</Label>
+                            <Input
+                              placeholder="Ex: Primeira ligação de apresentação"
+                              value={template.title}
+                              onChange={e => updateTaskTemplate(index, "title", e.target.value)}
+                            />
+                          </div>
+                          {/* Row 2: Tipo, Prioridade, Data Início, Data Fim */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div>
-                              <Label className="text-xs">Título *</Label>
+                              <Label className="text-xs">Tipo</Label>
+                              <Select value={template.task_type} onValueChange={v => { updateTaskTemplate(index, "task_type", v); }}>
+                                <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {TASK_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Prioridade</Label>
+                              <Select value={template.priority} onValueChange={v => updateTaskTemplate(index, "priority", v)}>
+                                <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs">Data Início</Label>
                               <Input
-                                placeholder="Ex: Primeira ligação de apresentação"
-                                value={template.title}
-                                onChange={e => updateTaskTemplate(index, "title", e.target.value)}
+                                type="date"
+                                value={template.start_date}
+                                onChange={e => updateTaskTemplate(index, "start_date", e.target.value)}
+                                className="text-xs"
                               />
                             </div>
-                            <div className="grid grid-cols-4 gap-2">
-                              <div>
-                                <Label className="text-xs">Tipo</Label>
-                                <Select value={template.task_type} onValueChange={v => { updateTaskTemplate(index, "task_type", v); }}>
-                                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {TASK_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Prioridade</Label>
-                                <Select value={template.priority} onValueChange={v => updateTaskTemplate(index, "priority", v)}>
-                                  <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    {PRIORITIES.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label className="text-xs">Data Início</Label>
-                                <Input
-                                  type="date"
-                                  value={template.start_date}
-                                  onChange={e => updateTaskTemplate(index, "start_date", e.target.value)}
-                                />
-                              </div>
-                              <div>
-                                <Label className="text-xs">Data Fim</Label>
-                                <Input
-                                  type="date"
-                                  value={template.end_date}
-                                  onChange={e => updateTaskTemplate(index, "end_date", e.target.value)}
-                                />
-                              </div>
+                            <div>
+                              <Label className="text-xs">Data Fim</Label>
+                              <Input
+                                type="date"
+                                value={template.end_date}
+                                onChange={e => updateTaskTemplate(index, "end_date", e.target.value)}
+                                className="text-xs"
+                              />
                             </div>
                           </div>
                           <div>
