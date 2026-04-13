@@ -142,12 +142,25 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
   const handleUnlink = async () => {
     if (!unlinkDialog) return;
     try {
+      const campaignName = unlinkDialog.campaign?.name;
+
+      // Delete all tasks related to this campaign for this client
+      if (campaignName) {
+        const { error: tasksError } = await supabase
+          .from("tasks")
+          .delete()
+          .eq("client_id", clientId)
+          .like("description", `%[Campanha: ${campaignName}]%`);
+        if (tasksError) throw tasksError;
+      }
+
       const { error } = await supabase
         .from("client_campaigns")
         .delete()
         .eq("id", unlinkDialog.id);
       if (error) throw error;
-      toast.success("Campanha desvinculada!");
+
+      toast.success("Campanha desvinculada e tarefas removidas!");
       setUnlinkDialog(null);
       fetchData();
     } catch (error: any) {
@@ -290,7 +303,7 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
           <AlertDialogHeader>
             <AlertDialogTitle>Desvincular campanha?</AlertDialogTitle>
             <AlertDialogDescription>
-              A campanha será desvinculada deste prospect. As tarefas já criadas não serão excluídas.
+              A campanha será desvinculada deste prospect e todas as tarefas geradas por ela serão excluídas automaticamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
