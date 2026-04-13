@@ -342,11 +342,17 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           priority: priority as any,
           status: status as any,
           description: (() => {
-            // Preserve campaign instructions on save
+            // Preserve campaign instructions and tag on save
             const fullDesc = task.description || "";
             const campaignMarker = "━━━ Orientações da Campanha (não editável) ━━━";
+            const campaignTagMatch = fullDesc.match(/\n*(\[Campanha: .+?\])\s*$/);
             const markerIdx = fullDesc.indexOf(campaignMarker);
-            const campaignPart = markerIdx > -1 ? fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx)) : "";
+            let campaignPart = "";
+            if (markerIdx > -1) {
+              campaignPart = fullDesc.substring(fullDesc.lastIndexOf("\n\n", markerIdx));
+            } else if (campaignTagMatch) {
+              campaignPart = "\n\n" + campaignTagMatch[1];
+            }
             const userDesc = description.trim();
             return userDesc ? (userDesc + campaignPart) : (campaignPart.trim() || null);
           })(),
