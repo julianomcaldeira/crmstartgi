@@ -38,6 +38,33 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   finished: { label: "Finalizada", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400", icon: Archive },
 };
 
+const getInstructionLabel = (taskType: string): string | null => {
+  switch (taskType) {
+    case "email": return "📧 Conteúdo do E-mail";
+    case "ligacao": return "📞 Roteiro da Ligação";
+    case "whatsapp": return "💬 Mensagem do WhatsApp";
+    case "linkedin": return "🔗 Mensagem do LinkedIn";
+    case "visita_presencial": return "🏢 Roteiro da Visita";
+    case "reuniao_online": return "💻 Pauta da Reunião";
+    case "visita_feira": return "🎪 Orientações da Feira";
+    case "visita_evento": return "🎤 Orientações do Evento";
+    case "pesquisa_inicial": return "🔍 Instruções da Pesquisa";
+    default: return null;
+  }
+};
+
+const getInstructionPlaceholder = (taskType: string): string => {
+  switch (taskType) {
+    case "email": return "Escreva aqui o conteúdo/modelo do e-mail que o vendedor deve enviar...";
+    case "ligacao": return "Descreva o que o vendedor deve falar nesta ligação, pontos-chave, argumentos...";
+    case "whatsapp": return "Escreva a mensagem modelo que o vendedor deve enviar pelo WhatsApp...";
+    case "linkedin": return "Escreva a mensagem modelo para enviar no LinkedIn...";
+    case "visita_presencial": return "Descreva os pontos a abordar na visita presencial...";
+    case "reuniao_online": return "Defina a pauta e pontos a discutir na reunião online...";
+    default: return "Instruções detalhadas para o vendedor executar esta tarefa...";
+  }
+};
+
 interface TaskTemplate {
   id?: string;
   title: string;

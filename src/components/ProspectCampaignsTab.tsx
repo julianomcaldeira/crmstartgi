@@ -107,12 +107,19 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
         const campaignStart = new Date(campaign.start_date);
         const tasksToCreate = templates.map(tpl => {
           const dueDate = new Date(campaignStart);
-          dueDate.setDate(dueDate.getDate() + tpl.day_offset);
-          dueDate.setHours(9, 0, 0, 0); // Default 9am
+          dueDate.setDate(dueDate.getDate() + tpl.end_day_offset);
+          dueDate.setHours(18, 0, 0, 0);
+
+          // Build description with campaign tag and instructions
+          let desc = tpl.description || "";
+          if (tpl.instructions) {
+            desc += `\n\n━━━ Orientações da Campanha (não editável) ━━━\n${tpl.instructions}`;
+          }
+          desc += `\n\n[Campanha: ${campaign.name}]`;
 
           return {
             title: `${TASK_TYPE_LABELS[tpl.task_type] || tpl.task_type} - ${tpl.title}`,
-            description: `${tpl.description || ""}\n\n[Campanha: ${campaign.name}]`.trim(),
+            description: desc.trim(),
             client_id: clientId,
             task_type: tpl.task_type as any,
             priority: tpl.priority as "low" | "medium" | "high",
