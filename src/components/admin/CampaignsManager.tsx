@@ -574,9 +574,6 @@ export const CampaignsManager = () => {
                   })}
                 </div>
               )}
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
