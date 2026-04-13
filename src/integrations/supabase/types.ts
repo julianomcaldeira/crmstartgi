@@ -20,11 +20,11 @@ export type Database = {
           created_at: string
           description: string | null
           display_order: number
-          end_day_offset: number
+          end_date: string | null
           id: string
           instructions: string | null
           priority: string
-          start_day_offset: number
+          start_date: string | null
           task_type: string
           title: string
         }
@@ -33,11 +33,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
-          end_day_offset?: number
+          end_date?: string | null
           id?: string
           instructions?: string | null
           priority?: string
-          start_day_offset?: number
+          start_date?: string | null
           task_type?: string
           title: string
         }
@@ -46,11 +46,11 @@ export type Database = {
           created_at?: string
           description?: string | null
           display_order?: number
-          end_day_offset?: number
+          end_date?: string | null
           id?: string
           instructions?: string | null
           priority?: string
-          start_day_offset?: number
+          start_date?: string | null
           task_type?: string
           title?: string
         }
