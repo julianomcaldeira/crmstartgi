@@ -104,11 +104,11 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
 
       // Create tasks based on templates
       if (templates && templates.length > 0) {
-        const campaignStart = new Date(campaign.start_date);
         const tasksToCreate = templates.map(tpl => {
-          const dueDate = new Date(campaignStart);
-          dueDate.setDate(dueDate.getDate() + tpl.end_day_offset);
-          dueDate.setHours(18, 0, 0, 0);
+          // Use the template's end_date directly as due_date
+          const dueDate = tpl.end_date
+            ? new Date(tpl.end_date + "T18:00:00")
+            : new Date(campaign.end_date + "T18:00:00");
 
           // Build description with campaign tag and instructions
           let desc = tpl.description || "";
