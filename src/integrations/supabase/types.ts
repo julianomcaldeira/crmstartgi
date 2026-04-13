@@ -18,33 +18,39 @@ export type Database = {
         Row: {
           campaign_id: string
           created_at: string
-          day_offset: number
           description: string | null
           display_order: number
+          end_day_offset: number
           id: string
+          instructions: string | null
           priority: string
+          start_day_offset: number
           task_type: string
           title: string
         }
         Insert: {
           campaign_id: string
           created_at?: string
-          day_offset?: number
           description?: string | null
           display_order?: number
+          end_day_offset?: number
           id?: string
+          instructions?: string | null
           priority?: string
+          start_day_offset?: number
           task_type?: string
           title: string
         }
         Update: {
           campaign_id?: string
           created_at?: string
-          day_offset?: number
           description?: string | null
           display_order?: number
+          end_day_offset?: number
           id?: string
+          instructions?: string | null
           priority?: string
+          start_day_offset?: number
           task_type?: string
           title?: string
         }
