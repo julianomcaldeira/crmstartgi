@@ -87,6 +87,8 @@ export const CampaignsManager = () => {
   const [saving, setSaving] = useState(false);
   const [linkedCounts, setLinkedCounts] = useState<Record<string, number>>({});
   const [linkedBySeller, setLinkedBySeller] = useState<Record<string, { name: string; count: number }[]>>({});
+  const [linkedClients, setLinkedClients] = useState<Record<string, { id: string; name: string; seller: string }[]>>({});
+  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
 
   // Form state
   const [formData, setFormData] = useState({
