@@ -382,6 +382,7 @@ export const CampaignsManager = () => {
             const statusInfo = STATUS_CONFIG[campaign.status] || STATUS_CONFIG.draft;
             const StatusIcon = statusInfo.icon;
             const count = linkedCounts[campaign.id] || 0;
+            const sellers = linkedBySeller[campaign.id] || [];
             return (
               <Card key={campaign.id} className="p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4">
@@ -406,6 +407,22 @@ export const CampaignsManager = () => {
                         {count} prospect{count !== 1 ? "s" : ""}
                       </span>
                     </div>
+
+                    {sellers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          Prospects vinculados por vendedor
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sellers.map((s, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs font-normal">
+                              {s.name} <span className="ml-1 font-semibold text-foreground">{s.count}</span>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {campaign.status === "draft" && (
