@@ -416,8 +416,11 @@ export const CampaignsManager = () => {
                         </p>
                         <div className="flex flex-wrap gap-1.5">
                           {sellers.map((s, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs font-normal">
-                              {s.name} <span className="ml-1 font-semibold text-foreground">{s.count}</span>
+                            <Badge key={idx} variant="secondary" className="text-xs font-normal gap-1.5">
+                              <span>{s.name}</span>
+                              <span className="px-1.5 py-0.5 rounded bg-primary text-primary-foreground font-semibold">
+                                {s.count}
+                              </span>
                             </Badge>
                           ))}
                         </div>
