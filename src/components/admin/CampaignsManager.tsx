@@ -86,6 +86,7 @@ export const CampaignsManager = () => {
   const [campaignToDelete, setCampaignToDelete] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [linkedCounts, setLinkedCounts] = useState<Record<string, number>>({});
+  const [linkedBySeller, setLinkedBySeller] = useState<Record<string, { name: string; count: number }[]>>({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -116,17 +117,40 @@ export const CampaignsManager = () => {
 
     setCampaigns(data || []);
 
-    // Fetch linked counts
+    // Fetch linked counts + breakdown by seller
     if (data && data.length > 0) {
       const { data: links } = await supabase
         .from("client_campaigns")
-        .select("campaign_id");
+        .select("campaign_id, linked_by");
+
+      const sellerIds = Array.from(new Set((links || []).map((l: any) => l.linked_by).filter(Boolean)));
+      let nameMap: Record<string, string> = {};
+      if (sellerIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", sellerIds);
+        nameMap = Object.fromEntries((profs || []).map((p: any) => [p.id, p.full_name]));
+      }
 
       const counts: Record<string, number> = {};
+      const bySeller: Record<string, Record<string, { name: string; count: number }>> = {};
       (links || []).forEach((l: any) => {
         counts[l.campaign_id] = (counts[l.campaign_id] || 0) + 1;
+        const sellerId = l.linked_by;
+        const sellerName = nameMap[sellerId] || "Desconhecido";
+        if (!bySeller[l.campaign_id]) bySeller[l.campaign_id] = {};
+        if (!bySeller[l.campaign_id][sellerId]) {
+          bySeller[l.campaign_id][sellerId] = { name: sellerName, count: 0 };
+        }
+        bySeller[l.campaign_id][sellerId].count += 1;
       });
       setLinkedCounts(counts);
+      const grouped: Record<string, { name: string; count: number }[]> = {};
+      Object.entries(bySeller).forEach(([cid, sellers]) => {
+        grouped[cid] = Object.values(sellers).sort((a, b) => b.count - a.count);
+      });
+      setLinkedBySeller(grouped);
     }
 
     setLoading(false);
@@ -358,6 +382,7 @@ export const CampaignsManager = () => {
             const statusInfo = STATUS_CONFIG[campaign.status] || STATUS_CONFIG.draft;
             const StatusIcon = statusInfo.icon;
             const count = linkedCounts[campaign.id] || 0;
+            const sellers = linkedBySeller[campaign.id] || [];
             return (
               <Card key={campaign.id} className="p-5 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between gap-4">
@@ -382,6 +407,22 @@ export const CampaignsManager = () => {
                         {count} prospect{count !== 1 ? "s" : ""}
                       </span>
                     </div>
+
+                    {sellers.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
+                          Prospects vinculados por vendedor
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {sellers.map((s, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs font-normal">
+                              {s.name} <span className="ml-1 font-semibold text-foreground">{s.count}</span>
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {campaign.status === "draft" && (
