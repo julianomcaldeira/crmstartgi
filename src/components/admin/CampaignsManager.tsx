@@ -117,17 +117,30 @@ export const CampaignsManager = () => {
 
     setCampaigns(data || []);
 
-    // Fetch linked counts
+    // Fetch linked counts + breakdown by seller
     if (data && data.length > 0) {
       const { data: links } = await supabase
         .from("client_campaigns")
-        .select("campaign_id");
+        .select("campaign_id, linked_by, profiles:profiles!client_campaigns_linked_by_fkey(full_name)");
 
       const counts: Record<string, number> = {};
+      const bySeller: Record<string, Record<string, { name: string; count: number }>> = {};
       (links || []).forEach((l: any) => {
         counts[l.campaign_id] = (counts[l.campaign_id] || 0) + 1;
+        const sellerId = l.linked_by;
+        const sellerName = l.profiles?.full_name || "Desconhecido";
+        if (!bySeller[l.campaign_id]) bySeller[l.campaign_id] = {};
+        if (!bySeller[l.campaign_id][sellerId]) {
+          bySeller[l.campaign_id][sellerId] = { name: sellerName, count: 0 };
+        }
+        bySeller[l.campaign_id][sellerId].count += 1;
       });
       setLinkedCounts(counts);
+      const grouped: Record<string, { name: string; count: number }[]> = {};
+      Object.entries(bySeller).forEach(([cid, sellers]) => {
+        grouped[cid] = Object.values(sellers).sort((a, b) => b.count - a.count);
+      });
+      setLinkedBySeller(grouped);
     }
 
     setLoading(false);
