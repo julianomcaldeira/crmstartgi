@@ -413,6 +413,30 @@ export const CampaignsManager = () => {
                     {campaign.description && (
                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{campaign.description}</p>
                     )}
+
+                    {(linkedClients[campaign.id]?.length || 0) > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <button
+                          type="button"
+                          onClick={() => setExpandedClients(prev => ({ ...prev, [campaign.id]: !prev[campaign.id] }))}
+                          className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
+                        >
+                          {expandedClients[campaign.id] ? "Ocultar" : "Ver"} contas vinculadas ({linkedClients[campaign.id].length})
+                        </button>
+                        {expandedClients[campaign.id] && (
+                          <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-muted/30">
+                            <ul className="divide-y divide-border">
+                              {linkedClients[campaign.id].map((c, idx) => (
+                                <li key={idx} className="px-3 py-2 text-xs flex items-center justify-between gap-2">
+                                  <span className="text-foreground truncate">{c.name}</span>
+                                  <span className="text-muted-foreground flex-shrink-0">{c.seller}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
