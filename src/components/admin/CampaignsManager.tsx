@@ -121,14 +121,24 @@ export const CampaignsManager = () => {
     if (data && data.length > 0) {
       const { data: links } = await supabase
         .from("client_campaigns")
-        .select("campaign_id, linked_by, profiles:profiles!client_campaigns_linked_by_fkey(full_name)");
+        .select("campaign_id, linked_by");
+
+      const sellerIds = Array.from(new Set((links || []).map((l: any) => l.linked_by).filter(Boolean)));
+      let nameMap: Record<string, string> = {};
+      if (sellerIds.length > 0) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", sellerIds);
+        nameMap = Object.fromEntries((profs || []).map((p: any) => [p.id, p.full_name]));
+      }
 
       const counts: Record<string, number> = {};
       const bySeller: Record<string, Record<string, { name: string; count: number }>> = {};
       (links || []).forEach((l: any) => {
         counts[l.campaign_id] = (counts[l.campaign_id] || 0) + 1;
         const sellerId = l.linked_by;
-        const sellerName = l.profiles?.full_name || "Desconhecido";
+        const sellerName = nameMap[sellerId] || "Desconhecido";
         if (!bySeller[l.campaign_id]) bySeller[l.campaign_id] = {};
         if (!bySeller[l.campaign_id][sellerId]) {
           bySeller[l.campaign_id][sellerId] = { name: sellerName, count: 0 };
