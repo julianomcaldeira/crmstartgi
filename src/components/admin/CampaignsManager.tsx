@@ -123,7 +123,7 @@ export const CampaignsManager = () => {
     if (data && data.length > 0) {
       const { data: links } = await supabase
         .from("client_campaigns")
-        .select("campaign_id, linked_by");
+        .select("campaign_id, linked_by, client_id, clients(id, company_name, trade_name)");
 
       const sellerIds = Array.from(new Set((links || []).map((l: any) => l.linked_by).filter(Boolean)));
       let nameMap: Record<string, string> = {};
@@ -137,6 +137,7 @@ export const CampaignsManager = () => {
 
       const counts: Record<string, number> = {};
       const bySeller: Record<string, Record<string, { name: string; count: number }>> = {};
+      const clientsByCampaign: Record<string, { id: string; name: string; seller: string }[]> = {};
       (links || []).forEach((l: any) => {
         counts[l.campaign_id] = (counts[l.campaign_id] || 0) + 1;
         const sellerId = l.linked_by;
@@ -146,6 +147,14 @@ export const CampaignsManager = () => {
           bySeller[l.campaign_id][sellerId] = { name: sellerName, count: 0 };
         }
         bySeller[l.campaign_id][sellerId].count += 1;
+
+        if (!clientsByCampaign[l.campaign_id]) clientsByCampaign[l.campaign_id] = [];
+        const clientName = l.clients?.trade_name || l.clients?.company_name || "Sem nome";
+        clientsByCampaign[l.campaign_id].push({
+          id: l.client_id,
+          name: clientName,
+          seller: sellerName,
+        });
       });
       setLinkedCounts(counts);
       const grouped: Record<string, { name: string; count: number }[]> = {};
@@ -153,6 +162,11 @@ export const CampaignsManager = () => {
         grouped[cid] = Object.values(sellers).sort((a, b) => b.count - a.count);
       });
       setLinkedBySeller(grouped);
+      // Sort clients alphabetically per campaign
+      Object.keys(clientsByCampaign).forEach(cid => {
+        clientsByCampaign[cid].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setLinkedClients(clientsByCampaign);
     }
 
     setLoading(false);
