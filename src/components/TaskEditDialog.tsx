@@ -342,6 +342,14 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           description: buildCampaignTaskDescription(description, task.description),
           client_id: editClientId || null,
           opportunity_id: editOpportunityId || null,
+          linkedin_connection_accepted:
+            taskType === "linkedin"
+              ? linkedinAccepted === "yes"
+                ? true
+                : linkedinAccepted === "no"
+                ? false
+                : null
+              : null,
         })
         .eq("id", task.id);
 
