@@ -52,6 +52,9 @@ const Tarefas = () => {
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaignClientsMap, setCampaignClientsMap] = useState<Record<string, Set<string>>>({});
   const [startDate, setStartDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   
