@@ -46,6 +46,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
   const [description, setDescription] = useState("");
+  const [linkedinAccepted, setLinkedinAccepted] = useState<string>("none");
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [history, setHistory] = useState<any[]>([]);
