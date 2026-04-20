@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
+import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
 // Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
 const convertDateToISO = (dateStr: string | null | undefined): string => {
@@ -227,44 +228,50 @@ const Prospects = () => {
     try {
       console.log("Fetching clients with pagination...");
 
-      const pageSize = 1000;
-      let from = 0;
-      let allClients: any[] = [];
-
-      while (true) {
+      // Buscar clientes SEM contatos embutidos (evita limite implícito do PostgREST nas relações)
+      const allClients = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("clients")
           .select(`
-          *,
-          contacts(*),
-          created_by_profile:profiles!clients_created_by_fkey(full_name, email),
-          client_feiras(feira_id)
-        `)
+            *,
+            created_by_profile:profiles!clients_created_by_fkey(full_name, email),
+            client_feiras(feira_id)
+          `)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
-          .range(from, from + pageSize - 1);
+          .range(from, to);
+        if (error) throw error;
+        return data || [];
+      });
 
-        if (error) {
-          console.error("Error fetching clients page:", error);
-          throw error;
-        }
+      // Buscar TODOS os contatos paginados separadamente para garantir que nenhum se perca
+      const allContacts = await fetchAllPaged<any>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("contacts")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        if (error) throw error;
+        return data || [];
+      });
 
-        if (!data || data.length === 0) {
-          break;
-        }
+      // Agrupar contatos por client_id
+      const contactsByClient: Record<string, any[]> = {};
+      allContacts.forEach((c) => {
+        if (!c.client_id) return;
+        if (!contactsByClient[c.client_id]) contactsByClient[c.client_id] = [];
+        contactsByClient[c.client_id].push(c);
+      });
 
-        allClients = allClients.concat(data);
+      // Mesclar contatos nos clientes
+      const merged = allClients.map((cli) => ({
+        ...cli,
+        contacts: contactsByClient[cli.id] || [],
+      }));
 
-        // Se retornou menos do que o tamanho da página, não há mais registros
-        if (data.length < pageSize) {
-          break;
-        }
-
-        from += pageSize;
-      }
-
-      console.log("Clients data fetched:", allClients.length, "records");
-      setClients(allClients);
+      console.log("Clients data fetched:", merged.length, "records,", allContacts.length, "contacts");
+      setClients(merged);
     } catch (error) {
       console.error("Error fetching clients:", error);
       toast.error("Erro ao carregar prospects");
