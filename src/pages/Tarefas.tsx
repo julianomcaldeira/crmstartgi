@@ -231,7 +231,7 @@ const Tarefas = () => {
         return q;
       };
       
-      const [tasksData, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
+      const [tasksData, clientsResponse, oppsResponse, usersResponse, campaignsResponse, clientCampaignsResponse] = await Promise.all([
         // Lista pode ultrapassar 1000 linhas; paginamos para não "sumir" tarefa pendente
         fetchAllPaged(async (from, to) => {
           const { data, error } = await buildTasksQuery().range(from, to);
@@ -241,6 +241,8 @@ const Tarefas = () => {
         supabase.from("clients").select("id, company_name, trade_name, cnpj"),
         supabase.from("opportunities").select("id, title"),
         supabase.from("profiles").select("id, full_name").or("is_deleted.is.null,is_deleted.eq.false"),
+        supabase.from("campaigns").select("id, name, status").order("name"),
+        supabase.from("client_campaigns").select("campaign_id, client_id"),
       ]);
 
       if (clientsResponse.error) throw clientsResponse.error;
@@ -254,10 +256,19 @@ const Tarefas = () => {
         opportunity: t.opportunity ?? t.opportunities,
       }));
 
+      // Mapear campanha -> set de client_ids
+      const campaignMap: Record<string, Set<string>> = {};
+      (clientCampaignsResponse.data || []).forEach((cc: any) => {
+        if (!campaignMap[cc.campaign_id]) campaignMap[cc.campaign_id] = new Set();
+        campaignMap[cc.campaign_id].add(cc.client_id);
+      });
+
       setTasks(normalizedTasks);
       setClients(clientsResponse.data || []);
       setOpportunities(oppsResponse.data || []);
       setUsers(usersResponse.data || []);
+      setCampaigns(campaignsResponse.data || []);
+      setCampaignClientsMap(campaignMap);
 
       // Mantém userRole do estado alinhada com a role real (evita admin/gestor serem tratados como vendedor)
       setUserRole(resolvedRole);
