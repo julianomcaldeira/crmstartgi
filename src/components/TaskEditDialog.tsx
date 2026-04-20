@@ -46,6 +46,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [priority, setPriority] = useState("");
   const [status, setStatus] = useState("");
   const [description, setDescription] = useState("");
+  const [linkedinAccepted, setLinkedinAccepted] = useState<string>("none");
   const [notes, setNotes] = useState<any[]>([]);
   const [newNote, setNewNote] = useState("");
   const [history, setHistory] = useState<any[]>([]);
@@ -83,6 +84,13 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setDescription(parseCampaignTaskDescription(task.description).editableDescription);
       setEditClientId(task.client_id || "");
       setEditOpportunityId(task.opportunity_id || "");
+      setLinkedinAccepted(
+        task.linkedin_connection_accepted === true
+          ? "yes"
+          : task.linkedin_connection_accepted === false
+          ? "no"
+          : "none"
+      );
       setNotes([]);
       setNewNote("");
       fetchNotesForTask(task.id);
@@ -334,6 +342,14 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           description: buildCampaignTaskDescription(description, task.description),
           client_id: editClientId || null,
           opportunity_id: editOpportunityId || null,
+          linkedin_connection_accepted:
+            taskType === "linkedin"
+              ? linkedinAccepted === "yes"
+                ? true
+                : linkedinAccepted === "no"
+                ? false
+                : null
+              : null,
         })
         .eq("id", task.id);
 
@@ -489,6 +505,22 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                 </SelectContent>
               </Select>
             </div>
+
+            {taskType === "linkedin" && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Aceitou pedido de conexão no LinkedIn?</Label>
+                <Select value={linkedinAccepted} onValueChange={setLinkedinAccepted}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="none">Aguardando resposta</SelectItem>
+                    <SelectItem value="yes">Sim, aceitou</SelectItem>
+                    <SelectItem value="no">Não aceitou</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
            </div>
 
           {/* Client & Opportunity linking */}

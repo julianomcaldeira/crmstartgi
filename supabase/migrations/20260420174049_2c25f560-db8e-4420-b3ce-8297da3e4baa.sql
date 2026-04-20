@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS linkedin_connection_accepted boolean;

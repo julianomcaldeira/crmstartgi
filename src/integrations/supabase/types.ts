@@ -2042,6 +2042,7 @@ export type Database = {
           email_sent: boolean | null
           email_subject: string | null
           id: string
+          linkedin_connection_accepted: boolean | null
           opportunity_id: string | null
           priority: Database["public"]["Enums"]["priority_level"] | null
           status: Database["public"]["Enums"]["task_status"] | null
@@ -2062,6 +2063,7 @@ export type Database = {
           email_sent?: boolean | null
           email_subject?: string | null
           id?: string
+          linkedin_connection_accepted?: boolean | null
           opportunity_id?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           status?: Database["public"]["Enums"]["task_status"] | null
@@ -2082,6 +2084,7 @@ export type Database = {
           email_sent?: boolean | null
           email_subject?: string | null
           id?: string
+          linkedin_connection_accepted?: boolean | null
           opportunity_id?: string | null
           priority?: Database["public"]["Enums"]["priority_level"] | null
           status?: Database["public"]["Enums"]["task_status"] | null
