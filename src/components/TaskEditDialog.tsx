@@ -505,6 +505,22 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                 </SelectContent>
               </Select>
             </div>
+
+            {taskType === "linkedin" && (
+              <div className="space-y-2 md:col-span-2">
+                <Label>Aceitou pedido de conexão no LinkedIn?</Label>
+                <Select value={linkedinAccepted} onValueChange={setLinkedinAccepted}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="none">Aguardando resposta</SelectItem>
+                    <SelectItem value="yes">Sim, aceitou</SelectItem>
+                    <SelectItem value="no">Não aceitou</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
            </div>
 
           {/* Client & Opportunity linking */}
