@@ -84,6 +84,13 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
       setDescription(parseCampaignTaskDescription(task.description).editableDescription);
       setEditClientId(task.client_id || "");
       setEditOpportunityId(task.opportunity_id || "");
+      setLinkedinAccepted(
+        task.linkedin_connection_accepted === true
+          ? "yes"
+          : task.linkedin_connection_accepted === false
+          ? "no"
+          : "none"
+      );
       setNotes([]);
       setNewNote("");
       fetchNotesForTask(task.id);
