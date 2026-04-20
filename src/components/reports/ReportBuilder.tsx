@@ -54,7 +54,7 @@ export interface ReportConfig {
   groupBy?: string;
   sortBy?: string;
   // Novos campos
-  mode: ReportMode;
+  mode?: ReportMode;
   analyticTables?: AnalyticTableSelection[];
 }
 
