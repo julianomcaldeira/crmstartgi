@@ -52,6 +52,9 @@ const Tarefas = () => {
   // Filters
   const [selectedClient, setSelectedClient] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedCampaign, setSelectedCampaign] = useState<string>("all");
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaignClientsMap, setCampaignClientsMap] = useState<Record<string, Set<string>>>({});
   const [startDate, setStartDate] = useState(() => format(startOfMonth(new Date()), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   
@@ -228,7 +231,7 @@ const Tarefas = () => {
         return q;
       };
       
-      const [tasksData, clientsResponse, oppsResponse, usersResponse] = await Promise.all([
+      const [tasksData, clientsResponse, oppsResponse, usersResponse, campaignsResponse, clientCampaignsResponse] = await Promise.all([
         // Lista pode ultrapassar 1000 linhas; paginamos para não "sumir" tarefa pendente
         fetchAllPaged(async (from, to) => {
           const { data, error } = await buildTasksQuery().range(from, to);
@@ -238,6 +241,8 @@ const Tarefas = () => {
         supabase.from("clients").select("id, company_name, trade_name, cnpj"),
         supabase.from("opportunities").select("id, title"),
         supabase.from("profiles").select("id, full_name").or("is_deleted.is.null,is_deleted.eq.false"),
+        supabase.from("campaigns").select("id, name, status").order("name"),
+        supabase.from("client_campaigns").select("campaign_id, client_id"),
       ]);
 
       if (clientsResponse.error) throw clientsResponse.error;
@@ -251,10 +256,19 @@ const Tarefas = () => {
         opportunity: t.opportunity ?? t.opportunities,
       }));
 
+      // Mapear campanha -> set de client_ids
+      const campaignMap: Record<string, Set<string>> = {};
+      (clientCampaignsResponse.data || []).forEach((cc: any) => {
+        if (!campaignMap[cc.campaign_id]) campaignMap[cc.campaign_id] = new Set();
+        campaignMap[cc.campaign_id].add(cc.client_id);
+      });
+
       setTasks(normalizedTasks);
       setClients(clientsResponse.data || []);
       setOpportunities(oppsResponse.data || []);
       setUsers(usersResponse.data || []);
+      setCampaigns(campaignsResponse.data || []);
+      setCampaignClientsMap(campaignMap);
 
       // Mantém userRole do estado alinhada com a role real (evita admin/gestor serem tratados como vendedor)
       setUserRole(resolvedRole);
@@ -696,6 +710,10 @@ const Tarefas = () => {
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
     const matchesUser = selectedUser === "all" || task.assigned_to === selectedUser;
 
+    const matchesCampaign =
+      selectedCampaign === "all" ||
+      (!!task.client_id && (campaignClientsMap[selectedCampaign]?.has(task.client_id) ?? false));
+
     const matchesStartDate = !startBoundary || !taskDate || taskDate >= startBoundary;
     const matchesEndDate = !endBoundary || !taskDate || taskDate <= endBoundary;
 
@@ -705,6 +723,7 @@ const Tarefas = () => {
     return (
       matchesClient &&
       matchesUser &&
+      matchesCampaign &&
       matchesStartDate &&
       matchesEndDate &&
       matchesQuickTaskType &&
@@ -734,7 +753,7 @@ const Tarefas = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
+  }, [filter, selectedClient, selectedUser, selectedCampaign, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
@@ -1083,7 +1102,7 @@ const Tarefas = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <Select value={selectedClient} onValueChange={setSelectedClient}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por cliente" />
@@ -1093,6 +1112,20 @@ const Tarefas = () => {
                   {clients.map((client) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.company_name || client.trade_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por campanha" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as campanhas</SelectItem>
+                  {campaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
