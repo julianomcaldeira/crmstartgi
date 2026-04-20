@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportReport } from "@/lib/reportExport";
+import { exportAnalyticReport, AnalyticReportConfig } from "@/lib/analyticReportExport";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -733,7 +734,32 @@ const Relatorios = () => {
         <ReportBuilder
           onGenerate={handleGenerateReport}
           onPreview={handleGenerateReport}
+          onExportAnalytic={async (config) => {
+            if (!config.analyticTables || config.analyticTables.length === 0) {
+              toast.error("Selecione pelo menos uma tabela.");
+              return;
+            }
+            setLoading(true);
+            try {
+              const analyticConfig: AnalyticReportConfig = {
+                mode: config.mode === "hibrido" ? "hibrido" : "analitico",
+                tables: config.analyticTables,
+                globalDateFrom: startDate,
+                globalDateTo: endDate,
+                globalSeller: selectedSeller,
+                fileName: `relatorio-${config.mode}-${startDate}-${endDate}.xlsx`,
+              };
+              await exportAnalyticReport(analyticConfig);
+              toast.success("Relatório analítico exportado em Excel.");
+            } catch (e: any) {
+              console.error(e);
+              toast.error(e?.message || "Erro ao exportar relatório analítico.");
+            } finally {
+              setLoading(false);
+            }
+          }}
           loading={loading}
+          sellers={sellers}
         />
       )}
 
