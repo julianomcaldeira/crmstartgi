@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -540,7 +541,7 @@ const InteligenciaMercado = () => {
 
   const renderMarkdown = (text: string) => {
     // Simple markdown rendering
-    return text
+    const html = text
       .split('\n')
       .map((line, i) => {
         // Bold
@@ -557,6 +558,7 @@ const InteligenciaMercado = () => {
         return line ? `<p class="mb-2">${line}</p>` : '<br/>';
       })
       .join('');
+    return DOMPurify.sanitize(html);
   };
 
   const exportToPDF = () => {

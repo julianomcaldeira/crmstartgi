@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import DOMPurify from "dompurify";
 
 interface AIAnalysis {
   id: string;
@@ -144,7 +145,7 @@ export function AIAnalysisHistoryList({ clientId }: AIAnalysisHistoryListProps) 
     html = html.replace(/\n\n/g, '</p><p class="mb-3">');
     html = html.replace(/\n/g, '<br/>');
     html = html.replace(/^---+$/gm, '<hr class="my-4 border-border"/>');
-    return `<div class="prose prose-sm max-w-none"><p class="mb-3">${html}</p></div>`;
+    return DOMPurify.sanitize(`<div class="prose prose-sm max-w-none"><p class="mb-3">${html}</p></div>`);
   };
 
   const formatDate = (date: string) => {
