@@ -710,6 +710,10 @@ const Tarefas = () => {
     const matchesClient = selectedClient === "all" || task.client_id === selectedClient;
     const matchesUser = selectedUser === "all" || task.assigned_to === selectedUser;
 
+    const matchesCampaign =
+      selectedCampaign === "all" ||
+      (!!task.client_id && (campaignClientsMap[selectedCampaign]?.has(task.client_id) ?? false));
+
     const matchesStartDate = !startBoundary || !taskDate || taskDate >= startBoundary;
     const matchesEndDate = !endBoundary || !taskDate || taskDate <= endBoundary;
 
@@ -719,6 +723,7 @@ const Tarefas = () => {
     return (
       matchesClient &&
       matchesUser &&
+      matchesCampaign &&
       matchesStartDate &&
       matchesEndDate &&
       matchesQuickTaskType &&
@@ -748,7 +753,7 @@ const Tarefas = () => {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, selectedClient, selectedUser, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
+  }, [filter, selectedClient, selectedUser, selectedCampaign, startDate, endDate, quickTaskTypeFilter, quickPriorityFilter, aiMatchedIds]);
 
   const getWeekDays = () => {
     const start = startOfWeek(currentDate, { locale: ptBR });
