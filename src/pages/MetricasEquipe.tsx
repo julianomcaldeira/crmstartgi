@@ -260,7 +260,9 @@ const MetricasEquipe = () => {
       const roles = (currentUserRoles || []).map((r) => r.role);
       const isPrivileged = roles.includes("admin") || roles.includes("gestor");
 
-      // 1. Get vendedores (admins/gestores see all; vendedores see only themselves)
+      // 1. Get vendedores. Always load ALL vendedores for company-wide
+      // aggregation, then filter to current user only (when not privileged)
+      // for the per-seller table view.
       const { data: vendedorRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -268,21 +270,22 @@ const MetricasEquipe = () => {
 
       if (rolesError) throw rolesError;
 
-      let vendedorIds = (vendedorRoles || []).map((r) => r.user_id);
-      if (!isPrivileged) {
-        vendedorIds = vendedorIds.filter((id) => id === currentUser.id);
-      }
+      const allVendedorIds = (vendedorRoles || []).map((r) => r.user_id);
+      const vendedorIds = isPrivileged
+        ? allVendedorIds
+        : allVendedorIds.filter((id) => id === currentUser.id);
 
-      if (vendedorIds.length === 0) {
+      if (allVendedorIds.length === 0) {
         setSellers([]);
         setGoalsBySeller({});
+        setCompanyGoalsBySeller({});
         return;
       }
 
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email")
-        .in("id", vendedorIds)
+        .in("id", vendedorIds.length > 0 ? vendedorIds : allVendedorIds)
         .or("is_deleted.is.null,is_deleted.eq.false")
         .order("full_name");
 
@@ -294,8 +297,10 @@ const MetricasEquipe = () => {
       const yearStart = `${year}-01-01`;
       const yearEnd = `${year}-12-31`;
 
+      // Always compute monetary achieved across ALL vendedores so the
+      // company total is consistent regardless of the viewer's role.
       const { bySeller: sellerMonetaryAchieved, nonSeller } =
-        await loadWonAchievementBucketsForYear(year, vendedorIds);
+        await loadWonAchievementBucketsForYear(year, allVendedorIds);
 
       setNonSellerAchieved(nonSeller);
 
