@@ -99,11 +99,37 @@ const CATEGORY_META: Record<SellerStats["category"], { label: string; icon: any;
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
 
+const METRIC_LABEL: Record<AuditMetric, string> = {
+  tasks: "Tarefas concluídas",
+  activities: "Atividades registradas",
+  opportunitiesCreated: "Oportunidades criadas",
+  clients: "Clientes criados",
+  won: "Oportunidades ganhas",
+};
+
+const formatDate = (d?: string | null) => {
+  if (!d) return "—";
+  try {
+    return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: ptBR });
+  } catch {
+    return "—";
+  }
+};
+
 export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SellerStats[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [isPrivileged, setIsPrivileged] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditSeller, setAuditSeller] = useState<SellerStats | null>(null);
+  const [auditMetric, setAuditMetric] = useState<AuditMetric | null>(null);
+
+  const openAudit = (seller: SellerStats, metric: AuditMetric) => {
+    setAuditSeller(seller);
+    setAuditMetric(metric);
+    setAuditOpen(true);
+  };
 
   useEffect(() => {
     const init = async () => {
