@@ -304,22 +304,24 @@ const MetricasEquipe = () => {
 
       setNonSellerAchieved(nonSeller);
 
-      // 2. Fetch goals overlapping the selected year
-      const { data: goals, error: goalsError } = await supabase
+      // 2. Fetch goals overlapping the selected year for ALL vendedores
+      // (so we can build a correct company-wide aggregate even when the
+      // viewer is a vendedor seeing only themselves).
+      const { data: allGoals, error: goalsError } = await supabase
         .from("goals")
         .select("*")
-        .in("assigned_to", vendedorIds)
+        .in("assigned_to", allVendedorIds)
         .lte("start_date", yearEnd)
         .gte("end_date", yearStart);
 
       if (goalsError) throw goalsError;
 
       // 3. For each goal, compute month-by-month progress
-      const computed: Record<string, GoalWithMonths[]> = {};
+      const computedAll: Record<string, GoalWithMonths[]> = {};
       const today = new Date();
 
       await Promise.all(
-        (goals || []).map(async (goal: any) => {
+        (allGoals || []).map(async (goal: any) => {
           const months: MonthCell[] = [];
           const goalStart = new Date(goal.start_date + "T12:00:00");
           const goalEnd = new Date(goal.end_date + "T12:00:00");
@@ -342,11 +344,6 @@ const MetricasEquipe = () => {
 
           const coveredCount = monthsCovered.filter(Boolean).length || 1;
 
-          // Target per month rules:
-          // - revenue / annualized_sales: target_value is treated as a total for the
-          //   covered period, so distribute across the covered months in the year
-          // - other goals with period mensal: target_value is already monthly
-          // - other goals with period anual / semestral: distribute by 12 / 6
           const isMonetaryGoal =
             goal.goal_type === "revenue" || goal.goal_type === "annualized_sales";
           const perMonthTarget = isMonetaryGoal
@@ -356,6 +353,13 @@ const MetricasEquipe = () => {
             : period === "semestral"
             ? targetValue / 6
             : targetValue;
+
+          // For non-monetary goals belonging to OTHER vendedores when the
+          // viewer is not privileged, skip the per-month achieved query
+          // (RLS may hide rows and it would be expensive). Targets still
+          // count toward the company aggregate.
+          const skipNonMonetaryAchieved =
+            !isMonetaryGoal && !isPrivileged && goal.assigned_to !== currentUser.id;
 
           for (let m = 0; m < 12; m++) {
             if (!monthsCovered[m]) {
@@ -368,20 +372,19 @@ const MetricasEquipe = () => {
             const startStr = format(mStart, "yyyy-MM-dd");
             const endStr = format(mEnd, "yyyy-MM-dd");
 
-            // Only compute achieved up to end of current month (future stays 0)
             let achieved = 0;
             if (mStart <= today) {
               if (monetaryAchieved) {
                 achieved = monetaryAchieved[m] || 0;
-              } else {
-              achieved = await fetchAchievedForMonth(
-                goal.goal_type,
-                goal.assigned_to,
-                startStr,
-                endStr,
-                goal.task_type_filter ?? null,
-                goal.activity_type_filter ?? null
-              );
+              } else if (!skipNonMonetaryAchieved) {
+                achieved = await fetchAchievedForMonth(
+                  goal.goal_type,
+                  goal.assigned_to,
+                  startStr,
+                  endStr,
+                  goal.task_type_filter ?? null,
+                  goal.activity_type_filter ?? null
+                );
               }
             }
 
@@ -397,9 +400,6 @@ const MetricasEquipe = () => {
             });
           }
 
-          // Year-to-Date totals: only sum target/achieved up to the current
-          // month for the current year. Past years sum the full 12 months;
-          // future years sum nothing.
           const todayYear = today.getFullYear();
           const ytdLastIdx =
             year < todayYear ? 11 : year > todayYear ? -1 : today.getMonth();
@@ -426,21 +426,29 @@ const MetricasEquipe = () => {
             totalPercentage,
           };
 
-          if (!computed[goal.assigned_to]) computed[goal.assigned_to] = [];
-          computed[goal.assigned_to].push(item);
+          if (!computedAll[goal.assigned_to]) computedAll[goal.assigned_to] = [];
+          computedAll[goal.assigned_to].push(item);
         })
       );
 
       // Sort goals per seller by type then title
-      Object.keys(computed).forEach((sid) => {
-        computed[sid].sort((a, b) =>
+      Object.keys(computedAll).forEach((sid) => {
+        computedAll[sid].sort((a, b) =>
           a.goal_type === b.goal_type
             ? a.title.localeCompare(b.title)
             : a.goal_type.localeCompare(b.goal_type)
         );
       });
 
+      // Per-seller table view: only includes vendedores the viewer can see
+      const visibleSellerSet = new Set(vendedorIds);
+      const computed: Record<string, GoalWithMonths[]> = {};
+      Object.entries(computedAll).forEach(([sid, gs]) => {
+        if (visibleSellerSet.has(sid)) computed[sid] = gs;
+      });
+
       setGoalsBySeller(computed);
+      setCompanyGoalsBySeller(computedAll);
     } catch (err) {
       console.error("Error loading team metrics:", err);
       toast.error("Erro ao carregar métricas da equipe");
