@@ -157,6 +157,10 @@ const MONTH_LABELS = [
 const MetricasEquipe = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [goalsBySeller, setGoalsBySeller] = useState<Record<string, GoalWithMonths[]>>({});
+  const [nonSellerAchieved, setNonSellerAchieved] = useState<{
+    revenue: number[];
+    annualized_sales: number[];
+  }>({ revenue: Array(12).fill(0), annualized_sales: Array(12).fill(0) });
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
