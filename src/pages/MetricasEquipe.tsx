@@ -545,7 +545,7 @@ const MetricasEquipe = () => {
                               </TableHead>
                             ))}
                             <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total Ano
+                              Total YTD
                             </TableHead>
                           </TableRow>
                         </TableHeader>
@@ -728,7 +728,7 @@ const MetricasEquipe = () => {
                               </TableHead>
                             ))}
                             <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total Ano
+                              Total YTD
                             </TableHead>
                           </TableRow>
                         </TableHeader>
