@@ -102,7 +102,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Upload, label: "Importação", path: "/importacao" },
     { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" },
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },
-    ...((isAdmin || isGestor) ? [{ icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" }] : []),
+    { icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];
