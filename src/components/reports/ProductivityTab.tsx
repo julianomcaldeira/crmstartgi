@@ -490,7 +490,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                       <Search className="h-3 w-3" /> Clique para auditar
                     </span>
                   </p>
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-5 gap-2 text-center">
                     <button
                       type="button"
                       onClick={() => openAudit(s, "tasks")}
@@ -514,6 +514,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                     >
                       <p className="text-lg font-bold">{s.opportunitiesCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Opp criadas</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "opportunitiesMoved")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
+                      <p className="text-lg font-bold">{s.opportunitiesMoved}</p>
+                      <p className="text-[10px] text-muted-foreground">Opp movidas</p>
                     </button>
                     <button
                       type="button"
