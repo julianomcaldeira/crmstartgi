@@ -38,9 +38,106 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
-// Local month-bounded progress calc (avoids the "current month only" bug
-// in useGoalProgress.calculateGoalProgress when period is "mensal").
+type MonetaryGoalType = "revenue" | "annualized_sales";
+
+interface MonetaryBuckets {
+  revenue: number[];
+  annualized_sales: number[];
+}
+
+const createEmptyMonetaryBuckets = (): MonetaryBuckets => ({
+  revenue: Array(12).fill(0),
+  annualized_sales: Array(12).fill(0),
+});
+
+const calculateMonetaryAchieved = (goalType: MonetaryGoalType, opp: any) => {
+  const billingType = opp?.billing_type ?? null;
+  const isPontual = billingType === "pontual";
+  const impl = Number(opp?.implementation_value) || 0;
+  const monthly = Number(opp?.monthly_value) || 0;
+  const value = Number(opp?.value) || 0;
+
+  if (goalType === "annualized_sales") {
+    return isPontual ? 0 : impl + monthly * 12;
+  }
+
+  return isPontual ? value || impl : impl + monthly * 12;
+};
+
+async function loadWonAchievementBucketsForYear(
+  year: number,
+  sellerIds: string[]
+): Promise<{
+  bySeller: Record<string, MonetaryBuckets>;
+  nonSeller: MonetaryBuckets;
+}> {
+  const bySeller = Object.fromEntries(
+    sellerIds.map((sellerId) => [sellerId, createEmptyMonetaryBuckets()])
+  ) as Record<string, MonetaryBuckets>;
+  const nonSeller = createEmptyMonetaryBuckets();
+
+  const wonOpportunities = await fetchAllPaged<any>(async (from, to) => {
+    const { data, error } = await supabase
+      .from("opportunities")
+      .select("id, assigned_to, implementation_value, monthly_value, billing_type, value, updated_at")
+      .eq("status", "won")
+      .order("updated_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+    return data || [];
+  });
+
+  if (wonOpportunities.length === 0) {
+    return { bySeller, nonSeller };
+  }
+
+  const firstWonAtByOpportunity = new Map<string, string>();
+  const opportunityIds = wonOpportunities.map((opp) => opp.id);
+
+  for (let i = 0; i < opportunityIds.length; i += 200) {
+    const chunk = opportunityIds.slice(i, i + 200);
+    const { data, error } = await supabase
+      .from("opportunity_activities")
+      .select("opportunity_id, created_at, new_value")
+      .in("opportunity_id", chunk)
+      .eq("new_value", "Ganho")
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    (data || []).forEach((activity) => {
+      if (!firstWonAtByOpportunity.has(activity.opportunity_id)) {
+        firstWonAtByOpportunity.set(activity.opportunity_id, activity.created_at);
+      }
+    });
+  }
+
+  const sellerSet = new Set(sellerIds);
+
+  wonOpportunities.forEach((opp) => {
+    const wonAt = firstWonAtByOpportunity.get(opp.id) ?? opp.updated_at;
+    if (!wonAt) return;
+
+    const wonDate = new Date(wonAt);
+    if (wonDate.getFullYear() !== year) return;
+
+    const monthIndex = wonDate.getMonth();
+    const buckets = sellerSet.has(opp.assigned_to)
+      ? bySeller[opp.assigned_to]
+      : nonSeller;
+
+    buckets.revenue[monthIndex] += calculateMonetaryAchieved("revenue", opp);
+    buckets.annualized_sales[monthIndex] += calculateMonetaryAchieved("annualized_sales", opp);
+  });
+
+  return { bySeller, nonSeller };
+}
+
+// Local month-bounded progress calc for non-monetary goals.
 async function fetchAchievedForMonth(
   goalType: string,
   assignedTo: string,
@@ -51,34 +148,6 @@ async function fetchAchievedForMonth(
 ): Promise<number> {
   const startTs = `${startStr}T00:00:00`;
   const endTs = `${endStr}T23:59:59`;
-
-  if (goalType === "revenue" || goalType === "annualized_sales") {
-    const { data, error } = await supabase
-      .from("opportunities")
-      .select("implementation_value, monthly_value, billing_type, value")
-      .eq("assigned_to", assignedTo)
-      .eq("status", "won")
-      .gte("updated_at", startTs)
-      .lte("updated_at", endTs);
-    if (error) {
-      console.error("revenue fetch error", error);
-      return 0;
-    }
-    return (data || []).reduce((sum: number, opp: any) => {
-      const billingType = opp?.billing_type ?? null;
-      const isPontual = billingType === "pontual";
-      const impl = Number(opp?.implementation_value) || 0;
-      const monthly = Number(opp?.monthly_value) || 0;
-      const value = Number(opp?.value) || 0;
-      if (goalType === "annualized_sales") {
-        if (isPontual) return sum;
-        return sum + impl + monthly * 12;
-      }
-      // revenue
-      if (isPontual) return sum + (value || impl);
-      return sum + impl + monthly * 12;
-    }, 0);
-  }
 
   if (goalType === "tasks") {
     let q = supabase
