@@ -109,13 +109,21 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
   const loadProductivity = async () => {
     setLoading(true);
     try {
-      // Determine which sellers to compute
+      // Determine which sellers to compute — apenas vendedores
       const { data: vendedorRoles } = await supabase
         .from("user_roles")
         .select("user_id")
-        .in("role", ["vendedor", "gestor", "admin"]);
+        .eq("role", "vendedor");
 
-      let sellerIds = Array.from(new Set((vendedorRoles || []).map((r: any) => r.user_id)));
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["admin", "gestor"]);
+
+      const adminIds = new Set((adminRoles || []).map((r: any) => r.user_id));
+      let sellerIds = Array.from(
+        new Set((vendedorRoles || []).map((r: any) => r.user_id))
+      ).filter((id) => !adminIds.has(id));
 
       // Restrict to current user if not privileged
       if (!isPrivileged) {
@@ -361,74 +369,6 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         </CardContent>
       </Card>
 
-      {/* Scatter Chart */}
-      {isPrivileged && stats.length > 1 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
-              Esforço x Resultado
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Eixo X: esforço total · Eixo Y: receita ganha · Tamanho: oportunidades ganhas
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={360}>
-              <ScatterChart margin={{ top: 20, right: 20, bottom: 40, left: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  type="number"
-                  dataKey="x"
-                  name="Esforço"
-                  label={{ value: "Esforço (tarefas + atividades + opp + clientes)", position: "bottom", offset: 20, fill: "hsl(var(--muted-foreground))" }}
-                  tick={{ fill: "hsl(var(--foreground))" }}
-                />
-                <YAxis
-                  type="number"
-                  dataKey="y"
-                  name="Receita"
-                  tickFormatter={(v) => formatCurrency(v)}
-                  label={{ value: "Receita ganha", angle: -90, position: "left", offset: 40, fill: "hsl(var(--muted-foreground))" }}
-                  tick={{ fill: "hsl(var(--foreground))", fontSize: 11 }}
-                />
-                <ZAxis type="number" dataKey="z" range={[80, 400]} />
-                <Tooltip
-                  cursor={{ strokeDasharray: "3 3" }}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: any, name: string) => {
-                    if (name === "Receita") return formatCurrency(Number(value));
-                    return value;
-                  }}
-                  labelFormatter={(_, payload) => (payload?.[0]?.payload?.name as string) || ""}
-                />
-                <Scatter data={scatterData}>
-                  {scatterData.map((entry, idx) => (
-                    <Cell key={idx} fill={categoryColors[entry.category as SellerStats["category"]]} />
-                  ))}
-                </Scatter>
-              </ScatterChart>
-            </ResponsiveContainer>
-            <div className="flex flex-wrap gap-3 mt-4 justify-center">
-              {(Object.keys(CATEGORY_META) as SellerStats["category"][]).map((k) => {
-                const meta = CATEGORY_META[k];
-                const Icon = meta.icon;
-                return (
-                  <div key={k} className="flex items-center gap-1.5 text-xs">
-                    <span className="h-3 w-3 rounded-full" style={{ backgroundColor: categoryColors[k] }} />
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{meta.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Per-seller cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
