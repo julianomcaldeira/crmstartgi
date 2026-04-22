@@ -298,6 +298,11 @@ const MetricasEquipe = () => {
           const goalStart = new Date(goal.start_date + "T12:00:00");
           const goalEnd = new Date(goal.end_date + "T12:00:00");
 
+          const monetaryAchieved =
+            goal.goal_type === "revenue" || goal.goal_type === "annualized_sales"
+              ? sellerMonetaryAchieved[goal.assigned_to]?.[goal.goal_type as MonetaryGoalType] ?? Array(12).fill(0)
+              : null;
+
           // Determine per-month target depending on period
           const period = goal.period || "mensal";
           const targetValue = Number(goal.target_value) || 0;
@@ -340,6 +345,9 @@ const MetricasEquipe = () => {
             // Only compute achieved up to end of current month (future stays 0)
             let achieved = 0;
             if (mStart <= today) {
+              if (monetaryAchieved) {
+                achieved = monetaryAchieved[m] || 0;
+              } else {
               achieved = await fetchAchievedForMonth(
                 goal.goal_type,
                 goal.assigned_to,
@@ -348,6 +356,7 @@ const MetricasEquipe = () => {
                 goal.task_type_filter ?? null,
                 goal.activity_type_filter ?? null
               );
+              }
             }
 
             const pct =
