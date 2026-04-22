@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Activity,
   Trophy,
   Gem,
@@ -16,15 +24,19 @@ import {
   DollarSign,
   Zap,
   Users,
+  Search,
 } from "lucide-react";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
-import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, CartesianGrid, Legend, Cell } from "recharts";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Props {
   startDate: string;
   endDate: string;
   selectedSeller: string; // 'all' or user id
 }
+
+type AuditMetric = "tasks" | "activities" | "opportunitiesCreated" | "clients" | "won";
 
 type SellerStats = {
   id: string;
@@ -37,8 +49,8 @@ type SellerStats = {
   effortScore: number; // composite
   // Resultado
   opportunitiesWon: number;
-  revenueCash: number; // implementation + monthly*12 (or value if pontual)
-  annualizedRevenue: number; // monthly*12 + implementation (skip pontual)
+  revenueCash: number;
+  annualizedRevenue: number;
   conversionRate: number;
   // Eficiência
   revenuePerTask: number;
@@ -47,6 +59,14 @@ type SellerStats = {
   activitiesPerWin: number;
   // Diagnóstico
   category: "champion" | "efficient" | "wrong_focus" | "low_effort";
+  // Auditoria — registros brutos
+  audit: {
+    tasks: any[];
+    activities: any[];
+    opportunitiesCreated: any[];
+    clients: any[];
+    won: any[];
+  };
 };
 
 const CATEGORY_META: Record<SellerStats["category"], { label: string; icon: any; color: string; description: string }> = {
@@ -79,11 +99,37 @@ const CATEGORY_META: Record<SellerStats["category"], { label: string; icon: any;
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
 
+const METRIC_LABEL: Record<AuditMetric, string> = {
+  tasks: "Tarefas concluídas",
+  activities: "Atividades registradas",
+  opportunitiesCreated: "Oportunidades criadas",
+  clients: "Clientes criados",
+  won: "Oportunidades ganhas",
+};
+
+const formatDate = (d?: string | null) => {
+  if (!d) return "—";
+  try {
+    return format(new Date(d), "dd/MM/yyyy HH:mm", { locale: ptBR });
+  } catch {
+    return "—";
+  }
+};
+
 export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<SellerStats[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [isPrivileged, setIsPrivileged] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
+  const [auditSeller, setAuditSeller] = useState<SellerStats | null>(null);
+  const [auditMetric, setAuditMetric] = useState<AuditMetric | null>(null);
+
+  const openAudit = (seller: SellerStats, metric: AuditMetric) => {
+    setAuditSeller(seller);
+    setAuditMetric(metric);
+    setAuditOpen(true);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -148,11 +194,10 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const endTs = `${endDate}T23:59:59`;
 
       // Won opportunities — using first 'Ganho' activity timestamp
-      // 1. Fetch ALL won opps for these sellers (we'll filter by won-date later)
       const wonOpps = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunities")
-          .select("id, assigned_to, created_by, implementation_value, monthly_value, value, billing_type, updated_at, close_cycle_days")
+          .select("id, title, assigned_to, created_by, implementation_value, monthly_value, value, billing_type, updated_at, close_cycle_days, client_id, clients(company_name, trade_name)")
           .eq("status", "won")
           .or(sellerIds.map((id) => `assigned_to.eq.${id}`).join(","))
           .range(from, to);
@@ -180,17 +225,19 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         });
       }
 
-      // Filter won opps that fell within window
-      const wonInWindow = wonOpps.filter((o) => {
-        const wonAt = wonAtMap.get(o.id) ?? o.updated_at;
-        return wonAt >= startTs && wonAt <= endTs;
-      });
+      // Filter won opps that fell within window — attach won_at for display
+      const wonInWindow = wonOpps
+        .filter((o) => {
+          const wonAt = wonAtMap.get(o.id) ?? o.updated_at;
+          return wonAt >= startTs && wonAt <= endTs;
+        })
+        .map((o) => ({ ...o, won_at: wonAtMap.get(o.id) ?? o.updated_at }));
 
       // Fetch all opportunities created in window (per seller)
       const oppsCreated = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunities")
-          .select("id, assigned_to, created_by, status")
+          .select("id, title, assigned_to, created_by, status, value, monthly_value, created_at, client_id, clients(company_name, trade_name)")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .or(sellerIds.map((id) => `assigned_to.eq.${id}`).join(","))
@@ -203,7 +250,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const clientsCreated = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("clients")
-          .select("id, created_by")
+          .select("id, company_name, trade_name, cnpj, created_by, created_at")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .in("created_by", sellerIds)
@@ -216,7 +263,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const tasksCompleted = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("tasks")
-          .select("id, assigned_to, completed_at, updated_at")
+          .select("id, title, task_type, assigned_to, completed_at, updated_at, client_id, clients(company_name, trade_name)")
           .eq("status", "completed")
           .in("assigned_to", sellerIds)
           .or(`and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`)
@@ -229,7 +276,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const activities = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunity_activities")
-          .select("id, created_by")
+          .select("id, activity_type, description, created_by, created_at, opportunity_id, opportunities(title, clients(company_name, trade_name))")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .in("created_by", sellerIds)
@@ -242,9 +289,13 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const computed: SellerStats[] = (profiles || []).map((p: any) => {
         const sellerWon = wonInWindow.filter((o) => o.assigned_to === p.id);
         const sellerOppsCreated = oppsCreated.filter((o) => o.assigned_to === p.id);
-        const sellerClients = clientsCreated.filter((c) => c.created_by === p.id).length;
-        const sellerTasks = tasksCompleted.filter((t) => t.assigned_to === p.id).length;
-        const sellerActs = activities.filter((a) => a.created_by === p.id).length;
+        const sellerClientsArr = clientsCreated.filter((c) => c.created_by === p.id);
+        const sellerTasksArr = tasksCompleted.filter((t) => t.assigned_to === p.id);
+        const sellerActsArr = activities.filter((a) => a.created_by === p.id);
+
+        const sellerClients = sellerClientsArr.length;
+        const sellerTasks = sellerTasksArr.length;
+        const sellerActs = sellerActsArr.length;
 
         let revenueCash = 0;
         let annualizedRevenue = 0;
@@ -288,7 +339,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           revenuePerActivity,
           tasksPerWin,
           activitiesPerWin,
-          category: "low_effort", // placeholder, set below
+          category: "low_effort" as const,
+          audit: {
+            tasks: sellerTasksArr,
+            activities: sellerActsArr,
+            opportunitiesCreated: sellerOppsCreated,
+            clients: sellerClientsArr,
+            won: sellerWon,
+          },
         };
       });
 
@@ -398,24 +456,43 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
                     <Activity className="h-3.5 w-3.5" /> ESFORÇO
+                    <span className="ml-auto text-[10px] font-normal text-muted-foreground flex items-center gap-1">
+                      <Search className="h-3 w-3" /> Clique para auditar
+                    </span>
                   </p>
                   <div className="grid grid-cols-4 gap-2 text-center">
-                    <div className="p-2 bg-muted/40 rounded">
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "tasks")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.tasksCompleted}</p>
                       <p className="text-[10px] text-muted-foreground">Tarefas</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "activities")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.activitiesLogged}</p>
                       <p className="text-[10px] text-muted-foreground">Atividades</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "opportunitiesCreated")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.opportunitiesCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Opp criadas</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "clients")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.clientsCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Clientes</p>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -425,10 +502,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                     <Trophy className="h-3.5 w-3.5" /> RESULTADO
                   </p>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-success/10 rounded">
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "won")}
+                      className="p-2 bg-success/10 rounded hover:bg-success/20 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold text-success">{s.opportunitiesWon}</p>
                       <p className="text-[10px] text-muted-foreground">Ganhas</p>
-                    </div>
+                    </button>
                     <div className="p-2 bg-primary/10 rounded">
                       <p className="text-sm font-bold text-primary">{formatCurrency(s.annualizedRevenue)}</p>
                       <p className="text-[10px] text-muted-foreground">Anualizada</p>
@@ -528,6 +609,160 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           </CardContent>
         </Card>
       )}
+
+      {/* Audit Dialog */}
+      <Dialog open={auditOpen} onOpenChange={setAuditOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              Auditoria — {auditSeller?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {auditMetric ? METRIC_LABEL[auditMetric] : ""} no período de{" "}
+              {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} a{" "}
+              {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            {auditSeller && auditMetric && (
+              <AuditList seller={auditSeller} metric={auditMetric} />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+};
+
+// ============================================================
+// AuditList — renders the records that compose a metric
+// ============================================================
+const AuditList = ({ seller, metric }: { seller: SellerStats; metric: AuditMetric }) => {
+  const records: any[] = seller.audit[metric] || [];
+
+  if (records.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-8">
+        Nenhum registro encontrado para este indicador no período.
+      </p>
+    );
+  }
+
+  if (metric === "tasks") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Título</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead>Concluída em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((t) => (
+            <TableRow key={t.id}>
+              <TableCell className="font-medium">{t.title || "—"}</TableCell>
+              <TableCell>{t.task_type || "—"}</TableCell>
+              <TableCell>{t.clients?.trade_name || t.clients?.company_name || "—"}</TableCell>
+              <TableCell>{formatDate(t.completed_at || t.updated_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (metric === "activities") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Descrição</TableHead>
+            <TableHead>Oportunidade</TableHead>
+            <TableHead>Data</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((a) => (
+            <TableRow key={a.id}>
+              <TableCell>
+                <Badge variant="outline">{a.activity_type || "—"}</Badge>
+              </TableCell>
+              <TableCell className="max-w-xs truncate">{a.description || "—"}</TableCell>
+              <TableCell>
+                {a.opportunities?.title || "—"}
+                {a.opportunities?.clients && (
+                  <span className="block text-xs text-muted-foreground">
+                    {a.opportunities.clients.trade_name || a.opportunities.clients.company_name}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>{formatDate(a.created_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (metric === "clients") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Empresa</TableHead>
+            <TableHead>Nome fantasia</TableHead>
+            <TableHead>CNPJ</TableHead>
+            <TableHead>Criado em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((c) => (
+            <TableRow key={c.id}>
+              <TableCell className="font-medium">{c.company_name || "—"}</TableCell>
+              <TableCell>{c.trade_name || "—"}</TableCell>
+              <TableCell className="font-mono text-xs">{c.cnpj || "—"}</TableCell>
+              <TableCell>{formatDate(c.created_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  // opportunitiesCreated / won
+  const isWon = metric === "won";
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Título</TableHead>
+          <TableHead>Cliente</TableHead>
+          <TableHead className="text-right">Valor</TableHead>
+          <TableHead>{isWon ? "Ganha em" : "Criada em"}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {records.map((o) => {
+          const total =
+            o.billing_type === "pontual"
+              ? Number(o.value) || Number(o.implementation_value) || 0
+              : (Number(o.implementation_value) || 0) + (Number(o.monthly_value) || 0) * 12;
+          return (
+            <TableRow key={o.id}>
+              <TableCell className="font-medium">{o.title || "—"}</TableCell>
+              <TableCell>{o.clients?.trade_name || o.clients?.company_name || "—"}</TableCell>
+              <TableCell className="text-right font-semibold text-primary">
+                {formatCurrency(isWon ? total : Number(o.value) || (Number(o.monthly_value) || 0) * 12)}
+              </TableCell>
+              <TableCell>{formatDate(isWon ? o.won_at : o.created_at)}</TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 };
