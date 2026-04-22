@@ -213,15 +213,21 @@ const MetricasEquipe = () => {
       const nonSellerRevenue = Array(12).fill(0);
       const nonSellerAnnualized = Array(12).fill(0);
 
-      const { data: nonSellerOpps } = await supabase
+      // Fetch all won opps in the year, then filter out those owned by vendedores in JS
+      // (avoids PostgREST UUID-quoting issues with .not("in", ...))
+      const vendedorSet = new Set(vendedorIds);
+      const { data: allWonOpps } = await supabase
         .from("opportunities")
         .select("implementation_value, monthly_value, billing_type, value, updated_at, assigned_to")
         .eq("status", "won")
-        .not("assigned_to", "in", `(${vendedorIds.join(",")})`)
         .gte("updated_at", `${yearStart}T00:00:00`)
         .lte("updated_at", `${yearEnd}T23:59:59`);
 
-      (nonSellerOpps || []).forEach((opp: any) => {
+      const nonSellerOpps = (allWonOpps || []).filter(
+        (o: any) => !vendedorSet.has(o.assigned_to)
+      );
+
+      nonSellerOpps.forEach((opp: any) => {
         const d = new Date(opp.updated_at);
         if (d.getFullYear() !== year) return;
         const mIdx = d.getMonth();
