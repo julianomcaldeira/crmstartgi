@@ -534,6 +534,56 @@ const MetricasEquipe = () => {
                 }
               });
 
+              // Inject achieved-only contributions from admins/gestores
+              // for revenue and annualized_sales. They add to "Realizado"
+              // but NEVER add to "Meta".
+              const injectNonSeller = (
+                goalType: "revenue" | "annualized_sales",
+                monthly: number[]
+              ) => {
+                const totalAchieved = monthly.reduce((s, v) => s + v, 0);
+                if (totalAchieved === 0) return;
+                const key = `${goalType}::all`;
+                const label = getGoalTypeLabel(goalType);
+                const existing = aggregated.get(key);
+
+                // YTD slice for total
+                const todayYear = new Date().getFullYear();
+                const todayMonth = new Date().getMonth();
+                const ytdLastIdx =
+                  year < todayYear ? 11 : year > todayYear ? -1 : todayMonth;
+                const ytdAchieved =
+                  ytdLastIdx >= 0
+                    ? monthly.slice(0, ytdLastIdx + 1).reduce((s, v) => s + v, 0)
+                    : 0;
+
+                if (!existing) {
+                  aggregated.set(key, {
+                    key,
+                    goal_type: goalType,
+                    title: label,
+                    months: monthly.map((v) => ({
+                      target: 0,
+                      achieved: v,
+                      percentage: 0,
+                    })),
+                    totalTarget: 0,
+                    totalAchieved: ytdAchieved,
+                    totalPercentage: 0,
+                  });
+                } else {
+                  existing.months = existing.months.map((c, i) => ({
+                    target: c.target,
+                    achieved: c.achieved + monthly[i],
+                    percentage: 0,
+                  }));
+                  existing.totalAchieved += ytdAchieved;
+                }
+              };
+
+              injectNonSeller("revenue", nonSellerAchieved.revenue);
+              injectNonSeller("annualized_sales", nonSellerAchieved.annualized_sales);
+
               // Recompute percentages
               const companyGoals = Array.from(aggregated.values()).map((g) => ({
                 ...g,
