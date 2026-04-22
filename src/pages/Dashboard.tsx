@@ -101,39 +101,69 @@ const Dashboard = () => {
     const [year, month] = selectedPeriod.split("-");
     const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
     const endDate = endOfMonth(startDate);
+    const startStr = format(startDate, "yyyy-MM-dd");
+    const endStr = format(endDate, "yyyy-MM-dd");
 
+    // Only revenue goals overlapping the selected month
     let goalsQuery = supabase
       .from("goals")
       .select("*, assigned_user:profiles!goals_assigned_to_fkey(full_name)")
-      .lte("start_date", format(endDate, "yyyy-MM-dd"))
-      .gte("end_date", format(startDate, "yyyy-MM-dd"));
+      .eq("goal_type", "revenue")
+      .lte("start_date", endStr)
+      .gte("end_date", startStr);
 
     if (userRole === "vendedor") {
       goalsQuery = goalsQuery.eq("assigned_to", userId);
     }
 
     const { data: goals, error: goalsError } = await goalsQuery;
-    
-    if (goalsError) {
-      console.error("Error fetching goals:", goalsError);
+    if (goalsError) console.error("Error fetching goals:", goalsError);
+
+    // Pro-rate each goal across the months it covers, then take the slice for the selected month
+    const totalGoal = (goals || []).reduce((sum: number, g: any) => {
+      const gStart = new Date(g.start_date + "T12:00:00");
+      const gEnd = new Date(g.end_date + "T12:00:00");
+      const monthsCovered =
+        (gEnd.getFullYear() - gStart.getFullYear()) * 12 +
+        (gEnd.getMonth() - gStart.getMonth()) +
+        1;
+      const safeMonths = Math.max(monthsCovered, 1);
+      return sum + Number(g.target_value || 0) / safeMonths;
+    }, 0);
+
+    // Won opportunities — find them via the actual "Ganho" event date in the month
+    const { data: wonActivities } = await supabase
+      .from("opportunity_activities")
+      .select("opportunity_id, created_at, new_value")
+      .eq("new_value", "Ganho")
+      .gte("created_at", `${startStr}T00:00:00`)
+      .lte("created_at", `${endStr}T23:59:59`);
+
+    const oppIds = Array.from(
+      new Set((wonActivities || []).map((a: any) => a.opportunity_id))
+    );
+
+    let totalAchieved = 0;
+    if (oppIds.length > 0) {
+      let oppsQuery = supabase
+        .from("opportunities")
+        .select("id, status, billing_type, value, monthly_value, implementation_value, assigned_to")
+        .in("id", oppIds)
+        .eq("status", "won");
+
+      if (userRole === "vendedor") {
+        oppsQuery = oppsQuery.eq("assigned_to", userId);
+      }
+
+      const { data: wonOpps } = await oppsQuery;
+      totalAchieved = (wonOpps || []).reduce((sum: number, o: any) => {
+        const isPontual = o.billing_type === "pontual";
+        const impl = Number(o.implementation_value) || 0;
+        const monthly = Number(o.monthly_value) || 0;
+        const value = Number(o.value) || 0;
+        return sum + (isPontual ? value || impl : impl + monthly * 12);
+      }, 0);
     }
-
-    // Buscar oportunidades ganhas no período para calcular progresso
-    let oppsQuery = supabase
-      .from("opportunities")
-      .select("value, monthly_value, assigned_to, created_at")
-      .eq("status", "won")
-      .gte("created_at", format(startDate, "yyyy-MM-dd"))
-      .lte("created_at", format(endDate, "yyyy-MM-dd"));
-
-    if (userRole === "vendedor") {
-      oppsQuery = oppsQuery.eq("assigned_to", userId);
-    }
-
-    const { data: wonOpps } = await oppsQuery;
-
-    const totalGoal = goals?.reduce((sum, g) => sum + Number(g.target_value), 0) || 0;
-    const totalAchieved = wonOpps?.reduce((sum, o) => sum + (Number(o.value) || Number(o.monthly_value) || 0), 0) || 0;
 
     setGoalData({
       target: totalGoal,
@@ -170,9 +200,11 @@ const Dashboard = () => {
   };
 
   const fetchFunnelData = async () => {
+    // Show only OPEN pipeline (exclude won/lost — closed deals aren't in the funnel)
     let query = supabase
       .from("opportunities")
-      .select("status");
+      .select("status")
+      .not("status", "in", "(won,lost)");
 
     if (userRole === "vendedor") {
       query = query.eq("assigned_to", userId);
@@ -182,12 +214,14 @@ const Dashboard = () => {
 
     const statusLabels: Record<string, string> = {
       lead: "Lead",
+      contacted: "Contatado",
       qualified: "Qualificado",
+      apresentacao: "Apresentação",
       proposal: "Proposta",
       negotiation: "Negociação",
-      won: "Ganho",
-      lost: "Perdido",
     };
+
+    const order = ["lead", "contacted", "qualified", "apresentacao", "proposal", "negotiation"];
 
     const statusCounts = data?.reduce((acc: any, opp) => {
       const label = statusLabels[opp.status] || opp.status;
@@ -195,10 +229,12 @@ const Dashboard = () => {
       return acc;
     }, {});
 
-    const chartData = Object.entries(statusCounts || {}).map(([name, value]) => ({
-      name,
-      value,
-    }));
+    const chartData = order
+      .filter((s) => statusLabels[s])
+      .map((s) => ({
+        name: statusLabels[s],
+        value: (statusCounts || {})[statusLabels[s]] || 0,
+      }));
 
     setFunnelData(chartData);
   };
@@ -208,29 +244,43 @@ const Dashboard = () => {
       const [year, month] = selectedPeriod.split("-");
       const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
       const endDate = endOfMonth(new Date(parseInt(year), parseInt(month) - 1));
+      const startStr = format(startDate, "yyyy-MM-dd");
+      const endStr = format(endDate, "yyyy-MM-dd");
+
+      // Find opportunities that became "Ganho" in the selected month (real close date)
+      const { data: wonActivities } = await supabase
+        .from("opportunity_activities")
+        .select("opportunity_id")
+        .eq("new_value", "Ganho")
+        .gte("created_at", `${startStr}T00:00:00`)
+        .lte("created_at", `${endStr}T23:59:59`);
+
+      const oppIds = Array.from(
+        new Set((wonActivities || []).map((a: any) => a.opportunity_id))
+      );
+
+      if (oppIds.length === 0) {
+        setAvgCloseCycle(0);
+        return;
+      }
 
       let query = supabase
         .from("opportunities")
-        .select("close_cycle_days")
+        .select("close_cycle_days, assigned_to")
         .eq("status", "won")
-        .gte("created_at", startDate.toISOString())
-        .lte("created_at", endDate.toISOString())
+        .in("id", oppIds)
         .not("close_cycle_days", "is", null);
 
-      // Filter by user if not gestor/admin
       if (userRole !== "gestor" && userRole !== "admin") {
         query = query.eq("assigned_to", userId);
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
 
-      // Calculate average
       if (data && data.length > 0) {
         const sum = (data as any[]).reduce((acc: number, opp: any) => acc + (opp.close_cycle_days || 0), 0);
-        const avg = Math.round(sum / data.length);
-        setAvgCloseCycle(avg);
+        setAvgCloseCycle(Math.round(sum / data.length));
       } else {
         setAvgCloseCycle(0);
       }
