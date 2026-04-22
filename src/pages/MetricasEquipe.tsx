@@ -396,7 +396,8 @@ const MetricasEquipe = () => {
                         </TableHeader>
                         <TableBody>
                           {goals.map((goal) => (
-                            <>
+                            <Fragment key={goal.id}>
+
                               {/* Target row */}
                               <TableRow key={`${goal.id}-target`} className="border-t-2">
                                 <TableCell
