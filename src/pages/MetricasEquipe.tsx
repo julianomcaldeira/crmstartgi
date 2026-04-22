@@ -204,10 +204,50 @@ const MetricasEquipe = () => {
       const sellerList = profiles || [];
       setSellers(sellerList);
 
-      // 2. Fetch goals overlapping the selected year
+      // 2a. Fetch won opportunities owned by NON-vendedores (admins/gestores).
+      // These count toward the company "Realizado" for revenue / annualized_sales,
+      // but DO NOT add to the company "Meta".
       const yearStart = `${year}-01-01`;
       const yearEnd = `${year}-12-31`;
 
+      const nonSellerRevenue = Array(12).fill(0);
+      const nonSellerAnnualized = Array(12).fill(0);
+
+      const { data: nonSellerOpps } = await supabase
+        .from("opportunities")
+        .select("implementation_value, monthly_value, billing_type, value, updated_at, assigned_to")
+        .eq("status", "won")
+        .not("assigned_to", "in", `(${vendedorIds.join(",")})`)
+        .gte("updated_at", `${yearStart}T00:00:00`)
+        .lte("updated_at", `${yearEnd}T23:59:59`);
+
+      (nonSellerOpps || []).forEach((opp: any) => {
+        const d = new Date(opp.updated_at);
+        if (d.getFullYear() !== year) return;
+        const mIdx = d.getMonth();
+        const billingType = opp?.billing_type ?? null;
+        const isPontual = billingType === "pontual";
+        const impl = Number(opp?.implementation_value) || 0;
+        const monthly = Number(opp?.monthly_value) || 0;
+        const value = Number(opp?.value) || 0;
+
+        // revenue
+        nonSellerRevenue[mIdx] += isPontual
+          ? value || impl
+          : impl + monthly * 12;
+
+        // annualized_sales (skip pontual)
+        if (!isPontual) {
+          nonSellerAnnualized[mIdx] += impl + monthly * 12;
+        }
+      });
+
+      setNonSellerAchieved({
+        revenue: nonSellerRevenue,
+        annualized_sales: nonSellerAnnualized,
+      });
+
+      // 2. Fetch goals overlapping the selected year
       const { data: goals, error: goalsError } = await supabase
         .from("goals")
         .select("*")
