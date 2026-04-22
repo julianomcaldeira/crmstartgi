@@ -1059,66 +1059,12 @@ const Relatorios = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="team" className="space-y-6">
-                <div className="space-y-4">
-                  {sellersPerformance.map((seller) => (
-                    <Card key={seller.id} className="hover:shadow-lg transition-all">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-xl">{seller.full_name}</CardTitle>
-                            <p className="text-sm text-muted-foreground">{seller.email}</p>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                          <div className="text-center p-3 bg-muted/50 rounded-lg">
-                            <Building2 className="h-4 w-4 mx-auto mb-1 text-primary" />
-                            <p className="text-xl font-bold">{seller.clientsCount}</p>
-                            <p className="text-xs text-muted-foreground">Clientes</p>
-                          </div>
-
-                          <div className="text-center p-3 bg-muted/50 rounded-lg">
-                            <Target className="h-4 w-4 mx-auto mb-1 text-info" />
-                            <p className="text-xl font-bold">{seller.opportunitiesCount}</p>
-                            <p className="text-xs text-muted-foreground">Oportunidades</p>
-                          </div>
-
-                          <div className="text-center p-3 bg-success/10 rounded-lg border border-success/20">
-                            <TrendingUp className="h-4 w-4 mx-auto mb-1 text-success" />
-                            <p className="text-xl font-bold text-success">{seller.wonOpportunitiesCount}</p>
-                            <p className="text-xs text-muted-foreground">Ganhas</p>
-                          </div>
-
-                          <div className="text-center p-3 bg-primary/10 rounded-lg border border-primary/20">
-                            <DollarSign className="h-4 w-4 mx-auto mb-1 text-primary" />
-                            <p className="text-sm font-bold text-primary">{formatCurrency(seller.wonValue)}</p>
-                            <p className="text-xs text-muted-foreground">Vendido</p>
-                          </div>
-
-                          <div className="text-center p-3 bg-muted/50 rounded-lg">
-                            <CheckCircle2 className="h-4 w-4 mx-auto mb-1 text-success" />
-                            <p className="text-xl font-bold">{seller.completedTasksCount}/{seller.totalTasks}</p>
-                            <p className="text-xs text-muted-foreground">Tarefas</p>
-                          </div>
-
-                          <div className="text-center p-3 bg-warning/10 rounded-lg border border-warning/20">
-                            <div className="text-xl font-bold text-warning mb-1">{seller.conversionRate.toFixed(1)}%</div>
-                            <p className="text-xs text-muted-foreground">Conversão</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                  {sellersPerformance.length === 0 && (
-                    <Card className="p-12 text-center">
-                      <Users className="mx-auto mb-4 text-muted-foreground" size={48} />
-                      <p className="text-muted-foreground">Nenhum dado de vendedor encontrado</p>
-                    </Card>
-                  )}
-                </div>
+              <TabsContent value="productivity" className="space-y-6">
+                <ProductivityTab
+                  startDate={startDate}
+                  endDate={endDate}
+                  selectedSeller={selectedSeller}
+                />
               </TabsContent>
 
               <TabsContent value="feiras" className="space-y-6">
