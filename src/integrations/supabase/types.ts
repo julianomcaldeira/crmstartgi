@@ -2349,6 +2349,21 @@ export type Database = {
       }
     }
     Functions: {
+      get_company_goals: {
+        Args: { _year: number }
+        Returns: {
+          activity_type_filter: string
+          assigned_to: string
+          end_date: string
+          goal_type: Database["public"]["Enums"]["goal_type"]
+          id: string
+          period: string
+          start_date: string
+          target_value: number
+          task_type_filter: string
+          title: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
