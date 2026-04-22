@@ -568,7 +568,7 @@ const MetricasEquipe = () => {
                 }
               >();
 
-              Object.values(goalsBySeller).flat().forEach((g) => {
+              Object.values(companyGoalsBySeller).flat().forEach((g) => {
                 const subKey =
                   g.goal_type === "tasks"
                     ? g.task_type_filter || "all"
