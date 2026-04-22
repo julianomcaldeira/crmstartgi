@@ -1,255 +1,265 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Target, TrendingUp, DollarSign, Briefcase, CheckCircle2, ChevronDown, ChevronUp, Trophy, Activity, ListTodo, Calendar, LayoutGrid, List, HelpCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Trophy,
+  Target,
+  DollarSign,
+  TrendingUp,
+  ListTodo,
+  Activity,
+  CheckCircle2,
+  Calendar,
+  HelpCircle,
+} from "lucide-react";
 import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { calculateGoalProgress } from "@/hooks/useGoalProgress";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-interface SellerMetrics {
-  seller_id: string;
-  seller_name: string;
-  seller_email: string;
-  total_clients: number;
-  total_opportunities: number;
-  won_opportunities: number;
-  total_revenue: number;
-  conversion_rate: number;
-  total_tasks: number;
-  completed_tasks: number;
+interface Seller {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
-interface GoalWithProgress {
+interface GoalRow {
   id: string;
   title: string;
   goal_type: string;
+  period: string; // mensal | anual | semestral
   target_value: number;
-  current_value: number;
-  percentage: number;
   start_date: string;
   end_date: string;
-  is_achieved: boolean;
+  assigned_to: string;
+  task_type_filter: string | null;
+  activity_type_filter: string | null;
 }
 
+interface MonthCell {
+  target: number;
+  achieved: number;
+  percentage: number;
+}
+
+interface GoalWithMonths extends GoalRow {
+  months: MonthCell[]; // length 12, index = month - 1
+  totalTarget: number;
+  totalAchieved: number;
+  totalPercentage: number;
+}
+
+const MONTH_LABELS = [
+  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+  "Jul", "Ago", "Set", "Out", "Nov", "Dez",
+];
+
 const MetricasEquipe = () => {
-  const [metrics, setMetrics] = useState<SellerMetrics[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [goalsBySeller, setGoalsBySeller] = useState<Record<string, GoalWithMonths[]>>({});
   const [loading, setLoading] = useState(true);
-  const [expandedSellers, setExpandedSellers] = useState<Record<string, boolean>>({});
-  const [sellerGoals, setSellerGoals] = useState<Record<string, GoalWithProgress[]>>({});
-  const [loadingGoals, setLoadingGoals] = useState<Record<string, boolean>>({});
-  const [selectedPeriod, setSelectedPeriod] = useState(format(new Date(), "yyyy-MM"));
-  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [year, setYear] = useState<number>(new Date().getFullYear());
+
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    return [current - 1, current, current + 1];
+  }, []);
 
   useEffect(() => {
-    fetchTeamMetrics();
-  }, [selectedPeriod]);
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year]);
 
-  const getPeriodDates = () => {
-    const [year, month] = selectedPeriod.split("-");
-    const startDate = startOfMonth(new Date(parseInt(year), parseInt(month) - 1));
-    const endDate = endOfMonth(startDate);
-    return { startDate, endDate };
-  };
-
-  const getPeriodOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = subMonths(currentDate, i);
-      const value = format(date, "yyyy-MM");
-      const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
-      options.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
-    }
-    
-    return options;
-  };
-
-  const fetchTeamMetrics = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const { startDate, endDate } = getPeriodDates();
-      const startDateStr = format(startDate, "yyyy-MM-dd");
-      const endDateStr = format(endDate, "yyyy-MM-dd");
+      // 1. Get only vendedores (exclude admins/gestores)
+      const { data: vendedorRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "vendedor");
 
-      // Fetch all sellers (excluding deleted users)
-      const { data: sellers, error: sellersError } = await supabase
+      if (rolesError) throw rolesError;
+
+      const vendedorIds = (vendedorRoles || []).map((r) => r.user_id);
+      if (vendedorIds.length === 0) {
+        setSellers([]);
+        setGoalsBySeller({});
+        return;
+      }
+
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, email")
+        .in("id", vendedorIds)
         .or("is_deleted.is.null,is_deleted.eq.false")
         .order("full_name");
 
-      if (sellersError) throw sellersError;
+      if (profilesError) throw profilesError;
 
-      const metricsPromises = sellers.map(async (seller) => {
-        // Count clients created in period
-        const { count: clientsCount } = await supabase
-          .from("clients")
-          .select("*", { count: "exact", head: true })
-          .eq("created_by", seller.id)
-          .gte("created_at", `${startDateStr}T00:00:00`)
-          .lte("created_at", `${endDateStr}T23:59:59`);
+      const sellerList = profiles || [];
+      setSellers(sellerList);
 
-        // Count opportunities in period
-        const { data: opportunities } = await supabase
-          .from("opportunities")
-          .select("status, value, updated_at")
-          .or(`created_by.eq.${seller.id},assigned_to.eq.${seller.id}`)
-          .gte("created_at", `${startDateStr}T00:00:00`)
-          .lte("created_at", `${endDateStr}T23:59:59`);
+      // 2. Fetch goals overlapping the selected year
+      const yearStart = `${year}-01-01`;
+      const yearEnd = `${year}-12-31`;
 
-        const totalOpportunities = opportunities?.length || 0;
-        const wonOpportunities = opportunities?.filter(o => o.status === "won").length || 0;
-        const totalRevenue = opportunities
-          ?.filter(o => o.status === "won")
-          .reduce((sum, o) => sum + (Number(o.value) || 0), 0) || 0;
-        const conversionRate = totalOpportunities > 0 
-          ? (wonOpportunities / totalOpportunities) * 100 
-          : 0;
+      const { data: goals, error: goalsError } = await supabase
+        .from("goals")
+        .select("*")
+        .in("assigned_to", vendedorIds)
+        .lte("start_date", yearEnd)
+        .gte("end_date", yearStart);
 
-        // Count tasks in period - using consistent logic with goals (completed_at for completed tasks)
-        const { data: tasks } = await supabase
-          .from("tasks")
-          .select("status, completed_at")
-          .eq("assigned_to", seller.id);
+      if (goalsError) throw goalsError;
 
-        // Filter tasks created in period OR completed in period
-        const tasksCreatedInPeriod = tasks?.filter(t => {
-          // For this metric we count all tasks assigned to the seller in the period
-          return true;
-        }) || [];
-        
-        // Count completed tasks that were completed within the period
-        const completedTasksInPeriod = tasks?.filter(t => {
-          if (t.status !== "completed" || !t.completed_at) return false;
-          const completedDate = new Date(t.completed_at);
-          return completedDate >= new Date(`${startDateStr}T00:00:00`) && 
-                 completedDate <= new Date(`${endDateStr}T23:59:59`);
-        }) || [];
-        
-        // For total tasks, count those created in period
-        const { count: totalTasksCount } = await supabase
-          .from("tasks")
-          .select("*", { count: "exact", head: true })
-          .eq("assigned_to", seller.id)
-          .gte("created_at", `${startDateStr}T00:00:00`)
-          .lte("created_at", `${endDateStr}T23:59:59`);
+      // 3. For each goal, compute month-by-month progress
+      const computed: Record<string, GoalWithMonths[]> = {};
+      const today = new Date();
 
-        const totalTasks = totalTasksCount || 0;
-        const completedTasks = completedTasksInPeriod.length;
+      await Promise.all(
+        (goals || []).map(async (goal: any) => {
+          const months: MonthCell[] = [];
+          const goalStart = new Date(goal.start_date + "T12:00:00");
+          const goalEnd = new Date(goal.end_date + "T12:00:00");
 
-        return {
-          seller_id: seller.id,
-          seller_name: seller.full_name,
-          seller_email: seller.email,
-          total_clients: clientsCount || 0,
-          total_opportunities: totalOpportunities,
-          won_opportunities: wonOpportunities,
-          total_revenue: totalRevenue,
-          conversion_rate: conversionRate,
-          total_tasks: totalTasks,
-          completed_tasks: completedTasks,
-        };
+          // Determine per-month target depending on period
+          const period = goal.period || "mensal";
+          const targetValue = Number(goal.target_value) || 0;
+
+          // Number of months the goal covers in this year
+          const monthsCovered: boolean[] = Array.from({ length: 12 }, (_, m) => {
+            const monthStart = new Date(year, m, 1);
+            const monthEnd = new Date(year, m + 1, 0);
+            return monthEnd >= goalStart && monthStart <= goalEnd;
+          });
+
+          const coveredCount = monthsCovered.filter(Boolean).length || 1;
+
+          // Target per month: mensal = full target each covered month;
+          // anual / semestral = divided across covered months in this year.
+          const perMonthTarget =
+            period === "mensal" ? targetValue : targetValue / coveredCount;
+
+          for (let m = 0; m < 12; m++) {
+            if (!monthsCovered[m]) {
+              months.push({ target: 0, achieved: 0, percentage: 0 });
+              continue;
+            }
+
+            const mStart = new Date(year, m, 1);
+            const mEnd = new Date(year, m + 1, 0);
+            const startStr = format(mStart, "yyyy-MM-dd");
+            const endStr = format(mEnd, "yyyy-MM-dd");
+
+            // Only compute achieved up to today (future months stay 0)
+            let achieved = 0;
+            if (mStart <= today) {
+              achieved = await calculateGoalProgress(
+                goal.id,
+                goal.goal_type,
+                targetValue,
+                goal.assigned_to,
+                startStr,
+                endStr,
+                "mensal", // force monthly window
+                goal.task_type_filter,
+                goal.activity_type_filter
+              );
+            }
+
+            const pct =
+              perMonthTarget > 0
+                ? Math.min((achieved / perMonthTarget) * 100, 999)
+                : 0;
+
+            months.push({
+              target: perMonthTarget,
+              achieved,
+              percentage: pct,
+            });
+          }
+
+          const totalTarget = months.reduce((s, c) => s + c.target, 0);
+          const totalAchieved = months.reduce((s, c) => s + c.achieved, 0);
+          const totalPercentage =
+            totalTarget > 0 ? (totalAchieved / totalTarget) * 100 : 0;
+
+          const item: GoalWithMonths = {
+            id: goal.id,
+            title: goal.title,
+            goal_type: goal.goal_type,
+            period,
+            target_value: targetValue,
+            start_date: goal.start_date,
+            end_date: goal.end_date,
+            assigned_to: goal.assigned_to,
+            task_type_filter: goal.task_type_filter ?? null,
+            activity_type_filter: goal.activity_type_filter ?? null,
+            months,
+            totalTarget,
+            totalAchieved,
+            totalPercentage,
+          };
+
+          if (!computed[goal.assigned_to]) computed[goal.assigned_to] = [];
+          computed[goal.assigned_to].push(item);
+        })
+      );
+
+      // Sort goals per seller by type then title
+      Object.keys(computed).forEach((sid) => {
+        computed[sid].sort((a, b) =>
+          a.goal_type === b.goal_type
+            ? a.title.localeCompare(b.title)
+            : a.goal_type.localeCompare(b.goal_type)
+        );
       });
 
-      const metricsData = await Promise.all(metricsPromises);
-      setMetrics(metricsData);
-      // Reset goals when period changes
-      setSellerGoals({});
-      setExpandedSellers({});
-    } catch (error) {
-      console.error("Error fetching team metrics:", error);
+      setGoalsBySeller(computed);
+    } catch (err) {
+      console.error("Error loading team metrics:", err);
       toast.error("Erro ao carregar métricas da equipe");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSellerGoals = async (sellerId: string) => {
-    if (sellerGoals[sellerId]) return; // Already loaded
-    
-    setLoadingGoals(prev => ({ ...prev, [sellerId]: true }));
-    
-    try {
-      const { startDate, endDate } = getPeriodDates();
-      const startDateStr = format(startDate, "yyyy-MM-dd");
-      const endDateStr = format(endDate, "yyyy-MM-dd");
-      
-      const { data: goals, error } = await supabase
-        .from("goals")
-        .select("*")
-        .eq("assigned_to", sellerId)
-        .lte("start_date", endDateStr)
-        .gte("end_date", startDateStr);
-
-      if (error) throw error;
-
-      if (!goals || goals.length === 0) {
-        setSellerGoals(prev => ({ ...prev, [sellerId]: [] }));
-        return;
-      }
-
-      // Calculate progress for each goal
-      const goalsWithProgress = await Promise.all(
-        goals.map(async (goal) => {
-          const currentValue = await calculateGoalProgress(
-            goal.id,
-            goal.goal_type,
-            Number(goal.target_value),
-            goal.assigned_to,
-            goal.start_date,
-            goal.end_date
-          );
-
-          const targetValue = Number(goal.target_value);
-          const percentage = targetValue > 0 ? Math.min((currentValue / targetValue) * 100, 100) : 0;
-
-          return {
-            id: goal.id,
-            title: goal.title,
-            goal_type: goal.goal_type,
-            target_value: targetValue,
-            current_value: currentValue,
-            percentage,
-            start_date: goal.start_date,
-            end_date: goal.end_date,
-            is_achieved: currentValue >= targetValue,
-          };
-        })
-      );
-
-      setSellerGoals(prev => ({ ...prev, [sellerId]: goalsWithProgress }));
-    } catch (error) {
-      console.error("Error fetching seller goals:", error);
-      toast.error("Erro ao carregar metas");
-    } finally {
-      setLoadingGoals(prev => ({ ...prev, [sellerId]: false }));
-    }
-  };
-
-  const toggleSellerExpanded = (sellerId: string) => {
-    const isExpanding = !expandedSellers[sellerId];
-    setExpandedSellers(prev => ({ ...prev, [sellerId]: isExpanding }));
-    
-    if (isExpanding) {
-      fetchSellerGoals(sellerId);
-    }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
+      maximumFractionDigits: 0,
     }).format(value);
+
+  const formatGoalValue = (type: string, value: number) => {
+    if (type === "revenue" || type === "annualized_sales") {
+      return formatCurrency(value);
+    }
+    return Math.round(value).toString();
   };
 
   const getGoalTypeLabel = (type: string) => {
@@ -277,544 +287,320 @@ const MetricasEquipe = () => {
     }
   };
 
-  const formatGoalValue = (type: string, value: number) => {
-    if (type === "revenue" || type === "annualized_sales") {
-      return formatCurrency(value);
-    }
-    return value.toString();
+  const getCellClass = (pct: number, target: number, isFuture: boolean) => {
+    if (target === 0) return "bg-muted/30 text-muted-foreground";
+    if (isFuture) return "bg-muted/20 text-muted-foreground";
+    if (pct >= 100) return "bg-success/15 text-success font-semibold";
+    if (pct >= 70) return "bg-warning/15 text-warning font-medium";
+    if (pct > 0) return "bg-destructive/10 text-destructive";
+    return "bg-muted/30 text-muted-foreground";
   };
 
-  const totalClients = metrics.reduce((sum, m) => sum + m.total_clients, 0);
-  const totalOpportunities = metrics.reduce((sum, m) => sum + m.total_opportunities, 0);
-  const totalRevenue = metrics.reduce((sum, m) => sum + m.total_revenue, 0);
-  const avgConversion = metrics.length > 0
-    ? metrics.reduce((sum, m) => sum + m.conversion_rate, 0) / metrics.length
-    : 0;
-
-  const selectedPeriodLabel = getPeriodOptions().find(o => o.value === selectedPeriod)?.label || selectedPeriod;
+  const currentMonthIdx =
+    new Date().getFullYear() === year ? new Date().getMonth() : -1;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
-            Métricas de Equipe
-          </h1>
-          <p className="text-muted-foreground">
-            Visão geral do desempenho de toda a equipe de vendas
-          </p>
-        </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
+              Métricas de Equipe
+            </h1>
+            <p className="text-muted-foreground">
+              Acompanhamento mês a mês das metas de cada vendedor
+            </p>
+          </div>
 
-        <div className="flex items-center gap-3">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[200px]">
+          <Select
+            value={String(year)}
+            onValueChange={(v) => setYear(parseInt(v))}
+          >
+            <SelectTrigger className="w-[160px]">
               <Calendar className="mr-2 h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {getPeriodOptions().map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-
-          <div className="flex border rounded-lg overflow-hidden">
-            <Button
-              variant={viewMode === "cards" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("cards")}
-              className="rounded-none"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === "list" ? "default" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-              className="rounded-none"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
-      </div>
 
-      {/* Summary Cards */}
-      <TooltipProvider>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="shadow-lg border-l-4 border-l-primary">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Novos Clientes</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-medium mb-1">Cálculo: Novos Clientes</p>
-                    <p className="text-xs">Soma de todos os clientes cadastrados (created_at) no período selecionado por cada vendedor.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Users className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{totalClients}</div>
-              <p className="text-xs text-muted-foreground">No período</p>
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Carregando métricas...
             </CardContent>
           </Card>
-
-          <Card className="shadow-lg border-l-4 border-l-success">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Oportunidades</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-medium mb-1">Cálculo: Oportunidades</p>
-                    <p className="text-xs">Soma de todas as oportunidades criadas (created_at) no período selecionado, onde o vendedor é criador ou responsável.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <Target className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">{totalOpportunities}</div>
-              <p className="text-xs text-muted-foreground">No período</p>
+        ) : sellers.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Nenhum vendedor encontrado.
             </CardContent>
           </Card>
-
-          <Card className="shadow-lg border-l-4 border-l-warning">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Receita</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-medium mb-1">Cálculo: Receita</p>
-                    <p className="text-xs">Soma do valor de todas as oportunidades com status "Ganha" criadas no período selecionado.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <DollarSign className="h-4 w-4 text-warning" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-warning">{formatCurrency(totalRevenue)}</div>
-              <p className="text-xs text-muted-foreground">No período</p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg border-l-4 border-l-accent">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-medium mb-1">Cálculo: Taxa de Conversão</p>
-                    <p className="text-xs">Média da taxa de conversão de cada vendedor. Taxa individual = (Oportunidades Ganhas ÷ Total de Oportunidades) × 100.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-              <TrendingUp className="h-4 w-4 text-accent" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-accent">{avgConversion.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground">Média da equipe</p>
-            </CardContent>
-          </Card>
-        </div>
-      </TooltipProvider>
-
-      {/* Individual Seller Metrics */}
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Desempenho Individual - {selectedPeriodLabel}
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            {viewMode === "cards" 
-              ? 'Clique em "Ver Metas" para visualizar o progresso das metas de cada vendedor'
-              : "Visualização em lista do desempenho de cada vendedor"}
-          </p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="text-center text-muted-foreground py-8">Carregando métricas...</p>
-          ) : metrics.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum vendedor encontrado</p>
-          ) : viewMode === "list" ? (
-            /* List View */
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Clientes
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Clientes cadastrados no período</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Oportunidades
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Oportunidades criadas no período</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Ganhos
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Oportunidades com status "Ganha"</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-right">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 ml-auto">
-                            Receita
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Soma do valor das oportunidades ganhas</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Conversão
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">(Ganhas ÷ Total) × 100</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Tarefas
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Tarefas criadas no período</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger className="flex items-center gap-1 mx-auto">
-                            Concluídas
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="text-xs">Tarefas concluídas (completed_at) no período</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableHead>
-                    <TableHead className="text-center">Metas</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {metrics.map((metric) => (
-                    <TableRow key={metric.seller_id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{metric.seller_name}</p>
-                          <p className="text-xs text-muted-foreground">{metric.seller_email}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">{metric.total_clients}</TableCell>
-                      <TableCell className="text-center">{metric.total_opportunities}</TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-success font-medium">{metric.won_opportunities}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="text-warning font-medium">{formatCurrency(metric.total_revenue)}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={metric.conversion_rate >= 30 ? "default" : "secondary"}>
-                          {metric.conversion_rate.toFixed(1)}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">{metric.total_tasks}</TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-success">{metric.completed_tasks}</span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => {
-                            setViewMode("cards");
-                            toggleSellerExpanded(metric.seller_id);
-                          }}
-                        >
-                          <Target className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            /* Cards View */
-            <div className="space-y-4">
-              {metrics.map((metric) => (
-                <Collapsible
-                  key={metric.seller_id}
-                  open={expandedSellers[metric.seller_id]}
-                  onOpenChange={() => toggleSellerExpanded(metric.seller_id)}
-                >
-                  <Card className="border-l-4 border-l-primary/50">
-                    <CardContent className="p-6">
-                      <div className="space-y-4">
-                        {/* Seller Info */}
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h3 className="text-lg font-bold text-foreground">{metric.seller_name}</h3>
-                            <p className="text-sm text-muted-foreground">{metric.seller_email}</p>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-primary">
-                                {metric.conversion_rate.toFixed(1)}%
-                              </div>
-                              <p className="text-xs text-muted-foreground">Taxa de Conversão</p>
-                            </div>
-                            <CollapsibleTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-2">
-                                <Target className="h-4 w-4" />
-                                Ver Metas
-                                {expandedSellers[metric.seller_id] ? (
-                                  <ChevronUp className="h-4 w-4" />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4" />
+        ) : (
+          sellers.map((seller) => {
+            const goals = goalsBySeller[seller.id] || [];
+            return (
+              <Card key={seller.id} className="shadow-lg border-l-4 border-l-primary">
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-primary" />
+                        {seller.full_name}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {seller.email}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="self-start sm:self-auto">
+                      {goals.length} meta{goals.length !== 1 ? "s" : ""} em {year}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {goals.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic py-4">
+                      Nenhuma meta cadastrada para este vendedor em {year}.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
+                              Meta
+                            </TableHead>
+                            {MONTH_LABELS.map((m, idx) => (
+                              <TableHead
+                                key={m}
+                                className={cn(
+                                  "text-center min-w-[110px]",
+                                  idx === currentMonthIdx &&
+                                    "bg-primary/10 text-primary font-bold"
                                 )}
-                              </Button>
-                            </CollapsibleTrigger>
-                          </div>
-                        </div>
+                              >
+                                {m}
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
+                              Total Ano
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {goals.map((goal) => (
+                            <Fragment key={goal.id}>
 
-                        {/* Metrics Grid */}
-                        <TooltipProvider>
-                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 pt-4 border-t">
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <Users size={16} />
-                                    <span className="text-xs">Clientes</span>
-                                    <HelpCircle className="h-3 w-3" />
+                              {/* Target row */}
+                              <TableRow key={`${goal.id}-target`} className="border-t-2">
+                                <TableCell
+                                  rowSpan={3}
+                                  className="align-top sticky left-0 bg-background z-10 border-r"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-muted-foreground mt-0.5">
+                                      {getGoalTypeIcon(goal.goal_type)}
+                                    </span>
+                                    <div>
+                                      <p className="font-semibold text-foreground leading-tight">
+                                        {goal.title}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        {getGoalTypeLabel(goal.goal_type)}
+                                      </p>
+                                      <Badge
+                                        variant="secondary"
+                                        className="mt-2 text-[10px]"
+                                      >
+                                        {goal.period === "mensal"
+                                          ? "Mensal"
+                                          : goal.period === "anual"
+                                          ? "Anual"
+                                          : "Semestral"}
+                                      </Badge>
+                                    </div>
                                   </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Clientes cadastrados no período</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-xl font-semibold text-foreground">{metric.total_clients}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <Target size={16} />
-                                    <span className="text-xs">Oportunidades</span>
-                                    <HelpCircle className="h-3 w-3" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Oportunidades criadas no período</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-xl font-semibold text-foreground">{metric.total_opportunities}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <TrendingUp size={16} />
-                                    <span className="text-xs">Ganhos</span>
-                                    <HelpCircle className="h-3 w-3" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Oportunidades com status "Ganha"</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-xl font-semibold text-success">{metric.won_opportunities}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <DollarSign size={16} />
-                                    <span className="text-xs">Receita</span>
-                                    <HelpCircle className="h-3 w-3" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Soma do valor das oportunidades ganhas</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-lg font-semibold text-warning">
-                                {formatCurrency(metric.total_revenue)}
-                              </p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <Briefcase size={16} />
-                                    <span className="text-xs">Tarefas</span>
-                                    <HelpCircle className="h-3 w-3" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Tarefas criadas (created_at) no período</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-xl font-semibold text-foreground">{metric.total_tasks}</p>
-                            </div>
-
-                            <div className="space-y-1">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-2 text-muted-foreground cursor-help">
-                                    <CheckCircle2 size={16} />
-                                    <span className="text-xs">Concluídas</span>
-                                    <HelpCircle className="h-3 w-3" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="text-xs">Tarefas concluídas (completed_at) no período</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <p className="text-xl font-semibold text-success">{metric.completed_tasks}</p>
-                            </div>
-                          </div>
-                        </TooltipProvider>
-
-                        {/* Goals Section - Collapsible */}
-                        <CollapsibleContent className="pt-4 border-t mt-4">
-                          <div className="space-y-4">
-                            <h4 className="font-semibold text-foreground flex items-center gap-2">
-                              <Trophy className="h-4 w-4 text-warning" />
-                              Metas do Período
-                            </h4>
-
-                            {loadingGoals[metric.seller_id] ? (
-                              <p className="text-sm text-muted-foreground">Carregando metas...</p>
-                            ) : !sellerGoals[metric.seller_id] || sellerGoals[metric.seller_id].length === 0 ? (
-                              <p className="text-sm text-muted-foreground italic">
-                                Nenhuma meta para este período
-                              </p>
-                            ) : (
-                              <div className="grid gap-3 md:grid-cols-2">
-                                {sellerGoals[metric.seller_id].map((goal) => (
-                                  <Card key={goal.id} className={`border ${goal.is_achieved ? 'border-success bg-success/5' : 'border-border'}`}>
-                                    <CardContent className="p-4">
-                                      <div className="space-y-3">
-                                        <div className="flex items-start justify-between">
-                                          <div className="flex items-center gap-2">
-                                            {getGoalTypeIcon(goal.goal_type)}
-                                            <span className="font-medium text-sm">{goal.title}</span>
-                                          </div>
-                                          {goal.is_achieved && (
-                                            <Badge variant="default" className="bg-success text-success-foreground">
-                                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                                              Atingida
-                                            </Badge>
-                                          )}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                          <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">
-                                              {getGoalTypeLabel(goal.goal_type)}
-                                            </span>
-                                            <span className="font-semibold">
-                                              {goal.percentage.toFixed(0)}%
-                                            </span>
-                                          </div>
-                                          <Progress 
-                                            value={goal.percentage} 
-                                            className={`h-2 ${goal.is_achieved ? '[&>div]:bg-success' : ''}`}
-                                          />
-                                          <div className="flex justify-between text-xs text-muted-foreground">
-                                            <span>
-                                              Atual: {formatGoalValue(goal.goal_type, goal.current_value)}
-                                            </span>
-                                            <span>
-                                              Meta: {formatGoalValue(goal.goal_type, goal.target_value)}
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        <div className="text-xs text-muted-foreground">
-                                          {format(new Date(goal.start_date), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(goal.end_date), "dd/MM/yyyy", { locale: ptBR })}
-                                        </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
+                                </TableCell>
+                                {goal.months.map((cell, idx) => (
+                                  <TableCell
+                                    key={`t-${idx}`}
+                                    className={cn(
+                                      "text-center text-xs text-muted-foreground",
+                                      idx === currentMonthIdx && "bg-primary/5"
+                                    )}
+                                  >
+                                    {cell.target > 0 ? (
+                                      <Tooltip>
+                                        <TooltipTrigger className="cursor-help">
+                                          Meta:{" "}
+                                          <span className="font-medium text-foreground">
+                                            {formatGoalValue(
+                                              goal.goal_type,
+                                              cell.target
+                                            )}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-xs">
+                                            Meta para {MONTH_LABELS[idx]}/{year}
+                                          </p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    ) : (
+                                      <span className="opacity-40">—</span>
+                                    )}
+                                  </TableCell>
                                 ))}
-                              </div>
-                            )}
-                          </div>
-                        </CollapsibleContent>
+                                <TableCell className="text-center text-xs bg-muted/30">
+                                  Meta:{" "}
+                                  <span className="font-bold text-foreground">
+                                    {formatGoalValue(
+                                      goal.goal_type,
+                                      goal.totalTarget
+                                    )}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+
+                              {/* Achieved row */}
+                              <TableRow key={`${goal.id}-achieved`}>
+                                {goal.months.map((cell, idx) => {
+                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
+                                  return (
+                                    <TableCell
+                                      key={`a-${idx}`}
+                                      className={cn(
+                                        "text-center text-sm",
+                                        idx === currentMonthIdx && "bg-primary/5"
+                                      )}
+                                    >
+                                      {cell.target > 0 ? (
+                                        <span
+                                          className={cn(
+                                            isFuture
+                                              ? "text-muted-foreground"
+                                              : "text-foreground font-medium"
+                                          )}
+                                        >
+                                          {formatGoalValue(
+                                            goal.goal_type,
+                                            cell.achieved
+                                          )}
+                                        </span>
+                                      ) : (
+                                        <span className="opacity-40">—</span>
+                                      )}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell className="text-center text-sm bg-muted/30 font-semibold">
+                                  {formatGoalValue(
+                                    goal.goal_type,
+                                    goal.totalAchieved
+                                  )}
+                                </TableCell>
+                              </TableRow>
+
+                              {/* Percentage row */}
+                              <TableRow
+                                key={`${goal.id}-pct`}
+                                className="border-b-2"
+                              >
+                                {goal.months.map((cell, idx) => {
+                                  const isFuture =
+                                    idx > currentMonthIdx && currentMonthIdx >= 0;
+                                  return (
+                                    <TableCell
+                                      key={`p-${idx}`}
+                                      className={cn(
+                                        "text-center text-xs px-1",
+                                        idx === currentMonthIdx && "ring-2 ring-primary/30"
+                                      )}
+                                    >
+                                      {cell.target > 0 ? (
+                                        <div
+                                          className={cn(
+                                            "rounded px-2 py-1 inline-flex items-center gap-1",
+                                            getCellClass(
+                                              cell.percentage,
+                                              cell.target,
+                                              isFuture
+                                            )
+                                          )}
+                                        >
+                                          {cell.percentage >= 100 && (
+                                            <CheckCircle2 className="h-3 w-3" />
+                                          )}
+                                          {cell.percentage.toFixed(0)}%
+                                        </div>
+                                      ) : (
+                                        <span className="opacity-40">—</span>
+                                      )}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell className="text-center bg-muted/40">
+                                  <div
+                                    className={cn(
+                                      "rounded px-2 py-1 inline-flex items-center gap-1 font-bold",
+                                      getCellClass(
+                                        goal.totalPercentage,
+                                        goal.totalTarget,
+                                        false
+                                      )
+                                    )}
+                                  >
+                                    {goal.totalPercentage >= 100 && (
+                                      <CheckCircle2 className="h-3 w-3" />
+                                    )}
+                                    {goal.totalPercentage.toFixed(0)}%
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+
+                      {/* Legend */}
+                      <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <HelpCircle className="h-3 w-3" />
+                          <span>Legenda:</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-3 h-3 rounded bg-success/15 border border-success/30" />
+                          ≥ 100% atingido
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-3 h-3 rounded bg-warning/15 border border-warning/30" />
+                          70–99%
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-3 h-3 rounded bg-destructive/10 border border-destructive/30" />
+                          1–69%
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="inline-block w-3 h-3 rounded bg-muted/30 border border-border" />
+                          Sem registro / fora do período
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                </Collapsible>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+    </TooltipProvider>
   );
 };
 
