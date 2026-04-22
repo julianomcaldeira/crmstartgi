@@ -294,6 +294,22 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         return data || [];
       });
 
+      // Opportunities moved in window — status changes recorded in opportunity_history
+      const oppMovements = await fetchAllPaged<any>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("opportunity_history")
+          .select("id, opportunity_id, changed_by, changed_at, old_data, new_data, opportunities(title, clients(company_name, trade_name))")
+          .gte("changed_at", startTs)
+          .lte("changed_at", endTs)
+          .in("changed_by", sellerIds)
+          .range(from, to);
+        if (error) throw error;
+        // Keep only entries that represent a real status change
+        return (data || []).filter(
+          (h: any) => (h.old_data?.status ?? null) !== (h.new_data?.status ?? null),
+        );
+      });
+
       // Compute per seller
       const computed: SellerStats[] = (profiles || []).map((p: any) => {
         const sellerWon = wonInWindow.filter((o) => o.assigned_to === p.id);
