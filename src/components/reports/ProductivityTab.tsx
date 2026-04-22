@@ -109,13 +109,21 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
   const loadProductivity = async () => {
     setLoading(true);
     try {
-      // Determine which sellers to compute
+      // Determine which sellers to compute — apenas vendedores
       const { data: vendedorRoles } = await supabase
         .from("user_roles")
         .select("user_id")
-        .in("role", ["vendedor", "gestor", "admin"]);
+        .eq("role", "vendedor");
 
-      let sellerIds = Array.from(new Set((vendedorRoles || []).map((r: any) => r.user_id)));
+      const { data: adminRoles } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .in("role", ["admin", "gestor"]);
+
+      const adminIds = new Set((adminRoles || []).map((r: any) => r.user_id));
+      let sellerIds = Array.from(
+        new Set((vendedorRoles || []).map((r: any) => r.user_id))
+      ).filter((id) => !adminIds.has(id));
 
       // Restrict to current user if not privileged
       if (!isPrivileged) {
