@@ -609,6 +609,160 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           </CardContent>
         </Card>
       )}
+
+      {/* Audit Dialog */}
+      <Dialog open={auditOpen} onOpenChange={setAuditOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-primary" />
+              Auditoria — {auditSeller?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {auditMetric ? METRIC_LABEL[auditMetric] : ""} no período de{" "}
+              {format(new Date(startDate), "dd/MM/yyyy", { locale: ptBR })} a{" "}
+              {format(new Date(endDate), "dd/MM/yyyy", { locale: ptBR })}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="flex-1 pr-4">
+            {auditSeller && auditMetric && (
+              <AuditList seller={auditSeller} metric={auditMetric} />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+};
+
+// ============================================================
+// AuditList — renders the records that compose a metric
+// ============================================================
+const AuditList = ({ seller, metric }: { seller: SellerStats; metric: AuditMetric }) => {
+  const records: any[] = seller.audit[metric] || [];
+
+  if (records.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-8">
+        Nenhum registro encontrado para este indicador no período.
+      </p>
+    );
+  }
+
+  if (metric === "tasks") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Título</TableHead>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead>Concluída em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((t) => (
+            <TableRow key={t.id}>
+              <TableCell className="font-medium">{t.title || "—"}</TableCell>
+              <TableCell>{t.task_type || "—"}</TableCell>
+              <TableCell>{t.clients?.trade_name || t.clients?.company_name || "—"}</TableCell>
+              <TableCell>{formatDate(t.completed_at || t.updated_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (metric === "activities") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Tipo</TableHead>
+            <TableHead>Descrição</TableHead>
+            <TableHead>Oportunidade</TableHead>
+            <TableHead>Data</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((a) => (
+            <TableRow key={a.id}>
+              <TableCell>
+                <Badge variant="outline">{a.activity_type || "—"}</Badge>
+              </TableCell>
+              <TableCell className="max-w-xs truncate">{a.description || "—"}</TableCell>
+              <TableCell>
+                {a.opportunities?.title || "—"}
+                {a.opportunities?.clients && (
+                  <span className="block text-xs text-muted-foreground">
+                    {a.opportunities.clients.trade_name || a.opportunities.clients.company_name}
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>{formatDate(a.created_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (metric === "clients") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Empresa</TableHead>
+            <TableHead>Nome fantasia</TableHead>
+            <TableHead>CNPJ</TableHead>
+            <TableHead>Criado em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((c) => (
+            <TableRow key={c.id}>
+              <TableCell className="font-medium">{c.company_name || "—"}</TableCell>
+              <TableCell>{c.trade_name || "—"}</TableCell>
+              <TableCell className="font-mono text-xs">{c.cnpj || "—"}</TableCell>
+              <TableCell>{formatDate(c.created_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  // opportunitiesCreated / won
+  const isWon = metric === "won";
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Título</TableHead>
+          <TableHead>Cliente</TableHead>
+          <TableHead className="text-right">Valor</TableHead>
+          <TableHead>{isWon ? "Ganha em" : "Criada em"}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {records.map((o) => {
+          const total =
+            o.billing_type === "pontual"
+              ? Number(o.value) || Number(o.implementation_value) || 0
+              : (Number(o.implementation_value) || 0) + (Number(o.monthly_value) || 0) * 12;
+          return (
+            <TableRow key={o.id}>
+              <TableCell className="font-medium">{o.title || "—"}</TableCell>
+              <TableCell>{o.clients?.trade_name || o.clients?.company_name || "—"}</TableCell>
+              <TableCell className="text-right font-semibold text-primary">
+                {formatCurrency(isWon ? total : Number(o.value) || (Number(o.monthly_value) || 0) * 12)}
+              </TableCell>
+              <TableCell>{formatDate(isWon ? o.won_at : o.created_at)}</TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 };
