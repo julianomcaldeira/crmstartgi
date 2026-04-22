@@ -236,11 +236,16 @@ const MetricasEquipe = () => {
 
           const coveredCount = monthsCovered.filter(Boolean).length || 1;
 
-          // Target per month: target_value represents the TOTAL for the goal's
-          // coverage period. Always divide by the number of months the goal
-          // covers within the selected year so each month shows the proportional
-          // monthly target (e.g. R$ 980.000 / 12 = R$ 81.667/mês).
-          const perMonthTarget = targetValue / coveredCount;
+          // Target per month respects the goal's configured period:
+          // - mensal: target_value is already the monthly target (use as-is)
+          // - anual: divide by 12 (annual total spread across the year)
+          // - semestral: divide by 6 (semester total spread across 6 months)
+          const perMonthTarget =
+            period === "anual"
+              ? targetValue / 12
+              : period === "semestral"
+              ? targetValue / 6
+              : targetValue;
 
           for (let m = 0; m < 12; m++) {
             if (!monthsCovered[m]) {
