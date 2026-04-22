@@ -243,7 +243,23 @@ const MetricasEquipe = () => {
   const loadAll = async () => {
     setLoading(true);
     try {
-      // 1. Get only vendedores (exclude admins/gestores)
+      // Get current user and role
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        setSellers([]);
+        setGoalsBySeller({});
+        return;
+      }
+
+      const { data: currentUserRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", currentUser.id);
+
+      const roles = (currentUserRoles || []).map((r) => r.role);
+      const isPrivileged = roles.includes("admin") || roles.includes("gestor");
+
+      // 1. Get vendedores (admins/gestores see all; vendedores see only themselves)
       const { data: vendedorRoles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id")
@@ -251,7 +267,11 @@ const MetricasEquipe = () => {
 
       if (rolesError) throw rolesError;
 
-      const vendedorIds = (vendedorRoles || []).map((r) => r.user_id);
+      let vendedorIds = (vendedorRoles || []).map((r) => r.user_id);
+      if (!isPrivileged) {
+        vendedorIds = vendedorIds.filter((id) => id === currentUser.id);
+      }
+
       if (vendedorIds.length === 0) {
         setSellers([]);
         setGoalsBySeller({});
