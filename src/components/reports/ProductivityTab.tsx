@@ -317,10 +317,12 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         const sellerClientsArr = clientsCreated.filter((c) => c.created_by === p.id);
         const sellerTasksArr = tasksCompleted.filter((t) => t.assigned_to === p.id);
         const sellerActsArr = activities.filter((a) => a.created_by === p.id);
+        const sellerMovedArr = oppMovements.filter((m) => m.changed_by === p.id);
 
         const sellerClients = sellerClientsArr.length;
         const sellerTasks = sellerTasksArr.length;
         const sellerActs = sellerActsArr.length;
+        const sellerMoved = sellerMovedArr.length;
 
         let revenueCash = 0;
         let annualizedRevenue = 0;
@@ -341,7 +343,8 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         const totalOpps = sellerOppsCreated.length;
         const conversionRate = totalOpps > 0 ? (won / totalOpps) * 100 : 0;
 
-        const effortScore = sellerTasks + sellerActs + sellerOppsCreated.length + sellerClients;
+        const effortScore =
+          sellerTasks + sellerActs + sellerOppsCreated.length + sellerClients + sellerMoved;
 
         const revenuePerTask = sellerTasks > 0 ? revenueCash / sellerTasks : 0;
         const revenuePerActivity = sellerActs > 0 ? revenueCash / sellerActs : 0;
@@ -353,6 +356,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           name: p.full_name,
           clientsCreated: sellerClients,
           opportunitiesCreated: sellerOppsCreated.length,
+          opportunitiesMoved: sellerMoved,
           tasksCompleted: sellerTasks,
           activitiesLogged: sellerActs,
           effortScore,
@@ -369,6 +373,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
             tasks: sellerTasksArr,
             activities: sellerActsArr,
             opportunitiesCreated: sellerOppsCreated,
+            opportunitiesMoved: sellerMovedArr,
             clients: sellerClientsArr,
             won: sellerWon,
           },
