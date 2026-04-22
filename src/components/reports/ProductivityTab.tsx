@@ -263,9 +263,13 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const computed: SellerStats[] = (profiles || []).map((p: any) => {
         const sellerWon = wonInWindow.filter((o) => o.assigned_to === p.id);
         const sellerOppsCreated = oppsCreated.filter((o) => o.assigned_to === p.id);
-        const sellerClients = clientsCreated.filter((c) => c.created_by === p.id).length;
-        const sellerTasks = tasksCompleted.filter((t) => t.assigned_to === p.id).length;
-        const sellerActs = activities.filter((a) => a.created_by === p.id).length;
+        const sellerClientsArr = clientsCreated.filter((c) => c.created_by === p.id);
+        const sellerTasksArr = tasksCompleted.filter((t) => t.assigned_to === p.id);
+        const sellerActsArr = activities.filter((a) => a.created_by === p.id);
+
+        const sellerClients = sellerClientsArr.length;
+        const sellerTasks = sellerTasksArr.length;
+        const sellerActs = sellerActsArr.length;
 
         let revenueCash = 0;
         let annualizedRevenue = 0;
@@ -309,7 +313,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           revenuePerActivity,
           tasksPerWin,
           activitiesPerWin,
-          category: "low_effort", // placeholder, set below
+          category: "low_effort" as const,
+          audit: {
+            tasks: sellerTasksArr,
+            activities: sellerActsArr,
+            opportunitiesCreated: sellerOppsCreated,
+            clients: sellerClientsArr,
+            won: sellerWon,
+          },
         };
       });
 
