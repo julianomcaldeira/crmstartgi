@@ -771,6 +771,39 @@ const AuditList = ({ seller, metric }: { seller: SellerStats; metric: AuditMetri
     );
   }
 
+  if (metric === "opportunitiesMoved") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Oportunidade</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead>De</TableHead>
+            <TableHead>Para</TableHead>
+            <TableHead>Movida em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((m) => (
+            <TableRow key={m.id}>
+              <TableCell className="font-medium">{m.opportunities?.title || "—"}</TableCell>
+              <TableCell>
+                {m.opportunities?.clients?.trade_name || m.opportunities?.clients?.company_name || "—"}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">{m.old_data?.status || "—"}</Badge>
+              </TableCell>
+              <TableCell>
+                <Badge>{m.new_data?.status || "—"}</Badge>
+              </TableCell>
+              <TableCell>{formatDate(m.changed_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
   // opportunitiesCreated / won
   const isWon = metric === "won";
   return (
