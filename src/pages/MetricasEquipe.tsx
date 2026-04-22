@@ -226,10 +226,7 @@ const MONTH_LABELS = [
 const MetricasEquipe = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [goalsBySeller, setGoalsBySeller] = useState<Record<string, GoalWithMonths[]>>({});
-  const [nonSellerAchieved, setNonSellerAchieved] = useState<{
-    revenue: number[];
-    annualized_sales: number[];
-  }>({ revenue: Array(12).fill(0), annualized_sales: Array(12).fill(0) });
+  const [nonSellerAchieved, setNonSellerAchieved] = useState<MonetaryBuckets>(createEmptyMonetaryBuckets);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
@@ -273,54 +270,13 @@ const MetricasEquipe = () => {
       const sellerList = profiles || [];
       setSellers(sellerList);
 
-      // 2a. Fetch won opportunities owned by NON-vendedores (admins/gestores).
-      // These count toward the company "Realizado" for revenue / annualized_sales,
-      // but DO NOT add to the company "Meta".
       const yearStart = `${year}-01-01`;
       const yearEnd = `${year}-12-31`;
 
-      const nonSellerRevenue = Array(12).fill(0);
-      const nonSellerAnnualized = Array(12).fill(0);
+      const { bySeller: sellerMonetaryAchieved, nonSeller } =
+        await loadWonAchievementBucketsForYear(year, vendedorIds);
 
-      // Fetch all won opps in the year, then filter out those owned by vendedores in JS
-      // (avoids PostgREST UUID-quoting issues with .not("in", ...))
-      const vendedorSet = new Set(vendedorIds);
-      const { data: allWonOpps } = await supabase
-        .from("opportunities")
-        .select("implementation_value, monthly_value, billing_type, value, updated_at, assigned_to")
-        .eq("status", "won")
-        .gte("updated_at", `${yearStart}T00:00:00`)
-        .lte("updated_at", `${yearEnd}T23:59:59`);
-
-      const nonSellerOpps = (allWonOpps || []).filter(
-        (o: any) => !vendedorSet.has(o.assigned_to)
-      );
-
-      nonSellerOpps.forEach((opp: any) => {
-        const d = new Date(opp.updated_at);
-        if (d.getFullYear() !== year) return;
-        const mIdx = d.getMonth();
-        const billingType = opp?.billing_type ?? null;
-        const isPontual = billingType === "pontual";
-        const impl = Number(opp?.implementation_value) || 0;
-        const monthly = Number(opp?.monthly_value) || 0;
-        const value = Number(opp?.value) || 0;
-
-        // revenue
-        nonSellerRevenue[mIdx] += isPontual
-          ? value || impl
-          : impl + monthly * 12;
-
-        // annualized_sales (skip pontual)
-        if (!isPontual) {
-          nonSellerAnnualized[mIdx] += impl + monthly * 12;
-        }
-      });
-
-      setNonSellerAchieved({
-        revenue: nonSellerRevenue,
-        annualized_sales: nonSellerAnnualized,
-      });
+      setNonSellerAchieved(nonSeller);
 
       // 2. Fetch goals overlapping the selected year
       const { data: goals, error: goalsError } = await supabase
