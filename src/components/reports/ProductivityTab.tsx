@@ -168,11 +168,10 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const endTs = `${endDate}T23:59:59`;
 
       // Won opportunities — using first 'Ganho' activity timestamp
-      // 1. Fetch ALL won opps for these sellers (we'll filter by won-date later)
       const wonOpps = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunities")
-          .select("id, assigned_to, created_by, implementation_value, monthly_value, value, billing_type, updated_at, close_cycle_days")
+          .select("id, title, assigned_to, created_by, implementation_value, monthly_value, value, billing_type, updated_at, close_cycle_days, client_id, clients(company_name, trade_name)")
           .eq("status", "won")
           .or(sellerIds.map((id) => `assigned_to.eq.${id}`).join(","))
           .range(from, to);
@@ -200,17 +199,19 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         });
       }
 
-      // Filter won opps that fell within window
-      const wonInWindow = wonOpps.filter((o) => {
-        const wonAt = wonAtMap.get(o.id) ?? o.updated_at;
-        return wonAt >= startTs && wonAt <= endTs;
-      });
+      // Filter won opps that fell within window — attach won_at for display
+      const wonInWindow = wonOpps
+        .filter((o) => {
+          const wonAt = wonAtMap.get(o.id) ?? o.updated_at;
+          return wonAt >= startTs && wonAt <= endTs;
+        })
+        .map((o) => ({ ...o, won_at: wonAtMap.get(o.id) ?? o.updated_at }));
 
       // Fetch all opportunities created in window (per seller)
       const oppsCreated = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunities")
-          .select("id, assigned_to, created_by, status")
+          .select("id, title, assigned_to, created_by, status, value, monthly_value, created_at, client_id, clients(company_name, trade_name)")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .or(sellerIds.map((id) => `assigned_to.eq.${id}`).join(","))
@@ -223,7 +224,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const clientsCreated = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("clients")
-          .select("id, created_by")
+          .select("id, company_name, trade_name, cnpj, created_by, created_at")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .in("created_by", sellerIds)
@@ -236,7 +237,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const tasksCompleted = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("tasks")
-          .select("id, assigned_to, completed_at, updated_at")
+          .select("id, title, task_type, assigned_to, completed_at, updated_at, client_id, clients(company_name, trade_name)")
           .eq("status", "completed")
           .in("assigned_to", sellerIds)
           .or(`and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`)
@@ -249,7 +250,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
       const activities = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
           .from("opportunity_activities")
-          .select("id, created_by")
+          .select("id, activity_type, description, created_by, created_at, opportunity_id, opportunities(title, clients(company_name, trade_name))")
           .gte("created_at", startTs)
           .lte("created_at", endTs)
           .in("created_by", sellerIds)
