@@ -36,7 +36,13 @@ interface Props {
   selectedSeller: string; // 'all' or user id
 }
 
-type AuditMetric = "tasks" | "activities" | "opportunitiesCreated" | "clients" | "won";
+type AuditMetric =
+  | "tasks"
+  | "activities"
+  | "opportunitiesCreated"
+  | "opportunitiesMoved"
+  | "clients"
+  | "won";
 
 type SellerStats = {
   id: string;
@@ -44,6 +50,7 @@ type SellerStats = {
   // Esforço
   clientsCreated: number;
   opportunitiesCreated: number;
+  opportunitiesMoved: number;
   tasksCompleted: number;
   activitiesLogged: number;
   effortScore: number; // composite
@@ -64,6 +71,7 @@ type SellerStats = {
     tasks: any[];
     activities: any[];
     opportunitiesCreated: any[];
+    opportunitiesMoved: any[];
     clients: any[];
     won: any[];
   };
@@ -103,6 +111,7 @@ const METRIC_LABEL: Record<AuditMetric, string> = {
   tasks: "Tarefas concluídas",
   activities: "Atividades registradas",
   opportunitiesCreated: "Oportunidades criadas",
+  opportunitiesMoved: "Oportunidades movimentadas",
   clients: "Clientes criados",
   won: "Oportunidades ganhas",
 };
@@ -285,6 +294,22 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         return data || [];
       });
 
+      // Opportunities moved in window — status changes recorded in opportunity_history
+      const oppMovements = await fetchAllPaged<any>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("opportunity_history")
+          .select("id, opportunity_id, changed_by, changed_at, old_data, new_data, opportunities(title, clients(company_name, trade_name))")
+          .gte("changed_at", startTs)
+          .lte("changed_at", endTs)
+          .in("changed_by", sellerIds)
+          .range(from, to);
+        if (error) throw error;
+        // Keep only entries that represent a real status change
+        return (data || []).filter(
+          (h: any) => (h.old_data?.status ?? null) !== (h.new_data?.status ?? null),
+        );
+      });
+
       // Compute per seller
       const computed: SellerStats[] = (profiles || []).map((p: any) => {
         const sellerWon = wonInWindow.filter((o) => o.assigned_to === p.id);
@@ -292,10 +317,12 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         const sellerClientsArr = clientsCreated.filter((c) => c.created_by === p.id);
         const sellerTasksArr = tasksCompleted.filter((t) => t.assigned_to === p.id);
         const sellerActsArr = activities.filter((a) => a.created_by === p.id);
+        const sellerMovedArr = oppMovements.filter((m) => m.changed_by === p.id);
 
         const sellerClients = sellerClientsArr.length;
         const sellerTasks = sellerTasksArr.length;
         const sellerActs = sellerActsArr.length;
+        const sellerMoved = sellerMovedArr.length;
 
         let revenueCash = 0;
         let annualizedRevenue = 0;
@@ -316,7 +343,8 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
         const totalOpps = sellerOppsCreated.length;
         const conversionRate = totalOpps > 0 ? (won / totalOpps) * 100 : 0;
 
-        const effortScore = sellerTasks + sellerActs + sellerOppsCreated.length + sellerClients;
+        const effortScore =
+          sellerTasks + sellerActs + sellerOppsCreated.length + sellerClients + sellerMoved;
 
         const revenuePerTask = sellerTasks > 0 ? revenueCash / sellerTasks : 0;
         const revenuePerActivity = sellerActs > 0 ? revenueCash / sellerActs : 0;
@@ -328,6 +356,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
           name: p.full_name,
           clientsCreated: sellerClients,
           opportunitiesCreated: sellerOppsCreated.length,
+          opportunitiesMoved: sellerMoved,
           tasksCompleted: sellerTasks,
           activitiesLogged: sellerActs,
           effortScore,
@@ -344,6 +373,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
             tasks: sellerTasksArr,
             activities: sellerActsArr,
             opportunitiesCreated: sellerOppsCreated,
+            opportunitiesMoved: sellerMovedArr,
             clients: sellerClientsArr,
             won: sellerWon,
           },
@@ -460,7 +490,7 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                       <Search className="h-3 w-3" /> Clique para auditar
                     </span>
                   </p>
-                  <div className="grid grid-cols-4 gap-2 text-center">
+                  <div className="grid grid-cols-5 gap-2 text-center">
                     <button
                       type="button"
                       onClick={() => openAudit(s, "tasks")}
@@ -484,6 +514,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                     >
                       <p className="text-lg font-bold">{s.opportunitiesCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Opp criadas</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "opportunitiesMoved")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
+                      <p className="text-lg font-bold">{s.opportunitiesMoved}</p>
+                      <p className="text-[10px] text-muted-foreground">Opp movidas</p>
                     </button>
                     <button
                       type="button"
@@ -726,6 +764,39 @@ const AuditList = ({ seller, metric }: { seller: SellerStats; metric: AuditMetri
               <TableCell>{c.trade_name || "—"}</TableCell>
               <TableCell className="font-mono text-xs">{c.cnpj || "—"}</TableCell>
               <TableCell>{formatDate(c.created_at)}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    );
+  }
+
+  if (metric === "opportunitiesMoved") {
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Oportunidade</TableHead>
+            <TableHead>Cliente</TableHead>
+            <TableHead>De</TableHead>
+            <TableHead>Para</TableHead>
+            <TableHead>Movida em</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((m) => (
+            <TableRow key={m.id}>
+              <TableCell className="font-medium">{m.opportunities?.title || "—"}</TableCell>
+              <TableCell>
+                {m.opportunities?.clients?.trade_name || m.opportunities?.clients?.company_name || "—"}
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">{m.old_data?.status || "—"}</Badge>
+              </TableCell>
+              <TableCell>
+                <Badge>{m.new_data?.status || "—"}</Badge>
+              </TableCell>
+              <TableCell>{formatDate(m.changed_at)}</TableCell>
             </TableRow>
           ))}
         </TableBody>
