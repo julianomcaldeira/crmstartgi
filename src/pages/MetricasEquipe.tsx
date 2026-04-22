@@ -40,6 +40,84 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
+// Local month-bounded progress calc (avoids the "current month only" bug
+// in useGoalProgress.calculateGoalProgress when period is "mensal").
+async function fetchAchievedForMonth(
+  goalType: string,
+  assignedTo: string,
+  startStr: string,
+  endStr: string,
+  taskTypeFilter: string | null,
+  activityTypeFilter: string | null
+): Promise<number> {
+  const startTs = `${startStr}T00:00:00`;
+  const endTs = `${endStr}T23:59:59`;
+
+  if (goalType === "revenue" || goalType === "annualized_sales") {
+    const { data, error } = await supabase
+      .from("opportunities")
+      .select("implementation_value, monthly_value, billing_type, value")
+      .eq("assigned_to", assignedTo)
+      .eq("status", "won")
+      .gte("updated_at", startTs)
+      .lte("updated_at", endTs);
+    if (error) {
+      console.error("revenue fetch error", error);
+      return 0;
+    }
+    return (data || []).reduce((sum: number, opp: any) => {
+      const billingType = opp?.billing_type ?? null;
+      const isPontual = billingType === "pontual";
+      const impl = Number(opp?.implementation_value) || 0;
+      const monthly = Number(opp?.monthly_value) || 0;
+      const value = Number(opp?.value) || 0;
+      if (goalType === "annualized_sales") {
+        if (isPontual) return sum;
+        return sum + impl + monthly * 12;
+      }
+      // revenue
+      if (isPontual) return sum + (value || impl);
+      return sum + impl + monthly * 12;
+    }, 0);
+  }
+
+  if (goalType === "tasks") {
+    let q = supabase
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("assigned_to", assignedTo)
+      .eq("status", "completed");
+    if (taskTypeFilter) q = q.eq("task_type", taskTypeFilter as any);
+    q = q.or(
+      `and(completed_at.gte.${startTs},completed_at.lte.${endTs}),and(completed_at.is.null,updated_at.gte.${startTs},updated_at.lte.${endTs})`
+    );
+    const { count, error } = await q;
+    if (error) {
+      console.error("tasks fetch error", error);
+      return 0;
+    }
+    return count || 0;
+  }
+
+  if (goalType === "activities") {
+    let q = supabase
+      .from("opportunity_activities")
+      .select("*", { count: "exact", head: true })
+      .eq("created_by", assignedTo)
+      .gte("created_at", startTs)
+      .lte("created_at", endTs);
+    if (activityTypeFilter) q = q.eq("activity_type", activityTypeFilter);
+    const { count, error } = await q;
+    if (error) {
+      console.error("activities fetch error", error);
+      return 0;
+    }
+    return count || 0;
+  }
+
+  return 0;
+}
+
 interface Seller {
   id: string;
   full_name: string;
@@ -175,19 +253,16 @@ const MetricasEquipe = () => {
             const startStr = format(mStart, "yyyy-MM-dd");
             const endStr = format(mEnd, "yyyy-MM-dd");
 
-            // Only compute achieved up to today (future months stay 0)
+            // Only compute achieved up to end of current month (future stays 0)
             let achieved = 0;
             if (mStart <= today) {
-              achieved = await calculateGoalProgress(
-                goal.id,
+              achieved = await fetchAchievedForMonth(
                 goal.goal_type,
-                targetValue,
                 goal.assigned_to,
                 startStr,
                 endStr,
-                "mensal", // force monthly window
-                goal.task_type_filter,
-                goal.activity_type_filter
+                goal.task_type_filter ?? null,
+                goal.activity_type_filter ?? null
               );
             }
 
