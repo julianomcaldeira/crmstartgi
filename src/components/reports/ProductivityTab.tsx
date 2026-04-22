@@ -36,7 +36,13 @@ interface Props {
   selectedSeller: string; // 'all' or user id
 }
 
-type AuditMetric = "tasks" | "activities" | "opportunitiesCreated" | "clients" | "won";
+type AuditMetric =
+  | "tasks"
+  | "activities"
+  | "opportunitiesCreated"
+  | "opportunitiesMoved"
+  | "clients"
+  | "won";
 
 type SellerStats = {
   id: string;
@@ -44,6 +50,7 @@ type SellerStats = {
   // Esforço
   clientsCreated: number;
   opportunitiesCreated: number;
+  opportunitiesMoved: number;
   tasksCompleted: number;
   activitiesLogged: number;
   effortScore: number; // composite
@@ -64,6 +71,7 @@ type SellerStats = {
     tasks: any[];
     activities: any[];
     opportunitiesCreated: any[];
+    opportunitiesMoved: any[];
     clients: any[];
     won: any[];
   };
