@@ -564,7 +564,7 @@ const MetricasEquipe = () => {
                                   </div>
                                 </TableCell>
                               </TableRow>
-                            </>
+                            </Fragment>
                           ))}
                         </TableBody>
                       </Table>
