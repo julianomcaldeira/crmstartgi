@@ -111,6 +111,7 @@ const METRIC_LABEL: Record<AuditMetric, string> = {
   tasks: "Tarefas concluídas",
   activities: "Atividades registradas",
   opportunitiesCreated: "Oportunidades criadas",
+  opportunitiesMoved: "Oportunidades movimentadas",
   clients: "Clientes criados",
   won: "Oportunidades ganhas",
 };
