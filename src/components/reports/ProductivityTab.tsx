@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
   Activity,
   Trophy,
   Gem,
@@ -16,9 +24,11 @@ import {
   DollarSign,
   Zap,
   Users,
+  Search,
 } from "lucide-react";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
-import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, CartesianGrid, Legend, Cell } from "recharts";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Props {
   startDate: string;
