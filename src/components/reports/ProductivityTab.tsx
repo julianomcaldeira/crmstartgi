@@ -456,24 +456,43 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
                     <Activity className="h-3.5 w-3.5" /> ESFORÇO
+                    <span className="ml-auto text-[10px] font-normal text-muted-foreground flex items-center gap-1">
+                      <Search className="h-3 w-3" /> Clique para auditar
+                    </span>
                   </p>
                   <div className="grid grid-cols-4 gap-2 text-center">
-                    <div className="p-2 bg-muted/40 rounded">
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "tasks")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.tasksCompleted}</p>
                       <p className="text-[10px] text-muted-foreground">Tarefas</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "activities")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.activitiesLogged}</p>
                       <p className="text-[10px] text-muted-foreground">Atividades</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "opportunitiesCreated")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.opportunitiesCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Opp criadas</p>
-                    </div>
-                    <div className="p-2 bg-muted/40 rounded">
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "clients")}
+                      className="p-2 bg-muted/40 rounded hover:bg-muted/70 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold">{s.clientsCreated}</p>
                       <p className="text-[10px] text-muted-foreground">Clientes</p>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
@@ -483,10 +502,14 @@ export const ProductivityTab = ({ startDate, endDate, selectedSeller }: Props) =
                     <Trophy className="h-3.5 w-3.5" /> RESULTADO
                   </p>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-2 bg-success/10 rounded">
+                    <button
+                      type="button"
+                      onClick={() => openAudit(s, "won")}
+                      className="p-2 bg-success/10 rounded hover:bg-success/20 transition-colors cursor-pointer"
+                    >
                       <p className="text-lg font-bold text-success">{s.opportunitiesWon}</p>
                       <p className="text-[10px] text-muted-foreground">Ganhas</p>
-                    </div>
+                    </button>
                     <div className="p-2 bg-primary/10 rounded">
                       <p className="text-sm font-bold text-primary">{formatCurrency(s.annualizedRevenue)}</p>
                       <p className="text-[10px] text-muted-foreground">Anualizada</p>
