@@ -36,6 +36,8 @@ interface Props {
   selectedSeller: string; // 'all' or user id
 }
 
+type AuditMetric = "tasks" | "activities" | "opportunitiesCreated" | "clients" | "won";
+
 type SellerStats = {
   id: string;
   name: string;
@@ -47,8 +49,8 @@ type SellerStats = {
   effortScore: number; // composite
   // Resultado
   opportunitiesWon: number;
-  revenueCash: number; // implementation + monthly*12 (or value if pontual)
-  annualizedRevenue: number; // monthly*12 + implementation (skip pontual)
+  revenueCash: number;
+  annualizedRevenue: number;
   conversionRate: number;
   // Eficiência
   revenuePerTask: number;
@@ -57,6 +59,14 @@ type SellerStats = {
   activitiesPerWin: number;
   // Diagnóstico
   category: "champion" | "efficient" | "wrong_focus" | "low_effort";
+  // Auditoria — registros brutos
+  audit: {
+    tasks: any[];
+    activities: any[];
+    opportunitiesCreated: any[];
+    clients: any[];
+    won: any[];
+  };
 };
 
 const CATEGORY_META: Record<SellerStats["category"], { label: string; icon: any; color: string; description: string }> = {
