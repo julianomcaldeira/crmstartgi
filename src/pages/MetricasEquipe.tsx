@@ -304,15 +304,12 @@ const MetricasEquipe = () => {
 
       setNonSellerAchieved(nonSeller);
 
-      // 2. Fetch goals overlapping the selected year for ALL vendedores
-      // (so we can build a correct company-wide aggregate even when the
-      // viewer is a vendedor seeing only themselves).
+      // 2. Fetch goals overlapping the selected year for ALL vendedores.
+      // Uses a SECURITY DEFINER RPC so vendedores can also see other
+      // vendedores' goals (only fields needed for aggregation) without
+      // changing the goals table RLS.
       const { data: allGoals, error: goalsError } = await supabase
-        .from("goals")
-        .select("*")
-        .in("assigned_to", allVendedorIds)
-        .lte("start_date", yearEnd)
-        .gte("end_date", yearStart);
+        .rpc("get_company_goals", { _year: year });
 
       if (goalsError) throw goalsError;
 
