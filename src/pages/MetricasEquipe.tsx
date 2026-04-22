@@ -236,16 +236,20 @@ const MetricasEquipe = () => {
 
           const coveredCount = monthsCovered.filter(Boolean).length || 1;
 
-          // Target per month respects the goal's configured period:
-          // - mensal: target_value is already the monthly target (use as-is)
-          // - anual: divide by 12 (annual total spread across the year)
-          // - semestral: divide by 6 (semester total spread across 6 months)
-          const perMonthTarget =
-            period === "anual"
-              ? targetValue / 12
-              : period === "semestral"
-              ? targetValue / 6
-              : targetValue;
+          // Target per month rules:
+          // - revenue / annualized_sales: target_value is treated as a total for the
+          //   covered period, so distribute across the covered months in the year
+          // - other goals with period mensal: target_value is already monthly
+          // - other goals with period anual / semestral: distribute by 12 / 6
+          const isMonetaryGoal =
+            goal.goal_type === "revenue" || goal.goal_type === "annualized_sales";
+          const perMonthTarget = isMonetaryGoal
+            ? targetValue / coveredCount
+            : period === "anual"
+            ? targetValue / 12
+            : period === "semestral"
+            ? targetValue / 6
+            : targetValue;
 
           for (let m = 0; m < 12; m++) {
             if (!monthsCovered[m]) {
