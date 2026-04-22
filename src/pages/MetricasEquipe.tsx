@@ -157,6 +157,10 @@ const MONTH_LABELS = [
 const MetricasEquipe = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [goalsBySeller, setGoalsBySeller] = useState<Record<string, GoalWithMonths[]>>({});
+  const [nonSellerAchieved, setNonSellerAchieved] = useState<{
+    revenue: number[];
+    annualized_sales: number[];
+  }>({ revenue: Array(12).fill(0), annualized_sales: Array(12).fill(0) });
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState<number>(new Date().getFullYear());
 
@@ -200,10 +204,50 @@ const MetricasEquipe = () => {
       const sellerList = profiles || [];
       setSellers(sellerList);
 
-      // 2. Fetch goals overlapping the selected year
+      // 2a. Fetch won opportunities owned by NON-vendedores (admins/gestores).
+      // These count toward the company "Realizado" for revenue / annualized_sales,
+      // but DO NOT add to the company "Meta".
       const yearStart = `${year}-01-01`;
       const yearEnd = `${year}-12-31`;
 
+      const nonSellerRevenue = Array(12).fill(0);
+      const nonSellerAnnualized = Array(12).fill(0);
+
+      const { data: nonSellerOpps } = await supabase
+        .from("opportunities")
+        .select("implementation_value, monthly_value, billing_type, value, updated_at, assigned_to")
+        .eq("status", "won")
+        .not("assigned_to", "in", `(${vendedorIds.join(",")})`)
+        .gte("updated_at", `${yearStart}T00:00:00`)
+        .lte("updated_at", `${yearEnd}T23:59:59`);
+
+      (nonSellerOpps || []).forEach((opp: any) => {
+        const d = new Date(opp.updated_at);
+        if (d.getFullYear() !== year) return;
+        const mIdx = d.getMonth();
+        const billingType = opp?.billing_type ?? null;
+        const isPontual = billingType === "pontual";
+        const impl = Number(opp?.implementation_value) || 0;
+        const monthly = Number(opp?.monthly_value) || 0;
+        const value = Number(opp?.value) || 0;
+
+        // revenue
+        nonSellerRevenue[mIdx] += isPontual
+          ? value || impl
+          : impl + monthly * 12;
+
+        // annualized_sales (skip pontual)
+        if (!isPontual) {
+          nonSellerAnnualized[mIdx] += impl + monthly * 12;
+        }
+      });
+
+      setNonSellerAchieved({
+        revenue: nonSellerRevenue,
+        annualized_sales: nonSellerAnnualized,
+      });
+
+      // 2. Fetch goals overlapping the selected year
       const { data: goals, error: goalsError } = await supabase
         .from("goals")
         .select("*")
@@ -489,6 +533,56 @@ const MetricasEquipe = () => {
                   existing.totalAchieved += g.totalAchieved;
                 }
               });
+
+              // Inject achieved-only contributions from admins/gestores
+              // for revenue and annualized_sales. They add to "Realizado"
+              // but NEVER add to "Meta".
+              const injectNonSeller = (
+                goalType: "revenue" | "annualized_sales",
+                monthly: number[]
+              ) => {
+                const totalAchieved = monthly.reduce((s, v) => s + v, 0);
+                if (totalAchieved === 0) return;
+                const key = `${goalType}::all`;
+                const label = getGoalTypeLabel(goalType);
+                const existing = aggregated.get(key);
+
+                // YTD slice for total
+                const todayYear = new Date().getFullYear();
+                const todayMonth = new Date().getMonth();
+                const ytdLastIdx =
+                  year < todayYear ? 11 : year > todayYear ? -1 : todayMonth;
+                const ytdAchieved =
+                  ytdLastIdx >= 0
+                    ? monthly.slice(0, ytdLastIdx + 1).reduce((s, v) => s + v, 0)
+                    : 0;
+
+                if (!existing) {
+                  aggregated.set(key, {
+                    key,
+                    goal_type: goalType,
+                    title: label,
+                    months: monthly.map((v) => ({
+                      target: 0,
+                      achieved: v,
+                      percentage: 0,
+                    })),
+                    totalTarget: 0,
+                    totalAchieved: ytdAchieved,
+                    totalPercentage: 0,
+                  });
+                } else {
+                  existing.months = existing.months.map((c, i) => ({
+                    target: c.target,
+                    achieved: c.achieved + monthly[i],
+                    percentage: 0,
+                  }));
+                  existing.totalAchieved += ytdAchieved;
+                }
+              };
+
+              injectNonSeller("revenue", nonSellerAchieved.revenue);
+              injectNonSeller("annualized_sales", nonSellerAchieved.annualized_sales);
 
               // Recompute percentages
               const companyGoals = Array.from(aggregated.values()).map((g) => ({
