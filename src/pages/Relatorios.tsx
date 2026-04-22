@@ -825,7 +825,10 @@ const Relatorios = () => {
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="sales">Vendas</TabsTrigger>
                 <TabsTrigger value="tasks">Tarefas</TabsTrigger>
-                <TabsTrigger value="team">Equipe</TabsTrigger>
+                <TabsTrigger value="productivity">
+                  <Activity className="h-4 w-4 mr-2" />
+                  Produtividade
+                </TabsTrigger>
                 <TabsTrigger value="feiras">Feiras</TabsTrigger>
                 <TabsTrigger value="ai">
                   <Sparkles className="h-4 w-4 mr-2" />
