@@ -287,8 +287,15 @@ const MetricasEquipe = () => {
             });
           }
 
-          const totalTarget = months.reduce((s, c) => s + c.target, 0);
-          const totalAchieved = months.reduce((s, c) => s + c.achieved, 0);
+          // Year-to-Date totals: only sum target/achieved up to the current
+          // month for the current year. Past years sum the full 12 months;
+          // future years sum nothing.
+          const todayYear = today.getFullYear();
+          const ytdLastIdx =
+            year < todayYear ? 11 : year > todayYear ? -1 : today.getMonth();
+          const ytdMonths = ytdLastIdx >= 0 ? months.slice(0, ytdLastIdx + 1) : [];
+          const totalTarget = ytdMonths.reduce((s, c) => s + c.target, 0);
+          const totalAchieved = ytdMonths.reduce((s, c) => s + c.achieved, 0);
           const totalPercentage =
             totalTarget > 0 ? (totalAchieved / totalTarget) * 100 : 0;
 
@@ -538,7 +545,7 @@ const MetricasEquipe = () => {
                               </TableHead>
                             ))}
                             <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total Ano
+                              Total YTD
                             </TableHead>
                           </TableRow>
                         </TableHeader>
@@ -721,7 +728,7 @@ const MetricasEquipe = () => {
                               </TableHead>
                             ))}
                             <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total Ano
+                              Total YTD
                             </TableHead>
                           </TableRow>
                         </TableHeader>
