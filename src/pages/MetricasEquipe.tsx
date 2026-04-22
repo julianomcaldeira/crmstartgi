@@ -424,7 +424,254 @@ const MetricasEquipe = () => {
             </CardContent>
           </Card>
         ) : (
-          sellers.map((seller) => {
+          <>
+            {/* Company-wide aggregated summary */}
+            {(() => {
+              // Group goals across all sellers by a stable key:
+              // goal_type + task/activity filter so we don't mix Ligações with Propostas.
+              const aggregated = new Map<
+                string,
+                {
+                  key: string;
+                  goal_type: string;
+                  title: string;
+                  months: MonthCell[];
+                  totalTarget: number;
+                  totalAchieved: number;
+                  totalPercentage: number;
+                }
+              >();
+
+              Object.values(goalsBySeller).flat().forEach((g) => {
+                const subKey =
+                  g.goal_type === "tasks"
+                    ? g.task_type_filter || "all"
+                    : g.goal_type === "activities"
+                    ? g.activity_type_filter || "all"
+                    : "all";
+                const key = `${g.goal_type}::${subKey}`;
+                let label = getGoalTypeLabel(g.goal_type);
+                if (g.goal_type === "tasks" && g.task_type_filter) {
+                  label = `Tarefas — ${g.task_type_filter}`;
+                } else if (g.goal_type === "activities" && g.activity_type_filter) {
+                  label = `Atividades — ${g.activity_type_filter}`;
+                }
+
+                const existing = aggregated.get(key);
+                if (!existing) {
+                  aggregated.set(key, {
+                    key,
+                    goal_type: g.goal_type,
+                    title: label,
+                    months: g.months.map((c) => ({ ...c })),
+                    totalTarget: g.totalTarget,
+                    totalAchieved: g.totalAchieved,
+                    totalPercentage: 0,
+                  });
+                } else {
+                  existing.months = existing.months.map((c, i) => ({
+                    target: c.target + g.months[i].target,
+                    achieved: c.achieved + g.months[i].achieved,
+                    percentage: 0,
+                  }));
+                  existing.totalTarget += g.totalTarget;
+                  existing.totalAchieved += g.totalAchieved;
+                }
+              });
+
+              // Recompute percentages
+              const companyGoals = Array.from(aggregated.values()).map((g) => ({
+                ...g,
+                months: g.months.map((c) => ({
+                  ...c,
+                  percentage:
+                    c.target > 0 ? Math.min((c.achieved / c.target) * 100, 999) : 0,
+                })),
+                totalPercentage:
+                  g.totalTarget > 0 ? (g.totalAchieved / g.totalTarget) * 100 : 0,
+              }));
+
+              companyGoals.sort((a, b) => a.title.localeCompare(b.title));
+
+              if (companyGoals.length === 0) return null;
+
+              return (
+                <Card className="shadow-xl border-l-4 border-l-success bg-gradient-to-br from-success/5 to-transparent">
+                  <CardHeader>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          <Trophy className="h-5 w-5 text-success" />
+                          Total da Empresa
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Soma das metas de todos os vendedores
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="self-start sm:self-auto border-success/40 text-success">
+                        {companyGoals.length} meta{companyGoals.length !== 1 ? "s" : ""} agregada{companyGoals.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
+                              Meta
+                            </TableHead>
+                            {MONTH_LABELS.map((m, idx) => (
+                              <TableHead
+                                key={m}
+                                className={cn(
+                                  "text-center min-w-[110px]",
+                                  idx === currentMonthIdx &&
+                                    "bg-primary/10 text-primary font-bold"
+                                )}
+                              >
+                                {m}
+                              </TableHead>
+                            ))}
+                            <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
+                              Total Ano
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {companyGoals.map((goal) => (
+                            <Fragment key={goal.key}>
+                              <TableRow className="border-t-2">
+                                <TableCell
+                                  rowSpan={3}
+                                  className="align-top sticky left-0 bg-background z-10 border-r"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-muted-foreground mt-0.5">
+                                      {getGoalTypeIcon(goal.goal_type)}
+                                    </span>
+                                    <div>
+                                      <p className="font-semibold text-foreground leading-tight">
+                                        {goal.title}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Empresa
+                                      </p>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                {goal.months.map((cell, idx) => (
+                                  <TableCell
+                                    key={`ct-${idx}`}
+                                    className={cn(
+                                      "text-center text-xs text-muted-foreground",
+                                      idx === currentMonthIdx && "bg-primary/5"
+                                    )}
+                                  >
+                                    {cell.target > 0 ? (
+                                      <>
+                                        Meta:{" "}
+                                        <span className="font-medium text-foreground">
+                                          {formatGoalValue(goal.goal_type, cell.target)}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <span className="opacity-40">—</span>
+                                    )}
+                                  </TableCell>
+                                ))}
+                                <TableCell className="text-center text-xs bg-muted/30">
+                                  Meta:{" "}
+                                  <span className="font-bold text-foreground">
+                                    {formatGoalValue(goal.goal_type, goal.totalTarget)}
+                                  </span>
+                                </TableCell>
+                              </TableRow>
+                              <TableRow>
+                                {goal.months.map((cell, idx) => {
+                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
+                                  return (
+                                    <TableCell
+                                      key={`ca-${idx}`}
+                                      className={cn(
+                                        "text-center text-sm",
+                                        idx === currentMonthIdx && "bg-primary/5"
+                                      )}
+                                    >
+                                      {cell.target > 0 ? (
+                                        <span
+                                          className={cn(
+                                            isFuture
+                                              ? "text-muted-foreground"
+                                              : "text-foreground font-medium"
+                                          )}
+                                        >
+                                          {formatGoalValue(goal.goal_type, cell.achieved)}
+                                        </span>
+                                      ) : (
+                                        <span className="opacity-40">—</span>
+                                      )}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell className="text-center text-sm bg-muted/30 font-semibold">
+                                  {formatGoalValue(goal.goal_type, goal.totalAchieved)}
+                                </TableCell>
+                              </TableRow>
+                              <TableRow className="border-b-2">
+                                {goal.months.map((cell, idx) => {
+                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
+                                  return (
+                                    <TableCell
+                                      key={`cp-${idx}`}
+                                      className={cn(
+                                        "text-center text-xs px-1",
+                                        idx === currentMonthIdx && "ring-2 ring-primary/30"
+                                      )}
+                                    >
+                                      {cell.target > 0 ? (
+                                        <div
+                                          className={cn(
+                                            "rounded px-2 py-1 inline-flex items-center gap-1",
+                                            getCellClass(cell.percentage, cell.target, isFuture)
+                                          )}
+                                        >
+                                          {cell.percentage >= 100 && (
+                                            <CheckCircle2 className="h-3 w-3" />
+                                          )}
+                                          {cell.percentage.toFixed(0)}%
+                                        </div>
+                                      ) : (
+                                        <span className="opacity-40">—</span>
+                                      )}
+                                    </TableCell>
+                                  );
+                                })}
+                                <TableCell className="text-center bg-muted/40">
+                                  <div
+                                    className={cn(
+                                      "rounded px-2 py-1 inline-flex items-center gap-1 font-bold",
+                                      getCellClass(goal.totalPercentage, goal.totalTarget, false)
+                                    )}
+                                  >
+                                    {goal.totalPercentage >= 100 && (
+                                      <CheckCircle2 className="h-3 w-3" />
+                                    )}
+                                    {goal.totalPercentage.toFixed(0)}%
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </Fragment>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {sellers.map((seller) => {
             const goals = goalsBySeller[seller.id] || [];
             return (
               <Card key={seller.id} className="shadow-lg border-l-4 border-l-primary">
