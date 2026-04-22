@@ -923,8 +923,9 @@ const MetricasEquipe = () => {
                   )}
                 </CardContent>
               </Card>
-            );
-          })
+              );
+            })}
+          </>
         )}
       </div>
     </TooltipProvider>
