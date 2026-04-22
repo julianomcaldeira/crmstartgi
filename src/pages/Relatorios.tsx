@@ -32,6 +32,8 @@ import { ptBR } from "date-fns/locale";
 import { ReportBuilder, ReportConfig } from "@/components/reports/ReportBuilder";
 import { ReportViewer } from "@/components/reports/ReportViewer";
 import { ReportAIAnalysis } from "@/components/reports/ReportAIAnalysis";
+import { ProductivityTab } from "@/components/reports/ProductivityTab";
+import { Activity } from "lucide-react";
 import {
   Select,
   SelectContent,
