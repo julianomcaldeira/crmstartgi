@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List, X } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
@@ -74,6 +74,22 @@ const Metas = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>(() => format(getFirstBusinessDay(new Date()), "yyyy-MM-dd"));
   const [filterEndDate, setFilterEndDate] = useState<string>(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [groupBySeller, setGroupBySeller] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: string }) => {
+    if (sortColumn !== col) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
   
   // Form states
   const [formData, setFormData] = useState({
@@ -1162,14 +1178,30 @@ const Metas = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Meta</TableHead>
-                        <TableHead>Vendedor</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Período</TableHead>
-                        <TableHead>Datas</TableHead>
-                        <TableHead>Filtro</TableHead>
-                        <TableHead>Descrição</TableHead>
-                        <TableHead className="text-right">Alvo</TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("title")}>
+                          <span className="inline-flex items-center gap-1">Meta <SortIcon col="title" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("seller")}>
+                          <span className="inline-flex items-center gap-1">Vendedor <SortIcon col="seller" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("goal_type")}>
+                          <span className="inline-flex items-center gap-1">Tipo <SortIcon col="goal_type" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("period")}>
+                          <span className="inline-flex items-center gap-1">Período <SortIcon col="period" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("start_date")}>
+                          <span className="inline-flex items-center gap-1">Datas <SortIcon col="start_date" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("filter")}>
+                          <span className="inline-flex items-center gap-1">Filtro <SortIcon col="filter" /></span>
+                        </TableHead>
+                        <TableHead className="cursor-pointer select-none" onClick={() => handleSort("description")}>
+                          <span className="inline-flex items-center gap-1">Descrição <SortIcon col="description" /></span>
+                        </TableHead>
+                        <TableHead className="text-right cursor-pointer select-none" onClick={() => handleSort("target_value")}>
+                          <span className="inline-flex items-center gap-1 justify-end w-full">Alvo <SortIcon col="target_value" /></span>
+                        </TableHead>
                         {isAdmin && <TableHead className="text-center">Ações</TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -1184,7 +1216,28 @@ const Metas = () => {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredGoalsProgress.map((goal) => {
+                        [...filteredGoalsProgress].sort((a, b) => {
+                          if (!sortColumn) return 0;
+                          const dir = sortDirection === "asc" ? 1 : -1;
+                          const getVal = (g: any) => {
+                            switch (sortColumn) {
+                              case "title": return (g.title || "").toLowerCase();
+                              case "seller": return (g.assigned_user?.full_name || "").toLowerCase();
+                              case "goal_type": return getGoalTypeLabel(g.goal_type).toLowerCase();
+                              case "period": return getPeriodLabel(g.period).toLowerCase();
+                              case "start_date": return g.start_date || "";
+                              case "filter": return (g.task_type_filter || g.activity_type_filter || "").toLowerCase();
+                              case "description": return (g.description || "").toLowerCase();
+                              case "target_value": return Number(g.target_value) || 0;
+                              default: return "";
+                            }
+                          };
+                          const va = getVal(a);
+                          const vb = getVal(b);
+                          if (va < vb) return -1 * dir;
+                          if (va > vb) return 1 * dir;
+                          return 0;
+                        }).map((goal) => {
                           const Icon = getGoalIcon(goal.goal_type);
                           const taskTypeLabel = goal.task_type_filter
                             ? (taskTypes.find((t) => t.value === goal.task_type_filter)?.label || goal.task_type_filter)
