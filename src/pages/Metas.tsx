@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List, X } from "lucide-react";
+import { TrendingUp, Target, DollarSign, CheckSquare, Plus, Pencil, Trash2, Users, Filter, BarChart3, LineChart, TrendingDown, List, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { CurrencyInput } from "@/components/ui/masked-input";
 import { Switch } from "@/components/ui/switch";
 import { BarChart, Bar, LineChart as RechartsLineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from "recharts";
