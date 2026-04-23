@@ -582,7 +582,9 @@ const Metas = () => {
 
       setDialogOpen(false);
       resetForm();
-      fetchGoals();
+      await fetchGoals();
+      // Force recalculation of progress immediately after update
+      await Promise.all([fetchGoalsProgress(), fetchHistoricalData()]);
     } catch (error) {
       console.error("Error saving goal:", error);
       toast.error("Erro ao salvar meta");
