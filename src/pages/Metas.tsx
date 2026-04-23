@@ -582,7 +582,9 @@ const Metas = () => {
 
       setDialogOpen(false);
       resetForm();
-      fetchGoals();
+      await fetchGoals();
+      // Force recalculation of progress immediately after update
+      await Promise.all([fetchGoalsProgress(), fetchHistoricalData()]);
     } catch (error) {
       console.error("Error saving goal:", error);
       toast.error("Erro ao salvar meta");
@@ -1162,8 +1164,10 @@ const Metas = () => {
                       <TableRow>
                         <TableHead>Meta</TableHead>
                         <TableHead>Tipo</TableHead>
-                        <TableHead>Responsável</TableHead>
                         <TableHead>Período</TableHead>
+                        <TableHead>Datas</TableHead>
+                        <TableHead>Filtro</TableHead>
+                        <TableHead>Descrição</TableHead>
                         <TableHead className="text-right">Alvo</TableHead>
                         <TableHead className="text-right">Atual</TableHead>
                         <TableHead className="text-right text-orange-600">Falta</TableHead>
@@ -1177,7 +1181,7 @@ const Metas = () => {
                       {filteredGoalsProgress.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={isAdmin ? 11 : 10}
+                            colSpan={isAdmin ? 13 : 12}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nenhuma meta encontrada para o período selecionado
@@ -1186,6 +1190,10 @@ const Metas = () => {
                       ) : (
                         filteredGoalsProgress.map((goal) => {
                           const Icon = getGoalIcon(goal.goal_type);
+                          const taskTypeLabel = goal.task_type_filter
+                            ? (taskTypes.find((t) => t.value === goal.task_type_filter)?.label || goal.task_type_filter)
+                            : null;
+                          const activityTypeLabel = goal.activity_type_filter || null;
                           return (
                             <TableRow key={goal.id} className="hover:bg-muted/50">
                               <TableCell>
@@ -1193,12 +1201,7 @@ const Metas = () => {
                                   <div className="p-1.5 bg-primary/10 rounded">
                                     <Icon className="h-4 w-4 text-primary" />
                                   </div>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">{goal.title}</span>
-                                    {goal.task_type_filter && (
-                                      <span className="text-xs text-muted-foreground">Tipo: {goal.task_type_filter}</span>
-                                    )}
-                                  </div>
+                                  <span className="font-medium">{goal.title}</span>
                                 </div>
                               </TableCell>
                               <TableCell>
@@ -1207,20 +1210,40 @@ const Metas = () => {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                {goal.profiles?.full_name || goal.assigned_user?.full_name || "Não atribuído"}
+                                <span className="text-xs font-medium">
+                                  {goal.isPartialPeriod ? `${getPeriodLabel(goal.period)} (proporcional)` : getPeriodLabel(goal.period)}
+                                </span>
                               </TableCell>
                               <TableCell>
                                 <div className="flex flex-col">
-                                  <span className="text-xs font-medium">
-                                    {goal.isPartialPeriod ? `${getPeriodLabel(goal.period)} (proporcional)` : (goal.period === "mensal" ? "Mês atual" : getPeriodLabel(goal.period))}
-                                  </span>
                                   <span className="text-xs text-muted-foreground">
-                                    {goal.windowStart && goal.windowEnd 
-                                      ? `${parseDateOnly(goal.windowStart).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${parseDateOnly(goal.windowEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}`
-                                      : `${parseDateOnly(goal.start_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - ${parseDateOnly(goal.end_date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}`
-                                    }
+                                    {parseDateOnly(goal.start_date).toLocaleDateString("pt-BR")} →{" "}
+                                    {parseDateOnly(goal.end_date).toLocaleDateString("pt-BR")}
                                   </span>
+                                  {goal.windowStart && goal.windowEnd && (goal.windowStart !== goal.start_date || goal.windowEnd !== goal.end_date) && (
+                                    <span className="text-xs text-muted-foreground italic">
+                                      janela: {parseDateOnly(goal.windowStart).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })} - {parseDateOnly(goal.windowEnd).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                                    </span>
+                                  )}
                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                {taskTypeLabel || activityTypeLabel ? (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {taskTypeLabel || activityTypeLabel}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="max-w-[240px]">
+                                {goal.description ? (
+                                  <span className="text-xs text-muted-foreground line-clamp-2" title={goal.description}>
+                                    {goal.description}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
                               </TableCell>
                               <TableCell className="text-right font-medium">
                                 <div className="flex flex-col items-end">
@@ -1248,7 +1271,7 @@ const Metas = () => {
                                 {formatValue(Math.round(goal.projection), goal.goal_type)}
                               </TableCell>
                               <TableCell>
-                                <Badge 
+                                <Badge
                                   variant={goal.isOnTrack ? "default" : "destructive"}
                                   className="text-xs"
                                 >
