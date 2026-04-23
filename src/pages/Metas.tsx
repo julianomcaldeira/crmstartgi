@@ -1169,11 +1169,6 @@ const Metas = () => {
                         <TableHead>Filtro</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead className="text-right">Alvo</TableHead>
-                        <TableHead className="text-right">Atual</TableHead>
-                        <TableHead className="text-right text-orange-600">Falta</TableHead>
-                        <TableHead className="text-right">Progresso</TableHead>
-                        <TableHead className="text-right">Projeção</TableHead>
-                        <TableHead>Status</TableHead>
                         {isAdmin && <TableHead className="text-center">Ações</TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -1181,7 +1176,7 @@ const Metas = () => {
                       {filteredGoalsProgress.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={isAdmin ? 13 : 12}
+                            colSpan={isAdmin ? 8 : 7}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nenhuma meta encontrada para o período selecionado
@@ -1246,41 +1241,7 @@ const Metas = () => {
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-medium">
-                                <div className="flex flex-col items-end">
-                                  <span>{formatValue(goal.effectiveTarget ?? goal.target_value, goal.goal_type)}</span>
-                                  {goal.isPartialPeriod && goal.effectiveTarget !== goal.target_value && (
-                                    <span className="text-xs text-muted-foreground">
-                                      (total: {formatValue(goal.target_value, goal.goal_type)})
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right font-bold text-primary">
-                                {formatValue(goal.currentValue, goal.goal_type)}
-                              </TableCell>
-                              <TableCell className="text-right font-semibold text-orange-600">
-                                {goal.remaining > 0 ? formatValue(goal.remaining, goal.goal_type) : "✓"}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <Progress value={goal.progress} className="w-16 h-2" />
-                                  <span className="text-xs font-medium w-10">{goal.progress.toFixed(0)}%</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right text-muted-foreground">
-                                {formatValue(Math.round(goal.projection), goal.goal_type)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={goal.isOnTrack ? "default" : "destructive"}
-                                  className="text-xs"
-                                >
-                                  {goal.isOnTrack ? (
-                                    <><TrendingUp className="h-3 w-3 mr-1" /> No caminho</>
-                                  ) : (
-                                    <><TrendingDown className="h-3 w-3 mr-1" /> Atenção</>
-                                  )}
-                                </Badge>
+                                {formatValue(goal.target_value, goal.goal_type)}
                               </TableCell>
                               {isAdmin && (
                                 <TableCell className="text-center">
