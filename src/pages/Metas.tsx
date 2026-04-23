@@ -74,6 +74,22 @@ const Metas = () => {
   const [filterStartDate, setFilterStartDate] = useState<string>(() => format(getFirstBusinessDay(new Date()), "yyyy-MM-dd"));
   const [filterEndDate, setFilterEndDate] = useState<string>(() => format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [groupBySeller, setGroupBySeller] = useState(false);
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (col: string) => {
+    if (sortColumn === col) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortColumn(col);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ col }: { col: string }) => {
+    if (sortColumn !== col) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
   
   // Form states
   const [formData, setFormData] = useState({
