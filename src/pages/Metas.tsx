@@ -1163,6 +1163,7 @@ const Metas = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Meta</TableHead>
+                        <TableHead>Vendedor</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Período</TableHead>
                         <TableHead>Datas</TableHead>
@@ -1176,7 +1177,7 @@ const Metas = () => {
                       {filteredGoalsProgress.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={isAdmin ? 8 : 7}
+                            colSpan={isAdmin ? 9 : 8}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nenhuma meta encontrada para o período selecionado
@@ -1198,6 +1199,11 @@ const Metas = () => {
                                   </div>
                                   <span className="font-medium">{goal.title}</span>
                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="text-sm">
+                                  {goal.assigned_user?.full_name || (goal.assigned_to ? "—" : <span className="text-muted-foreground italic">Não atribuído</span>)}
+                                </span>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="text-xs">
