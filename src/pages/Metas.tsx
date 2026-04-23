@@ -1169,11 +1169,6 @@ const Metas = () => {
                         <TableHead>Filtro</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead className="text-right">Alvo</TableHead>
-                        <TableHead className="text-right">Atual</TableHead>
-                        <TableHead className="text-right text-orange-600">Falta</TableHead>
-                        <TableHead className="text-right">Progresso</TableHead>
-                        <TableHead className="text-right">Projeção</TableHead>
-                        <TableHead>Status</TableHead>
                         {isAdmin && <TableHead className="text-center">Ações</TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -1181,7 +1176,7 @@ const Metas = () => {
                       {filteredGoalsProgress.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={isAdmin ? 13 : 12}
+                            colSpan={isAdmin ? 8 : 7}
                             className="py-8 text-center text-muted-foreground"
                           >
                             Nenhuma meta encontrada para o período selecionado
