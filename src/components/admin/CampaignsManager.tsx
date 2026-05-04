@@ -470,6 +470,23 @@ export const CampaignsManager = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {campaign.status === "active" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            await exportCampaignToPdf(campaign);
+                            toast.success("PDF gerado!");
+                          } catch (e: any) {
+                            toast.error("Erro ao gerar PDF: " + e.message);
+                          }
+                        }}
+                        className="gap-1"
+                      >
+                        <FileDown className="h-3.5 w-3.5" /> Passo a Passo (PDF)
+                      </Button>
+                    )}
                     {campaign.status === "draft" && (
                       <Button size="sm" variant="outline" onClick={() => handleStatusChange(campaign.id, "active")} className="gap-1">
                         <Play className="h-3.5 w-3.5" /> Ativar
