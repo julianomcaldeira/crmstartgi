@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, GripVertical, Calendar, Target, Users, CheckCircle2, Pause, Play, Archive, Megaphone, ListChecks } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Calendar, Target, Users, CheckCircle2, Pause, Play, Archive, Megaphone, ListChecks, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateLocaleBR } from "@/lib/dateUtils";
+import { exportCampaignToPdf } from "@/lib/campaignPdfExport";
 
 const TASK_TYPES = [
   { value: "ligacao", label: "Ligação" },
