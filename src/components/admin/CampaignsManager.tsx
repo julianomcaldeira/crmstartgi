@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, GripVertical, Calendar, Target, Users, CheckCircle2, Pause, Play, Archive, Megaphone, ListChecks } from "lucide-react";
+import { Plus, Edit, Trash2, GripVertical, Calendar, Target, Users, CheckCircle2, Pause, Play, Archive, Megaphone, ListChecks, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { formatDateLocaleBR } from "@/lib/dateUtils";
+import { exportCampaignToPdf } from "@/lib/campaignPdfExport";
 
 const TASK_TYPES = [
   { value: "ligacao", label: "Ligação" },
@@ -469,6 +470,23 @@ export const CampaignsManager = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    {campaign.status === "active" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          try {
+                            await exportCampaignToPdf(campaign);
+                            toast.success("PDF gerado!");
+                          } catch (e: any) {
+                            toast.error("Erro ao gerar PDF: " + e.message);
+                          }
+                        }}
+                        className="gap-1"
+                      >
+                        <FileDown className="h-3.5 w-3.5" /> Passo a Passo (PDF)
+                      </Button>
+                    )}
                     {campaign.status === "draft" && (
                       <Button size="sm" variant="outline" onClick={() => handleStatusChange(campaign.id, "active")} className="gap-1">
                         <Play className="h-3.5 w-3.5" /> Ativar
