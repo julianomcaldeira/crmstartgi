@@ -94,7 +94,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-    ...(isAdmin || isPreVendas ? [{ icon: Target, label: "Pré-Vendas", path: "/pre-vendas" }] : []),
+    { icon: TargetIcon, label: "Pré-Vendas", path: "/pre-vendas" },
     { icon: Users, label: "Prospects", path: "/prospects" },
     { icon: Target, label: "Oportunidades", path: "/oportunidades" },
     { icon: Users, label: "Clientes", path: "/clientes" },
