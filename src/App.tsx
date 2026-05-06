@@ -19,6 +19,7 @@ import Feiras from "./pages/Feiras";
 import MetricasEquipe from "./pages/MetricasEquipe";
 import RadarLeads from "./pages/RadarLeads";
 import InteligenciaMercado from "./pages/InteligenciaMercado";
+import PreVendas from "./pages/PreVendas";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
