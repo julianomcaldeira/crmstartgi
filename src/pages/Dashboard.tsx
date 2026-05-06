@@ -12,6 +12,7 @@ import { ptBR } from "date-fns/locale";
 
 import { DashboardSkeleton } from "@/components/ui/loading-skeleton";
 import { formatDateBR } from "@/lib/dateUtils";
+import ForecastSection from "@/components/ForecastSection";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
