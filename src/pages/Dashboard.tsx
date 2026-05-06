@@ -445,7 +445,25 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchAllOpportunities();
-  }, []);
+
+    // Realtime: refetch on any opportunity change
+    const channel = supabase
+      .channel("dashboard-opportunities-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "opportunities" },
+        () => {
+          fetchAllOpportunities();
+          if (userId && userRole) fetchForecastAccounts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, userRole]);
 
   const fetchAllOpportunities = async () => {
     try {
