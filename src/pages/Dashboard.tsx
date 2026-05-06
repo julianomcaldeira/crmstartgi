@@ -514,7 +514,7 @@ const Dashboard = () => {
       <Tabs defaultValue="resumo" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="previsao">Previsão de Vendas</TabsTrigger>
+          <TabsTrigger value="previsao">Forecast</TabsTrigger>
         </TabsList>
 
         <TabsContent value="resumo" className="space-y-4">
