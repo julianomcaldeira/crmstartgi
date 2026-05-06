@@ -232,7 +232,8 @@ const Layout = ({ children }: LayoutProps) => {
               </p>
               <p className="text-xs text-muted-foreground">
                 {userProfile?.user_roles?.[0]?.role === "admin" ? "Administrador" : 
-                 userProfile?.user_roles?.[0]?.role === "gestor" ? "Gestor" : "Vendedor"}
+                 userProfile?.user_roles?.[0]?.role === "gestor" ? "Gestor" :
+                 userProfile?.user_roles?.[0]?.role === "pre_vendas" ? "Pré-Vendas" : "Vendedor"}
               </p>
             </div>
             <div className="relative">
