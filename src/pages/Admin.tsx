@@ -739,6 +739,14 @@ const Admin = () => {
         </Badge>
       );
     }
+    if (role === "pre_vendas") {
+      return (
+        <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">
+          <ShieldCheck className="h-3 w-3 mr-1" />
+          Pré-Vendas
+        </Badge>
+      );
+    }
     return (
       <Badge variant="secondary">
         <Award className="h-3 w-3 mr-1" />
