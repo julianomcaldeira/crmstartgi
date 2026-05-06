@@ -90,9 +90,11 @@ const Layout = ({ children }: LayoutProps) => {
 
   const isAdmin = userProfile?.user_roles?.[0]?.role === 'admin';
   const isGestor = userProfile?.user_roles?.[0]?.role === 'gestor';
+  const isPreVendas = userProfile?.user_roles?.[0]?.role === 'pre_vendas';
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    ...(isAdmin || isPreVendas ? [{ icon: Target, label: "Pré-Vendas", path: "/pre-vendas" }] : []),
     { icon: Users, label: "Prospects", path: "/prospects" },
     { icon: Target, label: "Oportunidades", path: "/oportunidades" },
     { icon: Users, label: "Clientes", path: "/clientes" },
