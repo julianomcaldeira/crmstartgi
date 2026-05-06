@@ -739,6 +739,14 @@ const Admin = () => {
         </Badge>
       );
     }
+    if (role === "pre_vendas") {
+      return (
+        <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/20">
+          <ShieldCheck className="h-3 w-3 mr-1" />
+          Pré-Vendas
+        </Badge>
+      );
+    }
     return (
       <Badge variant="secondary">
         <Award className="h-3 w-3 mr-1" />
@@ -934,12 +942,14 @@ const Admin = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="vendedor">Vendedor</SelectItem>
+                          <SelectItem value="pre_vendas">Pré-Vendas</SelectItem>
                           <SelectItem value="gestor">Gestor</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-sm text-muted-foreground">
                         Vendedor: visualiza tudo, edita apenas suas contas<br />
+                        Pré-Vendas: apoio comercial, visualiza tudo e edita propostas<br />
                         Gestor: visualiza e edita qualquer informação<br />
                         Admin: acesso total ao sistema
                       </p>
@@ -1007,6 +1017,7 @@ const Admin = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="vendedor">Vendedor</SelectItem>
+                            <SelectItem value="pre_vendas">Pré-Vendas</SelectItem>
                             <SelectItem value="gestor">Gestor</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
