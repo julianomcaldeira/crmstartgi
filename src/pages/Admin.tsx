@@ -1017,6 +1017,7 @@ const Admin = () => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="vendedor">Vendedor</SelectItem>
+                            <SelectItem value="pre_vendas">Pré-Vendas</SelectItem>
                             <SelectItem value="gestor">Gestor</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
