@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import logo from "@/assets/logo-evolua-crm.png";
 import { NotificationSystem } from "./NotificationSystem";
 import { AlertsPanel } from "./AlertsPanel";
+import { useSessionTracker } from "@/hooks/useSessionTracker";
 
 interface LayoutProps {
   children: ReactNode;
@@ -38,6 +39,8 @@ const Layout = ({ children }: LayoutProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  useSessionTracker(user?.id ?? null);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
