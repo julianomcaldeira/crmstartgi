@@ -153,11 +153,13 @@ export default function ForecastSection({ opportunities, formatCurrency }: Props
         aggressive += v * aggProb;
       }
 
-      // Adiciona baseline histórico para período sem opps suficientes (apenas mensal)
-      if (granularity === "month" && inPeriod.length === 0 && avgHistoricalMonthly > 0) {
-        conservative = avgHistoricalMonthly * 0.7;
-        realistic = avgHistoricalMonthly;
-        aggressive = avgHistoricalMonthly * 1.3;
+      // Baseline histórico quando não há oportunidades cadastradas no período futuro
+      // Multiplica a média mensal pelo nº de meses do período (1 / 3 / 12)
+      const monthsInPeriod = granularity === "month" ? 1 : granularity === "quarter" ? 3 : 12;
+      if (inPeriod.length === 0 && avgHistoricalMonthly > 0) {
+        conservative = avgHistoricalMonthly * monthsInPeriod * 0.7;
+        realistic = avgHistoricalMonthly * monthsInPeriod;
+        aggressive = avgHistoricalMonthly * monthsInPeriod * 1.3;
       }
 
       return {
