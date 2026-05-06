@@ -1615,6 +1615,78 @@ export type Database = {
           },
         ]
       }
+      pre_vendas_requests: {
+        Row: {
+          assigned_pre_vendas: string | null
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          desired_datetime: string | null
+          feedback: string | null
+          id: string
+          meeting_link: string | null
+          opportunity_id: string | null
+          quality_rating: number | null
+          requested_by: string
+          scheduled_datetime: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_pre_vendas?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          desired_datetime?: string | null
+          feedback?: string | null
+          id?: string
+          meeting_link?: string | null
+          opportunity_id?: string | null
+          quality_rating?: number | null
+          requested_by: string
+          scheduled_datetime?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_pre_vendas?: string | null
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          desired_datetime?: string | null
+          feedback?: string | null
+          id?: string
+          meeting_link?: string | null
+          opportunity_id?: string | null
+          quality_rating?: number | null
+          requested_by?: string
+          scheduled_datetime?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_vendas_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_vendas_requests_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean | null
