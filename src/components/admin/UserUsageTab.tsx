@@ -39,18 +39,22 @@ export const UserUsageTab = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    let query = supabase
-      .from("user_sessions")
-      .select("user_id, started_at, last_seen_at, duration_seconds")
-      .order("started_at", { ascending: false })
-      .order("user_id", { ascending: true });
+    const since = range !== "all"
+      ? startOfDay(subDays(new Date(), parseInt(range))).toISOString()
+      : null;
 
-    if (range !== "all") {
-      const since = startOfDay(subDays(new Date(), parseInt(range))).toISOString();
-      query = query.gte("started_at", since);
-    }
-
-    const data = await fetchAllPaged<SessionRow>(query as any);
+    const data = await fetchAllPaged<SessionRow>(async (from, to) => {
+      let q = supabase
+        .from("user_sessions")
+        .select("user_id, started_at, last_seen_at, duration_seconds")
+        .order("started_at", { ascending: false })
+        .order("user_id", { ascending: true })
+        .range(from, to);
+      if (since) q = q.gte("started_at", since);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    });
     setSessions(data || []);
 
     const { data: profs } = await supabase

@@ -69,7 +69,7 @@ import { AlertsTester } from "@/components/AlertsTester";
 import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 import SalesFunnelChart from "@/components/SalesFunnelChart";
 import { DiagnosticQuestionsManager } from "@/components/admin/DiagnosticQuestionsManager";
-import { IndicadoresFundoTab } from "@/components/IndicadoresFundoTab";
+import { UserUsageTab } from "@/components/admin/UserUsageTab";
 import { CampaignsManager } from "@/components/admin/CampaignsManager";
 
 const Admin = () => {
@@ -878,7 +878,7 @@ const Admin = () => {
           <TabsTrigger value="loss-reasons">Motivos de Perda</TabsTrigger>
           <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
           <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-          <TabsTrigger value="indicadores">Indicadores</TabsTrigger>
+          <TabsTrigger value="usage">Tempo de Uso</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -1394,8 +1394,8 @@ const Admin = () => {
           <CampaignsManager />
         </TabsContent>
 
-        <TabsContent value="indicadores" className="space-y-4">
-          <IndicadoresFundoTab />
+        <TabsContent value="usage" className="space-y-4">
+          <UserUsageTab />
         </TabsContent>
 
       </Tabs>
