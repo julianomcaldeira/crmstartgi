@@ -41,3 +41,7 @@ verify_jwt = false
 
 [functions.analyze-diagnostic]
 verify_jwt = false
+
+[functions.zoho-oauth-callback]
+verify_jwt = false
+
