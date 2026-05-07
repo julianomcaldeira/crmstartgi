@@ -1,0 +1,1 @@
+ALTER TABLE public.zoho_user_tokens ADD COLUMN IF NOT EXISTS last_inbox_check_at TIMESTAMPTZ;
