@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { format, isSameDay, startOfDay, endOfDay, addDays } from "date-fns";
+import { format, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight, Send, Mail, X } from "lucide-react";
 import { Badge as BadgeUI } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
   const [filterPv, setFilterPv] = useState<string>("all");
   const [sending, setSending] = useState(false);
   const [attendeeInput, setAttendeeInput] = useState("");
+  const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canCreate = isPreVendas || isAdmin;
@@ -228,6 +229,17 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       );
   }, [filteredEvents, selectedDate]);
 
+  // Week view (Mon-Sun)
+  const weekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate]);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const weekEventsByDay = useMemo(() => {
+    return weekDays.map((d) =>
+      filteredEvents
+        .filter((e) => isSameDay(new Date(e.start_datetime), d))
+        .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+    );
+  }, [weekDays, filteredEvents]);
+
   // Days with events for calendar dots
   const busyDays = useMemo(() => {
     const set = new Set<string>();
@@ -275,11 +287,31 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
             <Lock className="h-3.5 w-3.5 ml-2" /> Privado (só você)
           </div>
         </div>
-        {canCreate && (
-          <Button onClick={() => openNew()} className="gap-2">
-            <Plus className="h-4 w-4" /> Novo compromisso
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md border p-0.5">
+            <Button
+              size="sm"
+              variant={viewMode === "day" ? "default" : "ghost"}
+              className="h-7 px-3 text-xs"
+              onClick={() => setViewMode("day")}
+            >
+              Dia
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === "week" ? "default" : "ghost"}
+              className="h-7 px-3 text-xs"
+              onClick={() => setViewMode("week")}
+            >
+              Semana
+            </Button>
+          </div>
+          {canCreate && (
+            <Button onClick={() => openNew()} className="gap-2">
+              <Plus className="h-4 w-4" /> Novo compromisso
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[auto_1fr_300px] gap-4">
@@ -307,19 +339,19 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSelectedDate(addDays(selectedDate, -1))}
+                  onClick={() => setSelectedDate(viewMode === "week" ? addWeeks(selectedDate, -1) : addDays(selectedDate, -1))}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <h3 className="font-semibold capitalize">
-                  {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", {
-                    locale: ptBR,
-                  })}
+                  {viewMode === "week"
+                    ? `${format(weekStart, "dd MMM", { locale: ptBR })} – ${format(addDays(weekStart, 6), "dd MMM yyyy", { locale: ptBR })}`
+                    : format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </h3>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSelectedDate(addDays(selectedDate, 1))}
+                  onClick={() => setSelectedDate(viewMode === "week" ? addWeeks(selectedDate, 1) : addDays(selectedDate, 1))}
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -333,7 +365,46 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
               </Button>
             </div>
 
-            {dayEvents.length === 0 ? (
+            {viewMode === "week" ? (
+              <div className="grid grid-cols-7 gap-2">
+                {weekDays.map((d, i) => {
+                  const evs = weekEventsByDay[i];
+                  const isToday = isSameDay(d, new Date());
+                  const isSelected = isSameDay(d, selectedDate);
+                  return (
+                    <div
+                      key={d.toISOString()}
+                      className={`border rounded-lg p-2 min-h-[160px] flex flex-col gap-1 cursor-pointer transition-colors ${isSelected ? "border-primary bg-accent/30" : "hover:bg-accent/20"}`}
+                      onClick={() => setSelectedDate(d)}
+                    >
+                      <div className={`text-xs font-medium capitalize ${isToday ? "text-primary" : "text-muted-foreground"}`}>
+                        {format(d, "EEE dd", { locale: ptBR })}
+                      </div>
+                      {evs.length === 0 && (
+                        <div className="text-[10px] text-muted-foreground/60 mt-1">—</div>
+                      )}
+                      {evs.map((ev) => (
+                        <button
+                          key={ev.id}
+                          onClick={(e) => { e.stopPropagation(); if (canEdit(ev)) openEdit(ev); else setSelectedDate(d); }}
+                          className="text-left text-[11px] rounded px-1.5 py-1 bg-accent/40 hover:bg-accent/70 truncate"
+                          style={{ borderLeft: `3px solid ${ev.color || "#22c55e"}` }}
+                          title={ev.title}
+                        >
+                          <div className="font-mono text-[10px] text-muted-foreground">
+                            {format(new Date(ev.start_datetime), "HH:mm")}
+                          </div>
+                          <div className="truncate font-medium flex items-center gap-1">
+                            {ev.is_private && <Lock className="h-2.5 w-2.5" />}
+                            {ev.title}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : dayEvents.length === 0 ? (
               <div className="text-center text-muted-foreground py-12 text-sm">
                 Sem compromissos para este dia.
                 {canCreate && (
