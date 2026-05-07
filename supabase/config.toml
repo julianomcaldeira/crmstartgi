@@ -54,4 +54,7 @@ verify_jwt = false
 [functions.zoho-email-webhook]
 verify_jwt = false
 
+[functions.zoho-pull-inbox]
+verify_jwt = false
+
 
