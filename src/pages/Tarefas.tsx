@@ -29,6 +29,7 @@ import { SearchableCombobox } from "@/components/SearchableCombobox";
 import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachments";
 import { parseDateOnly } from "@/lib/dateUtils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
+import SalesAgenda from "@/components/SalesAgenda";
 
 const Tarefas = () => {
   const navigate = useNavigate();
@@ -40,7 +41,7 @@ const Tarefas = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "completed" | "overdue">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar" | "agenda">("list");
   const [cardViewMode, setCardViewMode] = useViewMode("tasks-card-view-mode", "cards");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<any>(null);
@@ -987,7 +988,7 @@ const Tarefas = () => {
         </Dialog>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar")}>
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar" | "agenda")}>
         <TabsList>
           <TabsTrigger value="list" className="gap-2">
             <ListTodo size={16} />
@@ -995,7 +996,11 @@ const Tarefas = () => {
           </TabsTrigger>
           <TabsTrigger value="calendar" className="gap-2">
             <Calendar size={16} />
-            Agenda
+            Calendário
+          </TabsTrigger>
+          <TabsTrigger value="agenda" className="gap-2">
+            <CalendarIcon size={16} />
+            Agenda Zoho
           </TabsTrigger>
         </TabsList>
 
@@ -1570,6 +1575,16 @@ const Tarefas = () => {
               </DndContext>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="agenda" className="space-y-4">
+          {currentUserId && userRole && (
+            <SalesAgenda
+              userId={currentUserId}
+              role={userRole}
+              sellers={users.map(u => ({ id: u.id, full_name: u.full_name || u.email || "—" }))}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

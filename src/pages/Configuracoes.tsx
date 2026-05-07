@@ -22,6 +22,7 @@ const Configuracoes = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     fetchProfile();
   }, []);
@@ -30,6 +31,10 @@ const Configuracoes = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      const { data: roles } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id);
+      setIsAdmin((roles || []).some((r: any) => r.role === "admin"));
 
       const { data, error } = await supabase
         .from("profiles")
@@ -324,7 +329,7 @@ const Configuracoes = () => {
         </CardContent>
       </Card>
 
-      <ZohoConnection />
+      {!isAdmin && <ZohoConnection />}
 
       <TaskMessageTemplates />
 
