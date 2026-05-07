@@ -51,4 +51,7 @@ verify_jwt = false
 [functions.zoho-send-email]
 verify_jwt = false
 
+[functions.zoho-email-webhook]
+verify_jwt = false
+
 
