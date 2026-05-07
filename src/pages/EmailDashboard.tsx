@@ -15,6 +15,8 @@ import { fetchAllPaged } from "@/lib/fetchAllPaged";
 export default function EmailDashboard() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
@@ -29,6 +31,8 @@ export default function EmailDashboard() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const canSeeAll = role === "admin" || role === "gestor";
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -36,15 +40,12 @@ export default function EmailDashboard() {
         navigate("/auth");
         return;
       }
+      setCurrentUserId(user.id);
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      const role = roles?.[0]?.role;
-      if (role !== "admin" && role !== "gestor") {
-        setAuthorized(false);
-        return;
-      }
+      setRole(roles?.[0]?.role || "vendedor");
       setAuthorized(true);
     })();
   }, [navigate]);
