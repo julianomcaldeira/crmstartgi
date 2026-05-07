@@ -28,8 +28,8 @@ export default function ZohoConnection() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from("zoho_user_tokens" as any)
+    const { data } = await (supabase as any)
+      .from("zoho_user_tokens")
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
