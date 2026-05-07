@@ -117,12 +117,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Reply tracking token via plus-addressing on Reply-To
+    const replyToken = crypto.randomUUID();
+    const [zohoLocal, zohoDomain] = (tokens.zoho_email || "").split("@");
+    const replyToAddress = zohoLocal && zohoDomain
+      ? `${zohoLocal}+${replyToken}@${zohoDomain}`
+      : tokens.zoho_email;
+
     const payload: Record<string, any> = {
       fromAddress: tokens.zoho_email,
       toAddress: to.join(","),
       subject,
       content,
       mailFormat,
+      replyTo: replyToAddress,
     };
     if (cc.length) payload.ccAddress = cc.join(",");
     if (bcc.length) payload.bccAddress = bcc.join(",");
@@ -143,6 +151,7 @@ Deno.serve(async (req) => {
     }
 
     const messageId = sendData?.data?.messageId || null;
+    const threadId = sendData?.data?.threadId || null;
     const allRecipients = [...to, ...cc, ...bcc];
 
     await admin.from("email_invitation_log").insert({
@@ -155,6 +164,10 @@ Deno.serve(async (req) => {
       body: content,
       status: "sent",
       zoho_message_id: messageId,
+      direction: "outbound",
+      reply_token: replyToken,
+      from_email: tokens.zoho_email,
+      thread_id: threadId,
     });
 
     if (opportunityId) {
