@@ -1576,6 +1576,16 @@ const Tarefas = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="agenda" className="space-y-4">
+          {currentUserId && userRole && (
+            <SalesAgenda
+              userId={currentUserId}
+              role={userRole}
+              sellers={users.map(u => ({ id: u.id, full_name: u.full_name || u.email || "—" }))}
+            />
+          )}
+        </TabsContent>
       </Tabs>
 
       {selectedTask && (
