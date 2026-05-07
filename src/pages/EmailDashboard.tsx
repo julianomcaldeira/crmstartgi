@@ -233,18 +233,20 @@ export default function EmailDashboard() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {userOptions.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {canSeeAll && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {userOptions.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input
