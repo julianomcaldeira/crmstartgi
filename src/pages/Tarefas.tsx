@@ -29,6 +29,7 @@ import { SearchableCombobox } from "@/components/SearchableCombobox";
 import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachments";
 import { parseDateOnly } from "@/lib/dateUtils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
+import SalesAgenda from "@/components/SalesAgenda";
 
 const Tarefas = () => {
   const navigate = useNavigate();
