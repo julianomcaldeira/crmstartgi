@@ -12,6 +12,7 @@ import Oportunidades from "./pages/Oportunidades";
 import Tarefas from "./pages/Tarefas";
 import Metas from "./pages/Metas";
 import Configuracoes from "./pages/Configuracoes";
+import EmailDashboard from "./pages/EmailDashboard";
 import Relatorios from "./pages/Relatorios";
 import Admin from "./pages/Admin";
 import AdminImport from "./pages/AdminImport";
