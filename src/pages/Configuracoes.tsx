@@ -10,6 +10,7 @@ import { Loader2, Upload, User } from "lucide-react";
 import { PhoneInput } from "@/components/ui/masked-input";
 import TaskMessageTemplates from "@/components/TaskMessageTemplates";
 import TaskTemplatesManager from "@/components/TaskTemplatesManager";
+import ZohoConnection from "@/components/ZohoConnection";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
@@ -322,6 +323,8 @@ const Configuracoes = () => {
           </Button>
         </CardContent>
       </Card>
+
+      <ZohoConnection />
 
       <TaskMessageTemplates />
 

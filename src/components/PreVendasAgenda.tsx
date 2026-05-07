@@ -26,7 +26,8 @@ import {
 import { toast } from "sonner";
 import { format, isSameDay, startOfDay, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight, Send, Mail, X } from "lucide-react";
+import { Badge as BadgeUI } from "@/components/ui/badge";
 
 type AgendaEvent = {
   id: string;
@@ -39,6 +40,11 @@ type AgendaEvent = {
   is_private: boolean;
   color: string | null;
   created_by: string;
+  attendees?: string[] | null;
+  opportunity_id?: string | null;
+  zoho_event_id?: string | null;
+  sync_status?: string | null;
+  last_synced_at?: string | null;
 };
 
 interface Props {
@@ -53,6 +59,8 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AgendaEvent | null>(null);
   const [filterPv, setFilterPv] = useState<string>("all");
+  const [sending, setSending] = useState(false);
+  const [attendeeInput, setAttendeeInput] = useState("");
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canCreate = isPreVendas || isAdmin;
@@ -65,6 +73,8 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
     end_datetime: "",
     is_private: false,
     pre_vendas_user_id: "",
+    attendees: [] as string[],
+    send_invite: true,
   });
 
   useEffect(() => {
@@ -98,7 +108,10 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: format(end, "yyyy-MM-dd'T'HH:mm"),
       is_private: false,
       pre_vendas_user_id: isPreVendas ? userId : preVendasUsers[0]?.id || "",
+      attendees: [],
+      send_invite: true,
     });
+    setAttendeeInput("");
     setOpen(true);
   }
 
@@ -112,8 +125,22 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: format(new Date(ev.end_datetime), "yyyy-MM-dd'T'HH:mm"),
       is_private: ev.is_private,
       pre_vendas_user_id: ev.pre_vendas_user_id,
+      attendees: ev.attendees || [],
+      send_invite: false,
     });
+    setAttendeeInput("");
     setOpen(true);
+  }
+
+  function addAttendee() {
+    const email = attendeeInput.trim();
+    if (!email || !email.includes("@")) { toast.error("E-mail inválido"); return; }
+    if (form.attendees.includes(email)) return;
+    setForm({ ...form, attendees: [...form.attendees, email] });
+    setAttendeeInput("");
+  }
+  function removeAttendee(em: string) {
+    setForm({ ...form, attendees: form.attendees.filter(a => a !== em) });
   }
 
   async function handleSave() {
@@ -133,20 +160,42 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: new Date(form.end_datetime).toISOString(),
       is_private: form.is_private,
       pre_vendas_user_id: form.pre_vendas_user_id || userId,
+      attendees: form.attendees,
     };
+    let savedId: string | null = null;
     if (editing) {
       const { error } = await supabase
         .from("pre_vendas_agenda")
         .update(payload)
         .eq("id", editing.id);
       if (error) return toast.error("Erro: " + error.message);
+      savedId = editing.id;
       toast.success("Compromisso atualizado");
     } else {
       payload.created_by = userId;
-      const { error } = await supabase.from("pre_vendas_agenda").insert(payload);
+      const { data, error } = await supabase.from("pre_vendas_agenda").insert(payload).select().single();
       if (error) return toast.error("Erro: " + error.message);
+      savedId = (data as any)?.id;
       toast.success("Compromisso criado");
     }
+
+    // Sincroniza com Zoho (cria/atualiza evento + envia convite se houver convidados)
+    if (savedId && form.send_invite && form.attendees.length > 0) {
+      setSending(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
+          body: { eventId: savedId, sendInvite: true },
+        });
+        if (error) toast.error("Falha ao enviar convite: " + error.message);
+        else if (data?.invitation?.status === "sent") toast.success(`Convite enviado para ${form.attendees.length} convidado(s)`);
+        else if (data?.invitation?.status === "failed") toast.error("Convite falhou: " + (data.invitation.error_message || "erro desconhecido"));
+      } catch (e: any) {
+        toast.error("Erro Zoho: " + e.message);
+      } finally {
+        setSending(false);
+      }
+    }
+
     setOpen(false);
     load();
   }
@@ -495,12 +544,51 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                 onCheckedChange={(v) => setForm({ ...form, is_private: v })}
               />
             </div>
+
+            <div className="space-y-2 border rounded p-3">
+              <Label className="text-sm flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Convidados (e-mail)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={attendeeInput}
+                  onChange={(e) => setAttendeeInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAttendee(); } }}
+                  placeholder="email@exemplo.com"
+                  type="email"
+                />
+                <Button type="button" variant="outline" onClick={addAttendee}>Adicionar</Button>
+              </div>
+              {form.attendees.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {form.attendees.map((em) => (
+                    <BadgeUI key={em} variant="secondary" className="gap-1">
+                      {em}
+                      <button onClick={() => removeAttendee(em)} className="ml-1 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </BadgeUI>
+                  ))}
+                </div>
+              )}
+              {form.attendees.length > 0 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Label className="text-xs text-muted-foreground">Enviar convite por e-mail (Zoho Mail) ao salvar</Label>
+                  <Switch
+                    checked={form.send_invite}
+                    onCheckedChange={(v) => setForm({ ...form, send_invite: v })}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
+            <Button onClick={handleSave} disabled={sending}>
+              {sending ? "Enviando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

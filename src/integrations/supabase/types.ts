@@ -668,6 +668,48 @@ export type Database = {
           },
         ]
       }
+      email_invitation_log: {
+        Row: {
+          agenda_event_id: string | null
+          body: string | null
+          error_message: string | null
+          id: string
+          opportunity_id: string | null
+          recipients: string[]
+          sent_at: string
+          sent_by: string
+          status: string
+          subject: string
+          zoho_message_id: string | null
+        }
+        Insert: {
+          agenda_event_id?: string | null
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          opportunity_id?: string | null
+          recipients?: string[]
+          sent_at?: string
+          sent_by: string
+          status?: string
+          subject: string
+          zoho_message_id?: string | null
+        }
+        Update: {
+          agenda_event_id?: string | null
+          body?: string | null
+          error_message?: string | null
+          id?: string
+          opportunity_id?: string | null
+          recipients?: string[]
+          sent_at?: string
+          sent_by?: string
+          status?: string
+          subject?: string
+          zoho_message_id?: string | null
+        }
+        Relationships: []
+      }
       feira_audit_log: {
         Row: {
           change_type: string
@@ -1617,6 +1659,7 @@ export type Database = {
       }
       pre_vendas_agenda: {
         Row: {
+          attendees: string[]
           color: string | null
           created_at: string
           created_by: string
@@ -1624,14 +1667,20 @@ export type Database = {
           end_datetime: string
           id: string
           is_private: boolean
+          last_synced_at: string | null
           location: string | null
+          opportunity_id: string | null
           pre_vendas_user_id: string
           related_request_id: string | null
           start_datetime: string
+          sync_status: string | null
           title: string
           updated_at: string
+          zoho_etag: string | null
+          zoho_event_id: string | null
         }
         Insert: {
+          attendees?: string[]
           color?: string | null
           created_at?: string
           created_by: string
@@ -1639,14 +1688,20 @@ export type Database = {
           end_datetime: string
           id?: string
           is_private?: boolean
+          last_synced_at?: string | null
           location?: string | null
+          opportunity_id?: string | null
           pre_vendas_user_id: string
           related_request_id?: string | null
           start_datetime: string
+          sync_status?: string | null
           title: string
           updated_at?: string
+          zoho_etag?: string | null
+          zoho_event_id?: string | null
         }
         Update: {
+          attendees?: string[]
           color?: string | null
           created_at?: string
           created_by?: string
@@ -1654,12 +1709,17 @@ export type Database = {
           end_datetime?: string
           id?: string
           is_private?: boolean
+          last_synced_at?: string | null
           location?: string | null
+          opportunity_id?: string | null
           pre_vendas_user_id?: string
           related_request_id?: string | null
           start_datetime?: string
+          sync_status?: string | null
           title?: string
           updated_at?: string
+          zoho_etag?: string | null
+          zoho_event_id?: string | null
         }
         Relationships: [
           {
@@ -2482,6 +2542,54 @@ export type Database = {
           last_seen_at?: string
           started_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      zoho_user_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          data_center: string
+          expires_at: string
+          id: string
+          last_sync_at: string | null
+          primary_calendar_id: string | null
+          refresh_token: string
+          scopes: string | null
+          updated_at: string
+          user_id: string
+          zoho_account_id: string | null
+          zoho_email: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          data_center?: string
+          expires_at: string
+          id?: string
+          last_sync_at?: string | null
+          primary_calendar_id?: string | null
+          refresh_token: string
+          scopes?: string | null
+          updated_at?: string
+          user_id: string
+          zoho_account_id?: string | null
+          zoho_email?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          data_center?: string
+          expires_at?: string
+          id?: string
+          last_sync_at?: string | null
+          primary_calendar_id?: string | null
+          refresh_token?: string
+          scopes?: string | null
+          updated_at?: string
+          user_id?: string
+          zoho_account_id?: string | null
+          zoho_email?: string | null
         }
         Relationships: []
       }
