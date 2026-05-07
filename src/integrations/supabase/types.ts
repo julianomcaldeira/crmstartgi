@@ -673,45 +673,74 @@ export type Database = {
           agenda_event_id: string | null
           body: string | null
           client_id: string | null
+          direction: string
           error_message: string | null
+          from_email: string | null
           id: string
+          in_reply_to: string | null
           opportunity_id: string | null
+          parent_log_id: string | null
+          received_at: string | null
           recipients: string[]
+          reply_token: string | null
           sent_at: string
           sent_by: string
           status: string
           subject: string
+          thread_id: string | null
           zoho_message_id: string | null
         }
         Insert: {
           agenda_event_id?: string | null
           body?: string | null
           client_id?: string | null
+          direction?: string
           error_message?: string | null
+          from_email?: string | null
           id?: string
+          in_reply_to?: string | null
           opportunity_id?: string | null
+          parent_log_id?: string | null
+          received_at?: string | null
           recipients?: string[]
+          reply_token?: string | null
           sent_at?: string
           sent_by: string
           status?: string
           subject: string
+          thread_id?: string | null
           zoho_message_id?: string | null
         }
         Update: {
           agenda_event_id?: string | null
           body?: string | null
           client_id?: string | null
+          direction?: string
           error_message?: string | null
+          from_email?: string | null
           id?: string
+          in_reply_to?: string | null
           opportunity_id?: string | null
+          parent_log_id?: string | null
+          received_at?: string | null
           recipients?: string[]
+          reply_token?: string | null
           sent_at?: string
           sent_by?: string
           status?: string
           subject?: string
+          thread_id?: string | null
           zoho_message_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "email_invitation_log_parent_log_id_fkey"
+            columns: ["parent_log_id"]
+            isOneToOne: false
+            referencedRelation: "email_invitation_log"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_signatures: {
         Row: {
