@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     const content: string = (body.content || "").toString();
     const mailFormat: string = body.mailFormat === "plaintext" ? "plaintext" : "html";
     const opportunityId: string | null = body.opportunityId || null;
+    const clientId: string | null = body.clientId || null;
 
     if (!to.length) throw new Error("Pelo menos um destinatário é obrigatório");
     if (!subject) throw new Error("Assunto é obrigatório");
@@ -92,6 +93,7 @@ Deno.serve(async (req) => {
     await admin.from("email_invitation_log").insert({
       agenda_event_id: null,
       opportunity_id: opportunityId,
+      client_id: clientId,
       sent_by: user.id,
       recipients: allRecipients,
       subject,

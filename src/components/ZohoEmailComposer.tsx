@@ -15,6 +15,7 @@ interface ZohoEmailComposerProps {
   defaultSubject?: string;
   defaultBody?: string;
   opportunityId?: string;
+  clientId?: string;
   onSent?: () => void;
 }
 
@@ -25,6 +26,7 @@ export default function ZohoEmailComposer({
   defaultSubject = "",
   defaultBody = "",
   opportunityId,
+  clientId,
   onSent,
 }: ZohoEmailComposerProps) {
   const [to, setTo] = useState(defaultTo);
