@@ -45,8 +45,10 @@ Deno.serve(async (req) => {
     }
 
     const { dc = "com", returnUrl } = await req.json().catch(() => ({}));
-    const clientId = Deno.env.get("ZOHO_CLIENT_ID_NEW");
-    if (!clientId) throw new Error("ZOHO_CLIENT_ID_NEW not configured");
+    const rawClientId = Deno.env.get("ZOHO_CLIENT_ID_NEW") || Deno.env.get("ZOHO_CLIENT_ID");
+    if (!rawClientId) throw new Error("ZOHO_CLIENT_ID_NEW not configured");
+    const clientId = rawClientId.trim();
+    console.log("[zoho-oauth-init] dc=", dc, "client_id_prefix=", clientId.slice(0, 12), "len=", clientId.length, "starts_1000=", clientId.startsWith("1000."));
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const redirectUri = `${supabaseUrl}/functions/v1/zoho-oauth-callback`;
