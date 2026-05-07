@@ -2611,6 +2611,7 @@ export type Database = {
           data_center: string
           expires_at: string
           id: string
+          last_inbox_check_at: string | null
           last_sync_at: string | null
           primary_calendar_id: string | null
           refresh_token: string
@@ -2626,6 +2627,7 @@ export type Database = {
           data_center?: string
           expires_at: string
           id?: string
+          last_inbox_check_at?: string | null
           last_sync_at?: string | null
           primary_calendar_id?: string | null
           refresh_token: string
@@ -2641,6 +2643,7 @@ export type Database = {
           data_center?: string
           expires_at?: string
           id?: string
+          last_inbox_check_at?: string | null
           last_sync_at?: string | null
           primary_calendar_id?: string | null
           refresh_token?: string
