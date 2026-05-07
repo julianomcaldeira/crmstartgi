@@ -98,6 +98,8 @@ const ClienteDetalhes = () => {
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
   const [aiAnalysisDialogOpen, setAiAnalysisDialogOpen] = useState(false);
   const [diagnosticDialogOpen, setDiagnosticDialogOpen] = useState(false);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [emailHistoryRefresh, setEmailHistoryRefresh] = useState(0);
   
 
   const handleCopy = async (value: string, field: string) => {
