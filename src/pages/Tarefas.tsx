@@ -988,7 +988,7 @@ const Tarefas = () => {
         </Dialog>
       </div>
 
-      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar")}>
+      <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "list" | "calendar" | "agenda")}>
         <TabsList>
           <TabsTrigger value="list" className="gap-2">
             <ListTodo size={16} />
@@ -996,7 +996,11 @@ const Tarefas = () => {
           </TabsTrigger>
           <TabsTrigger value="calendar" className="gap-2">
             <Calendar size={16} />
-            Agenda
+            Calendário
+          </TabsTrigger>
+          <TabsTrigger value="agenda" className="gap-2">
+            <CalendarIcon size={16} />
+            Agenda Zoho
           </TabsTrigger>
         </TabsList>
 
