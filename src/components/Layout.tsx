@@ -109,7 +109,7 @@ const Layout = ({ children }: LayoutProps) => {
     // { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" }, // oculto temporariamente
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },
     { icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" },
-    ...((isAdmin || isGestor) ? [{ icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" }] : []),
+    { icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];
