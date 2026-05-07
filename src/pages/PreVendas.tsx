@@ -268,26 +268,21 @@ export default function PreVendas() {
               </div>
               <div>
                 <Label>Oportunidade vinculada</Label>
-                <Select
+                <SearchableCombobox
+                  items={opportunities
+                    .filter((o) => !["won", "lost"].includes(o.status))
+                    .map((o) => ({
+                      value: o.id,
+                      label: o.title,
+                      subLabel: o.clients?.company_name,
+                      searchText: `${o.title} ${o.clients?.company_name ?? ""} ${o.clients?.trade_name ?? ""} ${o.clients?.cnpj ?? ""}`,
+                    }))}
                   value={form.opportunity_id}
-                  onValueChange={(v) =>
-                    setForm({ ...form, opportunity_id: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma oportunidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opportunities
-                      .filter((o) => !["won", "lost"].includes(o.status))
-                      .slice(0, 200)
-                      .map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.title} — {o.clients?.company_name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+                  onValueChange={(v) => setForm({ ...form, opportunity_id: v })}
+                  placeholder="Selecione uma oportunidade"
+                  searchPlaceholder="Buscar por título, cliente ou CNPJ..."
+                  emptyText="Nenhuma oportunidade encontrada."
+                />
               </div>
               <div>
                 <Label>Pré-Vendas responsável</Label>
