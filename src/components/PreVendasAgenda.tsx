@@ -160,20 +160,42 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: new Date(form.end_datetime).toISOString(),
       is_private: form.is_private,
       pre_vendas_user_id: form.pre_vendas_user_id || userId,
+      attendees: form.attendees,
     };
+    let savedId: string | null = null;
     if (editing) {
       const { error } = await supabase
         .from("pre_vendas_agenda")
         .update(payload)
         .eq("id", editing.id);
       if (error) return toast.error("Erro: " + error.message);
+      savedId = editing.id;
       toast.success("Compromisso atualizado");
     } else {
       payload.created_by = userId;
-      const { error } = await supabase.from("pre_vendas_agenda").insert(payload);
+      const { data, error } = await supabase.from("pre_vendas_agenda").insert(payload).select().single();
       if (error) return toast.error("Erro: " + error.message);
+      savedId = (data as any)?.id;
       toast.success("Compromisso criado");
     }
+
+    // Sincroniza com Zoho (cria/atualiza evento + envia convite se houver convidados)
+    if (savedId && form.send_invite && form.attendees.length > 0) {
+      setSending(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
+          body: { eventId: savedId, sendInvite: true },
+        });
+        if (error) toast.error("Falha ao enviar convite: " + error.message);
+        else if (data?.invitation?.status === "sent") toast.success(`Convite enviado para ${form.attendees.length} convidado(s)`);
+        else if (data?.invitation?.status === "failed") toast.error("Convite falhou: " + (data.invitation.error_message || "erro desconhecido"));
+      } catch (e: any) {
+        toast.error("Erro Zoho: " + e.message);
+      } finally {
+        setSending(false);
+      }
+    }
+
     setOpen(false);
     load();
   }
