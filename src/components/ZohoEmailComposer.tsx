@@ -108,7 +108,7 @@ export default function ZohoEmailComposer({
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       toast.success("E-mail enviado!");
-      setCc(""); setBcc(""); setSubject(""); setBody(""); setTo("");
+      setCc(""); setBcc(""); setSubject(""); setBody(""); setTo(""); setFiles([]);
       onOpenChange(false);
       onSent?.();
     } catch (e: any) {
