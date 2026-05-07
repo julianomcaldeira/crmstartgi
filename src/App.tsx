@@ -12,6 +12,7 @@ import Oportunidades from "./pages/Oportunidades";
 import Tarefas from "./pages/Tarefas";
 import Metas from "./pages/Metas";
 import Configuracoes from "./pages/Configuracoes";
+import EmailDashboard from "./pages/EmailDashboard";
 import Relatorios from "./pages/Relatorios";
 import Admin from "./pages/Admin";
 import AdminImport from "./pages/AdminImport";
@@ -50,6 +51,7 @@ const App = () => {
         <Route path="/inteligencia-mercado" element={<Layout><InteligenciaMercado /></Layout>} />
         <Route path="/pre-vendas" element={<Layout><PreVendas /></Layout>} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
+        <Route path="/emails-dashboard" element={<Layout><EmailDashboard /></Layout>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

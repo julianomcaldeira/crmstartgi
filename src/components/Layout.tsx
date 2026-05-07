@@ -19,6 +19,7 @@ import {
   Upload,
   Radar,
   Brain,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -108,6 +109,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" },
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },
     { icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" },
+    ...((isAdmin || isGestor) ? [{ icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" }] : []),
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];
