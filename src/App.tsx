@@ -50,6 +50,7 @@ const App = () => {
         <Route path="/inteligencia-mercado" element={<Layout><InteligenciaMercado /></Layout>} />
         <Route path="/pre-vendas" element={<Layout><PreVendas /></Layout>} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
+        <Route path="/emails-dashboard" element={<Layout><EmailDashboard /></Layout>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
