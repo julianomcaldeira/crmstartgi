@@ -59,6 +59,7 @@ export default function ZohoEmailComposer({
           content: html,
           mailFormat: "html",
           opportunityId,
+          clientId,
         },
       });
       if (error) throw error;
