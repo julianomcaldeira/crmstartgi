@@ -182,6 +182,34 @@ export default function ZohoEmailComposer({
               placeholder="Escreva sua mensagem..."
             />
           </div>
+
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => { addFiles(e.target.files); if (fileRef.current) fileRef.current.value = ""; }}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              <Paperclip className="h-4 w-4 mr-2" /> Anexar arquivos
+            </Button>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="gap-1">
+                    {f.name} ({(f.size / 1024).toFixed(0)}KB)
+                    <button type="button" onClick={() => removeFile(i)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Máx {MAX_ATTACH_COUNT} arquivos, {MAX_ATTACH_MB}MB cada. Sua assinatura será adicionada automaticamente se configurada.
+            </p>
+          </div>
         </div>
 
         <DialogFooter>
