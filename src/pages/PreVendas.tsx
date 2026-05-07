@@ -347,13 +347,24 @@ export default function PreVendas() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="requests">
+      <Tabs defaultValue="agenda">
         <TabsList>
+          <TabsTrigger value="agenda">Agenda</TabsTrigger>
           <TabsTrigger value="requests">Solicitações</TabsTrigger>
           {canSeeDashboard && (
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="agenda">
+          {userId && (
+            <PreVendasAgenda
+              userId={userId}
+              role={role}
+              preVendasUsers={preVendasUsers}
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
           <Card>
