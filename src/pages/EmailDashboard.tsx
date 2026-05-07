@@ -68,15 +68,19 @@ export default function EmailDashboard() {
     try {
       const start = computeStart();
       const end = computeEnd();
-      let q: any = (supabase as any)
-        .from("email_invitation_log")
-        .select("*")
-        .order("sent_at", { ascending: false })
-        .order("id", { ascending: false });
-      if (start) q = q.gte("sent_at", start.toISOString());
-      if (end) q = q.lte("sent_at", end.toISOString());
-
-      const data = await fetchAllPaged(q, { pageSize: 1000 });
+      const data = await fetchAllPaged(async (from, to) => {
+        let q: any = (supabase as any)
+          .from("email_invitation_log")
+          .select("*")
+          .order("sent_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        if (start) q = q.gte("sent_at", start.toISOString());
+        if (end) q = q.lte("sent_at", end.toISOString());
+        const { data: rows, error } = await q;
+        if (error) throw error;
+        return rows || [];
+      });
       setItems(data || []);
 
       const userIds = Array.from(new Set((data || []).map((d: any) => d.sent_by).filter(Boolean)));
