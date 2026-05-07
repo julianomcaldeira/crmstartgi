@@ -40,6 +40,11 @@ type AgendaEvent = {
   is_private: boolean;
   color: string | null;
   created_by: string;
+  attendees?: string[] | null;
+  opportunity_id?: string | null;
+  zoho_event_id?: string | null;
+  sync_status?: string | null;
+  last_synced_at?: string | null;
 };
 
 interface Props {
@@ -54,6 +59,8 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<AgendaEvent | null>(null);
   const [filterPv, setFilterPv] = useState<string>("all");
+  const [sending, setSending] = useState(false);
+  const [attendeeInput, setAttendeeInput] = useState("");
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canCreate = isPreVendas || isAdmin;
@@ -66,6 +73,8 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
     end_datetime: "",
     is_private: false,
     pre_vendas_user_id: "",
+    attendees: [] as string[],
+    send_invite: true,
   });
 
   useEffect(() => {
