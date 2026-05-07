@@ -329,7 +329,7 @@ const Configuracoes = () => {
         </CardContent>
       </Card>
 
-      {!isAdmin && <ZohoConnection />}
+      <ZohoConnection />
 
       <TaskMessageTemplates />
 

@@ -48,4 +48,7 @@ verify_jwt = false
 [functions.zoho-pull-events]
 verify_jwt = false
 
+[functions.zoho-send-email]
+verify_jwt = false
+
 

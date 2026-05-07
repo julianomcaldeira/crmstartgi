@@ -3,12 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight, LayoutGrid, List } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight, LayoutGrid, List, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 import { formatPhone } from "@/components/ui/masked-input";
+import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 
 const Clientes = () => {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ const Clientes = () => {
   // Quick filters for compact view
   const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
   const [quickRegionFilter, setQuickRegionFilter] = useState("all");
+  const [emailComposer, setEmailComposer] = useState<{ open: boolean; to: string; name: string }>({ open: false, to: "", name: "" });
 
   useEffect(() => {
     checkUserRoleAndFetch();
@@ -331,17 +333,32 @@ const Clientes = () => {
                     </div>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/prospects/${cliente.id}`);
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </Button>
+                  <div className="flex gap-2">
+                    {cliente.email && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEmailComposer({ open: true, to: cliente.email, name: cliente.company_name });
+                        }}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        E-mail
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/prospects/${cliente.id}`);
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Ver Detalhes
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -385,6 +402,13 @@ const Clientes = () => {
           )}
         </>
       )}
+
+      <ZohoEmailComposer
+        open={emailComposer.open}
+        onOpenChange={(o) => setEmailComposer((prev) => ({ ...prev, open: o }))}
+        defaultTo={emailComposer.to}
+        defaultSubject={emailComposer.name ? `Contato - ${emailComposer.name}` : ""}
+      />
     </div>
   );
 };
