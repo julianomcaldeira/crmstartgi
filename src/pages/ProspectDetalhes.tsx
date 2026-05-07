@@ -57,7 +57,9 @@ import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { AIAnalysisHistoryList } from "@/components/AIAnalysisHistoryList";
-import { ClipboardList, Megaphone } from "lucide-react";
+import { ClipboardList, Megaphone, Mail, Send } from "lucide-react";
+import EmailHistory from "@/components/EmailHistory";
+import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
 
@@ -1002,11 +1004,12 @@ const ClienteDetalhes = () => {
 
       {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
           <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
+          <TabsTrigger value="emails" className="gap-1"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
           <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
         </TabsList>
