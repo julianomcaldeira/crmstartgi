@@ -61,6 +61,7 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
   const [filterPv, setFilterPv] = useState<string>("all");
   const [sending, setSending] = useState(false);
   const [attendeeInput, setAttendeeInput] = useState("");
+  const [viewMode, setViewMode] = useState<"day" | "week">("day");
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canCreate = isPreVendas || isAdmin;
