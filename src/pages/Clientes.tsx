@@ -402,8 +402,6 @@ const Clientes = () => {
           )}
         </>
       )}
-        </>
-      )}
 
       <ZohoEmailComposer
         open={emailComposer.open}
