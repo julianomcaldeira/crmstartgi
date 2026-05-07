@@ -544,12 +544,51 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                 onCheckedChange={(v) => setForm({ ...form, is_private: v })}
               />
             </div>
+
+            <div className="space-y-2 border rounded p-3">
+              <Label className="text-sm flex items-center gap-2">
+                <Mail className="h-4 w-4" /> Convidados (e-mail)
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={attendeeInput}
+                  onChange={(e) => setAttendeeInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addAttendee(); } }}
+                  placeholder="email@exemplo.com"
+                  type="email"
+                />
+                <Button type="button" variant="outline" onClick={addAttendee}>Adicionar</Button>
+              </div>
+              {form.attendees.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {form.attendees.map((em) => (
+                    <BadgeUI key={em} variant="secondary" className="gap-1">
+                      {em}
+                      <button onClick={() => removeAttendee(em)} className="ml-1 hover:text-destructive">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </BadgeUI>
+                  ))}
+                </div>
+              )}
+              {form.attendees.length > 0 && (
+                <div className="flex items-center justify-between pt-2">
+                  <Label className="text-xs text-muted-foreground">Enviar convite por e-mail (Zoho Mail) ao salvar</Label>
+                  <Switch
+                    checked={form.send_invite}
+                    onCheckedChange={(v) => setForm({ ...form, send_invite: v })}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Salvar</Button>
+            <Button onClick={handleSave} disabled={sending}>
+              {sending ? "Enviando..." : "Salvar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
