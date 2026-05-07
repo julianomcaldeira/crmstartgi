@@ -22,6 +22,7 @@ const Configuracoes = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
   useEffect(() => {
     fetchProfile();
   }, []);
