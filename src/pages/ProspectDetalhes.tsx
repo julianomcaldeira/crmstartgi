@@ -57,7 +57,7 @@ import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { AIAnalysisHistoryList } from "@/components/AIAnalysisHistoryList";
-import { ClipboardList, Megaphone, Mail, Send } from "lucide-react";
+import { ClipboardList, Megaphone, Send } from "lucide-react";
 import EmailHistory from "@/components/EmailHistory";
 import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
