@@ -53,6 +53,23 @@ export default function ZohoEmailComposer({
   const [body, setBody] = useState(defaultBody);
   const [sending, setSending] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function addFiles(picked: FileList | null) {
+    if (!picked) return;
+    const newOnes = Array.from(picked);
+    const combined = [...files, ...newOnes].slice(0, MAX_ATTACH_COUNT);
+    const tooBig = combined.find((f) => f.size > MAX_ATTACH_MB * 1024 * 1024);
+    if (tooBig) {
+      toast.error(`"${tooBig.name}" excede ${MAX_ATTACH_MB}MB`);
+      return;
+    }
+    setFiles(combined);
+  }
+  function removeFile(idx: number) {
+    setFiles((f) => f.filter((_, i) => i !== idx));
+  }
 
   async function handleSend() {
     if (!to.trim()) return toast.error("Informe ao menos um destinatário");
