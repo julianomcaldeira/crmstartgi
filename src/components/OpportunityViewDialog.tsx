@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History } from "lucide-react";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History, Mail, Send } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import OpportunityHistoryLog from "./OpportunityHistoryLog";
+import EmailHistory from "./EmailHistory";
+import ZohoEmailComposer from "./ZohoEmailComposer";
 interface OpportunityViewDialogProps {
   opportunity: any;
   open: boolean;
@@ -20,6 +22,8 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [attachments, setAttachments] = useState<any[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailRefresh, setEmailRefresh] = useState(0);
 
   useEffect(() => {
     if (open && opportunity?.id) {
@@ -229,10 +233,14 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="attachments">
               Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="emails">
+              <Mail className="h-4 w-4 mr-1" />
+              E-mails
             </TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-1" />
@@ -474,11 +482,30 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
             </div>
           </TabsContent>
 
+          <TabsContent value="emails" className="mt-4 space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setEmailOpen(true)}>
+                <Send className="h-4 w-4 mr-2" /> Novo e-mail
+              </Button>
+            </div>
+            <EmailHistory key={emailRefresh} opportunityId={opportunity.id} />
+          </TabsContent>
+
           <TabsContent value="history" className="mt-4">
             <OpportunityHistoryLog opportunityId={opportunity.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      <ZohoEmailComposer
+        open={emailOpen}
+        onOpenChange={setEmailOpen}
+        opportunityId={opportunity.id}
+        clientId={opportunity.client_id}
+        defaultTo={opportunity.client?.email || opportunity.clients?.email || ""}
+        defaultSubject={`Re: ${opportunity.title}`}
+        onSent={() => setEmailRefresh((n) => n + 1)}
+      />
 
       {/* Preview Dialog */}
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
