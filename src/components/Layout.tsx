@@ -95,9 +95,9 @@ const Layout = ({ children }: LayoutProps) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-    { icon: Target, label: "Pré-Vendas", path: "/pre-vendas" },
     { icon: Users, label: "Prospects", path: "/prospects" },
     { icon: Target, label: "Oportunidades", path: "/oportunidades" },
+    { icon: Target, label: "Pré-Vendas", path: "/pre-vendas" },
     { icon: Users, label: "Clientes", path: "/clientes" },
     { icon: CheckSquare, label: "Tarefas", path: "/tarefas" },
     { icon: BarChart3, label: "Metas", path: "/metas" },
