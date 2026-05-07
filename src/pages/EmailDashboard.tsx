@@ -185,7 +185,9 @@ export default function EmailDashboard() {
             <Mail className="h-6 w-6 text-primary" /> Dashboard de E-mails
           </h1>
           <p className="text-sm text-muted-foreground">
-            Monitoramento de e-mails enviados via Zoho Mail por todos os vendedores
+            {canSeeAll
+              ? "Monitoramento de e-mails enviados via Zoho Mail por todos os vendedores"
+              : "Seus e-mails enviados via Zoho Mail"}
           </p>
         </div>
         <Button onClick={load} variant="outline" size="sm">
