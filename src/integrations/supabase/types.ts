@@ -1615,6 +1615,62 @@ export type Database = {
           },
         ]
       }
+      pre_vendas_agenda: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_datetime: string
+          id: string
+          is_private: boolean
+          location: string | null
+          pre_vendas_user_id: string
+          related_request_id: string | null
+          start_datetime: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_datetime: string
+          id?: string
+          is_private?: boolean
+          location?: string | null
+          pre_vendas_user_id: string
+          related_request_id?: string | null
+          start_datetime: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_datetime?: string
+          id?: string
+          is_private?: boolean
+          location?: string | null
+          pre_vendas_user_id?: string
+          related_request_id?: string | null
+          start_datetime?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_vendas_agenda_related_request_id_fkey"
+            columns: ["related_request_id"]
+            isOneToOne: false
+            referencedRelation: "pre_vendas_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pre_vendas_requests: {
         Row: {
           assigned_pre_vendas: string | null

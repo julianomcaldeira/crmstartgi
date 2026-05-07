@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
+import PreVendasAgenda from "@/components/PreVendasAgenda";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -346,13 +347,24 @@ export default function PreVendas() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="requests">
+      <Tabs defaultValue="agenda">
         <TabsList>
+          <TabsTrigger value="agenda">Agenda</TabsTrigger>
           <TabsTrigger value="requests">Solicitações</TabsTrigger>
           {canSeeDashboard && (
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="agenda">
+          {userId && (
+            <PreVendasAgenda
+              userId={userId}
+              role={role}
+              preVendasUsers={preVendasUsers}
+            />
+          )}
+        </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
           <Card>
