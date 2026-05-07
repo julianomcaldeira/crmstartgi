@@ -32,6 +32,10 @@ const Configuracoes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      const { data: roles } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id);
+      setIsAdmin((roles || []).some((r: any) => r.role === "admin"));
+
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
