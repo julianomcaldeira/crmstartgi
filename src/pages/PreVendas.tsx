@@ -31,6 +31,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
