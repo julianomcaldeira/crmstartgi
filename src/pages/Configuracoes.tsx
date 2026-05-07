@@ -332,6 +332,8 @@ const Configuracoes = () => {
 
       <ZohoConnection />
 
+      <EmailSignatureConfig />
+
       <TaskMessageTemplates />
 
       <TaskTemplatesManager />
