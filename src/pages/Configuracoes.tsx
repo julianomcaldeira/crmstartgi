@@ -11,6 +11,7 @@ import { PhoneInput } from "@/components/ui/masked-input";
 import TaskMessageTemplates from "@/components/TaskMessageTemplates";
 import TaskTemplatesManager from "@/components/TaskTemplatesManager";
 import ZohoConnection from "@/components/ZohoConnection";
+import EmailSignatureConfig from "@/components/EmailSignatureConfig";
 
 const Configuracoes = () => {
   const [loading, setLoading] = useState(false);
