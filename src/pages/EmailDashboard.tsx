@@ -15,6 +15,8 @@ import { fetchAllPaged } from "@/lib/fetchAllPaged";
 export default function EmailDashboard() {
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<any[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
@@ -29,6 +31,8 @@ export default function EmailDashboard() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
+  const canSeeAll = role === "admin" || role === "gestor";
+
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -36,15 +40,12 @@ export default function EmailDashboard() {
         navigate("/auth");
         return;
       }
+      setCurrentUserId(user.id);
       const { data: roles } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id);
-      const role = roles?.[0]?.role;
-      if (role !== "admin" && role !== "gestor") {
-        setAuthorized(false);
-        return;
-      }
+      setRole(roles?.[0]?.role || "vendedor");
       setAuthorized(true);
     })();
   }, [navigate]);
@@ -184,7 +185,9 @@ export default function EmailDashboard() {
             <Mail className="h-6 w-6 text-primary" /> Dashboard de E-mails
           </h1>
           <p className="text-sm text-muted-foreground">
-            Monitoramento de e-mails enviados via Zoho Mail por todos os vendedores
+            {canSeeAll
+              ? "Monitoramento de e-mails enviados via Zoho Mail por todos os vendedores"
+              : "Seus e-mails enviados via Zoho Mail"}
           </p>
         </div>
         <Button onClick={load} variant="outline" size="sm">
@@ -232,18 +235,20 @@ export default function EmailDashboard() {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
-            <Select value={userFilter} onValueChange={setUserFilter}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {userOptions.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {canSeeAll && (
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {userOptions.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input

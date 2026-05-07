@@ -1,12 +1,29 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send, Mail } from "lucide-react";
+import { Loader2, Send, Mail, Paperclip, X } from "lucide-react";
+
+const MAX_ATTACH_MB = 10;
+const MAX_ATTACH_COUNT = 10;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = reader.result as string;
+      const base64 = res.includes(",") ? res.split(",")[1] : res;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 interface ZohoEmailComposerProps {
   open: boolean;
@@ -36,6 +53,23 @@ export default function ZohoEmailComposer({
   const [body, setBody] = useState(defaultBody);
   const [sending, setSending] = useState(false);
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function addFiles(picked: FileList | null) {
+    if (!picked) return;
+    const newOnes = Array.from(picked);
+    const combined = [...files, ...newOnes].slice(0, MAX_ATTACH_COUNT);
+    const tooBig = combined.find((f) => f.size > MAX_ATTACH_MB * 1024 * 1024);
+    if (tooBig) {
+      toast.error(`"${tooBig.name}" excede ${MAX_ATTACH_MB}MB`);
+      return;
+    }
+    setFiles(combined);
+  }
+  function removeFile(idx: number) {
+    setFiles((f) => f.filter((_, i) => i !== idx));
+  }
 
   async function handleSend() {
     if (!to.trim()) return toast.error("Informe ao menos um destinatário");
@@ -50,6 +84,14 @@ export default function ZohoEmailComposer({
         .map((l) => l || "&nbsp;")
         .join("<br/>");
 
+      const attachments = await Promise.all(
+        files.map(async (f) => ({
+          name: f.name,
+          mimeType: f.type || "application/octet-stream",
+          base64: await fileToBase64(f),
+        }))
+      );
+
       const { data, error } = await supabase.functions.invoke("zoho-send-email", {
         body: {
           to,
@@ -60,12 +102,13 @@ export default function ZohoEmailComposer({
           mailFormat: "html",
           opportunityId,
           clientId,
+          attachments,
         },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       toast.success("E-mail enviado!");
-      setCc(""); setBcc(""); setSubject(""); setBody(""); setTo("");
+      setCc(""); setBcc(""); setSubject(""); setBody(""); setTo(""); setFiles([]);
       onOpenChange(false);
       onSent?.();
     } catch (e: any) {
@@ -138,6 +181,34 @@ export default function ZohoEmailComposer({
               rows={10}
               placeholder="Escreva sua mensagem..."
             />
+          </div>
+
+          <div>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) => { addFiles(e.target.files); if (fileRef.current) fileRef.current.value = ""; }}
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+              <Paperclip className="h-4 w-4 mr-2" /> Anexar arquivos
+            </Button>
+            {files.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {files.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="gap-1">
+                    {f.name} ({(f.size / 1024).toFixed(0)}KB)
+                    <button type="button" onClick={() => removeFile(i)} className="ml-1 hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Máx {MAX_ATTACH_COUNT} arquivos, {MAX_ATTACH_MB}MB cada. Sua assinatura será adicionada automaticamente se configurada.
+            </p>
           </div>
         </div>
 

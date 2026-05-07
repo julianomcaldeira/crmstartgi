@@ -106,10 +106,10 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: Radar, label: "Radar de Leads", path: "/radar-leads" },
     { icon: Brain, label: "Inteligência de Mercado", path: "/inteligencia-mercado" },
     { icon: Upload, label: "Importação", path: "/importacao" },
-    { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" },
+    // { icon: BookOpen, label: "Conhecimento", path: "/base-conhecimento" }, // oculto temporariamente
     { icon: GitBranch, label: "Processo de Vendas", path: "/processo-vendas" },
     { icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" },
-    ...((isAdmin || isGestor) ? [{ icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" }] : []),
+    { icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];

@@ -713,6 +713,33 @@ export type Database = {
         }
         Relationships: []
       }
+      email_signatures: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          signature_html: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          signature_html?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          signature_html?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       feira_audit_log: {
         Row: {
           change_type: string
