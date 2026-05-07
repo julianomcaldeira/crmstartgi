@@ -229,6 +229,17 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       );
   }, [filteredEvents, selectedDate]);
 
+  // Week view (Mon-Sun)
+  const weekStart = useMemo(() => startOfWeek(selectedDate, { weekStartsOn: 1 }), [selectedDate]);
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const weekEventsByDay = useMemo(() => {
+    return weekDays.map((d) =>
+      filteredEvents
+        .filter((e) => isSameDay(new Date(e.start_datetime), d))
+        .sort((a, b) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime())
+    );
+  }, [weekDays, filteredEvents]);
+
   // Days with events for calendar dots
   const busyDays = useMemo(() => {
     const set = new Set<string>();
