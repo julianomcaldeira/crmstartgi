@@ -1961,7 +1961,29 @@ const ClienteDetalhes = () => {
             />
           </Card>
         </TabsContent>
+
+        <TabsContent value="emails" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">E-mails enviados ao cliente</h3>
+              <Button size="sm" onClick={() => setEmailComposerOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Novo e-mail
+              </Button>
+            </div>
+            <EmailHistory key={emailHistoryRefresh} clientId={id || ""} />
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <ZohoEmailComposer
+        open={emailComposerOpen}
+        onOpenChange={setEmailComposerOpen}
+        clientId={id || undefined}
+        defaultTo={client?.email || ""}
+        defaultSubject={client?.company_name ? `Contato - ${client.company_name}` : ""}
+        onSent={() => setEmailHistoryRefresh((n) => n + 1)}
+      />
 
       <TaskViewDialog
         task={selectedTask}
