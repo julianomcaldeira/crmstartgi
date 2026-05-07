@@ -30,12 +30,14 @@ export default function EmailHistory({ clientId, opportunityId }: EmailHistoryPr
     if (clientId || opportunityId) load();
   }, [clientId, opportunityId]);
 
-  const statusVariant = (s: string): any => {
+  const statusVariant = (s: string, dir: string): any => {
+    if (dir === "inbound") return "outline";
     if (s === "sent") return "default";
     if (s === "failed") return "destructive";
     return "secondary";
   };
-  const statusLabel = (s: string) => {
+  const statusLabel = (s: string, dir: string) => {
+    if (dir === "inbound") return "Recebido";
     if (s === "sent") return "Enviado";
     if (s === "failed") return "Falhou";
     if (s === "pending") return "Pendente";
@@ -69,22 +71,25 @@ export default function EmailHistory({ clientId, opportunityId }: EmailHistoryPr
         <div className="space-y-2">
           {items.map((it) => {
             const isOpen = expanded === it.id;
+            const dir = it.direction || "outbound";
+            const isInbound = dir === "inbound";
+            const dateStr = isInbound && it.received_at ? it.received_at : it.sent_at;
             return (
-              <div key={it.id} className="border rounded-lg bg-muted/30">
+              <div key={it.id} className={`border rounded-lg ${isInbound ? "bg-primary/5 border-primary/30" : "bg-muted/30"}`}>
                 <button
                   className="w-full flex items-start justify-between gap-3 p-3 text-left hover:bg-muted/50 transition-colors"
                   onClick={() => setExpanded(isOpen ? null : it.id)}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
+                      <Badge variant={statusVariant(it.status, dir)} className="text-xs">{statusLabel(it.status, dir)}</Badge>
                       <span className="text-sm font-medium truncate">{it.subject}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate">
-                      Para: {(it.recipients || []).join(", ")}
+                      {isInbound ? `De: ${it.from_email || "—"}` : `Para: ${(it.recipients || []).join(", ")}`}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(parseISO(it.sent_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(parseISO(dateStr), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                   {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
