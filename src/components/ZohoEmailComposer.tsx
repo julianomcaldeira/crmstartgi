@@ -84,6 +84,14 @@ export default function ZohoEmailComposer({
         .map((l) => l || "&nbsp;")
         .join("<br/>");
 
+      const attachments = await Promise.all(
+        files.map(async (f) => ({
+          name: f.name,
+          mimeType: f.type || "application/octet-stream",
+          base64: await fileToBase64(f),
+        }))
+      );
+
       const { data, error } = await supabase.functions.invoke("zoho-send-email", {
         body: {
           to,
@@ -94,6 +102,7 @@ export default function ZohoEmailComposer({
           mailFormat: "html",
           opportunityId,
           clientId,
+          attachments,
         },
       });
       if (error) throw error;
