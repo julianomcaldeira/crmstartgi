@@ -108,7 +108,10 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: format(end, "yyyy-MM-dd'T'HH:mm"),
       is_private: false,
       pre_vendas_user_id: isPreVendas ? userId : preVendasUsers[0]?.id || "",
+      attendees: [],
+      send_invite: true,
     });
+    setAttendeeInput("");
     setOpen(true);
   }
 
@@ -122,8 +125,22 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       end_datetime: format(new Date(ev.end_datetime), "yyyy-MM-dd'T'HH:mm"),
       is_private: ev.is_private,
       pre_vendas_user_id: ev.pre_vendas_user_id,
+      attendees: ev.attendees || [],
+      send_invite: false,
     });
+    setAttendeeInput("");
     setOpen(true);
+  }
+
+  function addAttendee() {
+    const email = attendeeInput.trim();
+    if (!email || !email.includes("@")) { toast.error("E-mail inválido"); return; }
+    if (form.attendees.includes(email)) return;
+    setForm({ ...form, attendees: [...form.attendees, email] });
+    setAttendeeInput("");
+  }
+  function removeAttendee(em: string) {
+    setForm({ ...form, attendees: form.attendees.filter(a => a !== em) });
   }
 
   async function handleSave() {
