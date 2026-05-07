@@ -672,6 +672,7 @@ export type Database = {
         Row: {
           agenda_event_id: string | null
           body: string | null
+          client_id: string | null
           error_message: string | null
           id: string
           opportunity_id: string | null
@@ -685,6 +686,7 @@ export type Database = {
         Insert: {
           agenda_event_id?: string | null
           body?: string | null
+          client_id?: string | null
           error_message?: string | null
           id?: string
           opportunity_id?: string | null
@@ -698,6 +700,7 @@ export type Database = {
         Update: {
           agenda_event_id?: string | null
           body?: string | null
+          client_id?: string | null
           error_message?: string | null
           id?: string
           opportunity_id?: string | null

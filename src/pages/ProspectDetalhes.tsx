@@ -57,7 +57,9 @@ import AIAnalysisDialog from "@/components/AIAnalysisDialog";
 import { ProspectDiagnosticDialog } from "@/components/ProspectDiagnosticDialog";
 import { DiagnosticHistoryList } from "@/components/DiagnosticHistoryList";
 import { AIAnalysisHistoryList } from "@/components/AIAnalysisHistoryList";
-import { ClipboardList, Megaphone } from "lucide-react";
+import { ClipboardList, Megaphone, Send } from "lucide-react";
+import EmailHistory from "@/components/EmailHistory";
+import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
 
@@ -96,6 +98,8 @@ const ClienteDetalhes = () => {
   const [selectedTaskForNotes, setSelectedTaskForNotes] = useState<any>(null);
   const [aiAnalysisDialogOpen, setAiAnalysisDialogOpen] = useState(false);
   const [diagnosticDialogOpen, setDiagnosticDialogOpen] = useState(false);
+  const [emailComposerOpen, setEmailComposerOpen] = useState(false);
+  const [emailHistoryRefresh, setEmailHistoryRefresh] = useState(0);
   
 
   const handleCopy = async (value: string, field: string) => {
@@ -1002,11 +1006,12 @@ const ClienteDetalhes = () => {
 
       {/* Tabs for Opportunities, Tasks and Contacts */}
       <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
           <TabsTrigger value="tasks">Tarefas</TabsTrigger>
           <TabsTrigger value="contacts">Contatos</TabsTrigger>
           <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
+          <TabsTrigger value="emails" className="gap-1"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
           <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
         </TabsList>
@@ -1956,7 +1961,29 @@ const ClienteDetalhes = () => {
             />
           </Card>
         </TabsContent>
+
+        <TabsContent value="emails" className="space-y-4">
+          <Card className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">E-mails enviados ao cliente</h3>
+              <Button size="sm" onClick={() => setEmailComposerOpen(true)}>
+                <Send className="mr-2 h-4 w-4" />
+                Novo e-mail
+              </Button>
+            </div>
+            <EmailHistory key={emailHistoryRefresh} clientId={id || ""} />
+          </Card>
+        </TabsContent>
       </Tabs>
+
+      <ZohoEmailComposer
+        open={emailComposerOpen}
+        onOpenChange={setEmailComposerOpen}
+        clientId={id || undefined}
+        defaultTo={client?.email || ""}
+        defaultSubject={client?.company_name ? `Contato - ${client.company_name}` : ""}
+        onSent={() => setEmailHistoryRefresh((n) => n + 1)}
+      />
 
       <TaskViewDialog
         task={selectedTask}
