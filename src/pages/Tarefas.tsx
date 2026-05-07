@@ -41,7 +41,7 @@ const Tarefas = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "completed" | "overdue">("pending");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [viewMode, setViewMode] = useState<"list" | "calendar" | "agenda">("list");
   const [cardViewMode, setCardViewMode] = useViewMode("tasks-card-view-mode", "cards");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedTask, setSelectedTask] = useState<any>(null);
