@@ -27,7 +27,8 @@ export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: 
         .proposal-doc .richtext-block ul { list-style: disc; }
         .proposal-doc .richtext-block ol { list-style: decimal; }
         .proposal-doc .richtext-block blockquote { border-left: 4px solid #e5e7eb; padding-left: 16px; color: #4b5563; font-style: italic; margin: 12px 0; }
-        .proposal-doc .richtext-block img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+        .proposal-doc .richtext-block img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px auto; display: block; }
+        .proposal-doc .richtext-block p:has(> img) { margin: 0; line-height: 0; }
         .proposal-doc .richtext-block a { color: var(--brand); text-decoration: underline; }
         .proposal-doc .richtext-block strong { font-weight: 700; }
       `}</style>

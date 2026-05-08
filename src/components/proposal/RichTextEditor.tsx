@@ -18,7 +18,13 @@ const ResizableImage = Image.extend({
       width: {
         default: null,
         parseHTML: (el: any) => el.style.width || el.getAttribute("width") || null,
-        renderHTML: (attrs: any) => attrs.width ? { style: `width: ${attrs.width}; height: auto;` } : {},
+        renderHTML: (attrs: any) => {
+          // Always responsive: max-width 100%, height auto, block-level so it
+          // doesn't interfere with line-height when font/text size changes.
+          const w = attrs.width;
+          const base = "max-width:100%;height:auto;display:block;margin:8px auto;";
+          return { style: w ? `width:${w};${base}` : base };
+        },
       },
     };
   },
@@ -285,7 +291,11 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         </span>
       </div>
       <div className="flex-1 overflow-y-auto bg-white">
-        <EditorContent editor={editor} />
+        <style>{`
+          .rte-content img { max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; border-radius: 6px; }
+          .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
+        `}</style>
+        <div className="rte-content"><EditorContent editor={editor} /></div>
       </div>
     </div>
   );
