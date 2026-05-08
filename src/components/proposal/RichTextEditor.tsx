@@ -9,6 +9,20 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Extension } from "@tiptap/core";
+
+// Image with width attribute for resizing
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el: any) => el.style.width || el.getAttribute("width") || null,
+        renderHTML: (attrs: any) => attrs.width ? { style: `width: ${attrs.width}; height: auto;` } : {},
+      },
+    };
+  },
+});
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
