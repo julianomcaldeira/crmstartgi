@@ -191,7 +191,8 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         body: {
           to: [client.email],
           subject: title,
-          html,
+          content: html,
+          mailFormat: "html",
           opportunityId: opportunity.id,
           clientId: opportunity.client_id,
         },
