@@ -417,48 +417,30 @@ export default function EmailDashboard() {
                   const isOpen = expandedGroup === g.clientId;
                   const sentCount = g.emails.filter((e) => e.status === "sent").length;
                   const failedCount = g.emails.filter((e) => e.status === "failed").length;
-                  const inboundCount = g.emails.filter((e) => e.direction === "inbound").length;
                   return (
-                    <div key={g.clientId} className="border rounded-lg bg-card overflow-hidden">
+                    <div key={g.clientId} className="border rounded-lg bg-muted/20">
                       <button
-                        className="w-full text-left hover:bg-muted/40 transition-colors"
+                        className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
                         onClick={() => setExpandedGroup(isOpen ? null : g.clientId)}
                       >
-                        <div className="flex items-center justify-between gap-3 px-4 pt-3">
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                              <Users className="h-4 w-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="text-sm font-semibold truncate" title={g.name}>{g.name}</div>
-                              <div className="text-xs text-muted-foreground">
-                                Último e-mail: {format(parseISO(g.lastDate), "dd/MM/yy 'às' HH:mm", { locale: ptBR })}
-                              </div>
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Users className="h-4 w-4 text-primary shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold truncate">{g.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Último: {format(parseISO(g.lastDate), "dd/MM/yy HH:mm", { locale: ptBR })}
                             </div>
                           </div>
-                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-4 py-3">
-                          <div className="rounded-md border bg-muted/30 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total</div>
-                            <div className="text-lg font-bold leading-tight">{g.emails.length}</div>
-                          </div>
-                          <div className="rounded-md border bg-muted/30 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Não lidos</div>
-                            <div className={`text-lg font-bold leading-tight ${inboundCount > 0 ? "text-primary" : "text-muted-foreground"}`}>{inboundCount}</div>
-                          </div>
-                          <div className="rounded-md border bg-muted/30 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Enviados</div>
-                            <div className="text-lg font-bold leading-tight">{sentCount}</div>
-                          </div>
-                          <div className="rounded-md border bg-muted/30 px-3 py-2">
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Falhas</div>
-                            <div className={`text-lg font-bold leading-tight ${failedCount > 0 ? "text-destructive" : "text-muted-foreground"}`}>{failedCount}</div>
-                          </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="secondary" className="text-xs">{g.emails.length} e-mails</Badge>
+                          {sentCount > 0 && <Badge variant="default" className="text-xs">{sentCount} env.</Badge>}
+                          {failedCount > 0 && <Badge variant="destructive" className="text-xs">{failedCount} falh.</Badge>}
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                         </div>
                       </button>
                       {isOpen && (
-                        <div className="border-t p-2 space-y-2 bg-muted/10">
+                        <div className="border-t p-2 space-y-2 bg-background">
                           {g.emails.map((it) => {
                             const eOpen = expanded === it.id;
                             return (
