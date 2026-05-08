@@ -10,6 +10,7 @@ export type BlockType =
   | "terms"
   | "signature"
   | "image"
+  | "gallery"
   | "cta";
 
 export interface BaseBlock {
@@ -60,6 +61,14 @@ export interface ImageBlock extends BaseBlock {
   type: "image";
   url: string;
   caption?: string;
+  width?: "small" | "medium" | "full";
+}
+export interface GalleryImage { url: string; caption?: string }
+export interface GalleryBlock extends BaseBlock {
+  type: "gallery";
+  title?: string;
+  images: GalleryImage[];
+  columns?: 2 | 3;
 }
 export interface CtaBlock extends BaseBlock {
   type: "cta";
@@ -70,7 +79,7 @@ export interface CtaBlock extends BaseBlock {
 
 export type ProposalBlock =
   | CoverBlock | TextBlock | ScopeBlock | PricingBlock
-  | TimelineBlock | SignatureBlock | ImageBlock | CtaBlock;
+  | TimelineBlock | SignatureBlock | ImageBlock | GalleryBlock | CtaBlock;
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   cover: "Capa",
@@ -82,6 +91,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   terms: "Termos & Condições",
   signature: "Assinatura",
   image: "Imagem",
+  gallery: "Galeria de imagens",
   cta: "Chamada para ação",
 };
 
@@ -105,7 +115,9 @@ export function newBlock(type: BlockType): ProposalBlock {
     case "signature":
       return { id, type, name: "{{seller.name}}", role: "Consultor Comercial", company: "StartGi", showClientLine: true };
     case "image":
-      return { id, type, url: "", caption: "" };
+      return { id, type, url: "", caption: "", width: "full" };
+    case "gallery":
+      return { id, type, title: "Imagens", images: [], columns: 2 };
     case "cta":
       return { id, type, title: "Pronto para começar?", buttonText: "Falar com consultor", buttonUrl: "" };
   }
