@@ -91,8 +91,8 @@ export default function Propostas() {
       ]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
-      const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
-      const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
+      const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean))) as string[];
+      const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean))) as string[];
       const [clientsRes, oppsRes] = await Promise.all([
         clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
         oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
