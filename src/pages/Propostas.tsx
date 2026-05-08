@@ -216,6 +216,20 @@ export default function Propostas() {
             </Card>
           ))}
           {!loading && proposals.length === 0 && <div className="text-center text-muted-foreground py-8">Nenhuma proposta gerada.</div>}
+
+          {proposalsTotal > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-3 border-t">
+              <div className="text-xs text-muted-foreground">
+                Página {proposalsPage} de {totalPages} · {proposalsTotal} propostas
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage(1)}>«</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage((p) => Math.max(1, p - 1))}>Anterior</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage(totalPages)}>»</Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
