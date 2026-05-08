@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
-import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight, Users, List } from "lucide-react";
 import { format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -33,8 +33,11 @@ export default function EmailDashboard() {
   const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [groupByClient, setGroupByClient] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
+  const GROUP_PAGE_SIZE = 15;
 
   const canSeeAll = role === "admin" || role === "gestor";
 
@@ -141,7 +144,7 @@ export default function EmailDashboard() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate]);
+  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate, groupByClient]);
 
   const filtered = useMemo(() => {
     return items.filter((it) => {
@@ -159,10 +162,30 @@ export default function EmailDashboard() {
     });
   }, [items, statusFilter, userFilter, clientFilter, search, clients]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const grouped = useMemo(() => {
+    const map = new Map<string, { clientId: string; name: string; emails: any[]; lastDate: string }>();
+    for (const it of filtered) {
+      const key = it.client_id || "__none__";
+      const name = it.client_id ? (clients[it.client_id] || "Cliente desconhecido") : "Sem cliente vinculado";
+      if (!map.has(key)) map.set(key, { clientId: key, name, emails: [], lastDate: it.sent_at });
+      const g = map.get(key)!;
+      g.emails.push(it);
+      if (it.sent_at > g.lastDate) g.lastDate = it.sent_at;
+    }
+    return Array.from(map.values()).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
+  }, [filtered, clients]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil((groupByClient ? grouped.length : filtered.length) / (groupByClient ? GROUP_PAGE_SIZE : PAGE_SIZE)),
+  );
   const paged = useMemo(
     () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     [filtered, page],
+  );
+  const pagedGroups = useMemo(
+    () => grouped.slice((page - 1) * GROUP_PAGE_SIZE, page * GROUP_PAGE_SIZE),
+    [grouped, page],
   );
 
   const stats = useMemo(() => {
@@ -318,8 +341,13 @@ export default function EmailDashboard() {
 
       {/* List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">E-mails ({filtered.length})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">
+            {groupByClient ? `Clientes (${grouped.length})` : `E-mails (${filtered.length})`}
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setGroupByClient((v) => !v)}>
+            {groupByClient ? (<><List className="h-4 w-4 mr-2" /> Ver lista</>) : (<><Users className="h-4 w-4 mr-2" /> Agrupar por cliente</>)}
+          </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -332,63 +360,138 @@ export default function EmailDashboard() {
             </div>
           ) : (
             <>
-            <div className="space-y-2">
-              {paged.map((it) => {
-                const isOpen = expanded === it.id;
-                return (
-                  <div key={it.id} className="border rounded-lg bg-muted/20">
-                    <button
-                      className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
-                      onClick={() => setExpanded(isOpen ? null : it.id)}
-                    >
-                      <div className="col-span-12 md:col-span-5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
-                          <span className="text-sm font-medium truncate">{it.subject}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          Para: {(it.recipients || []).join(", ")}
-                        </p>
-                      </div>
-                      <div className="col-span-6 md:col-span-3 text-xs">
-                        <div className="text-muted-foreground">Vendedor</div>
-                        <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
-                      </div>
-                      <div className="col-span-6 md:col-span-2 text-xs">
-                        <div className="text-muted-foreground">Cliente</div>
-                        <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
-                      </div>
-                      <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
-                        <div>
-                          <div className="text-muted-foreground">Data</div>
-                          <div className="font-medium">{format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
-                        </div>
-                        {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                      </div>
-                    </button>
-
-                    {isOpen && (
-                      <div className="border-t p-3 space-y-2 text-sm">
-                        {it.error_message && (
-                          <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                            Erro: {it.error_message}
+            {groupByClient ? (
+              <div className="space-y-2">
+                {pagedGroups.map((g) => {
+                  const isOpen = expandedGroup === g.clientId;
+                  const sentCount = g.emails.filter((e) => e.status === "sent").length;
+                  const failedCount = g.emails.filter((e) => e.status === "failed").length;
+                  return (
+                    <div key={g.clientId} className="border rounded-lg bg-muted/20">
+                      <button
+                        className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        onClick={() => setExpandedGroup(isOpen ? null : g.clientId)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Users className="h-4 w-4 text-primary shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold truncate">{g.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Último: {format(parseISO(g.lastDate), "dd/MM/yy HH:mm", { locale: ptBR })}
+                            </div>
                           </div>
-                        )}
-                        {it.body && (
-                          <div
-                            className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
-                            dangerouslySetInnerHTML={{ __html: it.body }}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="secondary" className="text-xs">{g.emails.length} e-mails</Badge>
+                          {sentCount > 0 && <Badge variant="default" className="text-xs">{sentCount} env.</Badge>}
+                          {failedCount > 0 && <Badge variant="destructive" className="text-xs">{failedCount} falh.</Badge>}
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div className="border-t p-2 space-y-2 bg-background">
+                          {g.emails.map((it) => {
+                            const eOpen = expanded === it.id;
+                            return (
+                              <div key={it.id} className="border rounded-md">
+                                <button
+                                  className="w-full flex items-start justify-between gap-3 p-2 text-left hover:bg-muted/40 transition-colors"
+                                  onClick={() => setExpanded(eOpen ? null : it.id)}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
+                                      <span className="text-sm font-medium truncate">{it.subject}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                                      Para: {(it.recipients || []).join(", ")} • {users[it.sent_by] || "—"} • {format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                    </p>
+                                  </div>
+                                  {eOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                                </button>
+                                {eOpen && (
+                                  <div className="border-t p-3 space-y-2 text-sm">
+                                    {it.error_message && (
+                                      <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">Erro: {it.error_message}</div>
+                                    )}
+                                    {it.body && (
+                                      <div
+                                        className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
+                                        dangerouslySetInnerHTML={{ __html: it.body }}
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {paged.map((it) => {
+                  const isOpen = expanded === it.id;
+                  return (
+                    <div key={it.id} className="border rounded-lg bg-muted/20">
+                      <button
+                        className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        onClick={() => setExpanded(isOpen ? null : it.id)}
+                      >
+                        <div className="col-span-12 md:col-span-5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
+                            <span className="text-sm font-medium truncate">{it.subject}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            Para: {(it.recipients || []).join(", ")}
+                          </p>
+                        </div>
+                        <div className="col-span-6 md:col-span-3 text-xs">
+                          <div className="text-muted-foreground">Vendedor</div>
+                          <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
+                        </div>
+                        <div className="col-span-6 md:col-span-2 text-xs">
+                          <div className="text-muted-foreground">Cliente</div>
+                          <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
+                        </div>
+                        <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
+                          <div>
+                            <div className="text-muted-foreground">Data</div>
+                            <div className="font-medium">{format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
+                          </div>
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t p-3 space-y-2 text-sm">
+                          {it.error_message && (
+                            <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                              Erro: {it.error_message}
+                            </div>
+                          )}
+                          {it.body && (
+                            <div
+                              className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
+                              dangerouslySetInnerHTML={{ __html: it.body }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex items-center justify-between mt-4 pt-3 border-t">
               <div className="text-xs text-muted-foreground">
-                Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+                {groupByClient
+                  ? `Mostrando ${(page - 1) * GROUP_PAGE_SIZE + 1}-${Math.min(page * GROUP_PAGE_SIZE, grouped.length)} de ${grouped.length} clientes`
+                  : `Mostrando ${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)} de ${filtered.length}`}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
