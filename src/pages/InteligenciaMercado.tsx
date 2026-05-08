@@ -1417,60 +1417,21 @@ const InteligenciaMercado = () => {
 
           {/* Tabs for detailed data and AI analysis */}
           <Tabs defaultValue="data" className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-              {/* Grupo: Dados de Mercado */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />
-                  <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
-                    Dados de Mercado
-                  </span>
-                </div>
-                <TabsList className="grid w-full grid-cols-2 h-auto">
-                  <TabsTrigger
-                    value="data"
-                    className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
-                  >
-                    <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
-                    <span className="truncate">Editais & Contratos</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="competitors"
-                    className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
-                  >
-                    <Users className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
-                    <span className="truncate">Concorrentes</span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-
-              {/* Grupo: Inteligência IA */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 px-1">
-                  <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />
-                  <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
-                    Inteligência IA
-                  </span>
-                </div>
-                <TabsList className="grid w-full grid-cols-2 h-auto">
-                  <TabsTrigger
-                    value="ai"
-                    disabled={!aiAnalysis}
-                    className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
-                  >
-                    <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
-                    <span className="truncate">Análise IA</span>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="chat"
-                    className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
-                    <span className="truncate">Chat Vendas Gov</span>
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-            </div>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="data" className="gap-2">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Editais & Contratos</span>
+                <span className="sm:hidden">Editais</span>
+              </TabsTrigger>
+              <TabsTrigger value="competitors" className="gap-2">
+                <Users className="h-4 w-4" />
+                Concorrentes
+              </TabsTrigger>
+              <TabsTrigger value="ai" disabled={!aiAnalysis} className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Análise IA
+              </TabsTrigger>
+            </TabsList>
 
             <TabsContent value="data" className="mt-4">
               <Card>
