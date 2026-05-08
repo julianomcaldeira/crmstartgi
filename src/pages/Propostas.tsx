@@ -89,8 +89,8 @@ export default function Propostas() {
       client: p.client_id ? cMap.get(p.client_id) || null : null,
       opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
     }));
-    setTemplates(tplRes.data || []);
     setProposals(enriched);
+    setProposalsTotal(propRes.count || 0);
     setLoading(false);
   };
 
