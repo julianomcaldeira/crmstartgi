@@ -839,15 +839,15 @@ const InteligenciaMercado = () => {
       </div>
     </div>
 
-      <Tabs defaultValue="search" className="w-full">
+      <Tabs defaultValue="chat" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="search" className="gap-2">
-            <Search className="h-4 w-4" />
-            Pesquisa de Mercado
-          </TabsTrigger>
           <TabsTrigger value="chat" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Chat IA — Vendas Gov
+          </TabsTrigger>
+          <TabsTrigger value="search" className="gap-2">
+            <Search className="h-4 w-4" />
+            Pesquisa de Mercado
           </TabsTrigger>
         </TabsList>
 
