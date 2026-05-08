@@ -144,7 +144,7 @@ export default function EmailDashboard() {
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate]);
+  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate, groupByClient]);
 
   const filtered = useMemo(() => {
     return items.filter((it) => {
