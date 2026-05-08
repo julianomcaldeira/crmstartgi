@@ -1617,18 +1617,30 @@ const InteligenciaMercado = () => {
 
       {/* Empty State */}
       {!marketData && !loading && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              Descubra Oportunidades de Mercado
-            </h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Adicione produtos ou serviços acima para analisar dados de compras
-              governamentais e identificar oportunidades de vendas no setor público.
-            </p>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                Descubra Oportunidades de Mercado
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Adicione produtos ou serviços acima para analisar dados de compras
+                governamentais e identificar oportunidades de vendas no setor público.
+              </p>
+            </CardContent>
+          </Card>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">
+                Ou converse com o Consultor IA de Vendas ao Governo
+              </h2>
+            </div>
+            <GovSalesChat />
+          </div>
+        </>
       )}
     </div>
   );
