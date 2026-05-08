@@ -143,13 +143,35 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
           </div>
         </section>
       );
-    case "image":
+    case "image": {
+      const w = block.width === "small" ? "40%" : block.width === "medium" ? "70%" : "100%";
       return (
         <section className="pg" style={{ textAlign: "center" }}>
-          {block.url ? <img src={block.url} alt={block.caption || ""} style={{ maxWidth: "100%", borderRadius: 8 }} /> : <div style={{ padding: 48, background: "#f3f4f6", borderRadius: 8, color: "#9ca3af" }}>(Sem imagem)</div>}
+          {block.url
+            ? <img src={block.url} alt={block.caption || ""} style={{ width: w, maxWidth: "100%", borderRadius: 8, display: "inline-block" }} />
+            : <div style={{ padding: 48, background: "#f3f4f6", borderRadius: 8, color: "#9ca3af" }}>(Sem imagem)</div>}
           {block.caption && <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>{block.caption}</div>}
         </section>
       );
+    }
+    case "gallery": {
+      const cols = block.columns || 2;
+      return (
+        <section className="pg">
+          {block.title && <h2 style={{ fontSize: 28, color: brandColor, marginBottom: 16 }}>{block.title}</h2>}
+          {block.images?.length ? (
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 12 }}>
+              {block.images.map((img, i) => (
+                <figure key={i} style={{ margin: 0 }}>
+                  <img src={img.url} alt={img.caption || ""} style={{ width: "100%", height: 200, objectFit: "cover", borderRadius: 8 }} />
+                  {img.caption && <figcaption style={{ marginTop: 4, fontSize: 12, color: "#6b7280", textAlign: "center" }}>{img.caption}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          ) : <div style={{ padding: 48, background: "#f3f4f6", borderRadius: 8, color: "#9ca3af", textAlign: "center" }}>(Sem imagens)</div>}
+        </section>
+      );
+    }
     case "cta":
       return (
         <section className="pg" style={{ textAlign: "center", background: `linear-gradient(135deg, ${brandColor}10, ${brandColor}25)` }}>
