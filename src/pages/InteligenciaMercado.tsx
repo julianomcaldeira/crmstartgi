@@ -1403,24 +1403,47 @@ const InteligenciaMercado = () => {
 
           {/* Tabs for detailed data and AI analysis */}
           <Tabs defaultValue="data" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="data">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Dados de Mercado
-              </TabsTrigger>
-              <TabsTrigger value="competitors">
-                <Users className="h-4 w-4 mr-2" />
-                Concorrentes
-              </TabsTrigger>
-              <TabsTrigger value="ai" disabled={!aiAnalysis}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Análise IA
-              </TabsTrigger>
-              <TabsTrigger value="chat">
-                <MessageSquare className="h-4 w-4 mr-2" />
-                Chat IA — Vendas Gov
-              </TabsTrigger>
-            </TabsList>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Grupo: Dados de Mercado */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Dados de Mercado
+                  </span>
+                </div>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="data">
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Editais & Contratos
+                  </TabsTrigger>
+                  <TabsTrigger value="competitors">
+                    <Users className="h-4 w-4 mr-2" />
+                    Concorrentes
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              {/* Grupo: Inteligência IA */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-1">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Inteligência IA
+                  </span>
+                </div>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="ai" disabled={!aiAnalysis}>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Análise IA
+                  </TabsTrigger>
+                  <TabsTrigger value="chat">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Chat Vendas Gov
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+            </div>
 
             <TabsContent value="data" className="mt-4">
               <Card>
