@@ -31,6 +31,7 @@ type Props = {
   emptyText?: string;
   disabled?: boolean;
   className?: string;
+  contentClassName?: string;
 };
 
 export function SearchableCombobox({
