@@ -255,11 +255,11 @@ export default function PreVendas() {
               <Plus className="h-4 w-4" /> Nova solicitação
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
               <DialogTitle>Solicitar agenda com Pré-Vendas</DialogTitle>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
               <div>
                 <Label>Título *</Label>
                 <Input
