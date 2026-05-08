@@ -92,7 +92,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
       FontSize,
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image.configure({ inline: false, HTMLAttributes: { class: "rounded my-2 max-w-full" } }),
+      ResizableImage.configure({ inline: false, HTMLAttributes: { class: "rounded my-2 max-w-full" } }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
       Placeholder.configure({ placeholder }),
     ],
