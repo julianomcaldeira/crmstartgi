@@ -81,6 +81,9 @@ export default function PreVendas() {
     desired_datetime: "",
     meeting_link: "",
     assigned_pre_vendas: "",
+    product_id: "",
+    attendees_roles: "",
+    expectations: "",
   });
 
   const isPreVendas = role === "pre_vendas";
