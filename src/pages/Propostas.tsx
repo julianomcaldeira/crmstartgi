@@ -140,8 +140,10 @@ export default function Propostas() {
     if (!confirm("Excluir esta proposta?")) return;
     const { error } = await supabase.from("proposals").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Excluída"); loadAll(); }
+    else { toast.success("Excluída"); loadProposals(proposalsPage); }
   };
+
+  const totalPages = Math.max(1, Math.ceil(proposalsTotal / PAGE_SIZE));
 
   const previewVars = buildVariableContext({
     client: { company_name: "Cliente Exemplo Ltda", trade_name: "Exemplo", cnpj: "00.000.000/0001-00", city: "São Paulo", state: "SP" },
