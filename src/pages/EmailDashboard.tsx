@@ -33,8 +33,11 @@ export default function EmailDashboard() {
   const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [groupByClient, setGroupByClient] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
+  const GROUP_PAGE_SIZE = 15;
 
   const canSeeAll = role === "admin" || role === "gestor";
 
