@@ -60,6 +60,16 @@ export default function Propostas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
+  // Persist tab/page/status filter into the URL so reload/back keeps state
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams);
+    if (tab !== "templates") next.set("tab", tab); else next.delete("tab");
+    if (proposalsPage > 1) next.set("page", String(proposalsPage)); else next.delete("page");
+    if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, proposalsPage, statusFilter]);
+
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return setHasAccess(false);
