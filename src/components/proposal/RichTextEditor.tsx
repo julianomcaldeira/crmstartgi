@@ -152,6 +152,8 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
     const html = `<p style="text-align:center;color:#9ca3af;opacity:0.25;font-size:72px;font-weight:700;letter-spacing:8px;transform:rotate(-15deg);margin:24px 0;user-select:none;">${text}</p>`;
     editor.chain().focus().insertContent(html).run();
   };
+
+  const Btn = ({ active, onClick, title, children }: any) => (
     <Button
       type="button"
       size="sm"
