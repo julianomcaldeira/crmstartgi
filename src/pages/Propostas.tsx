@@ -79,7 +79,7 @@ export default function Propostas() {
       if (!name.trim()) { toast.error("Informe um nome"); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const payload = { name, description, thumbnail_color: color, blocks, is_active: true };
+      const payload: any = { name, description, thumbnail_color: color, blocks: blocks as any, is_active: true };
       if (editing) {
         const r = await supabase.from("proposal_templates").update(payload).eq("id", editing.id);
         if (r.error) throw r.error;
