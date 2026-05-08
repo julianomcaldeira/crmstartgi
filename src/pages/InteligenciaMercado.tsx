@@ -1653,30 +1653,104 @@ const InteligenciaMercado = () => {
 
       {/* Empty State */}
       {!marketData && !loading && (
-        <>
-          <Card className="border-dashed">
-            <CardContent className="py-12 text-center">
-              <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                Descubra Oportunidades de Mercado
-              </h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Adicione produtos ou serviços acima para analisar dados de compras
-                governamentais e identificar oportunidades de vendas no setor público.
-              </p>
-            </CardContent>
-          </Card>
-
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">
-                Ou converse com o Consultor IA de Vendas ao Governo
-              </h2>
+        <Tabs defaultValue="chat" className="w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {/* Grupo: Dados de Mercado (desabilitado até pesquisar) */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />
+                <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
+                  Dados de Mercado
+                </span>
+              </div>
+              <TabsList className="grid w-full grid-cols-2 h-auto">
+                <TabsTrigger
+                  value="data-empty"
+                  className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
+                >
+                  <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="truncate">Editais & Contratos</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="competitors-empty"
+                  className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
+                >
+                  <Users className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="truncate">Concorrentes</span>
+                </TabsTrigger>
+              </TabsList>
             </div>
-            <GovSalesChat />
+
+            {/* Grupo: Inteligência IA */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-1">
+                <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary shrink-0" />
+                <span className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate">
+                  Inteligência IA
+                </span>
+              </div>
+              <TabsList className="grid w-full grid-cols-2 h-auto">
+                <TabsTrigger
+                  value="ai-empty"
+                  className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
+                >
+                  <Sparkles className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="truncate">Análise IA</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="chat"
+                  className="text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-2 md:px-3 py-2 whitespace-normal leading-tight min-h-[2.5rem]"
+                >
+                  <MessageSquare className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2 shrink-0" />
+                  <span className="truncate">Chat Vendas Gov</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
           </div>
-        </>
+
+          <TabsContent value="data-empty" className="mt-4">
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  Descubra Oportunidades de Mercado
+                </h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Faça uma pesquisa acima para ver editais e contratos do PNCP.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="competitors-empty" className="mt-4">
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <Users className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Concorrentes do Mercado</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Pesquise produtos ou serviços para identificar empresas que já vendem
+                  para o governo nesse segmento.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ai-empty" className="mt-4">
+            <Card className="border-dashed">
+              <CardContent className="py-12 text-center">
+                <Sparkles className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Análise IA</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  Pesquise dados de mercado e gere uma análise estratégica com IA.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="chat" className="mt-4">
+            <GovSalesChat />
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
