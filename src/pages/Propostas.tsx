@@ -15,7 +15,7 @@ import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTyp
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const PAGE_SIZE = 20;
 
