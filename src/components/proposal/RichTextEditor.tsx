@@ -137,8 +137,8 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
   );
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-background flex flex-col">
-      <div className="border-b bg-muted/30 p-1.5 flex flex-wrap gap-0.5 items-center sticky top-0 z-10">
+    <div className="border rounded-lg overflow-hidden bg-background flex flex-col h-full min-h-0">
+      <div className="shrink-0 border-b bg-muted/30 p-1.5 flex flex-wrap gap-0.5 items-center">
         {/* Font family */}
         <Select onValueChange={(v) => editor.chain().focus().setFontFamily(v).run()}>
           <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Fonte" /></SelectTrigger>
