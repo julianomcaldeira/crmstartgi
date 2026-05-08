@@ -68,6 +68,7 @@ export default function PreVendas() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [preVendasUsers, setPreVendasUsers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Request | null>(null);
