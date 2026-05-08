@@ -1931,6 +1931,131 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_templates: {
+        Row: {
+          blocks: Json
+          category: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          thumbnail_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          category?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          thumbnail_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          thumbnail_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          accepted_at: string | null
+          blocks: Json
+          client_id: string
+          created_at: string
+          created_by: string
+          id: string
+          implementation_value: number | null
+          monthly_value: number | null
+          opportunity_id: string
+          pdf_url: string | null
+          rejected_at: string | null
+          sent_at: string | null
+          share_token: string
+          status: string
+          template_id: string | null
+          title: string
+          total_value: number | null
+          updated_at: string
+          validity_days: number | null
+          variables: Json
+          view_count: number
+          viewed_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          blocks?: Json
+          client_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
+          opportunity_id: string
+          pdf_url?: string | null
+          rejected_at?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title: string
+          total_value?: number | null
+          updated_at?: string
+          validity_days?: number | null
+          variables?: Json
+          view_count?: number
+          viewed_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          blocks?: Json
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
+          opportunity_id?: string
+          pdf_url?: string | null
+          rejected_at?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title?: string
+          total_value?: number | null
+          updated_at?: string
+          validity_days?: number | null
+          variables?: Json
+          view_count?: number
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_ai_analyses: {
         Row: {
           analysis: string
@@ -2677,6 +2802,16 @@ export type Database = {
       }
     }
     Functions: {
+      get_client_owner_by_cnpj: {
+        Args: { _cnpj: string }
+        Returns: {
+          client_id: string
+          company_name: string
+          owner_email: string
+          owner_name: string
+          trade_name: string
+        }[]
+      }
       get_company_goals: {
         Args: { _year: number }
         Returns: {
@@ -2692,6 +2827,23 @@ export type Database = {
           title: string
         }[]
       }
+      get_proposal_by_token: {
+        Args: { _token: string }
+        Returns: {
+          blocks: Json
+          client_company: string
+          created_at: string
+          id: string
+          implementation_value: number
+          monthly_value: number
+          sent_at: string
+          status: string
+          title: string
+          total_value: number
+          validity_days: number
+          variables: Json
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2699,6 +2851,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      register_proposal_view: { Args: { _token: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "vendedor" | "gestor" | "pre_vendas"
