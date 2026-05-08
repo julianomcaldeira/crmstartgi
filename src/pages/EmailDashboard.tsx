@@ -230,7 +230,7 @@ export default function EmailDashboard() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Período</label>
             <Select value={range} onValueChange={setRange}>
