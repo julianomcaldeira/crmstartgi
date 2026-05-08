@@ -16,12 +16,16 @@ import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
+const PAGE_SIZE = 20;
+
 export default function Propostas() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("templates");
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
+  const [proposalsTotal, setProposalsTotal] = useState(0);
+  const [proposalsPage, setProposalsPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Editor state
