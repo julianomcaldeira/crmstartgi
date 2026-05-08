@@ -489,7 +489,9 @@ export default function EmailDashboard() {
             )}
             <div className="flex items-center justify-between mt-4 pt-3 border-t">
               <div className="text-xs text-muted-foreground">
-                Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+                {groupByClient
+                  ? `Mostrando ${(page - 1) * GROUP_PAGE_SIZE + 1}-${Math.min(page * GROUP_PAGE_SIZE, grouped.length)} de ${grouped.length} clientes`
+                  : `Mostrando ${(page - 1) * PAGE_SIZE + 1}-${Math.min(page * PAGE_SIZE, filtered.length)} de ${filtered.length}`}
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
