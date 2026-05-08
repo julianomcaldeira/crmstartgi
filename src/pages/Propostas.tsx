@@ -41,6 +41,11 @@ export default function Propostas() {
     checkAccess();
   }, []);
 
+  useEffect(() => {
+    if (hasAccess) loadProposals(proposalsPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalsPage, hasAccess]);
+
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return setHasAccess(false);
@@ -53,10 +58,23 @@ export default function Propostas() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [tplRes, propRes] = await Promise.all([
-      supabase.from("proposal_templates").select("*").order("created_at", { ascending: false }),
-      supabase.from("proposals").select("*").order("created_at", { ascending: false }).limit(200),
-    ]);
+    const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
+    setTemplates(tplRes.data || []);
+    await loadProposals(1);
+    setProposalsPage(1);
+    setLoading(false);
+  };
+
+  const loadProposals = async (page: number) => {
+    setLoading(true);
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const propRes = await supabase
+      .from("proposals")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
     const props = propRes.data || [];
     const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
     const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
