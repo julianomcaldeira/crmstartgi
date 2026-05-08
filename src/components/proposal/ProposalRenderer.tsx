@@ -26,6 +26,12 @@ export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: 
 
 function BlockView({ block, variables, brandColor }: { block: ProposalBlock; variables: VariableContext; brandColor: string }) {
   switch (block.type) {
+    case "richtext": {
+      const html = interpolate(block.html, variables);
+      return (
+        <section className="pg richtext-block" dangerouslySetInnerHTML={{ __html: html }} />
+      );
+    }
     case "cover": {
       const bg = block.backgroundColor || brandColor;
       const fg = block.textColor || "#ffffff";
