@@ -35,7 +35,9 @@ import {
   FileDown,
   GitCompare,
   Check,
+  MessageSquare,
 } from "lucide-react";
+import GovSalesChat from "@/components/marketIntelligence/GovSalesChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1401,7 +1403,7 @@ const InteligenciaMercado = () => {
 
           {/* Tabs for detailed data and AI analysis */}
           <Tabs defaultValue="data" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="data">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Dados de Mercado
@@ -1413,6 +1415,10 @@ const InteligenciaMercado = () => {
               <TabsTrigger value="ai" disabled={!aiAnalysis}>
                 <Sparkles className="h-4 w-4 mr-2" />
                 Análise IA
+              </TabsTrigger>
+              <TabsTrigger value="chat">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Chat IA — Vendas Gov
               </TabsTrigger>
             </TabsList>
 
@@ -1601,24 +1607,40 @@ const InteligenciaMercado = () => {
                 </Card>
               )}
             </TabsContent>
+
+            <TabsContent value="chat" className="mt-4">
+              <GovSalesChat />
+            </TabsContent>
           </Tabs>
         </div>
       )}
 
       {/* Empty State */}
       {!marketData && !loading && (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              Descubra Oportunidades de Mercado
-            </h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Adicione produtos ou serviços acima para analisar dados de compras
-              governamentais e identificar oportunidades de vendas no setor público.
-            </p>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <Brain className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-medium mb-2">
+                Descubra Oportunidades de Mercado
+              </h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Adicione produtos ou serviços acima para analisar dados de compras
+                governamentais e identificar oportunidades de vendas no setor público.
+              </p>
+            </CardContent>
+          </Card>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">
+                Ou converse com o Consultor IA de Vendas ao Governo
+              </h2>
+            </div>
+            <GovSalesChat />
+          </div>
+        </>
       )}
     </div>
   );
