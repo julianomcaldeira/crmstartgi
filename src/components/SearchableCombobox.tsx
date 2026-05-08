@@ -43,6 +43,7 @@ export function SearchableCombobox({
   emptyText = "Nenhum resultado.",
   disabled,
   className,
+  contentClassName,
 }: Props) {
   const [open, setOpen] = React.useState(false);
 
