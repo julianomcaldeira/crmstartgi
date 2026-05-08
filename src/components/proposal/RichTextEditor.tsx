@@ -9,6 +9,20 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Extension } from "@tiptap/core";
+
+// Image with width attribute for resizing
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      width: {
+        default: null,
+        parseHTML: (el: any) => el.style.width || el.getAttribute("width") || null,
+        renderHTML: (attrs: any) => attrs.width ? { style: `width: ${attrs.width}; height: auto;` } : {},
+      },
+    };
+  },
+});
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,7 +30,8 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
-  Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type
+  Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
+  Minus, Droplet
 } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { AVAILABLE_VARIABLES } from "@/lib/proposalTypes";
@@ -77,7 +92,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
       FontSize,
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Image.configure({ inline: false, HTMLAttributes: { class: "rounded my-2 max-w-full" } }),
+      ResizableImage.configure({ inline: false, HTMLAttributes: { class: "rounded my-2 max-w-full" } }),
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "text-primary underline" } }),
       Placeholder.configure({ placeholder }),
     ],
@@ -121,6 +136,21 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
     if (url === null) return;
     if (url === "") { editor.chain().focus().unsetLink().run(); return; }
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
+  const setImageWidth = (width: string) => {
+    if (!editor.isActive("image")) {
+      toast.info("Selecione uma imagem primeiro (clique sobre ela)");
+      return;
+    }
+    editor.chain().focus().updateAttributes("image", { width }).run();
+  };
+
+  const insertWatermark = () => {
+    const text = window.prompt("Texto da marca d'água:", "CONFIDENCIAL");
+    if (!text) return;
+    const html = `<p style="text-align:center;color:#9ca3af;opacity:0.25;font-size:72px;font-weight:700;letter-spacing:8px;transform:rotate(-15deg);margin:24px 0;user-select:none;">${text}</p>`;
+    editor.chain().focus().insertContent(html).run();
   };
 
   const Btn = ({ active, onClick, title, children }: any) => (
@@ -200,12 +230,35 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista"><List className="h-4 w-4" /></Btn>
         <Btn active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Lista numerada"><ListOrdered className="h-4 w-4" /></Btn>
         <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Citação"><Quote className="h-4 w-4" /></Btn>
+        <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Linha separadora"><Minus className="h-4 w-4" /></Btn>
 
         <span className="w-px h-6 bg-border mx-1" />
 
         <Btn onClick={() => fileRef.current?.click()} title="Inserir imagem"><ImageIcon className="h-4 w-4" /></Btn>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+
+        {/* Image size (when image selected) */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Tamanho da imagem" disabled={!editor.isActive("image")}>
+              Tam
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-40 p-1">
+            {[
+              { label: "25%", v: "25%" },
+              { label: "50%", v: "50%" },
+              { label: "75%", v: "75%" },
+              { label: "100%", v: "100%" },
+              { label: "Original", v: "" },
+            ].map((o) => (
+              <button key={o.label} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent" onClick={() => setImageWidth(o.v)}>{o.label}</button>
+            ))}
+          </PopoverContent>
+        </Popover>
+
         <Btn active={editor.isActive("link")} onClick={setLink} title="Inserir link"><Link2 className="h-4 w-4" /></Btn>
+        <Btn onClick={insertWatermark} title="Inserir marca d'água"><Droplet className="h-4 w-4" /></Btn>
 
         <span className="w-px h-6 bg-border mx-1" />
 
