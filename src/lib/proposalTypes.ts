@@ -1,6 +1,7 @@
 // Tipos e utilitários para o construtor de propostas
 
 export type BlockType =
+  | "richtext"
   | "cover"
   | "text"
   | "about"
@@ -76,9 +77,13 @@ export interface CtaBlock extends BaseBlock {
   buttonText: string;
   buttonUrl?: string;
 }
+export interface RichTextBlock extends BaseBlock {
+  type: "richtext";
+  html: string;
+}
 
 export type ProposalBlock =
-  | CoverBlock | TextBlock | ScopeBlock | PricingBlock
+  | RichTextBlock | CoverBlock | TextBlock | ScopeBlock | PricingBlock
   | TimelineBlock | SignatureBlock | ImageBlock | GalleryBlock | CtaBlock;
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
