@@ -291,7 +291,11 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         </span>
       </div>
       <div className="flex-1 overflow-y-auto bg-white">
-        <EditorContent editor={editor} />
+        <style>{`
+          .rte-content img { max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; border-radius: 6px; }
+          .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
+        `}</style>
+        <div className="rte-content"><EditorContent editor={editor} /></div>
       </div>
     </div>
   );
