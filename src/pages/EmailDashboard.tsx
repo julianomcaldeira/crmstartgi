@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
-import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight, Users, List } from "lucide-react";
+import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight, Users, List, ArrowUpDown } from "lucide-react";
 import { format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +32,7 @@ export default function EmailDashboard() {
   const [userFilter, setUserFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("date_desc");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [groupByClient, setGroupByClient] = useState(true);
@@ -147,7 +148,7 @@ export default function EmailDashboard() {
   }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate, groupByClient]);
 
   const filtered = useMemo(() => {
-    return items.filter((it) => {
+    const list = items.filter((it) => {
       if (statusFilter !== "all" && it.status !== statusFilter) return false;
       if (userFilter !== "all" && it.sent_by !== userFilter) return false;
       if (clientFilter && it.client_id !== clientFilter) return false;
@@ -160,7 +161,26 @@ export default function EmailDashboard() {
       }
       return true;
     });
-  }, [items, statusFilter, userFilter, clientFilter, search, clients]);
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc":
+          return a.sent_at < b.sent_at ? -1 : 1;
+        case "client_asc":
+          return (clients[a.client_id] || "zzz").localeCompare(clients[b.client_id] || "zzz", "pt-BR");
+        case "client_desc":
+          return (clients[b.client_id] || "zzz").localeCompare(clients[a.client_id] || "zzz", "pt-BR");
+        case "subject_asc":
+          return (a.subject || "").localeCompare(b.subject || "", "pt-BR");
+        case "status":
+          return (a.status || "").localeCompare(b.status || "");
+        case "date_desc":
+        default:
+          return a.sent_at < b.sent_at ? 1 : -1;
+      }
+    });
+    return sorted;
+  }, [items, statusFilter, userFilter, clientFilter, search, clients, sortBy]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { clientId: string; name: string; emails: any[]; lastDate: string }>();
@@ -172,8 +192,22 @@ export default function EmailDashboard() {
       g.emails.push(it);
       if (it.sent_at > g.lastDate) g.lastDate = it.sent_at;
     }
-    return Array.from(map.values()).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
-  }, [filtered, clients]);
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "client_asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "client_desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "date_asc":
+          return a.lastDate < b.lastDate ? -1 : 1;
+        case "date_desc":
+        default:
+          return a.lastDate < b.lastDate ? 1 : -1;
+      }
+    });
+    return arr;
+  }, [filtered, clients, sortBy]);
 
   const totalPages = Math.max(
     1,
@@ -253,8 +287,8 @@ export default function EmailDashboard() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-2">
             <label className="text-xs text-muted-foreground mb-1 block">Período</label>
             <Select value={range} onValueChange={setRange}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -269,17 +303,17 @@ export default function EmailDashboard() {
           </div>
           {range === "custom" && (
             <>
-              <div>
+              <div className="lg:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">De</label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
-              <div>
+              <div className="lg:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Até</label>
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </>
           )}
-          <div>
+          <div className="lg:col-span-2">
             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -292,7 +326,7 @@ export default function EmailDashboard() {
             </Select>
           </div>
           {canSeeAll && (
-            <div>
+            <div className="lg:col-span-2">
               <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
               <Select value={userFilter} onValueChange={setUserFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -305,7 +339,7 @@ export default function EmailDashboard() {
               </Select>
             </div>
           )}
-          <div>
+          <div className="lg:col-span-4">
             <label className="text-xs text-muted-foreground mb-1 block">Cliente</label>
             <SearchableCombobox
               items={allClients.map((c) => ({ value: c.id, label: c.company_name }))}
@@ -314,9 +348,26 @@ export default function EmailDashboard() {
               placeholder="Todos os clientes"
               searchPlaceholder="Buscar cliente..."
               emptyText="Nenhum cliente encontrado."
+              contentClassName="min-w-[420px] max-w-[560px]"
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
+            <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <ArrowUpDown className="h-3 w-3" /> Ordenar por
+            </label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_desc">Data (mais recente)</SelectItem>
+                <SelectItem value="date_asc">Data (mais antiga)</SelectItem>
+                <SelectItem value="client_asc">Cliente (A-Z)</SelectItem>
+                <SelectItem value="client_desc">Cliente (Z-A)</SelectItem>
+                <SelectItem value="subject_asc">Assunto (A-Z)</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="lg:col-span-4">
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input
               placeholder="Assunto, e-mail, cliente..."
@@ -441,7 +492,7 @@ export default function EmailDashboard() {
                         className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
                         onClick={() => setExpanded(isOpen ? null : it.id)}
                       >
-                        <div className="col-span-12 md:col-span-5 min-w-0">
+                        <div className="col-span-12 md:col-span-4 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
                             <span className="text-sm font-medium truncate">{it.subject}</span>
@@ -450,13 +501,15 @@ export default function EmailDashboard() {
                             Para: {(it.recipients || []).join(", ")}
                           </p>
                         </div>
-                        <div className="col-span-6 md:col-span-3 text-xs">
+                        <div className="col-span-6 md:col-span-4 text-xs min-w-0">
+                          <div className="text-muted-foreground">Cliente</div>
+                          <div className="font-medium truncate" title={clients[it.client_id] || ""}>
+                            {clients[it.client_id] || "—"}
+                          </div>
+                        </div>
+                        <div className="col-span-6 md:col-span-2 text-xs min-w-0">
                           <div className="text-muted-foreground">Vendedor</div>
                           <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
-                        </div>
-                        <div className="col-span-6 md:col-span-2 text-xs">
-                          <div className="text-muted-foreground">Cliente</div>
-                          <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
                         </div>
                         <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
                           <div>

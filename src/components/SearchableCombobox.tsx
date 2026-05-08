@@ -31,6 +31,7 @@ type Props = {
   emptyText?: string;
   disabled?: boolean;
   className?: string;
+  contentClassName?: string;
 };
 
 export function SearchableCombobox({
@@ -42,6 +43,7 @@ export function SearchableCombobox({
   emptyText = "Nenhum resultado.",
   disabled,
   className,
+  contentClassName,
 }: Props) {
   const [open, setOpen] = React.useState(false);
 
@@ -93,7 +95,7 @@ export function SearchableCombobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className={cn("w-[--radix-popover-trigger-width] min-w-[var(--radix-popover-trigger-width)] p-0", contentClassName)} align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
