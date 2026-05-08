@@ -245,3 +245,110 @@ function Field({ label, right, children }: { label: string; right?: React.ReactN
     </div>
   );
 }
+
+function ImageUploadButton({ onUploaded, label = "Enviar imagem" }: { onUploaded: (url: string) => void; label?: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const handle = async (f: File | undefined) => {
+    if (!f) return;
+    setBusy(true);
+    try {
+      const url = await uploadProposalImage(f);
+      onUploaded(url);
+      toast.success("Imagem enviada");
+    } catch (e: any) { toast.error(e.message || "Erro ao enviar"); }
+    finally { setBusy(false); if (ref.current) ref.current.value = ""; }
+  };
+  return (
+    <>
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => handle(e.target.files?.[0])} />
+      <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => ref.current?.click()}>
+        <Upload className="h-3 w-3 mr-1" /> {busy ? "Enviando..." : label}
+      </Button>
+    </>
+  );
+}
+
+function ImageEditor({ block, onChange }: { block: Extract<ProposalBlock, { type: "image" }>; onChange: (p: any) => void }) {
+  return (
+    <div className="space-y-3">
+      <Field label="Imagem" right={<ImageUploadButton onUploaded={(url) => onChange({ url })} />}>
+        <Input value={block.url} onChange={(e) => onChange({ url: e.target.value })} placeholder="URL ou faça upload" />
+      </Field>
+      {block.url && (
+        <div className="border rounded p-2 bg-muted/30 flex justify-center">
+          <img src={block.url} alt="" className="max-h-48 object-contain" />
+        </div>
+      )}
+      <Field label="Legenda"><Input value={block.caption || ""} onChange={(e) => onChange({ caption: e.target.value })} /></Field>
+      <Field label="Largura">
+        <Select value={block.width || "full"} onValueChange={(v: any) => onChange({ width: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="small">Pequena</SelectItem>
+            <SelectItem value="medium">Média</SelectItem>
+            <SelectItem value="full">Largura total</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+    </div>
+  );
+}
+
+function GalleryEditor({ block, onChange }: { block: Extract<ProposalBlock, { type: "gallery" }>; onChange: (p: any) => void }) {
+  const images = block.images || [];
+  const addImage = (url: string) => onChange({ images: [...images, { url, caption: "" }] });
+  const update = (i: number, patch: Partial<GalleryImage>) => onChange({ images: images.map((x, k) => k === i ? { ...x, ...patch } : x) });
+  const remove = (i: number) => onChange({ images: images.filter((_, k) => k !== i) });
+
+  const handleMulti = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const arr = Array.from(files);
+    const uploaded: GalleryImage[] = [];
+    for (const f of arr) {
+      try { uploaded.push({ url: await uploadProposalImage(f), caption: "" }); }
+      catch (e: any) { toast.error(`${f.name}: ${e.message}`); }
+    }
+    if (uploaded.length) {
+      onChange({ images: [...images, ...uploaded] });
+      toast.success(`${uploaded.length} imagem(ns) enviada(s)`);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Field label="Título"><Input value={block.title || ""} onChange={(e) => onChange({ title: e.target.value })} /></Field>
+      <Field label="Colunas">
+        <Select value={String(block.columns || 2)} onValueChange={(v) => onChange({ columns: Number(v) })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="2">2 colunas</SelectItem>
+            <SelectItem value="3">3 colunas</SelectItem>
+          </SelectContent>
+        </Select>
+      </Field>
+      <div className="flex items-center gap-2">
+        <ImageUploadButton onUploaded={addImage} label="Adicionar imagem" />
+        <label className="inline-flex items-center text-xs text-muted-foreground cursor-pointer">
+          <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => handleMulti(e.target.files)} />
+          <span className="underline">enviar várias de uma vez</span>
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {images.map((img, i) => (
+          <Card key={i} className="p-2 space-y-1">
+            <img src={img.url} alt="" className="w-full h-28 object-cover rounded" />
+            <Input placeholder="Legenda" value={img.caption || ""} onChange={(e) => update(i, { caption: e.target.value })} />
+            <Button size="sm" variant="ghost" className="text-destructive w-full" onClick={() => remove(i)}>
+              <Trash2 className="h-3 w-3 mr-1" /> Remover
+            </Button>
+          </Card>
+        ))}
+        {images.length === 0 && <div className="col-span-2 text-center text-xs text-muted-foreground py-6 border rounded border-dashed">
+          <ImageIcon className="h-6 w-6 mx-auto mb-1 opacity-50" />
+          Nenhuma imagem ainda
+        </div>}
+      </div>
+    </div>
+  );
+}
