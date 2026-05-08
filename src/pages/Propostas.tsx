@@ -30,6 +30,7 @@ export default function Propostas() {
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
