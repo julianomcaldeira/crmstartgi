@@ -10,6 +10,8 @@ const SCOPES = [
   "ZohoCalendar.event.ALL",
   "ZohoCalendar.freebusy.READ",
   "ZohoMail.messages.CREATE",
+  "ZohoMail.messages.READ",
+  "ZohoMail.folders.READ",
   "ZohoMail.accounts.READ",
   "AaaServer.profile.READ",
 ].join(",");
