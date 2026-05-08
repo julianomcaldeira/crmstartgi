@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
@@ -27,6 +28,8 @@ export default function Propostas() {
   const [proposalsTotal, setProposalsTotal] = useState(0);
   const [proposalsPage, setProposalsPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [proposalsError, setProposalsError] = useState<string | null>(null);
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -66,32 +69,50 @@ export default function Propostas() {
   };
 
   const loadProposals = async (page: number) => {
-    setLoading(true);
+    setProposalsLoading(true);
+    setProposalsError(null);
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const propRes = await supabase
-      .from("proposals")
-      .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, to);
-    const props = propRes.data || [];
-    const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
-    const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
-    const [clientsRes, oppsRes] = await Promise.all([
-      clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
-      oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
-    ]);
-    const cMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
-    const oMap = new Map((oppsRes.data || []).map((o: any) => [o.id, o]));
-    const enriched = props.map((p: any) => ({
-      ...p,
-      client: p.client_id ? cMap.get(p.client_id) || null : null,
-      opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
-    }));
-    setProposals(enriched);
-    setProposalsTotal(propRes.count || 0);
-    setLoading(false);
+
+    // Timeout guard (15s)
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Tempo esgotado ao carregar propostas. Verifique sua conexão.")), 15000)
+    );
+
+    try {
+      const propRes: any = await Promise.race([
+        supabase
+          .from("proposals")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+        timeout,
+      ]);
+      if (propRes.error) throw propRes.error;
+      const props = propRes.data || [];
+      const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean))) as string[];
+      const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean))) as string[];
+      const [clientsRes, oppsRes] = await Promise.all([
+        clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
+        oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const cMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
+      const oMap = new Map((oppsRes.data || []).map((o: any) => [o.id, o]));
+      const enriched = props.map((p: any) => ({
+        ...p,
+        client: p.client_id ? cMap.get(p.client_id) || null : null,
+        opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
+      }));
+      setProposals(enriched);
+      setProposalsTotal(propRes.count || 0);
+    } catch (e: any) {
+      setProposals([]);
+      setProposalsError(e?.message || "Erro ao carregar propostas");
+    } finally {
+      setProposalsLoading(false);
+      setLoading(false);
+    }
   };
 
   const openNewTemplate = () => {
@@ -200,7 +221,41 @@ export default function Propostas() {
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-2 mt-4">
-          {proposals.map((p) => (
+          {/* Skeleton de carregamento */}
+          {proposalsLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="p-3 flex items-center gap-3">
+                  <Skeleton className="h-5 w-5 rounded" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-3 w-2/3" />
+                  </div>
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                  <Skeleton className="h-8 w-24 rounded" />
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Erro / timeout */}
+          {!proposalsLoading && proposalsError && (
+            <Card className="p-6 border-destructive/40 bg-destructive/5">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-sm text-destructive">Não foi possível carregar as propostas</div>
+                  <div className="text-xs text-muted-foreground mt-1">{proposalsError}</div>
+                  <Button size="sm" variant="outline" className="mt-3" onClick={() => loadProposals(proposalsPage)}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Lista */}
+          {!proposalsLoading && !proposalsError && proposals.map((p) => (
             <Card key={p.id} className="p-3 flex items-center gap-3">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1 min-w-0">
@@ -215,18 +270,33 @@ export default function Propostas() {
               <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteProposal(p.id)}><Trash2 className="h-3 w-3" /></Button>
             </Card>
           ))}
-          {!loading && proposals.length === 0 && <div className="text-center text-muted-foreground py-8">Nenhuma proposta gerada.</div>}
 
-          {proposalsTotal > PAGE_SIZE && (
+          {/* Vazio */}
+          {!proposalsLoading && !proposalsError && proposals.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Inbox className="h-10 w-10 mx-auto mb-2 opacity-50" />
+              <div className="font-medium">Nenhuma proposta gerada {proposalsPage > 1 ? "nesta página" : "ainda"}.</div>
+              <div className="text-xs mt-1">
+                {proposalsPage > 1
+                  ? "Volte para a primeira página ou gere uma nova proposta a partir de uma oportunidade."
+                  : "Gere a primeira proposta a partir de uma oportunidade."}
+              </div>
+              {proposalsPage > 1 && (
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => setProposalsPage(1)}>Voltar para página 1</Button>
+              )}
+            </div>
+          )}
+
+          {!proposalsError && proposalsTotal > PAGE_SIZE && (
             <div className="flex items-center justify-between pt-3 border-t">
               <div className="text-xs text-muted-foreground">
                 Página {proposalsPage} de {totalPages} · {proposalsTotal} propostas
               </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage(1)}>«</Button>
-                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage((p) => Math.max(1, p - 1))}>Anterior</Button>
-                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
-                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage(totalPages)}>»</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || proposalsLoading} onClick={() => setProposalsPage(1)}>«</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || proposalsLoading} onClick={() => setProposalsPage((p) => Math.max(1, p - 1))}>Anterior</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || proposalsLoading} onClick={() => setProposalsPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || proposalsLoading} onClick={() => setProposalsPage(totalPages)}>»</Button>
               </div>
             </div>
           )}
