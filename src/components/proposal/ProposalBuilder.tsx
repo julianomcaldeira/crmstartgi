@@ -116,6 +116,12 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
   const append = (field: string, val: string) => onChange({ [field]: ((block as any)[field] || "") + " " + val });
 
   switch (block.type) {
+    case "richtext":
+      return (
+        <div className="h-[calc(100vh-280px)] min-h-[400px]">
+          <RichTextEditor value={block.html} onChange={(html) => onChange({ html })} />
+        </div>
+      );
     case "cover":
       return (
         <div className="space-y-3">
