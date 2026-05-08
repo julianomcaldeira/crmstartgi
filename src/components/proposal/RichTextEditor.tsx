@@ -107,7 +107,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
     if (!file) return;
     try {
       const url = await uploadProposalImage(file);
-      editor.chain().focus().setImage({ src: url }).run();
+      editor.chain().focus().insertContent(`<p><img src="${url}" alt="" /></p><p></p>`).run();
       toast.success("Imagem inserida");
     } catch (e: any) {
       toast.error(e.message || "Erro ao enviar imagem");
