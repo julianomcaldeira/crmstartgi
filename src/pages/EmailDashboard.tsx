@@ -32,6 +32,7 @@ export default function EmailDashboard() {
   const [userFilter, setUserFilter] = useState("all");
   const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("date_desc");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [groupByClient, setGroupByClient] = useState(true);
