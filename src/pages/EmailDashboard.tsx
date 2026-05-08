@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableCombobox } from "@/components/SearchableCombobox";
-import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight, Users, List } from "lucide-react";
+import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight, Users, List, ArrowUpDown } from "lucide-react";
 import { format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
