@@ -538,6 +538,8 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
           </div>
         </DialogContent>
       </Dialog>
+
+      <GenerateProposalDialog open={proposalOpen} onOpenChange={setProposalOpen} opportunity={opportunity} />
     </Dialog>
   );
 };
