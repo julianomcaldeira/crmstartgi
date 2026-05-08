@@ -337,6 +337,7 @@ export default function PreVendas() {
                   }
                   placeholder="https://meet..."
                 />
+              </div>
               <div>
                 <Label>Produto StartGi para apresentação</Label>
                 <SearchableCombobox
@@ -370,7 +371,6 @@ export default function PreVendas() {
                   placeholder="O que você espera alcançar com esta reunião?"
                 />
               </div>
-            </div>
               <div>
                 <Label>Contexto / pauta</Label>
                 <Textarea
