@@ -118,7 +118,7 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
   switch (block.type) {
     case "richtext":
       return (
-        <div className="h-[calc(100vh-280px)] min-h-[400px]">
+        <div className="flex-1 min-h-0 flex flex-col">
           <RichTextEditor value={block.html} onChange={(html) => onChange({ html })} />
         </div>
       );
