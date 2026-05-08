@@ -30,7 +30,8 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
-  Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type
+  Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
+  Minus, Droplet
 } from "lucide-react";
 import { useRef, useEffect } from "react";
 import { AVAILABLE_VARIABLES } from "@/lib/proposalTypes";
