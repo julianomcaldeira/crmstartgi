@@ -173,7 +173,7 @@ export default function Propostas() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
-          <TabsTrigger value="proposals">Propostas Geradas ({proposals.length})</TabsTrigger>
+          <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3 mt-4">
