@@ -492,7 +492,7 @@ export default function EmailDashboard() {
                         className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
                         onClick={() => setExpanded(isOpen ? null : it.id)}
                       >
-                        <div className="col-span-12 md:col-span-5 min-w-0">
+                        <div className="col-span-12 md:col-span-4 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
                             <span className="text-sm font-medium truncate">{it.subject}</span>
@@ -501,13 +501,15 @@ export default function EmailDashboard() {
                             Para: {(it.recipients || []).join(", ")}
                           </p>
                         </div>
-                        <div className="col-span-6 md:col-span-3 text-xs">
+                        <div className="col-span-6 md:col-span-4 text-xs min-w-0">
+                          <div className="text-muted-foreground">Cliente</div>
+                          <div className="font-medium truncate" title={clients[it.client_id] || ""}>
+                            {clients[it.client_id] || "—"}
+                          </div>
+                        </div>
+                        <div className="col-span-6 md:col-span-2 text-xs min-w-0">
                           <div className="text-muted-foreground">Vendedor</div>
                           <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
-                        </div>
-                        <div className="col-span-6 md:col-span-2 text-xs">
-                          <div className="text-muted-foreground">Cliente</div>
-                          <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
                         </div>
                         <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
                           <div>
