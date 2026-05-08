@@ -287,8 +287,8 @@ export default function EmailDashboard() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-12 gap-3">
+          <div className="lg:col-span-2">
             <label className="text-xs text-muted-foreground mb-1 block">Período</label>
             <Select value={range} onValueChange={setRange}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -303,17 +303,17 @@ export default function EmailDashboard() {
           </div>
           {range === "custom" && (
             <>
-              <div>
+              <div className="lg:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">De</label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
-              <div>
+              <div className="lg:col-span-2">
                 <label className="text-xs text-muted-foreground mb-1 block">Até</label>
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </>
           )}
-          <div>
+          <div className="lg:col-span-2">
             <label className="text-xs text-muted-foreground mb-1 block">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -326,7 +326,7 @@ export default function EmailDashboard() {
             </Select>
           </div>
           {canSeeAll && (
-            <div>
+            <div className="lg:col-span-2">
               <label className="text-xs text-muted-foreground mb-1 block">Vendedor</label>
               <Select value={userFilter} onValueChange={setUserFilter}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -339,7 +339,7 @@ export default function EmailDashboard() {
               </Select>
             </div>
           )}
-          <div>
+          <div className="lg:col-span-4">
             <label className="text-xs text-muted-foreground mb-1 block">Cliente</label>
             <SearchableCombobox
               items={allClients.map((c) => ({ value: c.id, label: c.company_name }))}
@@ -348,9 +348,26 @@ export default function EmailDashboard() {
               placeholder="Todos os clientes"
               searchPlaceholder="Buscar cliente..."
               emptyText="Nenhum cliente encontrado."
+              contentClassName="min-w-[420px] max-w-[560px]"
             />
           </div>
-          <div>
+          <div className="lg:col-span-2">
+            <label className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+              <ArrowUpDown className="h-3 w-3" /> Ordenar por
+            </label>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_desc">Data (mais recente)</SelectItem>
+                <SelectItem value="date_asc">Data (mais antiga)</SelectItem>
+                <SelectItem value="client_asc">Cliente (A-Z)</SelectItem>
+                <SelectItem value="client_desc">Cliente (Z-A)</SelectItem>
+                <SelectItem value="subject_asc">Assunto (A-Z)</SelectItem>
+                <SelectItem value="status">Status</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="lg:col-span-4">
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input
               placeholder="Assunto, e-mail, cliente..."
