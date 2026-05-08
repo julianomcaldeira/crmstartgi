@@ -122,10 +122,32 @@ export default function EmailDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authorized, range, startDate, endDate]);
 
+  useEffect(() => {
+    if (!authorized) return;
+    (async () => {
+      const data = await fetchAllPaged(async (from, to) => {
+        const { data: rows, error } = await supabase
+          .from("clients")
+          .select("id, company_name")
+          .order("company_name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (error) throw error;
+        return rows || [];
+      });
+      setAllClients(data || []);
+    })();
+  }, [authorized]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate]);
+
   const filtered = useMemo(() => {
     return items.filter((it) => {
       if (statusFilter !== "all" && it.status !== statusFilter) return false;
       if (userFilter !== "all" && it.sent_by !== userFilter) return false;
+      if (clientFilter && it.client_id !== clientFilter) return false;
       if (search) {
         const s = search.toLowerCase();
         const recips = (it.recipients || []).join(" ").toLowerCase();
@@ -135,7 +157,13 @@ export default function EmailDashboard() {
       }
       return true;
     });
-  }, [items, statusFilter, userFilter, search, clients]);
+  }, [items, statusFilter, userFilter, clientFilter, search, clients]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
 
   const stats = useMemo(() => {
     const total = filtered.length;
