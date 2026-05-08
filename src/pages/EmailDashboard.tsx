@@ -34,7 +34,7 @@ export default function EmailDashboard() {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
-  const [groupByClient, setGroupByClient] = useState(false);
+  const [groupByClient, setGroupByClient] = useState(true);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 25;
   const GROUP_PAGE_SIZE = 15;
