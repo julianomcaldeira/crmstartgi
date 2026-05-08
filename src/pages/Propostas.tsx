@@ -16,12 +16,16 @@ import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
+const PAGE_SIZE = 20;
+
 export default function Propostas() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("templates");
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
+  const [proposalsTotal, setProposalsTotal] = useState(0);
+  const [proposalsPage, setProposalsPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   // Editor state
@@ -37,6 +41,11 @@ export default function Propostas() {
     checkAccess();
   }, []);
 
+  useEffect(() => {
+    if (hasAccess) loadProposals(proposalsPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [proposalsPage, hasAccess]);
+
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return setHasAccess(false);
@@ -49,10 +58,23 @@ export default function Propostas() {
 
   const loadAll = async () => {
     setLoading(true);
-    const [tplRes, propRes] = await Promise.all([
-      supabase.from("proposal_templates").select("*").order("created_at", { ascending: false }),
-      supabase.from("proposals").select("*").order("created_at", { ascending: false }).limit(200),
-    ]);
+    const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
+    setTemplates(tplRes.data || []);
+    await loadProposals(1);
+    setProposalsPage(1);
+    setLoading(false);
+  };
+
+  const loadProposals = async (page: number) => {
+    setLoading(true);
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const propRes = await supabase
+      .from("proposals")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, to);
     const props = propRes.data || [];
     const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
     const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
@@ -67,8 +89,8 @@ export default function Propostas() {
       client: p.client_id ? cMap.get(p.client_id) || null : null,
       opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
     }));
-    setTemplates(tplRes.data || []);
     setProposals(enriched);
+    setProposalsTotal(propRes.count || 0);
     setLoading(false);
   };
 
@@ -118,8 +140,10 @@ export default function Propostas() {
     if (!confirm("Excluir esta proposta?")) return;
     const { error } = await supabase.from("proposals").delete().eq("id", id);
     if (error) toast.error(error.message);
-    else { toast.success("Excluída"); loadAll(); }
+    else { toast.success("Excluída"); loadProposals(proposalsPage); }
   };
+
+  const totalPages = Math.max(1, Math.ceil(proposalsTotal / PAGE_SIZE));
 
   const previewVars = buildVariableContext({
     client: { company_name: "Cliente Exemplo Ltda", trade_name: "Exemplo", cnpj: "00.000.000/0001-00", city: "São Paulo", state: "SP" },
@@ -149,7 +173,7 @@ export default function Propostas() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
-          <TabsTrigger value="proposals">Propostas Geradas ({proposals.length})</TabsTrigger>
+          <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3 mt-4">
@@ -192,6 +216,20 @@ export default function Propostas() {
             </Card>
           ))}
           {!loading && proposals.length === 0 && <div className="text-center text-muted-foreground py-8">Nenhuma proposta gerada.</div>}
+
+          {proposalsTotal > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-3 border-t">
+              <div className="text-xs text-muted-foreground">
+                Página {proposalsPage} de {totalPages} · {proposalsTotal} propostas
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage(1)}>«</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage <= 1 || loading} onClick={() => setProposalsPage((p) => Math.max(1, p - 1))}>Anterior</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage((p) => Math.min(totalPages, p + 1))}>Próxima</Button>
+                <Button size="sm" variant="outline" disabled={proposalsPage >= totalPages || loading} onClick={() => setProposalsPage(totalPages)}>»</Button>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
