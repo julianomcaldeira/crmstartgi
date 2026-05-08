@@ -21,6 +21,8 @@ import MetricasEquipe from "./pages/MetricasEquipe";
 import RadarLeads from "./pages/RadarLeads";
 import InteligenciaMercado from "./pages/InteligenciaMercado";
 import PreVendas from "./pages/PreVendas";
+import Propostas from "./pages/Propostas";
+import PropostaPublica from "./pages/PropostaPublica";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
@@ -50,6 +52,8 @@ const App = () => {
         <Route path="/radar-leads" element={<Layout><RadarLeads /></Layout>} />
         <Route path="/inteligencia-mercado" element={<Layout><InteligenciaMercado /></Layout>} />
         <Route path="/pre-vendas" element={<Layout><PreVendas /></Layout>} />
+        <Route path="/propostas" element={<Layout><Propostas /></Layout>} />
+        <Route path="/p/:token" element={<PropostaPublica />} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
         <Route path="/emails-dashboard" element={<Layout><EmailDashboard /></Layout>} />
         <Route path="*" element={<NotFound />} />

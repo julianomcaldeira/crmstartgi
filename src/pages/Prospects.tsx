@@ -422,21 +422,17 @@ const Prospects = () => {
 
       const cleanedCnpj = cnpj.replace(/\D/g, "");
 
-      // Check if CNPJ already exists with responsible user info
-      const { data: existingClient, error: checkError } = await supabase
-        .from("clients")
-        .select(`
-          id, company_name, trade_name,
-          created_by_profile:profiles!clients_created_by_fkey(full_name, email)
-        `)
-        .eq("cnpj", cleanedCnpj)
-        .maybeSingle();
+      // Check if CNPJ already exists with responsible user info (uses SECURITY DEFINER RPC
+      // to bypass profile RLS so we can show the real owner name even to other vendedores)
+      const { data: ownerRows, error: checkError } = await supabase
+        .rpc("get_client_owner_by_cnpj", { _cnpj: cleanedCnpj });
 
       if (checkError) throw checkError;
 
+      const existingClient = Array.isArray(ownerRows) ? ownerRows[0] : null;
       if (existingClient) {
-        const responsibleName = existingClient.created_by_profile?.full_name || "Usuário desconhecido";
-        const responsibleEmail = existingClient.created_by_profile?.email || "";
+        const responsibleName = existingClient.owner_name || "Usuário desconhecido";
+        const responsibleEmail = existingClient.owner_email || "";
         const companyDisplayName = existingClient.company_name || existingClient.trade_name;
         
         toast.error(

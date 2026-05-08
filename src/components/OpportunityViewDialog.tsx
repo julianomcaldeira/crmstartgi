@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import OpportunityHistoryLog from "./OpportunityHistoryLog";
 import EmailHistory from "./EmailHistory";
 import ZohoEmailComposer from "./ZohoEmailComposer";
+import { GenerateProposalDialog } from "./proposal/GenerateProposalDialog";
+import { Sparkles } from "lucide-react";
 interface OpportunityViewDialogProps {
   opportunity: any;
   open: boolean;
@@ -24,6 +26,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [previewFile, setPreviewFile] = useState<{ url: string; name: string; type: string } | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRefresh, setEmailRefresh] = useState(0);
+  const [proposalOpen, setProposalOpen] = useState(false);
 
   useEffect(() => {
     if (open && opportunity?.id) {
@@ -229,7 +232,12 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
+          <div className="flex items-start justify-between gap-3">
+            <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
+            <Button size="sm" onClick={() => setProposalOpen(true)} className="shrink-0">
+              <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
+            </Button>
+          </div>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
@@ -530,6 +538,8 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
           </div>
         </DialogContent>
       </Dialog>
+
+      <GenerateProposalDialog open={proposalOpen} onOpenChange={setProposalOpen} opportunity={opportunity} />
     </Dialog>
   );
 };
