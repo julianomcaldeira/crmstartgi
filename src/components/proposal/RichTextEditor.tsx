@@ -18,7 +18,13 @@ const ResizableImage = Image.extend({
       width: {
         default: null,
         parseHTML: (el: any) => el.style.width || el.getAttribute("width") || null,
-        renderHTML: (attrs: any) => attrs.width ? { style: `width: ${attrs.width}; height: auto;` } : {},
+        renderHTML: (attrs: any) => {
+          // Always responsive: max-width 100%, height auto, block-level so it
+          // doesn't interfere with line-height when font/text size changes.
+          const w = attrs.width;
+          const base = "max-width:100%;height:auto;display:block;margin:8px auto;";
+          return { style: w ? `width:${w};${base}` : base };
+        },
       },
     };
   },
