@@ -138,7 +138,7 @@ serve(async (req) => {
             { role: "system", content: SYSTEM_PROMPT },
             {
               role: "system",
-              content: `Se a próxima mensagem do usuário não for sobre vendas ao governo brasileiro, responda EXATAMENTE com este texto e nada mais:\n\n${OFF_TOPIC_FALLBACK}`,
+              content: `Lembrete: SEMPRE assuma que a pergunta é sobre vendas ao governo brasileiro, mesmo quando o usuário não mencionar "governo". Só use o texto abaixo se a pergunta for claramente ilegal, antiética, política partidária, pessoal/íntima ou totalmente desconectada de negócios:\n\n${OFF_TOPIC_FALLBACK}`,
             },
             ...sanitized,
           ],
