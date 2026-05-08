@@ -57,6 +57,55 @@ Tente algo como:
 - "Quais órgãos mais compraram software de gestão nos últimos 12 meses?"
 - "Existe ata de registro de preço vigente para meu produto que eu possa pedir carona?"`;
 
+function fmtBRL(n: number | undefined): string {
+  if (typeof n !== "number" || !isFinite(n)) return "—";
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
+function buildSearchContextMessages(ctx: any): Array<{ role: "system"; content: string }> {
+  if (!ctx || !Array.isArray(ctx.searchTerms) || ctx.searchTerms.length === 0) {
+    return [];
+  }
+  const terms = ctx.searchTerms.slice(0, 10).map((t: any) => String(t)).join(", ");
+  const lines: string[] = [
+    "CONTEXTO DA ÚLTIMA PESQUISA DE MERCADO DO VENDEDOR (use SEMPRE como base das respostas):",
+    `- Produto/Serviço pesquisado: ${terms}`,
+  ];
+  if (ctx.state) lines.push(`- UF/Região: ${ctx.state}`);
+  if (typeof ctx.totalValue12Months === "number")
+    lines.push(`- Volume contratado nos últimos 12 meses: ${fmtBRL(ctx.totalValue12Months)} (${ctx.totalQuantity12Months ?? 0} contratos)`);
+  if (typeof ctx.totalValue24Months === "number")
+    lines.push(`- Volume contratado nos últimos 24 meses: ${fmtBRL(ctx.totalValue24Months)} (${ctx.totalQuantity24Months ?? 0} contratos)`);
+
+  if (Array.isArray(ctx.topCompetitors) && ctx.topCompetitors.length > 0) {
+    lines.push("- Principais concorrentes identificados (PNCP):");
+    ctx.topCompetitors.slice(0, 8).forEach((c: any) => {
+      const name = String(c?.name ?? "—");
+      const cnpj = c?.cnpj ? ` (CNPJ ${c.cnpj})` : "";
+      const val = typeof c?.totalValue === "number" ? ` — ${fmtBRL(c.totalValue)}` : "";
+      const cnt = typeof c?.contractCount === "number" ? ` em ${c.contractCount} contratos` : "";
+      lines.push(`  • ${name}${cnpj}${val}${cnt}`);
+    });
+  }
+
+  if (Array.isArray(ctx.topOrgans) && ctx.topOrgans.length > 0) {
+    lines.push("- Órgãos compradores frequentes:");
+    ctx.topOrgans.slice(0, 8).forEach((o: any) => {
+      lines.push(`  • ${String(o?.name ?? "—")}${o?.count ? ` (${o.count})` : ""}`);
+    });
+  }
+
+  lines.push(
+    "",
+    "REGRA DE USO DO CONTEXTO:",
+    "- Toda resposta DEVE partir desse recorte (produto/serviço + UF + concorrentes + órgãos).",
+    "- Quando o vendedor perguntar algo genérico (ex: 'tamanho do mercado', 'quem são os players', 'como prospectar'), responda especificamente sobre os termos pesquisados acima.",
+    "- Se citar concorrentes ou órgãos, prefira os listados acima e oriente o vendedor a validar no PNCP.",
+  );
+
+  return [{ role: "system", content: lines.join("\n") }];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -87,7 +136,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages } = await req.json();
+    const { messages, searchContext } = await req.json();
     if (!Array.isArray(messages) || messages.length === 0) {
       return new Response(
         JSON.stringify({ error: "messages é obrigatório" }),
@@ -140,6 +189,7 @@ serve(async (req) => {
               role: "system",
               content: `Lembrete: SEMPRE assuma que a pergunta é sobre vendas ao governo brasileiro, mesmo quando o usuário não mencionar "governo". Só use o texto abaixo se a pergunta for claramente ilegal, antiética, política partidária, pessoal/íntima ou totalmente desconectada de negócios:\n\n${OFF_TOPIC_FALLBACK}`,
             },
+            ...buildSearchContextMessages(searchContext),
             ...sanitized,
           ],
         }),
