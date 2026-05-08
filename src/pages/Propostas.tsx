@@ -63,7 +63,7 @@ export default function Propostas() {
     setName("");
     setDescription("");
     setColor("#22c55e");
-    setBlocks([newBlock("cover"), newBlock("about"), newBlock("scope"), newBlock("pricing"), newBlock("timeline"), newBlock("terms"), newBlock("signature")]);
+    setBlocks([newBlock("richtext")]);
     setEditorOpen(true);
   };
   const openEditTemplate = (t: any) => {
