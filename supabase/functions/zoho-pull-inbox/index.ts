@@ -41,12 +41,16 @@ async function pullForUser(admin: any, userId: string, debug: boolean) {
   const foldersRes = await fetch(`${base}/api/accounts/${accountId}/folders`, { headers: auth });
   const foldersData = await foldersRes.json();
   const folders: any[] = Array.isArray(foldersData?.data) ? foldersData.data : [];
-  const inbox = folders.find((f: any) =>
-    String(f?.folderType || "").toLowerCase() === "inbox" ||
-    String(f?.folderName || "").toLowerCase() === "inbox"
-  ) || folders[0];
-  const inboxId = inbox?.folderId;
-  if (!inboxId) throw new Error("Inbox folder not found");
+  if (debug) console.log("folders sample", JSON.stringify(folders.slice(0, 5)));
+  const inbox = folders.find((f: any) => {
+    const ft = String(f?.folderType || f?.type || "").toLowerCase();
+    const fn = String(f?.folderName || f?.name || "").toLowerCase();
+    return ft === "inbox" || fn === "inbox" || fn === "caixa de entrada";
+  }) || folders[0];
+  const inboxId = inbox?.folderId || inbox?.id;
+  if (!inboxId) {
+    return { processed: 0, matched: 0, error: "Inbox not found", foldersSample: folders.slice(0, 5) } as any;
+  }
 
   // 3. last check timestamp
   const { data: tokRow } = await admin
