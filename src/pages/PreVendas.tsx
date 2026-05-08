@@ -337,7 +337,40 @@ export default function PreVendas() {
                   }
                   placeholder="https://meet..."
                 />
+              <div>
+                <Label>Produto StartGi para apresentação</Label>
+                <SearchableCombobox
+                  items={products.map((p) => ({ value: p.id, label: p.name }))}
+                  value={form.product_id}
+                  onValueChange={(v) => setForm({ ...form, product_id: v })}
+                  placeholder="Selecione o produto"
+                  searchPlaceholder="Buscar produto..."
+                  emptyText="Nenhum produto encontrado."
+                />
               </div>
+              <div>
+                <Label>Cargos dos participantes da reunião</Label>
+                <Textarea
+                  value={form.attendees_roles}
+                  onChange={(e) =>
+                    setForm({ ...form, attendees_roles: e.target.value })
+                  }
+                  rows={2}
+                  placeholder="Ex: Diretor Financeiro, Gerente de TI, Sócio..."
+                />
+              </div>
+              <div>
+                <Label>Expectativa do vendedor para a reunião</Label>
+                <Textarea
+                  value={form.expectations}
+                  onChange={(e) =>
+                    setForm({ ...form, expectations: e.target.value })
+                  }
+                  rows={3}
+                  placeholder="O que você espera alcançar com esta reunião?"
+                />
+              </div>
+            </div>
               <div>
                 <Label>Contexto / pauta</Label>
                 <Textarea
