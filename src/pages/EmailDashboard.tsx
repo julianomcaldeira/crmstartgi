@@ -22,6 +22,7 @@ export default function EmailDashboard() {
   const [items, setItems] = useState<any[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [clients, setClients] = useState<Record<string, string>>({});
+  const [allClients, setAllClients] = useState<{ id: string; company_name: string }[]>([]);
 
   // filters
   const [range, setRange] = useState("7");
@@ -29,8 +30,11 @@ export default function EmailDashboard() {
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   const canSeeAll = role === "admin" || role === "gestor";
 
