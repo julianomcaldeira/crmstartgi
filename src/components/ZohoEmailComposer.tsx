@@ -112,7 +112,33 @@ export default function ZohoEmailComposer({
       onOpenChange(false);
       onSent?.();
     } catch (e: any) {
-      toast.error("Erro ao enviar: " + (e.message || e));
+      const raw = (e?.message || String(e) || "").toString();
+      const low = raw.toLowerCase();
+      let title = "Não foi possível enviar o e-mail";
+      let description = raw;
+      if (low.includes("invalid_oauthtoken") || low.includes("oauth") || low.includes("token") || low.includes("unauthorized") || low.includes("401")) {
+        title = "Conta Zoho desconectada ou token expirado";
+        description = "Vá em Configurações → Integrações → Zoho Mail e clique em Reconectar para autorizar novamente.";
+      } else if (low.includes("replyto") || low.includes("reply-to") || low.includes("not verified") || low.includes("verify")) {
+        title = "E-mail de resposta não verificado pela Zoho";
+        description = "A Zoho exige que o endereço de resposta seja verificado. Acesse Zoho Mail → Configurações → E-mails → Endereços de envio e verifique sua conta, ou reenvie sem CC/BCC personalizado.";
+      } else if (low.includes("invalid") && (low.includes("to") || low.includes("recipient") || low.includes("address"))) {
+        title = "Destinatário inválido";
+        description = "Verifique se os e-mails em Para/CC/BCC estão corretos e separados por vírgula.";
+      } else if (low.includes("limit") || low.includes("quota") || low.includes("throttl") || low.includes("429")) {
+        title = "Limite de envio da Zoho atingido";
+        description = "Aguarde alguns minutos antes de enviar novamente. A Zoho aplica limites por hora/dia em sua conta.";
+      } else if (low.includes("attach")) {
+        title = "Falha ao enviar anexo";
+        description = "Verifique o tamanho (máx. 10MB cada) e o formato dos arquivos anexados, e tente novamente.";
+      } else if (low.includes("accountid") || low.includes("conta zoho")) {
+        title = "Conta Zoho não configurada";
+        description = "Conecte sua conta Zoho em Configurações → Integrações antes de enviar e-mails.";
+      } else if (low.includes("network") || low.includes("failed to fetch")) {
+        title = "Falha de conexão";
+        description = "Verifique sua internet e tente novamente em instantes.";
+      }
+      toast.error(title, { description, duration: 8000 });
     } finally {
       setSending(false);
     }
