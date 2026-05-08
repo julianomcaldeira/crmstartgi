@@ -1607,6 +1607,10 @@ const InteligenciaMercado = () => {
                 </Card>
               )}
             </TabsContent>
+
+            <TabsContent value="chat" className="mt-4">
+              <GovSalesChat />
+            </TabsContent>
           </Tabs>
         </div>
       )}
