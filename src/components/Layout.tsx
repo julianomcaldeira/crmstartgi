@@ -20,7 +20,7 @@ import {
   Radar,
   Brain,
   Mail,
-} from "lucide-react";
+  FileText,
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
