@@ -19,6 +19,17 @@ export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: 
         .proposal-doc .pg:last-child { page-break-after: auto; }
         .proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-weight: 700; }
         .proposal-doc .pre-line { white-space: pre-line; }
+        .proposal-doc .richtext-block h1 { font-size: 32px; margin: 16px 0 12px; }
+        .proposal-doc .richtext-block h2 { font-size: 26px; margin: 16px 0 10px; }
+        .proposal-doc .richtext-block h3 { font-size: 20px; margin: 14px 0 8px; }
+        .proposal-doc .richtext-block p { margin: 8px 0; }
+        .proposal-doc .richtext-block ul, .proposal-doc .richtext-block ol { padding-left: 24px; margin: 8px 0; }
+        .proposal-doc .richtext-block ul { list-style: disc; }
+        .proposal-doc .richtext-block ol { list-style: decimal; }
+        .proposal-doc .richtext-block blockquote { border-left: 4px solid #e5e7eb; padding-left: 16px; color: #4b5563; font-style: italic; margin: 12px 0; }
+        .proposal-doc .richtext-block img { max-width: 100%; border-radius: 8px; margin: 12px 0; }
+        .proposal-doc .richtext-block a { color: var(--brand); text-decoration: underline; }
+        .proposal-doc .richtext-block strong { font-weight: 700; }
       `}</style>
     </div>
   );
@@ -26,6 +37,12 @@ export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: 
 
 function BlockView({ block, variables, brandColor }: { block: ProposalBlock; variables: VariableContext; brandColor: string }) {
   switch (block.type) {
+    case "richtext": {
+      const html = interpolate(block.html, variables);
+      return (
+        <section className="pg richtext-block" dangerouslySetInnerHTML={{ __html: html }} />
+      );
+    }
     case "cover": {
       const bg = block.backgroundColor || brandColor;
       const fg = block.textColor || "#ffffff";

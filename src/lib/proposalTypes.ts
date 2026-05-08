@@ -1,6 +1,7 @@
 // Tipos e utilitários para o construtor de propostas
 
 export type BlockType =
+  | "richtext"
   | "cover"
   | "text"
   | "about"
@@ -76,12 +77,17 @@ export interface CtaBlock extends BaseBlock {
   buttonText: string;
   buttonUrl?: string;
 }
+export interface RichTextBlock extends BaseBlock {
+  type: "richtext";
+  html: string;
+}
 
 export type ProposalBlock =
-  | CoverBlock | TextBlock | ScopeBlock | PricingBlock
+  | RichTextBlock | CoverBlock | TextBlock | ScopeBlock | PricingBlock
   | TimelineBlock | SignatureBlock | ImageBlock | GalleryBlock | CtaBlock;
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
+  richtext: "Texto Livre (Rich)",
   cover: "Capa",
   text: "Texto",
   about: "Sobre nós",
@@ -98,6 +104,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 export function newBlock(type: BlockType): ProposalBlock {
   const id = crypto.randomUUID();
   switch (type) {
+    case "richtext":
+      return { id, type, html: "<p></p>" };
     case "cover":
       return { id, type, title: "Proposta Comercial", subtitle: "Para {{client.company_name}}", backgroundColor: "#22c55e", textColor: "#ffffff" };
     case "about":

@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { ProposalBlock, BlockType, BLOCK_LABELS, newBlock, AVAILABLE_VARIABLES, PricingItem, ScopeItem, TimelinePhase, GalleryImage } from "@/lib/proposalTypes";
+import { RichTextEditor } from "./RichTextEditor";
 import { uploadProposalImage } from "@/lib/proposalUpload";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface Props {
   onChange: (blocks: ProposalBlock[]) => void;
 }
 
-const BLOCK_OPTIONS: BlockType[] = ["cover", "about", "text", "scope", "pricing", "timeline", "image", "gallery", "terms", "cta", "signature"];
+const BLOCK_OPTIONS: BlockType[] = ["richtext", "cover", "about", "text", "scope", "pricing", "timeline", "image", "gallery", "terms", "cta", "signature"];
 
 export function ProposalBuilder({ blocks, onChange }: Props) {
   const [selected, setSelected] = useState<string | null>(blocks[0]?.id ?? null);
@@ -115,6 +116,12 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
   const append = (field: string, val: string) => onChange({ [field]: ((block as any)[field] || "") + " " + val });
 
   switch (block.type) {
+    case "richtext":
+      return (
+        <div className="h-[calc(100vh-280px)] min-h-[400px]">
+          <RichTextEditor value={block.html} onChange={(html) => onChange({ html })} />
+        </div>
+      );
     case "cover":
       return (
         <div className="space-y-3">
