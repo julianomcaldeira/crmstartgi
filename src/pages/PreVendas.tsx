@@ -146,6 +146,9 @@ export default function PreVendas() {
         : null,
       meeting_link: form.meeting_link || null,
       assigned_pre_vendas: form.assigned_pre_vendas || null,
+      product_id: form.product_id || null,
+      attendees_roles: form.attendees_roles || null,
+      expectations: form.expectations || null,
       requested_by: userId,
       status: "solicitada",
     };
@@ -163,6 +166,9 @@ export default function PreVendas() {
       desired_datetime: "",
       meeting_link: "",
       assigned_pre_vendas: "",
+      product_id: "",
+      attendees_roles: "",
+      expectations: "",
     });
     await loadAll();
   }
