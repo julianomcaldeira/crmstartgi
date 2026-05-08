@@ -227,6 +227,29 @@ export default function Propostas() {
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-2 mt-4">
+          {/* Filtros por status */}
+          <div className="flex flex-wrap gap-1.5 items-center pb-1">
+            <span className="text-xs text-muted-foreground mr-1">Status:</span>
+            {[
+              { v: "all", label: "Todas" },
+              { v: "draft", label: "Rascunho" },
+              { v: "sent", label: "Enviada" },
+              { v: "viewed", label: "Visualizada" },
+              { v: "accepted", label: "Aprovada" },
+              { v: "rejected", label: "Recusada" },
+            ].map((f) => (
+              <Button
+                key={f.v}
+                size="sm"
+                variant={statusFilter === f.v ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setStatusFilter(f.v)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
           {/* Skeleton de carregamento */}
           {proposalsLoading && (
             <div className="space-y-2">
