@@ -230,12 +230,35 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Lista"><List className="h-4 w-4" /></Btn>
         <Btn active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Lista numerada"><ListOrdered className="h-4 w-4" /></Btn>
         <Btn active={editor.isActive("blockquote")} onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Citação"><Quote className="h-4 w-4" /></Btn>
+        <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Linha separadora"><Minus className="h-4 w-4" /></Btn>
 
         <span className="w-px h-6 bg-border mx-1" />
 
         <Btn onClick={() => fileRef.current?.click()} title="Inserir imagem"><ImageIcon className="h-4 w-4" /></Btn>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
+
+        {/* Image size (when image selected) */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Tamanho da imagem" disabled={!editor.isActive("image")}>
+              Tam
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-40 p-1">
+            {[
+              { label: "25%", v: "25%" },
+              { label: "50%", v: "50%" },
+              { label: "75%", v: "75%" },
+              { label: "100%", v: "100%" },
+              { label: "Original", v: "" },
+            ].map((o) => (
+              <button key={o.label} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent" onClick={() => setImageWidth(o.v)}>{o.label}</button>
+            ))}
+          </PopoverContent>
+        </Popover>
+
         <Btn active={editor.isActive("link")} onClick={setLink} title="Inserir link"><Link2 className="h-4 w-4" /></Btn>
+        <Btn onClick={insertWatermark} title="Inserir marca d'água"><Droplet className="h-4 w-4" /></Btn>
 
         <span className="w-px h-6 bg-border mx-1" />
 
