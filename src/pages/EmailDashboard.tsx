@@ -283,6 +283,17 @@ export default function EmailDashboard() {
             </div>
           )}
           <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Cliente</label>
+            <SearchableCombobox
+              items={allClients.map((c) => ({ value: c.id, label: c.company_name }))}
+              value={clientFilter}
+              onValueChange={setClientFilter}
+              placeholder="Todos os clientes"
+              searchPlaceholder="Buscar cliente..."
+              emptyText="Nenhum cliente encontrado."
+            />
+          </div>
+          <div>
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input
               placeholder="Assunto, e-mail, cliente..."
