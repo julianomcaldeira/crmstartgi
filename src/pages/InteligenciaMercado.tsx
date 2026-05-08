@@ -35,7 +35,12 @@ import {
   FileDown,
   GitCompare,
   Check,
+  MessageSquare,
 } from "lucide-react";
+import GovSalesChat from "@/components/marketIntelligence/GovSalesChat";
+const _unused_marker = 0;
+void _unused_marker;
+const __end_imports = "";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
