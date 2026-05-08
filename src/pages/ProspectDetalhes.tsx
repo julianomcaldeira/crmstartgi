@@ -1980,7 +1980,12 @@ const ClienteDetalhes = () => {
         open={emailComposerOpen}
         onOpenChange={setEmailComposerOpen}
         clientId={id || undefined}
-        defaultTo={client?.email || ""}
+        defaultTo={
+          (client?.contacts || [])
+            .map((c: any) => (c?.email || "").trim())
+            .filter((e: string) => !!e && /.+@.+\..+/.test(e))
+            .join(", ") || ""
+        }
         defaultSubject={client?.company_name ? `Contato - ${client.company_name}` : ""}
         onSent={() => setEmailHistoryRefresh((n) => n + 1)}
       />
