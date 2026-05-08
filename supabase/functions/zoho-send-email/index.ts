@@ -136,15 +136,26 @@ Deno.serve(async (req) => {
     if (bcc.length) payload.bccAddress = bcc.join(",");
     if (zohoAttachments.length) payload.attachments = zohoAttachments;
 
-    const sendRes = await fetch(`${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    const sendData = await sendRes.json();
+    const doSend = async (p: Record<string, any>) => {
+      const r = await fetch(`${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(p),
+      });
+      const d = await r.json();
+      return { r, d };
+    };
+
+    let { r: sendRes, d: sendData } = await doSend(payload);
+    // Zoho requires the ReplyTo address to be verified. If not verified, retry without replyTo.
+    if (!sendRes.ok && JSON.stringify(sendData || {}).toLowerCase().includes("replyto")) {
+      console.warn("Retrying Zoho send without replyTo (address not verified)");
+      const { replyTo: _omit, ...fallback } = payload;
+      ({ r: sendRes, d: sendData } = await doSend(fallback));
+    }
     if (!sendRes.ok) {
       console.error("Zoho Mail send error", sendData);
       throw new Error(`Zoho Mail: ${JSON.stringify(sendData)}`);
