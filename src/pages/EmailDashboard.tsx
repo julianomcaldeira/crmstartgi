@@ -148,7 +148,7 @@ export default function EmailDashboard() {
   }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate, groupByClient]);
 
   const filtered = useMemo(() => {
-    return items.filter((it) => {
+    const list = items.filter((it) => {
       if (statusFilter !== "all" && it.status !== statusFilter) return false;
       if (userFilter !== "all" && it.sent_by !== userFilter) return false;
       if (clientFilter && it.client_id !== clientFilter) return false;
@@ -161,7 +161,26 @@ export default function EmailDashboard() {
       }
       return true;
     });
-  }, [items, statusFilter, userFilter, clientFilter, search, clients]);
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc":
+          return a.sent_at < b.sent_at ? -1 : 1;
+        case "client_asc":
+          return (clients[a.client_id] || "zzz").localeCompare(clients[b.client_id] || "zzz", "pt-BR");
+        case "client_desc":
+          return (clients[b.client_id] || "zzz").localeCompare(clients[a.client_id] || "zzz", "pt-BR");
+        case "subject_asc":
+          return (a.subject || "").localeCompare(b.subject || "", "pt-BR");
+        case "status":
+          return (a.status || "").localeCompare(b.status || "");
+        case "date_desc":
+        default:
+          return a.sent_at < b.sent_at ? 1 : -1;
+      }
+    });
+    return sorted;
+  }, [items, statusFilter, userFilter, clientFilter, search, clients, sortBy]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { clientId: string; name: string; emails: any[]; lastDate: string }>();
@@ -173,8 +192,22 @@ export default function EmailDashboard() {
       g.emails.push(it);
       if (it.sent_at > g.lastDate) g.lastDate = it.sent_at;
     }
-    return Array.from(map.values()).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
-  }, [filtered, clients]);
+    const arr = Array.from(map.values());
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case "client_asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "client_desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "date_asc":
+          return a.lastDate < b.lastDate ? -1 : 1;
+        case "date_desc":
+        default:
+          return a.lastDate < b.lastDate ? 1 : -1;
+      }
+    });
+    return arr;
+  }, [filtered, clients, sortBy]);
 
   const totalPages = Math.max(
     1,
