@@ -28,6 +28,8 @@ export default function Propostas() {
   const [proposalsTotal, setProposalsTotal] = useState(0);
   const [proposalsPage, setProposalsPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [proposalsLoading, setProposalsLoading] = useState(false);
+  const [proposalsError, setProposalsError] = useState<string | null>(null);
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
