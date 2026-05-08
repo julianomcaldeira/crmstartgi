@@ -1641,7 +1641,38 @@ const InteligenciaMercado = () => {
           </TabsContent>
 
           <TabsContent value="chat" className="mt-2">
-            <GovSalesChat />
+            <GovSalesChat
+              searchContext={
+                searchTerms.length > 0
+                  ? {
+                      searchTerms,
+                      state: selectedState || undefined,
+                      totalValue12Months: marketData?.totalValue12Months,
+                      totalValue24Months: marketData?.totalValue24Months,
+                      totalQuantity12Months: marketData?.totalQuantity12Months,
+                      totalQuantity24Months: marketData?.totalQuantity24Months,
+                      topCompetitors: marketData?.competitors
+                        ?.slice(0, 8)
+                        .map((c) => ({
+                          name: c.name,
+                          cnpj: c.cnpj,
+                          totalValue: c.totalValue,
+                          contractCount: c.contractCount,
+                        })),
+                      topOrgans: (() => {
+                        const counts = new Map<string, number>();
+                        marketData?.sampleContracts?.forEach((s) => {
+                          if (s.organ) counts.set(s.organ, (counts.get(s.organ) || 0) + 1);
+                        });
+                        return Array.from(counts.entries())
+                          .sort((a, b) => b[1] - a[1])
+                          .slice(0, 8)
+                          .map(([name, count]) => ({ name, count }));
+                      })(),
+                    }
+                  : undefined
+              }
+            />
           </TabsContent>
         </Tabs>
     </div>
