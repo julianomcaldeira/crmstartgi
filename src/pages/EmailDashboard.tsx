@@ -331,8 +331,9 @@ export default function EmailDashboard() {
               Nenhum e-mail encontrado para os filtros selecionados.
             </div>
           ) : (
+            <>
             <div className="space-y-2">
-              {filtered.map((it) => {
+              {paged.map((it) => {
                 const isOpen = expanded === it.id;
                 return (
                   <div key={it.id} className="border rounded-lg bg-muted/20">
@@ -385,6 +386,21 @@ export default function EmailDashboard() {
                 );
               })}
             </div>
+            <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs">Página {page} de {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
