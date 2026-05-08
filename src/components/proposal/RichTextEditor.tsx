@@ -138,7 +138,20 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
     editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
   };
 
-  const Btn = ({ active, onClick, title, children }: any) => (
+  const setImageWidth = (width: string) => {
+    if (!editor.isActive("image")) {
+      toast.info("Selecione uma imagem primeiro (clique sobre ela)");
+      return;
+    }
+    editor.chain().focus().updateAttributes("image", { width }).run();
+  };
+
+  const insertWatermark = () => {
+    const text = window.prompt("Texto da marca d'água:", "CONFIDENCIAL");
+    if (!text) return;
+    const html = `<p style="text-align:center;color:#9ca3af;opacity:0.25;font-size:72px;font-weight:700;letter-spacing:8px;transform:rotate(-15deg);margin:24px 0;user-select:none;">${text}</p>`;
+    editor.chain().focus().insertContent(html).run();
+  };
     <Button
       type="button"
       size="sm"
