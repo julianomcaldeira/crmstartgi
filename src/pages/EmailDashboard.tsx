@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
+import { SearchableCombobox } from "@/components/SearchableCombobox";
+import { Loader2, Mail, RefreshCcw, ChevronDown, ChevronUp, ShieldAlert, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, parseISO, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ export default function EmailDashboard() {
   const [items, setItems] = useState<any[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
   const [clients, setClients] = useState<Record<string, string>>({});
+  const [allClients, setAllClients] = useState<{ id: string; company_name: string }[]>([]);
 
   // filters
   const [range, setRange] = useState("7");
@@ -28,8 +30,11 @@ export default function EmailDashboard() {
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [userFilter, setUserFilter] = useState("all");
+  const [clientFilter, setClientFilter] = useState("");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   const canSeeAll = role === "admin" || role === "gestor";
 
@@ -117,10 +122,32 @@ export default function EmailDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authorized, range, startDate, endDate]);
 
+  useEffect(() => {
+    if (!authorized) return;
+    (async () => {
+      const data = await fetchAllPaged(async (from, to) => {
+        const { data: rows, error } = await supabase
+          .from("clients")
+          .select("id, company_name")
+          .order("company_name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to);
+        if (error) throw error;
+        return rows || [];
+      });
+      setAllClients(data || []);
+    })();
+  }, [authorized]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, userFilter, clientFilter, search, range, startDate, endDate]);
+
   const filtered = useMemo(() => {
     return items.filter((it) => {
       if (statusFilter !== "all" && it.status !== statusFilter) return false;
       if (userFilter !== "all" && it.sent_by !== userFilter) return false;
+      if (clientFilter && it.client_id !== clientFilter) return false;
       if (search) {
         const s = search.toLowerCase();
         const recips = (it.recipients || []).join(" ").toLowerCase();
@@ -130,7 +157,13 @@ export default function EmailDashboard() {
       }
       return true;
     });
-  }, [items, statusFilter, userFilter, search, clients]);
+  }, [items, statusFilter, userFilter, clientFilter, search, clients]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paged = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
 
   const stats = useMemo(() => {
     const total = filtered.length;
@@ -197,7 +230,7 @@ export default function EmailDashboard() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-5 gap-3">
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Período</label>
             <Select value={range} onValueChange={setRange}>
@@ -250,6 +283,17 @@ export default function EmailDashboard() {
             </div>
           )}
           <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Cliente</label>
+            <SearchableCombobox
+              items={allClients.map((c) => ({ value: c.id, label: c.company_name }))}
+              value={clientFilter}
+              onValueChange={setClientFilter}
+              placeholder="Todos os clientes"
+              searchPlaceholder="Buscar cliente..."
+              emptyText="Nenhum cliente encontrado."
+            />
+          </div>
+          <div>
             <label className="text-xs text-muted-foreground mb-1 block">Buscar</label>
             <Input
               placeholder="Assunto, e-mail, cliente..."
@@ -287,8 +331,9 @@ export default function EmailDashboard() {
               Nenhum e-mail encontrado para os filtros selecionados.
             </div>
           ) : (
+            <>
             <div className="space-y-2">
-              {filtered.map((it) => {
+              {paged.map((it) => {
                 const isOpen = expanded === it.id;
                 return (
                   <div key={it.id} className="border rounded-lg bg-muted/20">
@@ -341,6 +386,21 @@ export default function EmailDashboard() {
                 );
               })}
             </div>
+            <div className="flex items-center justify-between mt-4 pt-3 border-t">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-xs">Página {page} de {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
