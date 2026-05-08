@@ -86,7 +86,7 @@ export function ProposalBuilder({ blocks, onChange }: Props) {
       </div>
 
       {/* Editor do bloco selecionado */}
-      <div className="col-span-8 border rounded-lg p-4 overflow-y-auto">
+      <div className={`col-span-8 border rounded-lg ${current?.type === "richtext" ? "overflow-hidden flex flex-col" : "p-4 overflow-y-auto"}`}>
         {!current && <p className="text-sm text-muted-foreground text-center pt-12">Selecione ou adicione um bloco para editar.</p>}
         {current && <BlockEditor block={current} onChange={(patch) => update(current.id, patch)} />}
       </div>
@@ -118,7 +118,7 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
   switch (block.type) {
     case "richtext":
       return (
-        <div className="h-[calc(100vh-280px)] min-h-[400px]">
+        <div className="flex-1 min-h-0 flex flex-col">
           <RichTextEditor value={block.html} onChange={(html) => onChange({ html })} />
         </div>
       );
