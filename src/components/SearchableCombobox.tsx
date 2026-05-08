@@ -95,7 +95,7 @@ export function SearchableCombobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className={cn("w-[--radix-popover-trigger-width] min-w-[var(--radix-popover-trigger-width)] p-0", contentClassName)} align="start">
         <Command>
           <CommandInput placeholder={searchPlaceholder} />
           <CommandList>
