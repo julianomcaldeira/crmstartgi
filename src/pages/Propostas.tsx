@@ -48,7 +48,13 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess]);
+  }, [proposalsPage, hasAccess, statusFilter]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
