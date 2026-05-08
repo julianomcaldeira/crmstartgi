@@ -73,7 +73,11 @@ const SUGGESTIONS: { label: string; prompt: string }[] = [
   },
 ];
 
-export default function GovSalesChat() {
+export default function GovSalesChat({
+  searchContext,
+}: {
+  searchContext?: GovChatSearchContext;
+} = {}) {
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
