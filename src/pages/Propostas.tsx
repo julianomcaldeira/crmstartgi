@@ -30,6 +30,7 @@ export default function Propostas() {
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -47,7 +48,13 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess]);
+  }, [proposalsPage, hasAccess, statusFilter]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -80,15 +87,14 @@ export default function Propostas() {
     );
 
     try {
-      const propRes: any = await Promise.race([
-        supabase
-          .from("proposals")
-          .select("*", { count: "exact" })
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to),
-        timeout,
-      ]);
+      let q = supabase
+        .from("proposals")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
       const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean))) as string[];
@@ -221,6 +227,29 @@ export default function Propostas() {
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-2 mt-4">
+          {/* Filtros por status */}
+          <div className="flex flex-wrap gap-1.5 items-center pb-1">
+            <span className="text-xs text-muted-foreground mr-1">Status:</span>
+            {[
+              { v: "all", label: "Todas" },
+              { v: "draft", label: "Rascunho" },
+              { v: "sent", label: "Enviada" },
+              { v: "viewed", label: "Visualizada" },
+              { v: "accepted", label: "Aprovada" },
+              { v: "rejected", label: "Recusada" },
+            ].map((f) => (
+              <Button
+                key={f.v}
+                size="sm"
+                variant={statusFilter === f.v ? "default" : "outline"}
+                className="h-7 text-xs"
+                onClick={() => setStatusFilter(f.v)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+
           {/* Skeleton de carregamento */}
           {proposalsLoading && (
             <div className="space-y-2">
