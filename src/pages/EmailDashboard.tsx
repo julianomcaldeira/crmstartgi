@@ -341,8 +341,13 @@ export default function EmailDashboard() {
 
       {/* List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">E-mails ({filtered.length})</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-base">
+            {groupByClient ? `Clientes (${grouped.length})` : `E-mails (${filtered.length})`}
+          </CardTitle>
+          <Button variant="outline" size="sm" onClick={() => setGroupByClient((v) => !v)}>
+            {groupByClient ? (<><List className="h-4 w-4 mr-2" /> Ver lista</>) : (<><Users className="h-4 w-4 mr-2" /> Agrupar por cliente</>)}
+          </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
