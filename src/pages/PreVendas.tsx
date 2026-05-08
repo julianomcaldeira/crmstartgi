@@ -107,7 +107,7 @@ export default function PreVendas() {
   }, []);
 
   async function loadAll() {
-    const [{ data: reqs }, { data: opps }, { data: profs }, { data: pvRoles }] =
+    const [{ data: reqs }, { data: opps }, { data: profs }, { data: pvRoles }, { data: prods }] =
       await Promise.all([
         supabase
           .from("pre_vendas_requests")
@@ -119,10 +119,12 @@ export default function PreVendas() {
           .order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email").or("is_deleted.is.null,is_deleted.eq.false"),
         supabase.from("user_roles").select("user_id, role").in("role", ["pre_vendas", "admin"]),
+        supabase.from("products").select("id, name").eq("active", true).order("name"),
       ]);
     setRequests(reqs || []);
     setOpportunities(opps || []);
     setProfiles(profs || []);
+    setProducts(prods || []);
     const pvIds = new Set((pvRoles || []).map((r: any) => r.user_id));
     setPreVendasUsers((profs || []).filter((p: any) => pvIds.has(p.id)));
   }
