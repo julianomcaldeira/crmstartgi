@@ -653,6 +653,23 @@ export default function PreVendas() {
                     {editing.meeting_link}
                   </a>
                 </div>
+              {editing.product_id && (
+                <div>
+                  <strong>Produto StartGi:</strong>{" "}
+                  {products.find((p) => p.id === editing.product_id)?.name || "—"}
+                </div>
+              )}
+              {editing.attendees_roles && (
+                <div>
+                  <strong>Cargos dos participantes:</strong>
+                  <p className="text-muted-foreground whitespace-pre-wrap mt-1">{editing.attendees_roles}</p>
+                </div>
+              )}
+              {editing.expectations && (
+                <div>
+                  <strong>Expectativa do vendedor:</strong>
+                  <p className="text-muted-foreground whitespace-pre-wrap mt-1">{editing.expectations}</p>
+                </div>
               )}
               <div>
                 <Label>Feedback do vendedor</Label>
