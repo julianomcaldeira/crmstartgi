@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { ProposalBlock, BlockType, BLOCK_LABELS, newBlock, AVAILABLE_VARIABLES, PricingItem, ScopeItem, TimelinePhase } from "@/lib/proposalTypes";
+import { useRef, useState } from "react";
+import { ProposalBlock, BlockType, BLOCK_LABELS, newBlock, AVAILABLE_VARIABLES, PricingItem, ScopeItem, TimelinePhase, GalleryImage } from "@/lib/proposalTypes";
+import { uploadProposalImage } from "@/lib/proposalUpload";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, ArrowUp, ArrowDown, Variable, GripVertical } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Variable, GripVertical, Upload, Image as ImageIcon } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface Props {
@@ -15,7 +17,7 @@ interface Props {
   onChange: (blocks: ProposalBlock[]) => void;
 }
 
-const BLOCK_OPTIONS: BlockType[] = ["cover", "about", "text", "scope", "pricing", "timeline", "image", "terms", "cta", "signature"];
+const BLOCK_OPTIONS: BlockType[] = ["cover", "about", "text", "scope", "pricing", "timeline", "image", "gallery", "terms", "cta", "signature"];
 
 export function ProposalBuilder({ blocks, onChange }: Props) {
   const [selected, setSelected] = useState<string | null>(blocks[0]?.id ?? null);
