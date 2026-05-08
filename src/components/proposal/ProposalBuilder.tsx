@@ -220,12 +220,9 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
         </div>
       );
     case "image":
-      return (
-        <div className="space-y-3">
-          <Field label="URL da imagem"><Input value={block.url} onChange={(e) => onChange({ url: e.target.value })} placeholder="https://..." /></Field>
-          <Field label="Legenda"><Input value={block.caption || ""} onChange={(e) => onChange({ caption: e.target.value })} /></Field>
-        </div>
-      );
+      return <ImageEditor block={block} onChange={onChange} />;
+    case "gallery":
+      return <GalleryEditor block={block} onChange={onChange} />;
     case "cta":
       return (
         <div className="space-y-3">
