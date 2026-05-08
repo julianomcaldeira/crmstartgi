@@ -1403,7 +1403,7 @@ const InteligenciaMercado = () => {
 
           {/* Tabs for detailed data and AI analysis */}
           <Tabs defaultValue="data" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="data">
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Dados de Mercado
@@ -1415,6 +1415,10 @@ const InteligenciaMercado = () => {
               <TabsTrigger value="ai" disabled={!aiAnalysis}>
                 <Sparkles className="h-4 w-4 mr-2" />
                 Análise IA
+              </TabsTrigger>
+              <TabsTrigger value="chat">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Chat IA — Vendas Gov
               </TabsTrigger>
             </TabsList>
 
