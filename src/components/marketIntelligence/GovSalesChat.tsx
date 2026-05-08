@@ -124,7 +124,7 @@ export default function GovSalesChat({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ messages: next }),
+        body: JSON.stringify({ messages: next, searchContext }),
         signal: controller.signal,
       });
 
