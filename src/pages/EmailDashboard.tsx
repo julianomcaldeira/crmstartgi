@@ -162,10 +162,30 @@ export default function EmailDashboard() {
     });
   }, [items, statusFilter, userFilter, clientFilter, search, clients]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const grouped = useMemo(() => {
+    const map = new Map<string, { clientId: string; name: string; emails: any[]; lastDate: string }>();
+    for (const it of filtered) {
+      const key = it.client_id || "__none__";
+      const name = it.client_id ? (clients[it.client_id] || "Cliente desconhecido") : "Sem cliente vinculado";
+      if (!map.has(key)) map.set(key, { clientId: key, name, emails: [], lastDate: it.sent_at });
+      const g = map.get(key)!;
+      g.emails.push(it);
+      if (it.sent_at > g.lastDate) g.lastDate = it.sent_at;
+    }
+    return Array.from(map.values()).sort((a, b) => (a.lastDate < b.lastDate ? 1 : -1));
+  }, [filtered, clients]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil((groupByClient ? grouped.length : filtered.length) / (groupByClient ? GROUP_PAGE_SIZE : PAGE_SIZE)),
+  );
   const paged = useMemo(
     () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
     [filtered, page],
+  );
+  const pagedGroups = useMemo(
+    () => grouped.slice((page - 1) * GROUP_PAGE_SIZE, page * GROUP_PAGE_SIZE),
+    [grouped, page],
   );
 
   const stats = useMemo(() => {
