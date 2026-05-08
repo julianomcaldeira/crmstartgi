@@ -69,32 +69,50 @@ export default function Propostas() {
   };
 
   const loadProposals = async (page: number) => {
-    setLoading(true);
+    setProposalsLoading(true);
+    setProposalsError(null);
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
-    const propRes = await supabase
-      .from("proposals")
-      .select("*", { count: "exact" })
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range(from, to);
-    const props = propRes.data || [];
-    const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
-    const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
-    const [clientsRes, oppsRes] = await Promise.all([
-      clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
-      oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
-    ]);
-    const cMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
-    const oMap = new Map((oppsRes.data || []).map((o: any) => [o.id, o]));
-    const enriched = props.map((p: any) => ({
-      ...p,
-      client: p.client_id ? cMap.get(p.client_id) || null : null,
-      opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
-    }));
-    setProposals(enriched);
-    setProposalsTotal(propRes.count || 0);
-    setLoading(false);
+
+    // Timeout guard (15s)
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Tempo esgotado ao carregar propostas. Verifique sua conexão.")), 15000)
+    );
+
+    try {
+      const propRes: any = await Promise.race([
+        supabase
+          .from("proposals")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+        timeout,
+      ]);
+      if (propRes.error) throw propRes.error;
+      const props = propRes.data || [];
+      const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
+      const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
+      const [clientsRes, oppsRes] = await Promise.all([
+        clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
+        oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
+      ]);
+      const cMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
+      const oMap = new Map((oppsRes.data || []).map((o: any) => [o.id, o]));
+      const enriched = props.map((p: any) => ({
+        ...p,
+        client: p.client_id ? cMap.get(p.client_id) || null : null,
+        opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
+      }));
+      setProposals(enriched);
+      setProposalsTotal(propRes.count || 0);
+    } catch (e: any) {
+      setProposals([]);
+      setProposalsError(e?.message || "Erro ao carregar propostas");
+    } finally {
+      setProposalsLoading(false);
+      setLoading(false);
+    }
   };
 
   const openNewTemplate = () => {
