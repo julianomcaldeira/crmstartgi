@@ -360,60 +360,133 @@ export default function EmailDashboard() {
             </div>
           ) : (
             <>
-            <div className="space-y-2">
-              {paged.map((it) => {
-                const isOpen = expanded === it.id;
-                return (
-                  <div key={it.id} className="border rounded-lg bg-muted/20">
-                    <button
-                      className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
-                      onClick={() => setExpanded(isOpen ? null : it.id)}
-                    >
-                      <div className="col-span-12 md:col-span-5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
-                          <span className="text-sm font-medium truncate">{it.subject}</span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          Para: {(it.recipients || []).join(", ")}
-                        </p>
-                      </div>
-                      <div className="col-span-6 md:col-span-3 text-xs">
-                        <div className="text-muted-foreground">Vendedor</div>
-                        <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
-                      </div>
-                      <div className="col-span-6 md:col-span-2 text-xs">
-                        <div className="text-muted-foreground">Cliente</div>
-                        <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
-                      </div>
-                      <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
-                        <div>
-                          <div className="text-muted-foreground">Data</div>
-                          <div className="font-medium">{format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
-                        </div>
-                        {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                      </div>
-                    </button>
-
-                    {isOpen && (
-                      <div className="border-t p-3 space-y-2 text-sm">
-                        {it.error_message && (
-                          <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                            Erro: {it.error_message}
+            {groupByClient ? (
+              <div className="space-y-2">
+                {pagedGroups.map((g) => {
+                  const isOpen = expandedGroup === g.clientId;
+                  const sentCount = g.emails.filter((e) => e.status === "sent").length;
+                  const failedCount = g.emails.filter((e) => e.status === "failed").length;
+                  return (
+                    <div key={g.clientId} className="border rounded-lg bg-muted/20">
+                      <button
+                        className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        onClick={() => setExpandedGroup(isOpen ? null : g.clientId)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <Users className="h-4 w-4 text-primary shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold truncate">{g.name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              Último: {format(parseISO(g.lastDate), "dd/MM/yy HH:mm", { locale: ptBR })}
+                            </div>
                           </div>
-                        )}
-                        {it.body && (
-                          <div
-                            className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
-                            dangerouslySetInnerHTML={{ __html: it.body }}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="secondary" className="text-xs">{g.emails.length} e-mails</Badge>
+                          {sentCount > 0 && <Badge variant="default" className="text-xs">{sentCount} env.</Badge>}
+                          {failedCount > 0 && <Badge variant="destructive" className="text-xs">{failedCount} falh.</Badge>}
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </button>
+                      {isOpen && (
+                        <div className="border-t p-2 space-y-2 bg-background">
+                          {g.emails.map((it) => {
+                            const eOpen = expanded === it.id;
+                            return (
+                              <div key={it.id} className="border rounded-md">
+                                <button
+                                  className="w-full flex items-start justify-between gap-3 p-2 text-left hover:bg-muted/40 transition-colors"
+                                  onClick={() => setExpanded(eOpen ? null : it.id)}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
+                                      <span className="text-sm font-medium truncate">{it.subject}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                                      Para: {(it.recipients || []).join(", ")} • {users[it.sent_by] || "—"} • {format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                                    </p>
+                                  </div>
+                                  {eOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                                </button>
+                                {eOpen && (
+                                  <div className="border-t p-3 space-y-2 text-sm">
+                                    {it.error_message && (
+                                      <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">Erro: {it.error_message}</div>
+                                    )}
+                                    {it.body && (
+                                      <div
+                                        className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
+                                        dangerouslySetInnerHTML={{ __html: it.body }}
+                                      />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {paged.map((it) => {
+                  const isOpen = expanded === it.id;
+                  return (
+                    <div key={it.id} className="border rounded-lg bg-muted/20">
+                      <button
+                        className="w-full grid grid-cols-12 items-start gap-3 p-3 text-left hover:bg-muted/40 transition-colors"
+                        onClick={() => setExpanded(isOpen ? null : it.id)}
+                      >
+                        <div className="col-span-12 md:col-span-5 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={statusVariant(it.status)} className="text-xs">{statusLabel(it.status)}</Badge>
+                            <span className="text-sm font-medium truncate">{it.subject}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 truncate">
+                            Para: {(it.recipients || []).join(", ")}
+                          </p>
+                        </div>
+                        <div className="col-span-6 md:col-span-3 text-xs">
+                          <div className="text-muted-foreground">Vendedor</div>
+                          <div className="font-medium truncate">{users[it.sent_by] || "—"}</div>
+                        </div>
+                        <div className="col-span-6 md:col-span-2 text-xs">
+                          <div className="text-muted-foreground">Cliente</div>
+                          <div className="font-medium truncate">{clients[it.client_id] || "—"}</div>
+                        </div>
+                        <div className="col-span-12 md:col-span-2 text-xs flex items-start justify-between">
+                          <div>
+                            <div className="text-muted-foreground">Data</div>
+                            <div className="font-medium">{format(parseISO(it.sent_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
+                          </div>
+                          {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                      </button>
+
+                      {isOpen && (
+                        <div className="border-t p-3 space-y-2 text-sm">
+                          {it.error_message && (
+                            <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                              Erro: {it.error_message}
+                            </div>
+                          )}
+                          {it.body && (
+                            <div
+                              className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
+                              dangerouslySetInnerHTML={{ __html: it.body }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="flex items-center justify-between mt-4 pt-3 border-t">
               <div className="text-xs text-muted-foreground">
                 Mostrando {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} de {filtered.length}
