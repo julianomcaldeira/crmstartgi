@@ -213,22 +213,32 @@ export default function GovSalesChat({
     setInput("");
   }
 
+  const hasContext =
+    !!searchContext && searchContext.searchTerms.length > 0;
+
   return (
-    <Card className="flex flex-col h-[640px]">
-      <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-            <Bot className="h-4 w-4" />
+    <Card className="flex flex-col h-[calc(100vh-260px)] min-h-[560px] max-h-[820px] overflow-hidden border-border/60 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shadow-sm">
+              <Bot className="h-5 w-5" />
+            </div>
+            <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
           </div>
-          <div>
-            <p className="text-sm font-semibold flex items-center gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold flex items-center gap-2 truncate">
               Consultor IA — Vendas ao Governo
-              <Badge variant="secondary" className="text-[10px] gap-1">
+              <Badge
+                variant="secondary"
+                className="text-[10px] gap-1 hidden sm:inline-flex"
+              >
                 <ShieldCheck className="h-3 w-3" />
                 Fontes oficiais
               </Badge>
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground truncate">
               PNCP · Compras.gov.br · Transparência · Lei 14.133/2021
             </p>
           </div>
@@ -239,43 +249,52 @@ export default function GovSalesChat({
             size="sm"
             onClick={clearChat}
             disabled={loading}
+            className="shrink-0"
           >
-            <RotateCcw className="h-4 w-4 mr-1" />
-            Nova conversa
+            <RotateCcw className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Nova conversa</span>
           </Button>
         )}
       </div>
 
-      {searchContext && searchContext.searchTerms.length > 0 && (
-        <div className="px-4 py-2 border-b bg-primary/5 flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-semibold text-primary uppercase tracking-wide">
-            Contexto da pesquisa:
+      {/* Search context strip */}
+      {hasContext && (
+        <div className="px-4 sm:px-5 py-2 border-b bg-primary/5 flex flex-wrap items-center gap-1.5 text-xs">
+          <span className="font-semibold text-primary uppercase tracking-wide text-[10px]">
+            Contexto:
           </span>
-          {searchContext.searchTerms.map((t) => (
+          {searchContext!.searchTerms.map((t) => (
             <Badge key={t} variant="secondary" className="text-[10px]">
               {t}
             </Badge>
           ))}
-          {searchContext.state && (
+          {searchContext!.state && (
             <Badge variant="outline" className="text-[10px]">
-              UF: {searchContext.state}
+              UF: {searchContext!.state}
             </Badge>
           )}
-          {searchContext.topCompetitors && searchContext.topCompetitors.length > 0 && (
-            <span className="text-muted-foreground">
-              · {searchContext.topCompetitors.length} concorrentes mapeados
-            </span>
-          )}
+          {searchContext!.topCompetitors &&
+            searchContext!.topCompetitors.length > 0 && (
+              <span className="text-muted-foreground text-[11px]">
+                · {searchContext!.topCompetitors.length} concorrentes mapeados
+              </span>
+            )}
         </div>
       )}
 
-      <ScrollArea className="flex-1">
-        <div ref={scrollRef} className="p-4 space-y-4">
+      {/* Messages */}
+      <ScrollArea className="flex-1 bg-muted/20">
+        <div
+          ref={scrollRef}
+          className="px-3 sm:px-5 py-5 space-y-5 max-w-3xl mx-auto w-full"
+        >
           {messages.length === 0 && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div className="text-center py-6">
-                <Sparkles className="h-8 w-8 text-primary mx-auto mb-2" />
-                <p className="text-sm font-medium">
+                <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 text-primary mx-auto mb-3 flex items-center justify-center">
+                  <Sparkles className="h-7 w-7" />
+                </div>
+                <p className="text-base font-semibold">
                   Como posso ajudar a prospectar novos clientes públicos?
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -283,18 +302,21 @@ export default function GovSalesChat({
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider px-1">
                   Sugestões para começar
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SUGGESTIONS.map((s) => (
                     <button
                       key={s.label}
                       onClick={() => sendMessage(s.prompt)}
-                      className="text-left rounded-lg border bg-card hover:bg-accent transition px-3 py-2 text-sm"
+                      className="group text-left rounded-xl border bg-card hover:bg-accent hover:border-primary/40 transition px-3 py-2.5"
                     >
-                      <p className="font-medium">{s.label}</p>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-primary opacity-70 group-hover:opacity-100" />
+                        {s.label}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
                         {s.prompt}
                       </p>
                     </button>
@@ -307,35 +329,37 @@ export default function GovSalesChat({
           {messages.map((m, i) => (
             <div
               key={i}
-              className={`flex gap-3 ${
+              className={`flex gap-2.5 sm:gap-3 ${
                 m.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
               {m.role === "assistant" && (
-                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shrink-0 shadow-sm">
                   <Bot className="h-4 w-4" />
                 </div>
               )}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
+                className={`max-w-[88%] sm:max-w-[80%] px-4 py-2.5 text-sm shadow-sm ${
                   m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted rounded-bl-sm"
+                    ? "bg-primary text-primary-foreground rounded-2xl rounded-br-md"
+                    : "bg-card border border-border/60 rounded-2xl rounded-bl-md"
                 }`}
               >
                 {m.role === "assistant" ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_a]:text-primary [&_a]:underline">
+                  <div className="prose prose-sm dark:prose-invert max-w-none break-words leading-relaxed [&_a]:text-primary [&_a]:underline [&_p]:my-2 [&_ul]:my-2 [&_ol]:my-2 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h1]:mt-3 [&_h2]:mt-3 [&_h3]:mt-2 [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px]">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                       {m.content}
                     </ReactMarkdown>
                   </div>
                 ) : (
-                  <p className="whitespace-pre-wrap">{m.content}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">
+                    {m.content}
+                  </p>
                 )}
               </div>
               {m.role === "user" && (
-                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                  <UserIcon className="h-4 w-4" />
+                <div className="h-8 w-8 rounded-full bg-muted border flex items-center justify-center shrink-0">
+                  <UserIcon className="h-4 w-4 text-muted-foreground" />
                 </div>
               )}
             </div>
@@ -345,11 +369,11 @@ export default function GovSalesChat({
             (messages.length === 0 ||
               messages[messages.length - 1].role === "user") && (
               <div className="flex gap-3 justify-start">
-                <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shrink-0 shadow-sm">
                   <Bot className="h-4 w-4" />
                 </div>
-                <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="bg-card border border-border/60 rounded-2xl rounded-bl-md px-4 py-2.5 text-sm flex items-center gap-2 text-muted-foreground shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   Consultando fontes oficiais...
                 </div>
               </div>
@@ -357,39 +381,42 @@ export default function GovSalesChat({
         </div>
       </ScrollArea>
 
-      <div className="border-t p-3 bg-background">
-        <div className="flex items-end gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage(input);
-              }
-            }}
-            placeholder="Pergunte sobre prospecção, licitações, PNCP, atas, dispensas..."
-            rows={2}
-            className="resize-none min-h-[48px] max-h-32"
-            disabled={loading}
-          />
-          <Button
-            onClick={() => sendMessage(input)}
-            disabled={loading || !input.trim()}
-            size="icon"
-            className="h-12 w-12 shrink-0"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
+      {/* Composer */}
+      <div className="border-t bg-background/95 backdrop-blur p-3 sm:p-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-end gap-2 rounded-2xl border bg-card focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition p-1.5">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(input);
+                }
+              }}
+              placeholder="Pergunte sobre prospecção, licitações, PNCP, atas, dispensas..."
+              rows={1}
+              className="resize-none min-h-[40px] max-h-32 border-0 shadow-none focus-visible:ring-0 bg-transparent text-sm"
+              disabled={loading}
+            />
+            <Button
+              onClick={() => sendMessage(input)}
+              disabled={loading || !input.trim()}
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-xl"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2 text-center">
+            Apenas vendas ao governo brasileiro. Sempre valide informações nas
+            fontes oficiais antes de agir.
+          </p>
         </div>
-        <p className="text-[10px] text-muted-foreground mt-2 text-center">
-          Apenas vendas ao governo brasileiro. Sempre valide informações nas
-          fontes oficiais antes de agir.
-        </p>
       </div>
     </Card>
   );
