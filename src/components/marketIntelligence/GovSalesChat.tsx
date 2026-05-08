@@ -19,6 +19,17 @@ import {
 
 type ChatMsg = { role: "user" | "assistant"; content: string };
 
+export type GovChatSearchContext = {
+  searchTerms: string[];
+  state?: string;
+  totalValue12Months?: number;
+  totalValue24Months?: number;
+  totalQuantity12Months?: number;
+  totalQuantity24Months?: number;
+  topCompetitors?: Array<{ name: string; cnpj?: string; totalValue?: number; contractCount?: number }>;
+  topOrgans?: Array<{ name: string; count?: number }>;
+};
+
 const SUGGESTIONS: { label: string; prompt: string }[] = [
   {
     label: "Mapear órgãos compradores",
