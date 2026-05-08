@@ -87,15 +87,14 @@ export default function Propostas() {
     );
 
     try {
-      const propRes: any = await Promise.race([
-        supabase
-          .from("proposals")
-          .select("*", { count: "exact" })
-          .order("created_at", { ascending: false })
-          .order("id", { ascending: false })
-          .range(from, to),
-        timeout,
-      ]);
+      let q = supabase
+        .from("proposals")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
       const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean))) as string[];
