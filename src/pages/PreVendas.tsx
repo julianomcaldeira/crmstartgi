@@ -653,6 +653,7 @@ export default function PreVendas() {
                     {editing.meeting_link}
                   </a>
                 </div>
+              )}
               {editing.product_id && (
                 <div>
                   <strong>Produto StartGi:</strong>{" "}
