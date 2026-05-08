@@ -1793,15 +1793,18 @@ export type Database = {
       pre_vendas_requests: {
         Row: {
           assigned_pre_vendas: string | null
+          attendees_roles: string | null
           client_id: string | null
           completed_at: string | null
           created_at: string
           description: string | null
           desired_datetime: string | null
+          expectations: string | null
           feedback: string | null
           id: string
           meeting_link: string | null
           opportunity_id: string | null
+          product_id: string | null
           quality_rating: number | null
           requested_by: string
           scheduled_datetime: string | null
@@ -1811,15 +1814,18 @@ export type Database = {
         }
         Insert: {
           assigned_pre_vendas?: string | null
+          attendees_roles?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           desired_datetime?: string | null
+          expectations?: string | null
           feedback?: string | null
           id?: string
           meeting_link?: string | null
           opportunity_id?: string | null
+          product_id?: string | null
           quality_rating?: number | null
           requested_by: string
           scheduled_datetime?: string | null
@@ -1829,15 +1835,18 @@ export type Database = {
         }
         Update: {
           assigned_pre_vendas?: string | null
+          attendees_roles?: string | null
           client_id?: string | null
           completed_at?: string | null
           created_at?: string
           description?: string | null
           desired_datetime?: string | null
+          expectations?: string | null
           feedback?: string | null
           id?: string
           meeting_link?: string | null
           opportunity_id?: string | null
+          product_id?: string | null
           quality_rating?: number | null
           requested_by?: string
           scheduled_datetime?: string | null
@@ -1858,6 +1867,13 @@ export type Database = {
             columns: ["opportunity_id"]
             isOneToOne: false
             referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_vendas_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

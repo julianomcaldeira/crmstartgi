@@ -68,6 +68,7 @@ export default function PreVendas() {
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
   const [preVendasUsers, setPreVendasUsers] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Request | null>(null);
@@ -80,6 +81,9 @@ export default function PreVendas() {
     desired_datetime: "",
     meeting_link: "",
     assigned_pre_vendas: "",
+    product_id: "",
+    attendees_roles: "",
+    expectations: "",
   });
 
   const isPreVendas = role === "pre_vendas";
@@ -103,7 +107,7 @@ export default function PreVendas() {
   }, []);
 
   async function loadAll() {
-    const [{ data: reqs }, { data: opps }, { data: profs }, { data: pvRoles }] =
+    const [{ data: reqs }, { data: opps }, { data: profs }, { data: pvRoles }, { data: prods }] =
       await Promise.all([
         supabase
           .from("pre_vendas_requests")
@@ -115,10 +119,12 @@ export default function PreVendas() {
           .order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email").or("is_deleted.is.null,is_deleted.eq.false"),
         supabase.from("user_roles").select("user_id, role").in("role", ["pre_vendas", "admin"]),
+        supabase.from("products").select("id, name").eq("active", true).order("name"),
       ]);
     setRequests(reqs || []);
     setOpportunities(opps || []);
     setProfiles(profs || []);
+    setProducts(prods || []);
     const pvIds = new Set((pvRoles || []).map((r: any) => r.user_id));
     setPreVendasUsers((profs || []).filter((p: any) => pvIds.has(p.id)));
   }
@@ -140,6 +146,9 @@ export default function PreVendas() {
         : null,
       meeting_link: form.meeting_link || null,
       assigned_pre_vendas: form.assigned_pre_vendas || null,
+      product_id: form.product_id || null,
+      attendees_roles: form.attendees_roles || null,
+      expectations: form.expectations || null,
       requested_by: userId,
       status: "solicitada",
     };
@@ -157,6 +166,9 @@ export default function PreVendas() {
       desired_datetime: "",
       meeting_link: "",
       assigned_pre_vendas: "",
+      product_id: "",
+      attendees_roles: "",
+      expectations: "",
     });
     await loadAll();
   }
@@ -324,6 +336,39 @@ export default function PreVendas() {
                     setForm({ ...form, meeting_link: e.target.value })
                   }
                   placeholder="https://meet..."
+                />
+              </div>
+              <div>
+                <Label>Produto StartGi para apresentação</Label>
+                <SearchableCombobox
+                  items={products.map((p) => ({ value: p.id, label: p.name }))}
+                  value={form.product_id}
+                  onValueChange={(v) => setForm({ ...form, product_id: v })}
+                  placeholder="Selecione o produto"
+                  searchPlaceholder="Buscar produto..."
+                  emptyText="Nenhum produto encontrado."
+                />
+              </div>
+              <div>
+                <Label>Cargos dos participantes da reunião</Label>
+                <Textarea
+                  value={form.attendees_roles}
+                  onChange={(e) =>
+                    setForm({ ...form, attendees_roles: e.target.value })
+                  }
+                  rows={2}
+                  placeholder="Ex: Diretor Financeiro, Gerente de TI, Sócio..."
+                />
+              </div>
+              <div>
+                <Label>Expectativa do vendedor para a reunião</Label>
+                <Textarea
+                  value={form.expectations}
+                  onChange={(e) =>
+                    setForm({ ...form, expectations: e.target.value })
+                  }
+                  rows={3}
+                  placeholder="O que você espera alcançar com esta reunião?"
                 />
               </div>
               <div>
@@ -607,6 +652,24 @@ export default function PreVendas() {
                   <a href={editing.meeting_link} target="_blank" rel="noreferrer" className="text-primary underline">
                     {editing.meeting_link}
                   </a>
+                </div>
+              )}
+              {editing.product_id && (
+                <div>
+                  <strong>Produto StartGi:</strong>{" "}
+                  {products.find((p) => p.id === editing.product_id)?.name || "—"}
+                </div>
+              )}
+              {editing.attendees_roles && (
+                <div>
+                  <strong>Cargos dos participantes:</strong>
+                  <p className="text-muted-foreground whitespace-pre-wrap mt-1">{editing.attendees_roles}</p>
+                </div>
+              )}
+              {editing.expectations && (
+                <div>
+                  <strong>Expectativa do vendedor:</strong>
+                  <p className="text-muted-foreground whitespace-pre-wrap mt-1">{editing.expectations}</p>
                 </div>
               )}
               <div>
