@@ -51,10 +51,24 @@ export default function Propostas() {
     setLoading(true);
     const [tplRes, propRes] = await Promise.all([
       supabase.from("proposal_templates").select("*").order("created_at", { ascending: false }),
-      supabase.from("proposals").select("*, client:clients(company_name), opportunity:opportunities(title)").order("created_at", { ascending: false }).limit(200),
+      supabase.from("proposals").select("*").order("created_at", { ascending: false }).limit(200),
     ]);
+    const props = propRes.data || [];
+    const clientIds = Array.from(new Set(props.map((p: any) => p.client_id).filter(Boolean)));
+    const oppIds = Array.from(new Set(props.map((p: any) => p.opportunity_id).filter(Boolean)));
+    const [clientsRes, oppsRes] = await Promise.all([
+      clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] as any[] }),
+      oppIds.length ? supabase.from("opportunities").select("id, title").in("id", oppIds) : Promise.resolve({ data: [] as any[] }),
+    ]);
+    const cMap = new Map((clientsRes.data || []).map((c: any) => [c.id, c]));
+    const oMap = new Map((oppsRes.data || []).map((o: any) => [o.id, o]));
+    const enriched = props.map((p: any) => ({
+      ...p,
+      client: p.client_id ? cMap.get(p.client_id) || null : null,
+      opportunity: p.opportunity_id ? oMap.get(p.opportunity_id) || null : null,
+    }));
     setTemplates(tplRes.data || []);
-    setProposals(propRes.data || []);
+    setProposals(enriched);
     setLoading(false);
   };
 
