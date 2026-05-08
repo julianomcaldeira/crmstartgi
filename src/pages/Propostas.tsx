@@ -21,16 +21,20 @@ const PAGE_SIZE = 20;
 
 export default function Propostas() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState("templates");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // URL-driven state (initial values come from query params)
+  const [tab, setTab] = useState(() => searchParams.get("tab") || "templates");
+  const [proposalsPage, setProposalsPage] = useState(() => Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
+  const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
+
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
   const [proposalsTotal, setProposalsTotal] = useState(0);
-  const [proposalsPage, setProposalsPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
