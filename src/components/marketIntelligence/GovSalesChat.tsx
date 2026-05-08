@@ -246,6 +246,29 @@ export default function GovSalesChat({
         )}
       </div>
 
+      {searchContext && searchContext.searchTerms.length > 0 && (
+        <div className="px-4 py-2 border-b bg-primary/5 flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-semibold text-primary uppercase tracking-wide">
+            Contexto da pesquisa:
+          </span>
+          {searchContext.searchTerms.map((t) => (
+            <Badge key={t} variant="secondary" className="text-[10px]">
+              {t}
+            </Badge>
+          ))}
+          {searchContext.state && (
+            <Badge variant="outline" className="text-[10px]">
+              UF: {searchContext.state}
+            </Badge>
+          )}
+          {searchContext.topCompetitors && searchContext.topCompetitors.length > 0 && (
+            <span className="text-muted-foreground">
+              · {searchContext.topCompetitors.length} concorrentes mapeados
+            </span>
+          )}
+        </div>
+      )}
+
       <ScrollArea className="flex-1">
         <div ref={scrollRef} className="p-4 space-y-4">
           {messages.length === 0 && (
