@@ -207,17 +207,46 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
 
       if (clientError) throw clientError;
 
-      // Delete existing contacts and insert new ones
-      const { error: deleteContactsError } = await supabase
+      // Smart diff: update existing, insert new, delete only the ones explicitly removed.
+      // NEVER bulk-delete all contacts of the client — that risks data loss if state is stale.
+      const validContacts = contacts.filter(c => c.name && c.name.trim());
+
+      // Re-fetch the authoritative list of existing contacts from the DB to compute the diff
+      const { data: existingContactsDb, error: fetchExistingError } = await supabase
         .from("contacts")
-        .delete()
+        .select("id")
         .eq("client_id", client.id);
 
-      if (deleteContactsError) throw deleteContactsError;
+      if (fetchExistingError) throw fetchExistingError;
 
-      const validContacts = contacts.filter(c => c.name.trim());
-      if (validContacts.length > 0) {
-        const contactsData = validContacts.map(contact => ({
+      const existingIds = new Set((existingContactsDb || []).map((c: any) => c.id));
+      const keptIds = new Set(
+        validContacts.filter((c: any) => c.id && existingIds.has(c.id)).map((c: any) => c.id)
+      );
+      const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id as string));
+
+      // Update existing contacts
+      for (const contact of validContacts) {
+        if (contact.id && existingIds.has(contact.id)) {
+          const { error: updateError } = await supabase
+            .from("contacts")
+            .update({
+              name: contact.name,
+              role: contact.role,
+              email: contact.email,
+              phone: contact.phone ? autoAddMobileNine(contact.phone) : contact.phone,
+              mobile: contact.mobile ? autoAddMobileNine(contact.mobile) : contact.mobile,
+              is_primary: contact.is_primary,
+            })
+            .eq("id", contact.id);
+          if (updateError) throw updateError;
+        }
+      }
+
+      // Insert new contacts (those without an id)
+      const newContacts = validContacts.filter((c: any) => !c.id);
+      if (newContacts.length > 0) {
+        const contactsData = newContacts.map((contact: any) => ({
           name: contact.name,
           role: contact.role,
           email: contact.email,
@@ -233,6 +262,16 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           .insert(contactsData);
 
         if (contactsError) throw contactsError;
+      }
+
+      // Delete only contacts the user explicitly removed in the form
+      if (idsToDelete.length > 0) {
+        const { error: deleteContactsError } = await supabase
+          .from("contacts")
+          .delete()
+          .in("id", idsToDelete as string[]);
+
+        if (deleteContactsError) throw deleteContactsError;
       }
 
       // Update client-feira relationships - use smart diff approach
