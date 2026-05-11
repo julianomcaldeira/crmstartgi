@@ -207,27 +207,15 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
 
       if (clientError) throw clientError;
 
-      // Smart diff: update existing, insert new, delete only the ones explicitly removed.
-      // NEVER bulk-delete all contacts of the client — that risks data loss if state is stale.
+      // SAFETY: This dialog NEVER deletes contacts automatically.
+      // It only updates existing contacts and inserts new ones.
+      // Removing a contact from the form locally has NO effect on the database —
+      // exclusion must be done via a dedicated, confirmed action.
       const validContacts = contacts.filter(c => c.name && c.name.trim());
 
-      // Re-fetch the authoritative list of existing contacts from the DB to compute the diff
-      const { data: existingContactsDb, error: fetchExistingError } = await supabase
-        .from("contacts")
-        .select("id")
-        .eq("client_id", client.id);
-
-      if (fetchExistingError) throw fetchExistingError;
-
-      const existingIds = new Set((existingContactsDb || []).map((c: any) => c.id));
-      const keptIds = new Set(
-        validContacts.filter((c: any) => c.id && existingIds.has(c.id)).map((c: any) => c.id)
-      );
-      const idsToDelete = Array.from(existingIds).filter((id) => !keptIds.has(id as string));
-
-      // Update existing contacts
+      // Update existing contacts (those with an id)
       for (const contact of validContacts) {
-        if (contact.id && existingIds.has(contact.id)) {
+        if (contact.id) {
           const { error: updateError } = await supabase
             .from("contacts")
             .update({
@@ -262,16 +250,6 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
           .insert(contactsData);
 
         if (contactsError) throw contactsError;
-      }
-
-      // Delete only contacts the user explicitly removed in the form
-      if (idsToDelete.length > 0) {
-        const { error: deleteContactsError } = await supabase
-          .from("contacts")
-          .delete()
-          .in("id", idsToDelete as string[]);
-
-        if (deleteContactsError) throw deleteContactsError;
       }
 
       // Update client-feira relationships - use smart diff approach
