@@ -998,5 +998,72 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
         </form>
       </DialogContent>
     </Dialog>
+
+    <Dialog
+      open={!!deleteContactTarget}
+      onOpenChange={(o) => {
+        if (!o) {
+          setDeleteContactTarget(null);
+          setDeleteConfirmText("");
+        }
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Excluir contato permanentemente?
+          </DialogTitle>
+          <DialogDescription className="pt-2 space-y-2">
+            <span className="block">
+              Você está prestes a excluir o contato{" "}
+              <strong>{deleteContactTarget?.name}</strong> do banco de dados.
+            </span>
+            <span className="block text-destructive font-medium">
+              Esta ação NÃO pode ser desfeita.
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Label>
+            Para confirmar, digite <strong>EXCLUIR</strong> abaixo:
+          </Label>
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="EXCLUIR"
+            autoFocus
+          />
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setDeleteContactTarget(null);
+              setDeleteConfirmText("");
+            }}
+            disabled={deletingContact}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={confirmDeleteContact}
+            disabled={
+              deletingContact ||
+              deleteConfirmText.trim().toUpperCase() !== "EXCLUIR"
+            }
+          >
+            {deletingContact && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Excluir definitivamente
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
