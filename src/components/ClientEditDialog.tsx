@@ -10,10 +10,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Search, Copy, Check } from "lucide-react";
+import { Plus, Loader2, Search, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 interface ClientEditDialogProps {
   client: any;
@@ -75,6 +77,9 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [feiraSearchTerm, setFeiraSearchTerm] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [deleteContactTarget, setDeleteContactTarget] = useState<{ id: string; name: string; index: number } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingContact, setDeletingContact] = useState(false);
 
   const handleCopy = async (value: string, field: string) => {
     try {
@@ -165,6 +170,31 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const removeContact = (index: number) => {
     if (contacts.length > 1) {
       setContacts(contacts.filter((_, i) => i !== index));
+    }
+  };
+
+  const confirmDeleteContact = async () => {
+    if (!deleteContactTarget) return;
+    if (deleteConfirmText.trim().toUpperCase() !== "EXCLUIR") {
+      toast.error('Digite EXCLUIR para confirmar');
+      return;
+    }
+    setDeletingContact(true);
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", deleteContactTarget.id);
+      if (error) throw error;
+      setContacts(contacts.filter((_, i) => i !== deleteContactTarget.index));
+      toast.success(`Contato "${deleteContactTarget.name}" excluído`);
+      setDeleteContactTarget(null);
+      setDeleteConfirmText("");
+    } catch (err: any) {
+      console.error("Error deleting contact:", err);
+      toast.error("Erro ao excluir contato: " + (err?.message || ""));
+    } finally {
+      setDeletingContact(false);
     }
   };
 
@@ -301,6 +331,7 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -669,16 +700,37 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                         Contato {index + 1}
                         {contact.is_primary && <span className="text-primary ml-2">(Principal)</span>}
                       </CardTitle>
-                      {contacts.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeContact(index)}
-                        >
-                          Remover
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {!contact.id && contacts.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeContact(index)}
+                          >
+                            Remover
+                          </Button>
+                        )}
+                        {contact.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setDeleteContactTarget({
+                                id: contact.id,
+                                name: contact.name || `Contato ${index + 1}`,
+                                index,
+                              });
+                              setDeleteConfirmText("");
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Excluir contato
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -947,5 +999,72 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
         </form>
       </DialogContent>
     </Dialog>
+
+    <Dialog
+      open={!!deleteContactTarget}
+      onOpenChange={(o) => {
+        if (!o) {
+          setDeleteContactTarget(null);
+          setDeleteConfirmText("");
+        }
+      }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-5 w-5" />
+            Excluir contato permanentemente?
+          </DialogTitle>
+          <DialogDescription className="pt-2 space-y-2">
+            <span className="block">
+              Você está prestes a excluir o contato{" "}
+              <strong>{deleteContactTarget?.name}</strong> do banco de dados.
+            </span>
+            <span className="block text-destructive font-medium">
+              Esta ação NÃO pode ser desfeita.
+            </span>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-2">
+          <Label>
+            Para confirmar, digite <strong>EXCLUIR</strong> abaixo:
+          </Label>
+          <Input
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="EXCLUIR"
+            autoFocus
+          />
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setDeleteContactTarget(null);
+              setDeleteConfirmText("");
+            }}
+            disabled={deletingContact}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={confirmDeleteContact}
+            disabled={
+              deletingContact ||
+              deleteConfirmText.trim().toUpperCase() !== "EXCLUIR"
+            }
+          >
+            {deletingContact && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Excluir definitivamente
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
