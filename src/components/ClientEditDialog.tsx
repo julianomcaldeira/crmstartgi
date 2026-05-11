@@ -173,6 +173,31 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
     }
   };
 
+  const confirmDeleteContact = async () => {
+    if (!deleteContactTarget) return;
+    if (deleteConfirmText.trim().toUpperCase() !== "EXCLUIR") {
+      toast.error('Digite EXCLUIR para confirmar');
+      return;
+    }
+    setDeletingContact(true);
+    try {
+      const { error } = await supabase
+        .from("contacts")
+        .delete()
+        .eq("id", deleteContactTarget.id);
+      if (error) throw error;
+      setContacts(contacts.filter((_, i) => i !== deleteContactTarget.index));
+      toast.success(`Contato "${deleteContactTarget.name}" excluído`);
+      setDeleteContactTarget(null);
+      setDeleteConfirmText("");
+    } catch (err: any) {
+      console.error("Error deleting contact:", err);
+      toast.error("Erro ao excluir contato: " + (err?.message || ""));
+    } finally {
+      setDeletingContact(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
