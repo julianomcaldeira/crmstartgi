@@ -699,16 +699,37 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
                         Contato {index + 1}
                         {contact.is_primary && <span className="text-primary ml-2">(Principal)</span>}
                       </CardTitle>
-                      {contacts.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeContact(index)}
-                        >
-                          Remover
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {!contact.id && contacts.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeContact(index)}
+                          >
+                            Remover
+                          </Button>
+                        )}
+                        {contact.id && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setDeleteContactTarget({
+                                id: contact.id,
+                                name: contact.name || `Contato ${index + 1}`,
+                                index,
+                              });
+                              setDeleteConfirmText("");
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Excluir contato
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
