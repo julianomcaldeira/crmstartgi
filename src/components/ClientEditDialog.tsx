@@ -77,6 +77,9 @@ export const ClientEditDialog = ({ client, open, onOpenChange, onSuccess }: Clie
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [feiraSearchTerm, setFeiraSearchTerm] = useState("");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [deleteContactTarget, setDeleteContactTarget] = useState<{ id: string; name: string; index: number } | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingContact, setDeletingContact] = useState(false);
 
   const handleCopy = async (value: string, field: string) => {
     try {
