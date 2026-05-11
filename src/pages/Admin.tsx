@@ -406,7 +406,24 @@ const Admin = () => {
         fetchUsers();
       }
     } catch (error: any) {
-      toast.error("Erro ao criar usuário: " + error.message);
+      const raw = (error?.message || String(error) || "").toString();
+      const low = raw.toLowerCase();
+      let title = "Erro ao criar usuário";
+      let description = raw;
+      if (low.includes("rate limit") || low.includes("rate_limit") || low.includes("too many") || low.includes("429")) {
+        title = "Limite de criação de usuários atingido";
+        description = "O provedor de e-mail bloqueia muitos cadastros em sequência por segurança. Aguarde cerca de 1 hora e tente novamente, ou crie o usuário em outro horário. Se precisar criar vários usuários agora, entre em contato com o administrador para aumentar o limite.";
+      } else if (low.includes("already registered") || low.includes("already exists") || low.includes("user already")) {
+        title = "E-mail já cadastrado";
+        description = "Este e-mail já possui um usuário no sistema. Verifique a lista de usuários ou use outro e-mail.";
+      } else if (low.includes("invalid") && low.includes("email")) {
+        title = "E-mail inválido";
+        description = "Verifique se o endereço de e-mail está digitado corretamente.";
+      } else if (low.includes("password")) {
+        title = "Senha inválida";
+        description = "A senha deve ter pelo menos 6 caracteres. Use uma senha mais forte e tente novamente.";
+      }
+      toast.error(title, { description, duration: 9000 });
     } finally {
       setCreatingUser(false);
     }
