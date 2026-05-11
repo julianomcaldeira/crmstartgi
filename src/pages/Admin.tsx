@@ -373,57 +373,43 @@ const Admin = () => {
 
     setCreatingUser(true);
     try {
-      // Create user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUserEmail,
-        password: newUserPassword,
-        options: {
-          data: {
-            full_name: newUserName,
-          },
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: newUserEmail,
+          password: newUserPassword,
+          full_name: newUserName,
+          role: newUserRole,
         },
       });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
 
-      if (authError) throw authError;
-
-      if (authData.user) {
-        // Update role if not vendedor (default)
-        if (newUserRole !== "vendedor") {
-          const { error: roleError } = await supabase
-            .from("user_roles")
-            .update({ role: newUserRole as any })
-            .eq("user_id", authData.user.id);
-
-          if (roleError) throw roleError;
-        }
-
-        toast.success("Usuário criado com sucesso!");
-        setDialogOpen(false);
-        setNewUserEmail("");
-        setNewUserName("");
-        setNewUserPassword("");
-        setNewUserRole("vendedor");
-        fetchUsers();
-      }
+      toast.success("Usuário criado com sucesso!");
+      setDialogOpen(false);
+      setNewUserEmail("");
+      setNewUserName("");
+      setNewUserPassword("");
+      setNewUserRole("vendedor");
+      fetchUsers();
     } catch (error: any) {
-      const raw = (error?.message || String(error) || "").toString();
+      const raw = (error?.message || error?.context?.error || String(error) || "").toString();
       const low = raw.toLowerCase();
       let title = "Erro ao criar usuário";
       let description = raw;
-      if (low.includes("rate limit") || low.includes("rate_limit") || low.includes("too many") || low.includes("429")) {
-        title = "Limite de criação de usuários atingido";
-        description = "O provedor de e-mail bloqueia muitos cadastros em sequência por segurança. Aguarde cerca de 1 hora e tente novamente, ou crie o usuário em outro horário. Se precisar criar vários usuários agora, entre em contato com o administrador para aumentar o limite.";
-      } else if (low.includes("already registered") || low.includes("already exists") || low.includes("user already")) {
+      if (low.includes("already") || low.includes("duplicate") || low.includes("registered")) {
         title = "E-mail já cadastrado";
-        description = "Este e-mail já possui um usuário no sistema. Verifique a lista de usuários ou use outro e-mail.";
+        description = "Este e-mail já possui um usuário no sistema.";
       } else if (low.includes("invalid") && low.includes("email")) {
         title = "E-mail inválido";
         description = "Verifique se o endereço de e-mail está digitado corretamente.";
-      } else if (low.includes("password")) {
+      } else if (low.includes("senha") || low.includes("password")) {
         title = "Senha inválida";
-        description = "A senha deve ter pelo menos 6 caracteres. Use uma senha mais forte e tente novamente.";
+        description = "A senha deve ter pelo menos 6 caracteres.";
+      } else if (low.includes("admin")) {
+        title = "Acesso negado";
+        description = "Apenas administradores podem criar novos usuários.";
       }
-      toast.error(title, { description, duration: 9000 });
+      toast.error(title, { description, duration: 7000 });
     } finally {
       setCreatingUser(false);
     }
