@@ -10,10 +10,12 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Loader2, Search, Copy, Check } from "lucide-react";
+import { Plus, Loader2, Search, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 interface ClientEditDialogProps {
   client: any;
