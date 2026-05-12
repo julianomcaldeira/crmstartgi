@@ -2067,15 +2067,43 @@ const Prospects = () => {
                   </div>
                   <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                     {canEditClient(client) && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => handleEditClient(e, client)}
-                        className="h-8 w-8"
-                        title="Editar prospect"
-                      >
-                        <Edit size={16} />
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleEditClient(e, client)}
+                          className="h-8 w-8"
+                          title="Editar prospect"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleTransferClick(e, client)}
+                          className="h-8 w-8"
+                          title="Transferir prospect"
+                        >
+                          <UserCog size={16} />
+                        </Button>
+                      </>
+                    )}
+                    {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                      myPendingRequests.has(client.id) ? (
+                        <Badge variant="secondary" className="h-8 px-2 flex items-center gap-1 text-xs">
+                          <Handshake size={12} /> Pendente
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleRequestTransferClick(e, client)}
+                          className="h-8 w-8"
+                          title="Solicitar transferência"
+                        >
+                          <Handshake size={16} />
+                        </Button>
+                      )
                     )}
                     {userRoles.includes('admin') && (
                       <Button
