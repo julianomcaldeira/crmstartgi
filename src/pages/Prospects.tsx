@@ -2359,6 +2359,25 @@ const Prospects = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RequestTransferDialog
+        open={requestTransferOpen}
+        onOpenChange={setRequestTransferOpen}
+        client={prospectToRequest}
+        ownerName={prospectToRequest?.created_by_profile?.full_name || sellers.find(s => s.id === prospectToRequest?.created_by)?.full_name}
+        requesterId={currentUserId || ""}
+        onSuccess={fetchMyTransferRequests}
+      />
+
+      <TransferRequestsPanel
+        open={requestsPanelOpen}
+        onOpenChange={setRequestsPanelOpen}
+        currentUserId={currentUserId || ""}
+        onChanged={() => {
+          fetchMyTransferRequests();
+          fetchClients();
+        }}
+      />
     </div>
   );
 };
