@@ -834,7 +834,19 @@ const Prospects = () => {
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            className="gap-2 relative"
+            onClick={() => setRequestsPanelOpen(true)}
+          >
+            <Handshake size={18} />
+            Solicitações
+            {incomingPendingCount > 0 && (
+              <Badge className="ml-1 bg-amber-500 hover:bg-amber-500">{incomingPendingCount}</Badge>
+            )}
+          </Button>
+
           {userRoles.includes('admin') && selectedProspects.length > 0 && (
             <Button 
               variant="destructive" 
