@@ -161,6 +161,10 @@ const Prospects = () => {
     initialize();
   }, []);
 
+  useEffect(() => {
+    if (currentUserId) fetchMyTransferRequests();
+  }, [currentUserId]);
+
   // Aplicar filtro automático para vendedor
   useEffect(() => {
     if (currentUserId && userRoles.includes('vendedor') && !userRoles.includes('admin') && !userRoles.includes('gestor') && !initialFilterApplied) {
