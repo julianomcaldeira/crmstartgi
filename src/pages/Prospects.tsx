@@ -718,6 +718,34 @@ const Prospects = () => {
     setTransferDialogOpen(true);
   };
 
+  const handleRequestTransferClick = (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setProspectToRequest(client);
+    setRequestTransferOpen(true);
+  };
+
+  const fetchMyTransferRequests = async () => {
+    if (!currentUserId) return;
+    try {
+      const [outgoing, incoming] = await Promise.all([
+        supabase
+          .from("prospect_transfer_requests")
+          .select("client_id")
+          .eq("requester_id", currentUserId)
+          .eq("status", "pending"),
+        supabase
+          .from("prospect_transfer_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", currentUserId)
+          .eq("status", "pending"),
+      ]);
+      setMyPendingRequests(new Set((outgoing.data || []).map((r: any) => r.client_id)));
+      setIncomingPendingCount(incoming.count || 0);
+    } catch (e) {
+      console.error("Erro ao carregar solicitações de transferência:", e);
+    }
+  };
+
   const handleTransferProspect = async () => {
     if (!prospectToTransfer || !selectedNewSeller) {
       toast.error("Selecione um vendedor");
