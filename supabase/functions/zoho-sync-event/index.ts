@@ -44,6 +44,42 @@ Deno.serve(async (req) => {
 
     const attendees: string[] = (ev.attendees || []).filter((a: string) => a && a.includes("@"));
 
+    // Auto-incluir o e-mail do pré-vendas (dono do evento) se ainda não estiver presente
+    const { data: pvProfile } = await admin
+      .from("profiles")
+      .select("email, full_name")
+      .eq("id", ev.pre_vendas_user_id)
+      .maybeSingle();
+    if (pvProfile?.email && !attendees.includes(pvProfile.email)) {
+      attendees.push(pvProfile.email);
+    }
+
+    // Carrega dados do solicitante (vendedor) e da oportunidade/cliente (se houver)
+    const { data: requesterProfile } = await admin
+      .from("profiles")
+      .select("full_name, email, phone")
+      .eq("id", ev.created_by)
+      .maybeSingle();
+
+    let opportunityInfo: any = null;
+    let clientInfo: any = null;
+    if (ev.opportunity_id) {
+      const { data: opp } = await admin
+        .from("opportunities")
+        .select("id, title, value, monthly_value, client_id")
+        .eq("id", ev.opportunity_id)
+        .maybeSingle();
+      opportunityInfo = opp;
+      if (opp?.client_id) {
+        const { data: cli } = await admin
+          .from("clients")
+          .select("company_name, trade_name, cnpj")
+          .eq("id", opp.client_id)
+          .maybeSingle();
+        clientInfo = cli;
+      }
+    }
+
     // Monta evento Zoho Calendar
     const eventData: any = {
       title: ev.title,
