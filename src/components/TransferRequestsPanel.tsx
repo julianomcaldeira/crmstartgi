@@ -58,27 +58,41 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
     try {
       const { data, error } = await supabase
         .from("prospect_transfer_requests")
-        .select(`
-          *,
-          client:clients!prospect_transfer_requests_client_id_fkey(company_name, trade_name),
-          requester:profiles!prospect_transfer_requests_requester_id_fkey(full_name, email),
-          owner:profiles!prospect_transfer_requests_owner_id_fkey(full_name, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
       const all = (data || []) as any[];
-      setReceived(all.filter((r) => r.owner_id === currentUserId));
-      setSent(all.filter((r) => r.requester_id === currentUserId));
+
+      const clientIds = Array.from(new Set(all.map((r) => r.client_id)));
+      const userIds = Array.from(new Set([
+        ...all.map((r) => r.requester_id),
+        ...all.map((r) => r.owner_id),
+      ]));
+
+      const [{ data: clients }, { data: profiles }] = await Promise.all([
+        clientIds.length
+          ? supabase.from("clients").select("id, company_name, trade_name").in("id", clientIds)
+          : Promise.resolve({ data: [] as any[] }),
+        userIds.length
+          ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const clientMap = new Map((clients || []).map((c: any) => [c.id, c]));
+      const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+      const enriched = all.map((r) => ({
+        ...r,
+        client: clientMap.get(r.client_id),
+        requester: profileMap.get(r.requester_id),
+        owner: profileMap.get(r.owner_id),
+      }));
+
+      setReceived(enriched.filter((r) => r.owner_id === currentUserId));
+      setSent(enriched.filter((r) => r.requester_id === currentUserId));
     } catch (e: any) {
       console.error(e);
-      // fallback sem joins (caso FKs não estejam mapeadas no PostgREST)
-      const { data } = await supabase
-        .from("prospect_transfer_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-      const all = (data || []) as any[];
-      setReceived(all.filter((r) => r.owner_id === currentUserId));
-      setSent(all.filter((r) => r.requester_id === currentUserId));
+      toast.error("Erro ao carregar solicitações");
     } finally {
       setLoading(false);
     }
