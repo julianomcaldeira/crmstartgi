@@ -86,6 +86,12 @@ const Prospects = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
+  // Solicitação de transferência (vendedor não-dono)
+  const [requestTransferOpen, setRequestTransferOpen] = useState(false);
+  const [prospectToRequest, setProspectToRequest] = useState<any>(null);
+  const [requestsPanelOpen, setRequestsPanelOpen] = useState(false);
+  const [myPendingRequests, setMyPendingRequests] = useState<Set<string>>(new Set());
+  const [incomingPendingCount, setIncomingPendingCount] = useState(0);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [quickImportOpen, setQuickImportOpen] = useState(false);
   const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
