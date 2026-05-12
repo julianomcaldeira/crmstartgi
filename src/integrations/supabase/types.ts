@@ -2223,6 +2223,48 @@ export type Database = {
           },
         ]
       }
+      prospect_transfer_requests: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          owner_id: string
+          request_message: string | null
+          requester_id: string
+          responded_at: string | null
+          responded_by: string | null
+          response_message: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          owner_id: string
+          request_message?: string | null
+          requester_id: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          owner_id?: string
+          request_message?: string | null
+          requester_id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          response_message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       radar_leads: {
         Row: {
           assigned_to: string | null
