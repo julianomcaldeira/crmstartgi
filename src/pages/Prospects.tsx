@@ -1964,6 +1964,24 @@ const Prospects = () => {
                           </Button>
                         </>
                       )}
+
+                      {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                        myPendingRequests.has(client.id) ? (
+                          <Badge variant="secondary" className="h-10 px-3 flex items-center gap-1">
+                            <Handshake size={14} /> Pendente
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleRequestTransferClick(e, client)}
+                            className="h-10 w-10"
+                            title="Solicitar transferência"
+                          >
+                            <Handshake size={18} />
+                          </Button>
+                        )
+                      )}
                       
                       {userRoles.includes('admin') && (
                         <Button
