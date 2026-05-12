@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar, Handshake } from "lucide-react";
+import { RequestTransferDialog } from "@/components/RequestTransferDialog";
+import { TransferRequestsPanel } from "@/components/TransferRequestsPanel";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -84,6 +86,12 @@ const Prospects = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
+  // Solicitação de transferência (vendedor não-dono)
+  const [requestTransferOpen, setRequestTransferOpen] = useState(false);
+  const [prospectToRequest, setProspectToRequest] = useState<any>(null);
+  const [requestsPanelOpen, setRequestsPanelOpen] = useState(false);
+  const [myPendingRequests, setMyPendingRequests] = useState<Set<string>>(new Set());
+  const [incomingPendingCount, setIncomingPendingCount] = useState(0);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [quickImportOpen, setQuickImportOpen] = useState(false);
   const [selectedProspects, setSelectedProspects] = useState<string[]>([]);
@@ -152,6 +160,10 @@ const Prospects = () => {
     
     initialize();
   }, []);
+
+  useEffect(() => {
+    if (currentUserId) fetchMyTransferRequests();
+  }, [currentUserId]);
 
   // Aplicar filtro automático para vendedor
   useEffect(() => {
@@ -710,6 +722,34 @@ const Prospects = () => {
     setTransferDialogOpen(true);
   };
 
+  const handleRequestTransferClick = (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    setProspectToRequest(client);
+    setRequestTransferOpen(true);
+  };
+
+  const fetchMyTransferRequests = async () => {
+    if (!currentUserId) return;
+    try {
+      const [outgoing, incoming] = await Promise.all([
+        supabase
+          .from("prospect_transfer_requests")
+          .select("client_id")
+          .eq("requester_id", currentUserId)
+          .eq("status", "pending"),
+        supabase
+          .from("prospect_transfer_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("owner_id", currentUserId)
+          .eq("status", "pending"),
+      ]);
+      setMyPendingRequests(new Set((outgoing.data || []).map((r: any) => r.client_id)));
+      setIncomingPendingCount(incoming.count || 0);
+    } catch (e) {
+      console.error("Erro ao carregar solicitações de transferência:", e);
+    }
+  };
+
   const handleTransferProspect = async () => {
     if (!prospectToTransfer || !selectedNewSeller) {
       toast.error("Selecione um vendedor");
@@ -794,7 +834,19 @@ const Prospects = () => {
           </p>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="outline"
+            className="gap-2 relative"
+            onClick={() => setRequestsPanelOpen(true)}
+          >
+            <Handshake size={18} />
+            Solicitações
+            {incomingPendingCount > 0 && (
+              <Badge className="ml-1 bg-amber-500 hover:bg-amber-500">{incomingPendingCount}</Badge>
+            )}
+          </Button>
+
           {userRoles.includes('admin') && selectedProspects.length > 0 && (
             <Button 
               variant="destructive" 
@@ -1924,6 +1976,24 @@ const Prospects = () => {
                           </Button>
                         </>
                       )}
+
+                      {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                        myPendingRequests.has(client.id) ? (
+                          <Badge variant="secondary" className="h-10 px-3 flex items-center gap-1">
+                            <Handshake size={14} /> Pendente
+                          </Badge>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleRequestTransferClick(e, client)}
+                            className="h-10 w-10"
+                            title="Solicitar transferência"
+                          >
+                            <Handshake size={18} />
+                          </Button>
+                        )
+                      )}
                       
                       {userRoles.includes('admin') && (
                         <Button
@@ -2009,15 +2079,43 @@ const Prospects = () => {
                   </div>
                   <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                     {canEditClient(client) && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={(e) => handleEditClient(e, client)}
-                        className="h-8 w-8"
-                        title="Editar prospect"
-                      >
-                        <Edit size={16} />
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleEditClient(e, client)}
+                          className="h-8 w-8"
+                          title="Editar prospect"
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleTransferClick(e, client)}
+                          className="h-8 w-8"
+                          title="Transferir prospect"
+                        >
+                          <UserCog size={16} />
+                        </Button>
+                      </>
+                    )}
+                    {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                      myPendingRequests.has(client.id) ? (
+                        <Badge variant="secondary" className="h-8 px-2 flex items-center gap-1 text-xs">
+                          <Handshake size={12} /> Pendente
+                        </Badge>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={(e) => handleRequestTransferClick(e, client)}
+                          className="h-8 w-8"
+                          title="Solicitar transferência"
+                        >
+                          <Handshake size={16} />
+                        </Button>
+                      )
                     )}
                     {userRoles.includes('admin') && (
                       <Button
@@ -2261,6 +2359,25 @@ const Prospects = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RequestTransferDialog
+        open={requestTransferOpen}
+        onOpenChange={setRequestTransferOpen}
+        client={prospectToRequest}
+        ownerName={prospectToRequest?.created_by_profile?.full_name || sellers.find(s => s.id === prospectToRequest?.created_by)?.full_name}
+        requesterId={currentUserId || ""}
+        onSuccess={fetchMyTransferRequests}
+      />
+
+      <TransferRequestsPanel
+        open={requestsPanelOpen}
+        onOpenChange={setRequestsPanelOpen}
+        currentUserId={currentUserId || ""}
+        onChanged={() => {
+          fetchMyTransferRequests();
+          fetchClients();
+        }}
+      />
     </div>
   );
 };
