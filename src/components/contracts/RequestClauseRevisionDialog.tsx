@@ -85,6 +85,10 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
         toast.warning("Revisão criada, mas a IA não conseguiu extrair as mudanças. Reabra para revisar manualmente.");
       } else {
         toast.success("Revisão criada e cláusulas extraídas");
+        // Notifica admin/pré-vendas + vendedor por e-mail
+        supabase.functions.invoke("notify-contract-revision", {
+          body: { revision_id: rev.id, event: "submitted" },
+        }).catch(() => {});
       }
 
       reset();
