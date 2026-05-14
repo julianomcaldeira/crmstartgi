@@ -65,9 +65,10 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
   Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
-  Minus, Droplet
+  Minus, Droplet, Code2
 } from "lucide-react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { AVAILABLE_VARIABLES } from "@/lib/proposalTypes";
 import { uploadProposalImage } from "@/lib/proposalUpload";
 import { toast } from "sonner";
@@ -116,6 +117,8 @@ interface Props {
 
 export function RichTextEditor({ value, onChange, placeholder = "Comece a escrever sua proposta...", minHeight = 400 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [htmlMode, setHtmlMode] = useState(false);
+  const [htmlDraft, setHtmlDraft] = useState(value || "");
 
   const editor = useEditor({
     extensions: [
@@ -353,7 +356,25 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
           </PopoverContent>
         </Popover>
 
-        <span className="ml-auto flex gap-0.5">
+        <span className="ml-auto flex gap-0.5 items-center">
+          <Button
+            type="button"
+            size="sm"
+            variant={htmlMode ? "default" : "ghost"}
+            className="h-8 gap-1 text-xs"
+            title="Editar código HTML"
+            onClick={() => {
+              if (!htmlMode) {
+                setHtmlDraft(editor.getHTML());
+                setHtmlMode(true);
+              } else {
+                editor.commands.setContent(htmlDraft || "", { emitUpdate: true });
+                setHtmlMode(false);
+              }
+            }}
+          >
+            <Code2 className="h-4 w-4" /> {htmlMode ? "Aplicar" : "HTML"}
+          </Button>
           <Btn onClick={() => editor.chain().focus().undo().run()} title="Desfazer"><Undo className="h-4 w-4" /></Btn>
           <Btn onClick={() => editor.chain().focus().redo().run()} title="Refazer"><Redo className="h-4 w-4" /></Btn>
         </span>
@@ -363,7 +384,22 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
           .rte-content img { max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; border-radius: 6px; }
           .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
         `}</style>
-        <div className="rte-content"><EditorContent editor={editor} /></div>
+        {htmlMode ? (
+          <div className="p-3 h-full">
+            <Textarea
+              value={htmlDraft}
+              onChange={(e) => setHtmlDraft(e.target.value)}
+              className="font-mono text-xs h-full min-h-[400px] w-full"
+              placeholder="<h1>Título</h1><p>Cole ou edite seu HTML aqui...</p>"
+              spellCheck={false}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Edite o HTML diretamente. Clique em "Aplicar" para voltar ao editor visual.
+            </p>
+          </div>
+        ) : (
+          <div className="rte-content"><EditorContent editor={editor} /></div>
+        )}
       </div>
     </div>
   );
