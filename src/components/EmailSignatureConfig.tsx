@@ -68,20 +68,25 @@ export default function EmailSignatureConfig() {
     setImporting(true);
     try {
       let nextHtml = currentHtml;
+      let importedCount = 0;
       for (const url of urls) {
         const { data, error } = await supabase.functions.invoke<SignatureImportResult>("import-signature-image", {
           body: { url },
         });
         if (error) throw error;
         if (data?.fallback) {
-          throw new Error(data.error || "O provedor externo bloqueou o download automático da imagem.");
+          if (showToast) {
+            toast.warning(data.error || "O provedor externo bloqueou o download automático; mantivemos o link original.");
+          }
+          continue;
         }
         if (!data?.publicUrl) throw new Error("A imagem externa não pôde ser importada.");
         nextHtml = nextHtml.split(url).join(data.publicUrl);
+        importedCount += 1;
       }
       setHtml(nextHtml);
-      if (showToast) {
-        toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      if (showToast && importedCount > 0) {
+        toast.success(importedCount === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
       }
       return nextHtml;
     } catch (err: unknown) {
