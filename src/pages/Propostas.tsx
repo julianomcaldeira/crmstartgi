@@ -287,29 +287,56 @@ export default function Propostas() {
           </div>
         </TabsContent>
 
-        <TabsContent value="proposals" className="space-y-2 mt-4">
-          {/* Filtros por status */}
-          <div className="flex flex-wrap gap-1.5 items-center pb-1">
-            <span className="text-xs text-muted-foreground mr-1">Status:</span>
-            {[
-              { v: "all", label: "Todas" },
-              { v: "draft", label: "Rascunho" },
-              { v: "sent", label: "Enviada" },
-              { v: "viewed", label: "Visualizada" },
-              { v: "accepted", label: "Aprovada" },
-              { v: "rejected", label: "Recusada" },
-            ].map((f) => (
-              <Button
-                key={f.v}
-                size="sm"
-                variant={statusFilter === f.v ? "default" : "outline"}
-                className="h-7 text-xs"
-                onClick={() => setStatusFilter(f.v)}
-              >
-                {f.label}
-              </Button>
-            ))}
+        <TabsContent value="proposals" className="space-y-3 mt-4">
+          {/* Filtros */}
+          <div className="flex flex-wrap gap-2 items-center pb-1">
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs text-muted-foreground mr-1">Status:</span>
+              {[
+                { v: "all", label: "Todas" },
+                { v: "draft", label: "Rascunho" },
+                { v: "sent", label: "Enviada" },
+                { v: "viewed", label: "Visualizada" },
+                { v: "accepted", label: "Aprovada" },
+                { v: "rejected", label: "Recusada" },
+              ].map((f) => (
+                <Button
+                  key={f.v}
+                  size="sm"
+                  variant={statusFilter === f.v ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setStatusFilter(f.v)}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <span className="text-xs text-muted-foreground">Vendedor:</span>
+              <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                <SelectTrigger className="h-8 w-[220px] text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
+                  {sellers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* KPIs agregados */}
+          {aggregates && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              <AggCard icon={<FileText className="h-4 w-4" />} label="Propostas" value={String(aggregates.total)} />
+              <AggCard icon={<Activity className="h-4 w-4" />} label="Enviadas" value={String(aggregates.sent)} />
+              <AggCard icon={<Eye className="h-4 w-4" />} label="Visualizadas" value={String(aggregates.viewed)} />
+              <AggCard icon={<Flame className="h-4 w-4" />} label="Aprovadas" value={String(aggregates.accepted)} />
+              <AggCard icon={<Snowflake className="h-4 w-4" />} label="Recusadas" value={String(aggregates.rejected)} />
+              <AggCard icon={<Users className="h-4 w-4" />} label="Visitantes únicos" value={String(aggregates.uniqueVisitors)} />
+              <AggCard icon={<DollarSign className="h-4 w-4" />} label="Valor total" value={aggregates.totalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} sub={`Score médio ${aggregates.avgScore}`} />
+            </div>
+          )}
 
           {/* Skeleton de carregamento */}
           {proposalsLoading && (
