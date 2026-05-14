@@ -12,6 +12,7 @@ import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
 import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench } from "lucide-react";
 import html2pdf from "html2pdf.js";
+import { proposalPublicUrl } from "@/lib/publicUrls";
 
 interface Props {
   open: boolean;
@@ -154,7 +155,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const copyShareLink = async () => {
     let prop = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("draft");
     if (!prop) return;
-    const url = `${window.location.origin}/p/${prop.share_token || shareToken}`;
+    const url = proposalPublicUrl(prop.share_token || shareToken);
     await navigator.clipboard.writeText(url);
     toast.success("Link copiado!");
   };
@@ -179,7 +180,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
       const { data: pub } = supabase.storage.from("proposals").getPublicUrl(path);
       await supabase.from("proposals").update({ pdf_url: pub.publicUrl, status: "sent", sent_at: new Date().toISOString() }).eq("id", prop.id);
 
-      const shareUrl = `${window.location.origin}/p/${prop.share_token || shareToken}`;
+      const shareUrl = proposalPublicUrl(prop.share_token || shareToken);
       const html = `
         <p>Olá ${client.company_name || ""},</p>
         <p>Segue a proposta comercial conforme conversamos.</p>

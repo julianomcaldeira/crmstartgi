@@ -13,6 +13,7 @@ import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, 
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
+import { proposalPublicUrl } from "@/lib/publicUrls";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -322,7 +323,7 @@ export default function Propostas() {
                 </Badge>
               )}
               <Button size="sm" variant="outline" onClick={() => navigate(`/propostas/${p.id}/insights`)}><BarChart3 className="h-3 w-3 mr-1" /> Insights</Button>
-              <Button size="sm" variant="outline" onClick={() => window.open(`/p/${p.share_token}`, "_blank")}>Abrir link</Button>
+              <Button size="sm" variant="outline" onClick={() => window.open(proposalPublicUrl(p.share_token), "_blank")}>Abrir link</Button>
               <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteProposal(p.id)}><Trash2 className="h-3 w-3" /></Button>
             </Card>
           );})}

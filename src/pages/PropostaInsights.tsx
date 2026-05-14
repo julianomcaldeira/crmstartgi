@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { proposalPublicUrl } from "@/lib/publicUrls";
 
 function classify(score: number): { label: string; color: string; Icon: any } {
   if (score >= 60) return { label: "Quente", color: "bg-red-500 text-white", Icon: Flame };
@@ -115,8 +116,7 @@ export default function PropostaInsights() {
     toast.success("Removido");
     if (proposal?.id) loadRecipients(proposal.id);
   };
-  const recipientLink = (r: any) =>
-    `${window.location.origin}/p/${proposal?.share_token}?r=${r.id}`;
+  const recipientLink = (r: any) => proposalPublicUrl(proposal?.share_token, r.id);
   const copyRecipientLink = async (r: any) => {
     await navigator.clipboard.writeText(recipientLink(r));
     toast.success(`Link de ${r.name} copiado`);
@@ -141,7 +141,6 @@ export default function PropostaInsights() {
       const { data, error } = await supabase.functions.invoke("send-proposal-invite", {
         body: {
           recipientId: inviteRecipient.id,
-          appOrigin: window.location.origin,
           customMessage: inviteMessage.trim() || undefined,
         },
       });
@@ -298,8 +297,7 @@ export default function PropostaInsights() {
 
   const copyLink = async () => {
     if (!proposal?.share_token) return;
-    const url = `${window.location.origin}/p/${proposal.share_token}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(proposalPublicUrl(proposal.share_token));
     toast.success("Link copiado");
   };
 
@@ -323,7 +321,7 @@ export default function PropostaInsights() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={copyLink}><Copy className="h-3 w-3 mr-1" /> Copiar link</Button>
-          <Button variant="outline" size="sm" onClick={() => window.open(`/p/${proposal.share_token}`, "_blank")}><ExternalLink className="h-3 w-3 mr-1" /> Abrir</Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(proposalPublicUrl(proposal.share_token), "_blank")}><ExternalLink className="h-3 w-3 mr-1" /> Abrir</Button>
           <Button variant="default" size="sm" onClick={() => setSaveOpen(true)}><Save className="h-3 w-3 mr-1" /> Salvar nova versão</Button>
         </div>
       </div>

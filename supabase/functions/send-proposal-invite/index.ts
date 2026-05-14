@@ -26,18 +26,16 @@ serve(async (req) => {
     if (authErr || !user) return json({ error: "Não autorizado" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const { recipientId, appOrigin, customMessage } = body as {
+    const { recipientId, customMessage } = body as {
       recipientId?: string;
-      appOrigin?: string;
       customMessage?: string;
     };
 
     if (!recipientId || typeof recipientId !== "string") {
       return json({ error: "recipientId é obrigatório" }, 400);
     }
-    const origin = (appOrigin && /^https?:\/\//.test(appOrigin))
-      ? appOrigin.replace(/\/$/, "")
-      : "https://evoluacrm.com.br";
+    // Always use the production custom domain for client-facing links.
+    const origin = "https://evoluacrm.com.br";
 
     const admin = createClient(SUPABASE_URL, SERVICE);
 
