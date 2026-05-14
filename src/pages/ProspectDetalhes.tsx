@@ -500,6 +500,7 @@ const ClienteDetalhes = () => {
       email: contact.email || "",
       phone: contact.phone || "",
       mobile: contact.mobile || "",
+      linkedin: contact.linkedin || "",
       rating: contact.rating || 3,
       is_primary: contact.is_primary || false,
     });
