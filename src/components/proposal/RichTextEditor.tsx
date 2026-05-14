@@ -166,6 +166,10 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
+  const [htmlView, setHtmlView] = useState<"split" | "code" | "preview">("split");
+  const [htmlWrap, setHtmlWrap] = useState(true);
+  const [htmlCopied, setHtmlCopied] = useState(false);
+  const lineCount = (htmlDraft.match(/\n/g)?.length ?? 0) + 1;
 
   const insertHtmlVariable = (key: string) => {
     const ta = htmlTextareaRef.current;
