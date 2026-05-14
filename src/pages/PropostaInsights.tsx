@@ -204,9 +204,10 @@ export default function PropostaInsights() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={copyLink}><Copy className="h-3 w-3 mr-1" /> Copiar link</Button>
           <Button variant="outline" size="sm" onClick={() => window.open(`/p/${proposal.share_token}`, "_blank")}><ExternalLink className="h-3 w-3 mr-1" /> Abrir</Button>
+          <Button variant="default" size="sm" onClick={() => setSaveOpen(true)}><Save className="h-3 w-3 mr-1" /> Salvar nova versão</Button>
         </div>
       </div>
 
