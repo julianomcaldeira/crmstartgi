@@ -65,7 +65,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
   Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
-  Minus, Droplet, Code2
+  Minus, Droplet, Code2, Wand2, Eraser, Copy, Check, Eye
 } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,6 +108,52 @@ const FONT_FAMILIES = [
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px"];
 const COLORS = ["#000000", "#374151", "#6b7280", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#ffffff"];
 
+// Pretty-print HTML (block tags on their own lines, indented)
+const VOID_TAGS = new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);
+const INLINE_TAGS = new Set(["a","span","strong","em","b","i","u","s","small","sub","sup","mark","code","abbr","cite","time","br","img"]);
+function formatHtml(input: string): string {
+  if (!input) return "";
+  // Normalize whitespace between tags
+  let html = input.replace(/>\s+</g, "><").trim();
+  const tokens = html.split(/(<[^>]+>)/g).filter(t => t !== "");
+  let out = "";
+  let depth = 0;
+  const indent = (n: number) => "  ".repeat(Math.max(0, n));
+  for (const tok of tokens) {
+    if (!tok.startsWith("<")) {
+      // text node
+      const txt = tok.trim();
+      if (txt) out += indent(depth) + txt + "\n";
+      continue;
+    }
+    const isComment = tok.startsWith("<!");
+    const isClose = /^<\//.test(tok);
+    const tagMatch = tok.match(/^<\/?\s*([a-zA-Z0-9-]+)/);
+    const name = tagMatch ? tagMatch[1].toLowerCase() : "";
+    const selfClose = /\/>$/.test(tok) || VOID_TAGS.has(name);
+    const isInline = INLINE_TAGS.has(name);
+    if (isComment) { out += indent(depth) + tok + "\n"; continue; }
+    if (isClose) {
+      depth = Math.max(0, depth - 1);
+      out += indent(depth) + tok + "\n";
+    } else if (selfClose || isInline) {
+      out += indent(depth) + tok + "\n";
+    } else {
+      out += indent(depth) + tok + "\n";
+      depth += 1;
+    }
+  }
+  return out.trimEnd();
+}
+function minifyHtml(input: string): string {
+  return (input || "").replace(/>\s+</g, "><").replace(/\n+/g, "").trim();
+}
+function cleanEmptyParagraphs(input: string): string {
+  return (input || "")
+    .replace(/<p[^>]*>\s*(?:&nbsp;|\u00a0|\s)*<\/p>/gi, "")
+    .replace(/<span[^>]*>\s*(?:&nbsp;|\u00a0|\s)*<\/span>/gi, "");
+}
+
 interface Props {
   value: string;
   onChange: (html: string) => void;
@@ -120,6 +166,10 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
+  const [htmlView, setHtmlView] = useState<"split" | "code" | "preview">("split");
+  const [htmlWrap, setHtmlWrap] = useState(true);
+  const [htmlCopied, setHtmlCopied] = useState(false);
+  const lineCount = (htmlDraft.match(/\n/g)?.length ?? 0) + 1;
 
   const insertHtmlVariable = (key: string) => {
     const ta = htmlTextareaRef.current;
@@ -383,10 +433,10 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
             title="Editar código HTML"
             onClick={() => {
               if (!htmlMode) {
-                setHtmlDraft(editor.getHTML());
+                setHtmlDraft(formatHtml(editor.getHTML()));
                 setHtmlMode(true);
               } else {
-                editor.commands.setContent(htmlDraft || "", { emitUpdate: true });
+                editor.commands.setContent(minifyHtml(htmlDraft || ""), { emitUpdate: true });
                 setHtmlMode(false);
               }
             }}
@@ -403,9 +453,86 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
           .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
         `}</style>
         {htmlMode ? (
-          <div className="p-3 h-full flex flex-col gap-2 min-h-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] text-muted-foreground">Editor HTML com pré-visualização ao lado.</span>
+          <div className="p-3 h-full flex flex-col gap-2 min-h-0 bg-muted/30">
+            {/* Action bar */}
+            <div className="flex items-center gap-1 flex-wrap rounded-md border bg-background px-2 py-1.5">
+              <div className="inline-flex rounded-md border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setHtmlView("code")}
+                  className={`px-2.5 py-1 text-xs inline-flex items-center gap-1 ${htmlView === "code" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  title="Apenas código"
+                >
+                  <Code2 className="h-3.5 w-3.5" /> Código
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHtmlView("split")}
+                  className={`px-2.5 py-1 text-xs inline-flex items-center gap-1 border-l ${htmlView === "split" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  title="Lado a lado"
+                >
+                  <span className="font-mono text-[10px]">⫶⫶</span> Dividido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setHtmlView("preview")}
+                  className={`px-2.5 py-1 text-xs inline-flex items-center gap-1 border-l ${htmlView === "preview" ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+                  title="Apenas pré-visualização"
+                >
+                  <Eye className="h-3.5 w-3.5" /> Preview
+                </button>
+              </div>
+
+              <span className="w-px h-5 bg-border mx-1" />
+
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-xs"
+                onClick={() => setHtmlDraft(formatHtml(htmlDraft))}
+                title="Formatar / indentar HTML"
+              >
+                <Wand2 className="h-3.5 w-3.5" /> Formatar
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-xs"
+                onClick={() => setHtmlDraft(formatHtml(cleanEmptyParagraphs(htmlDraft)))}
+                title="Remover parágrafos e spans vazios"
+              >
+                <Eraser className="h-3.5 w-3.5" /> Limpar vazios
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-xs"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(htmlDraft);
+                    setHtmlCopied(true);
+                    toast.success("HTML copiado");
+                    setTimeout(() => setHtmlCopied(false), 1500);
+                  } catch { toast.error("Não foi possível copiar"); }
+                }}
+                title="Copiar HTML"
+              >
+                {htmlCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Copiar
+              </Button>
+
+              <label className="ml-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 accent-primary"
+                  checked={htmlWrap}
+                  onChange={(e) => setHtmlWrap(e.target.checked)}
+                />
+                Quebra de linha
+              </label>
+
               <Popover>
                 <PopoverTrigger asChild>
                   <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-xs ml-auto">
@@ -427,24 +554,60 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1 min-h-0">
-              <Textarea
-                ref={htmlTextareaRef}
-                value={htmlDraft}
-                onChange={(e) => setHtmlDraft(e.target.value)}
-                className="font-mono text-xs h-full min-h-[400px] w-full resize-none"
-                placeholder="<h1>Título</h1><p>Cole ou edite seu HTML aqui...</p>"
-                spellCheck={false}
-              />
-              <div className="border rounded-md bg-white overflow-auto min-h-[400px]">
-                <div
-                  className="rte-content prose prose-sm max-w-none p-4"
-                  dangerouslySetInnerHTML={{ __html: htmlDraft }}
-                />
-              </div>
+
+            {/* Editor + preview area */}
+            <div
+              className={`grid gap-2 flex-1 min-h-0 ${
+                htmlView === "split" ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
+              }`}
+            >
+              {(htmlView === "split" || htmlView === "code") && (
+                <div className="flex flex-col rounded-md border overflow-hidden bg-[hsl(220,15%,12%)] min-h-[400px]">
+                  <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 text-[11px] text-white/60 bg-white/5">
+                    <span className="inline-flex items-center gap-1.5"><Code2 className="h-3 w-3" /> HTML</span>
+                    <span>{lineCount} linha{lineCount === 1 ? "" : "s"} · {htmlDraft.length} caracteres</span>
+                  </div>
+                  <div className="flex-1 flex overflow-hidden">
+                    {/* Line numbers */}
+                    <div
+                      aria-hidden
+                      className="select-none text-right text-[11px] leading-5 font-mono text-white/30 py-3 px-2 bg-white/[0.03] border-r border-white/10 overflow-hidden"
+                      style={{ minWidth: 40 }}
+                    >
+                      {Array.from({ length: lineCount }).map((_, i) => (
+                        <div key={i}>{i + 1}</div>
+                      ))}
+                    </div>
+                    <textarea
+                      ref={htmlTextareaRef}
+                      value={htmlDraft}
+                      onChange={(e) => setHtmlDraft(e.target.value)}
+                      spellCheck={false}
+                      wrap={htmlWrap ? "soft" : "off"}
+                      className="flex-1 resize-none bg-transparent text-white/90 font-mono text-[12px] leading-5 py-3 px-3 focus:outline-none placeholder:text-white/30 caret-primary"
+                      placeholder="<h1>Título</h1>&#10;<p>Cole ou edite seu HTML aqui...</p>"
+                    />
+                  </div>
+                </div>
+              )}
+              {(htmlView === "split" || htmlView === "preview") && (
+                <div className="flex flex-col rounded-md border bg-white overflow-hidden min-h-[400px]">
+                  <div className="flex items-center justify-between px-3 py-1.5 border-b text-[11px] text-muted-foreground bg-muted/40">
+                    <span className="inline-flex items-center gap-1.5"><Eye className="h-3 w-3" /> Pré-visualização</span>
+                    <span>Atualiza ao digitar</span>
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    <div
+                      className="rte-content prose prose-sm max-w-none p-4"
+                      dangerouslySetInnerHTML={{ __html: htmlDraft }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+
             <p className="text-[11px] text-muted-foreground">
-              Variáveis como <span className="font-mono">{`{{cliente.nome}}`}</span> aparecem como texto na pré-visualização e são substituídas ao gerar a proposta. Clique em "Aplicar" para voltar ao editor visual.
+              Variáveis como <span className="font-mono text-foreground">{`{{cliente.nome}}`}</span> aparecem como texto na pré-visualização e são substituídas ao gerar a proposta. Clique em <strong>Aplicar</strong> para voltar ao editor visual.
             </p>
           </div>
         ) : (
