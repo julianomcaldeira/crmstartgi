@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { proposalPublicUrl } from "@/lib/publicUrls";
 
 function classify(score: number): { label: string; color: string; Icon: any } {
   if (score >= 60) return { label: "Quente", color: "bg-red-500 text-white", Icon: Flame };
