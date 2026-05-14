@@ -49,6 +49,8 @@ export default function ContratoDetalhes() {
   const [editing, setEditing] = useState(false);
   const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"side" | "stacked" | "hidden">("side");
+  const [splitPct, setSplitPct] = useState<number>(50);
 
   useEffect(() => { if (id) load(); }, [id]);
 
