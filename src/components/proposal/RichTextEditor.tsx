@@ -654,7 +654,14 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                 <div className="flex flex-col rounded-md border overflow-hidden bg-[hsl(220,15%,12%)] min-h-[400px]">
                   <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 text-[11px] text-white/60 bg-white/5">
                     <span className="inline-flex items-center gap-1.5"><Code2 className="h-3 w-3" /> HTML</span>
-                    <span>{lineCount} linha{lineCount === 1 ? "" : "s"} · {htmlDraft.length} caracteres</span>
+                    <span>
+                      {lineCount} linha{lineCount === 1 ? "" : "s"} · {htmlDraft.length} caracteres
+                      {varCount > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[#22c55e]">
+                          <Variable className="h-3 w-3" /> {varCount} variável{varCount === 1 ? "" : "is"}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex-1 flex overflow-hidden">
                     {/* Line numbers */}
@@ -667,15 +674,31 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                         <div key={i}>{i + 1}</div>
                       ))}
                     </div>
-                    <textarea
-                      ref={htmlTextareaRef}
-                      value={htmlDraft}
-                      onChange={(e) => setHtmlDraft(e.target.value)}
-                      spellCheck={false}
-                      wrap={htmlWrap ? "soft" : "off"}
-                      className="flex-1 resize-none bg-transparent text-white/90 font-mono text-[12px] leading-5 py-3 px-3 focus:outline-none placeholder:text-white/30 caret-primary"
-                      placeholder="<h1>Título</h1>&#10;<p>Cole ou edite seu HTML aqui...</p>"
-                    />
+                    {/* Highlighted overlay + transparent textarea */}
+                    <div className="relative flex-1 overflow-auto">
+                      <div
+                        ref={htmlOverlayRef}
+                        aria-hidden
+                        className={`rte-code-overlay absolute inset-0 pointer-events-none font-mono text-[12px] leading-5 py-3 px-3 ${htmlWrap ? "" : "no-wrap"}`}
+                        dangerouslySetInnerHTML={{ __html: highlightCode(htmlDraft) }}
+                      />
+                      <textarea
+                        ref={htmlTextareaRef}
+                        value={htmlDraft}
+                        onChange={(e) => setHtmlDraft(e.target.value)}
+                        onScroll={(e) => {
+                          const ov = htmlOverlayRef.current;
+                          if (ov) {
+                            ov.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
+                            ov.scrollLeft = (e.target as HTMLTextAreaElement).scrollLeft;
+                          }
+                        }}
+                        spellCheck={false}
+                        wrap={htmlWrap ? "soft" : "off"}
+                        className="relative w-full h-full min-h-[400px] resize-none bg-transparent text-transparent font-mono text-[12px] leading-5 py-3 px-3 focus:outline-none placeholder:text-white/30 caret-[#22c55e] selection:bg-white/20"
+                        placeholder="<h1>Título</h1>&#10;<p>Cole ou edite seu HTML aqui...</p>"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
