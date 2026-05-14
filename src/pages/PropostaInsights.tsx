@@ -509,7 +509,7 @@ export default function PropostaInsights() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveOpen(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={saveNewVersion} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Salvar versão</Button>
+            <Button onClick={saveNewVersion} disabled={saving || snapshotReason.trim().length < 3}>{saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Salvar versão</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
