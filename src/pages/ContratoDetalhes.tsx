@@ -94,13 +94,15 @@ export default function ContratoDetalhes() {
 
   const startEdit = () => {
     setEditBlocks((contract?.blocks || []) as ProposalBlock[]);
+    setEditPage({ ...DEFAULT_PAGE_SETTINGS, ...((contract?.variables as any)?._page || {}) });
     setEditing(true);
   };
   const cancelEdit = () => { setEditing(false); setEditBlocks([]); };
   const saveEdit = async () => {
     if (!contract) return;
     setSavingEdit(true);
-    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any }).eq("id", contract.id);
+    const newVars = { ...(contract.variables || {}), _page: editPage };
+    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any, variables: newVars as any }).eq("id", contract.id);
     setSavingEdit(false);
     if (error) return toast.error(error.message);
     toast.success("Conteúdo atualizado");
