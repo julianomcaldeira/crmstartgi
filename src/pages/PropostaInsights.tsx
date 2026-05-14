@@ -57,6 +57,69 @@ export default function PropostaInsights() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [snapshotReason, setSnapshotReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const [recipients, setRecipients] = useState<any[]>([]);
+  const [recipientOpen, setRecipientOpen] = useState(false);
+  const [editingRecipient, setEditingRecipient] = useState<any | null>(null);
+  const [rName, setRName] = useState("");
+  const [rEmail, setREmail] = useState("");
+  const [rRole, setRRole] = useState("");
+  const [rNotes, setRNotes] = useState("");
+
+  const loadRecipients = async (pid: string) => {
+    const { data } = await supabase
+      .from("proposal_recipients")
+      .select("*")
+      .eq("proposal_id", pid)
+      .order("created_at", { ascending: true });
+    setRecipients(data || []);
+  };
+
+  const openNewRecipient = () => {
+    setEditingRecipient(null);
+    setRName(""); setREmail(""); setRRole(""); setRNotes("");
+    setRecipientOpen(true);
+  };
+  const openEditRecipient = (r: any) => {
+    setEditingRecipient(r);
+    setRName(r.name || ""); setREmail(r.email || ""); setRRole(r.role || ""); setRNotes(r.notes || "");
+    setRecipientOpen(true);
+  };
+  const saveRecipient = async () => {
+    if (!proposal) return;
+    if (!rName.trim()) { toast.error("Informe um nome"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      if (editingRecipient) {
+        const r = await supabase.from("proposal_recipients").update({
+          name: rName, email: rEmail || null, role: rRole || null, notes: rNotes || null,
+        }).eq("id", editingRecipient.id);
+        if (r.error) throw r.error;
+      } else {
+        const r = await supabase.from("proposal_recipients").insert({
+          proposal_id: proposal.id, name: rName, email: rEmail || null,
+          role: rRole || null, notes: rNotes || null, created_by: user.id,
+        });
+        if (r.error) throw r.error;
+      }
+      toast.success("Destinatário salvo");
+      setRecipientOpen(false);
+      await loadRecipients(proposal.id);
+    } catch (e: any) { toast.error(e.message); }
+  };
+  const deleteRecipient = async (r: any) => {
+    if (!confirm(`Remover ${r.name}?`)) return;
+    const { error } = await supabase.from("proposal_recipients").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Removido");
+    if (proposal?.id) loadRecipients(proposal.id);
+  };
+  const recipientLink = (r: any) =>
+    `${window.location.origin}/p/${proposal?.share_token}?r=${r.id}`;
+  const copyRecipientLink = async (r: any) => {
+    await navigator.clipboard.writeText(recipientLink(r));
+    toast.success(`Link de ${r.name} copiado`);
+  };
 
   const loadVersions = async (pid: string) => {
     const { data } = await supabase
