@@ -46,6 +46,43 @@ function extensionFromMime(mime: string) {
   return "png";
 }
 
+class ExternalImageDownloadError extends Error {
+  status: number;
+  contentType: string;
+
+  constructor(message: string, status: number, contentType: string) {
+    super(message);
+    this.status = status;
+    this.contentType = contentType;
+  }
+}
+
+function jsonResponse(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function fetchExternalImage(url: URL, refererUrl?: string) {
+  const response = await fetch(url.toString(), {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 EvoluaCRM/1.0",
+      "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      "Referer": refererUrl || `${url.protocol}//${url.hostname}/`,
+    },
+    redirect: "follow",
+  });
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!response.ok) {
+    await response.arrayBuffer().catch(() => null);
+    throw new ExternalImageDownloadError("Não foi possível baixar a imagem externa", response.status, contentType);
+  }
+
+  return response;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -65,26 +102,12 @@ Deno.serve(async (req) => {
     const { url } = await req.json();
     const sourceUrl = assertAllowedUrl(String(url || ""));
 
-    let response = await fetch(sourceUrl.toString(), {
-      headers: {
-        "User-Agent": "Mozilla/5.0 EvoluaCRM Signature Importer",
-        "Referer": `${sourceUrl.protocol}//${sourceUrl.hostname}/`,
-      },
-      redirect: "follow",
-    });
-    if (!response.ok) throw new Error("Não foi possível baixar a imagem externa");
+    let response = await fetchExternalImage(sourceUrl);
 
     let contentType = response.headers.get("content-type") || "";
     if (contentType.includes("text/html")) {
       const directUrl = assertAllowedUrl(pickImageFromHtml(await response.text(), sourceUrl.toString()));
-      response = await fetch(directUrl.toString(), {
-        headers: {
-          "User-Agent": "Mozilla/5.0 EvoluaCRM Signature Importer",
-          "Referer": `${directUrl.protocol}//${directUrl.hostname}/`,
-        },
-        redirect: "follow",
-      });
-      if (!response.ok) throw new Error("Não foi possível baixar a imagem real");
+      response = await fetchExternalImage(directUrl, sourceUrl.toString());
       contentType = response.headers.get("content-type") || "";
     }
 
@@ -101,15 +124,21 @@ Deno.serve(async (req) => {
     if (uploadError) throw uploadError;
 
     const { data: { publicUrl } } = admin.storage.from("email-signatures").getPublicUrl(path);
-    return new Response(JSON.stringify({ publicUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ publicUrl });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Erro ao importar imagem";
+    if (error instanceof ExternalImageDownloadError) {
+      console.warn("External signature image import blocked", {
+        status: error.status,
+        contentType: error.contentType,
+      });
+      return jsonResponse({
+        error: message,
+        fallback: true,
+        reason: "external_download_blocked",
+      });
+    }
     const status = message === "Unauthorized" ? 401 : 400;
-    return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: message }, status);
   }
 });
