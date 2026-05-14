@@ -2340,6 +2340,62 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_versions: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string
+          id: string
+          implementation_value: number | null
+          monthly_value: number | null
+          proposal_id: string
+          snapshot_reason: string | null
+          title: string
+          total_value: number | null
+          validity_days: number | null
+          variables: Json
+          version: number
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
+          proposal_id: string
+          snapshot_reason?: string | null
+          title: string
+          total_value?: number | null
+          validity_days?: number | null
+          variables?: Json
+          version: number
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          implementation_value?: number | null
+          monthly_value?: number | null
+          proposal_id?: string
+          snapshot_reason?: string | null
+          title?: string
+          total_value?: number | null
+          validity_days?: number | null
+          variables?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_versions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_views: {
         Row: {
           browser: string | null
