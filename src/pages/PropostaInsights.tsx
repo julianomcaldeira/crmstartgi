@@ -450,8 +450,9 @@ export default function PropostaInsights() {
         </DialogContent>
       </Dialog>
 
-
-          <Badge variant="outline">Versão atual: v{proposal.version || 1}</Badge>
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Histórico de versões ({versions.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {versions.length === 0 ? (
