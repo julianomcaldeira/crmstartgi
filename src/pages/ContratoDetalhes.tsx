@@ -56,7 +56,7 @@ export default function ContratoDetalhes() {
       setRoles((r || []).map(x => x.role));
     }
     const [{ data: c }, { data: rev }, { data: fs }] = await Promise.all([
-      supabase.from("contracts").select("*, clients(company_name, email), profiles!contracts_created_by_fkey(full_name, email)").eq("id", id).single(),
+      supabase.from("contracts").select("*, clients(company_name, email)").eq("id", id).maybeSingle(),
       supabase.from("contract_clause_revisions").select("*").eq("contract_id", id).order("submitted_at", { ascending: false }),
       supabase.from("contract_files").select("*").eq("contract_id", id).order("created_at", { ascending: false }),
     ]);
