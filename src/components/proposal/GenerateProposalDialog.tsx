@@ -27,6 +27,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [title, setTitle] = useState("Proposta Comercial");
   const [validityDays, setValidityDays] = useState(30);
   const [blocks, setBlocks] = useState<ProposalBlock[]>([]);
+  const [pageSettings, setPageSettings] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
