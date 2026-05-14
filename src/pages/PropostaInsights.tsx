@@ -1,0 +1,232 @@
+import { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from "@/components/ui/table";
+import {
+  ArrowLeft, Eye, Users, Clock, Activity, Flame, Snowflake, Thermometer,
+  ExternalLink, Copy, Loader2,
+} from "lucide-react";
+import { format, parseISO, formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+
+function classify(score: number): { label: string; color: string; Icon: any } {
+  if (score >= 60) return { label: "Quente", color: "bg-red-500 text-white", Icon: Flame };
+  if (score >= 30) return { label: "Morno", color: "bg-amber-500 text-white", Icon: Thermometer };
+  return { label: "Frio", color: "bg-slate-400 text-white", Icon: Snowflake };
+}
+
+function formatDuration(ms: number): string {
+  const s = Math.floor((ms || 0) / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m < 60) return `${m}m ${r}s`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+const EVENT_LABELS: Record<string, string> = {
+  open: "Abertura",
+  section_view: "Visualizou seção",
+  cta_click: "Clicou em CTA",
+  pricing_view: "Viu pricing",
+  download: "Baixou/Imprimiu",
+  share: "Compartilhou",
+  heartbeat: "Permanência",
+};
+
+export default function PropostaInsights() {
+  const { id } = useParams<{ id: string }>();
+  const [proposal, setProposal] = useState<any | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
+  const [views, setViews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    const [pRes, eRes, vRes] = await Promise.all([
+      supabase.from("proposals").select("*, clients(company_name), opportunities(title)").eq("id", id).maybeSingle(),
+      supabase.from("proposal_events").select("*").eq("proposal_id", id).order("created_at", { ascending: false }).limit(500),
+      supabase.from("proposal_views").select("*").eq("proposal_id", id).order("last_view_at", { ascending: false }),
+    ]);
+    if (pRes.error) setError(pRes.error.message);
+    setProposal(pRes.data);
+    setEvents(eRes.data || []);
+    setViews(vRes.data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [id]);
+
+  // Realtime subscription for new events
+  useEffect(() => {
+    if (!id) return;
+    const ch = supabase
+      .channel(`prop-events-${id}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_events", filter: `proposal_id=eq.${id}` }, (payload) => {
+        const ev: any = payload.new;
+        setEvents((prev) => [ev, ...prev].slice(0, 500));
+        const lbl = EVENT_LABELS[ev.event_type] || ev.event_type;
+        toast.info(`Novo evento: ${lbl}`, { description: ev.city ? `${ev.city}, ${ev.country || ""}` : undefined });
+        // refresh aggregates lazily
+        supabase.from("proposals").select("engagement_score, unique_visitors, total_time_ms, view_count, viewed_at, status").eq("id", id).maybeSingle().then((r) => {
+          if (r.data) setProposal((p: any) => ({ ...p, ...r.data }));
+        });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [id]);
+
+  const sectionStats = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const e of events) {
+      if (e.event_type !== "section_view" || !e.section_id) continue;
+      map.set(e.section_id, (map.get(e.section_id) || 0) + 1);
+    }
+    const arr = Array.from(map.entries()).map(([id, count]) => ({ id, count }));
+    arr.sort((a, b) => b.count - a.count);
+    return arr.slice(0, 8);
+  }, [events]);
+
+  const lastEvent = events[0];
+  const score = proposal?.engagement_score || 0;
+  const cls = classify(score);
+
+  const copyLink = async () => {
+    if (!proposal?.share_token) return;
+    const url = `${window.location.origin}/p/${proposal.share_token}`;
+    await navigator.clipboard.writeText(url);
+    toast.success("Link copiado");
+  };
+
+  if (loading) return <div className="p-6 flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>;
+  if (error || !proposal) return <div className="p-6 text-destructive">{error || "Proposta não encontrada"}</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <Link to="/propostas?tab=proposals"><Button variant="ghost" size="sm"><ArrowLeft className="h-4 w-4 mr-1" /> Voltar</Button></Link>
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              {proposal.title}
+              <Badge className={cls.color}><cls.Icon className="h-3 w-3 mr-1" />{cls.label}</Badge>
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {proposal.clients?.company_name || "—"} · {proposal.opportunities?.title || ""} · v{proposal.version || 1} · {proposal.status}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={copyLink}><Copy className="h-3 w-3 mr-1" /> Copiar link</Button>
+          <Button variant="outline" size="sm" onClick={() => window.open(`/p/${proposal.share_token}`, "_blank")}><ExternalLink className="h-3 w-3 mr-1" /> Abrir</Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <KpiCard icon={<Activity className="h-4 w-4" />} label="Score" value={String(score)} sub={cls.label} />
+        <KpiCard icon={<Eye className="h-4 w-4" />} label="Aberturas" value={String(proposal.view_count || 0)} />
+        <KpiCard icon={<Users className="h-4 w-4" />} label="Visitantes únicos" value={String(proposal.unique_visitors || 0)} />
+        <KpiCard icon={<Clock className="h-4 w-4" />} label="Tempo total" value={formatDuration(proposal.total_time_ms || 0)} />
+        <KpiCard
+          icon={<Activity className="h-4 w-4" />}
+          label="Última atividade"
+          value={lastEvent ? formatDistanceToNow(parseISO(lastEvent.created_at), { addSuffix: true, locale: ptBR }) : (proposal.viewed_at ? formatDistanceToNow(parseISO(proposal.viewed_at), { addSuffix: true, locale: ptBR }) : "—")}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Top seções visualizadas</CardTitle></CardHeader>
+          <CardContent>
+            {sectionStats.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Sem visualizações de seção registradas ainda.</div>
+            ) : (
+              <div className="space-y-2">
+                {sectionStats.map((s) => {
+                  const max = sectionStats[0].count || 1;
+                  const pct = Math.round((s.count / max) * 100);
+                  return (
+                    <div key={s.id}>
+                      <div className="flex justify-between text-xs mb-1"><span className="font-mono truncate max-w-[60%]">{s.id}</span><span className="text-muted-foreground">{s.count} views</span></div>
+                      <div className="h-2 bg-muted rounded"><div className="h-2 bg-primary rounded" style={{ width: `${pct}%` }} /></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Visitantes ({views.length})</CardTitle></CardHeader>
+          <CardContent>
+            {views.length === 0 ? (
+              <div className="text-sm text-muted-foreground">Ninguém abriu ainda.</div>
+            ) : (
+              <Table>
+                <TableHeader><TableRow><TableHead>Visitante</TableHead><TableHead>Local</TableHead><TableHead>Acessos</TableHead><TableHead>Tempo</TableHead><TableHead>Última</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {views.slice(0, 20).map((v) => (
+                    <TableRow key={v.id}>
+                      <TableCell className="font-mono text-xs">{v.visitor_id.slice(0, 8)}…</TableCell>
+                      <TableCell className="text-xs">{[v.city, v.country].filter(Boolean).join(", ") || "—"}</TableCell>
+                      <TableCell>{v.view_count}</TableCell>
+                      <TableCell>{formatDuration(v.total_time_ms)}</TableCell>
+                      <TableCell className="text-xs">{format(parseISO(v.last_view_at), "dd/MM HH:mm")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Timeline de eventos ({events.length})</CardTitle></CardHeader>
+        <CardContent>
+          {events.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Nenhum evento registrado ainda.</div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Quando</TableHead><TableHead>Evento</TableHead><TableHead>Detalhe</TableHead><TableHead>Visitante</TableHead><TableHead>Origem</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {events.slice(0, 100).map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{format(parseISO(e.created_at), "dd/MM HH:mm:ss")}</TableCell>
+                    <TableCell><Badge variant="outline">{EVENT_LABELS[e.event_type] || e.event_type}</Badge></TableCell>
+                    <TableCell className="text-xs max-w-[280px] truncate">{e.section_id || (e.metadata?.href ?? "")}</TableCell>
+                    <TableCell className="font-mono text-xs">{e.visitor_id?.slice(0, 8)}…</TableCell>
+                    <TableCell className="text-xs">{[e.city, e.country].filter(Boolean).join(", ")} {e.device ? `· ${e.device}` : ""} {e.browser ? `· ${e.browser}` : ""}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function KpiCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">{icon}{label}</div>
+        <div className="text-2xl font-bold mt-1">{value}</div>
+        {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+      </CardContent>
+    </Card>
+  );
+}
