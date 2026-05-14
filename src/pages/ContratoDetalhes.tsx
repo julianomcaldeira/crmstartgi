@@ -46,6 +46,9 @@ export default function ContratoDetalhes() {
   const [activeRevision, setActiveRevision] = useState<any | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { if (id) load(); }, [id]);
 
