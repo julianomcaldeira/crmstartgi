@@ -108,7 +108,53 @@ const FONT_FAMILIES = [
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "40px", "48px"];
 const COLORS = ["#000000", "#374151", "#6b7280", "#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#ec4899", "#ffffff"];
 
-interface Props {
+// Pretty-print HTML (block tags on their own lines, indented)
+const VOID_TAGS = new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);
+const INLINE_TAGS = new Set(["a","span","strong","em","b","i","u","s","small","sub","sup","mark","code","abbr","cite","time","br","img"]);
+function formatHtml(input: string): string {
+  if (!input) return "";
+  // Normalize whitespace between tags
+  let html = input.replace(/>\s+</g, "><").trim();
+  const tokens = html.split(/(<[^>]+>)/g).filter(t => t !== "");
+  let out = "";
+  let depth = 0;
+  const indent = (n: number) => "  ".repeat(Math.max(0, n));
+  for (const tok of tokens) {
+    if (!tok.startsWith("<")) {
+      // text node
+      const txt = tok.trim();
+      if (txt) out += indent(depth) + txt + "\n";
+      continue;
+    }
+    const isComment = tok.startsWith("<!");
+    const isClose = /^<\//.test(tok);
+    const tagMatch = tok.match(/^<\/?\s*([a-zA-Z0-9-]+)/);
+    const name = tagMatch ? tagMatch[1].toLowerCase() : "";
+    const selfClose = /\/>$/.test(tok) || VOID_TAGS.has(name);
+    const isInline = INLINE_TAGS.has(name);
+    if (isComment) { out += indent(depth) + tok + "\n"; continue; }
+    if (isClose) {
+      depth = Math.max(0, depth - 1);
+      out += indent(depth) + tok + "\n";
+    } else if (selfClose || isInline) {
+      out += indent(depth) + tok + "\n";
+    } else {
+      out += indent(depth) + tok + "\n";
+      depth += 1;
+    }
+  }
+  return out.trimEnd();
+}
+function minifyHtml(input: string): string {
+  return (input || "").replace(/>\s+</g, "><").replace(/\n+/g, "").trim();
+}
+function cleanEmptyParagraphs(input: string): string {
+  return (input || "")
+    .replace(/<p[^>]*>\s*(?:&nbsp;|\u00a0|\s)*<\/p>/gi, "")
+    .replace(/<span[^>]*>\s*(?:&nbsp;|\u00a0|\s)*<\/span>/gi, "");
+}
+
+
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
