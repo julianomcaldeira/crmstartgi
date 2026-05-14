@@ -706,12 +706,19 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                 <div className="flex flex-col rounded-md border bg-white overflow-hidden min-h-[400px]">
                   <div className="flex items-center justify-between px-3 py-1.5 border-b text-[11px] text-muted-foreground bg-muted/40">
                     <span className="inline-flex items-center gap-1.5"><Eye className="h-3 w-3" /> Pré-visualização</span>
-                    <span>Atualiza ao digitar</span>
+                    <span>
+                      Atualiza ao digitar
+                      {varCount > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-primary">
+                          <Variable className="h-3 w-3" /> {varCount}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex-1 overflow-auto">
                     <div
                       className="rte-content prose prose-sm max-w-none p-4"
-                      dangerouslySetInnerHTML={{ __html: htmlDraft }}
+                      dangerouslySetInnerHTML={{ __html: highlightVariablesInPreview(htmlDraft) }}
                     />
                   </div>
                 </div>
