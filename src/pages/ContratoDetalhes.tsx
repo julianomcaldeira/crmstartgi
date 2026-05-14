@@ -255,24 +255,24 @@ export default function ContratoDetalhes() {
                   onSplitChange={setSplitPct}
                   left={
                     <Card className="h-full"><CardContent className="p-3 h-full">
-                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div>
+                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div>
                     </CardContent></Card>
                   }
                   right={
-                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} />
+                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} pageSettings={editPage} />
                   }
                 />
               )}
 
               {previewMode === "stacked" && (
                 <div className="space-y-3">
-                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
-                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} /></div>
+                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div></CardContent></Card>
+                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} pageSettings={editPage} /></div>
                 </div>
               )}
 
               {previewMode === "hidden" && (
-                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div></CardContent></Card>
               )}
             </div>
           ) : (
