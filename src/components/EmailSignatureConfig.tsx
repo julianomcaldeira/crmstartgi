@@ -7,17 +7,44 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Save, FileSignature, ImagePlus, Copy } from "lucide-react";
+import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react";
+
+const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
+
+function getExternalSignatureImageUrls(signatureHtml: string) {
+  if (!signatureHtml) return [];
+  const doc = new DOMParser().parseFromString(signatureHtml, "text/html");
+  const urls = Array.from(doc.querySelectorAll("img[src]"))
+    .map((img) => img.getAttribute("src")?.trim())
+    .filter((src): src is string => !!src && EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(src));
+
+  return Array.from(new Set(urls));
+}
+
+function normalizeSignatureImagesForPreview(signatureHtml: string) {
+  return signatureHtml.replace(/<img\b[^>]*>/gi, (tag) => {
+    let next = tag;
+    if (!/referrerpolicy\s*=/i.test(next)) {
+      next = next.replace(/\s*\/?>$/, ' referrerpolicy="origin-when-cross-origin"$&');
+    }
+    if (!/style\s*=/i.test(next)) {
+      next = next.replace(/\s*\/?>$/, ' style="max-width:100%;height:auto;display:block;"$&');
+    }
+    return next;
+  });
+}
 
 export default function EmailSignatureConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [html, setHtml] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasExternalImages = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html);
 
   useEffect(() => {
     (async () => {
@@ -37,17 +64,51 @@ export default function EmailSignatureConfig() {
     })();
   }, []);
 
+  async function importExternalImages(currentHtml = html) {
+    const urls = getExternalSignatureImageUrls(currentHtml);
+    if (!urls.length) {
+      toast.info("Nenhuma imagem externa compatível encontrada na assinatura.");
+      return currentHtml;
+    }
+
+    setImporting(true);
+    try {
+      let nextHtml = currentHtml;
+      for (const url of urls) {
+        const { data, error } = await supabase.functions.invoke("import-signature-image", {
+          body: { url },
+        });
+        if (error) throw error;
+        if (!data?.publicUrl) throw new Error("A imagem externa não pôde ser importada.");
+        nextHtml = nextHtml.split(url).join(data.publicUrl);
+      }
+      setHtml(nextHtml);
+      toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      return nextHtml;
+    } catch (err: any) {
+      toast.error("Erro ao corrigir imagem externa: " + (err.message || "tente anexar a imagem pelo botão de upload"));
+      throw err;
+    } finally {
+      setImporting(false);
+    }
+  }
+
   async function save() {
     if (!userId) return;
     setSaving(true);
     try {
+      const htmlToSave = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html)
+        ? await importExternalImages(html)
+        : html;
       const { error } = await (supabase as any)
         .from("email_signatures")
-        .upsert({ user_id: userId, signature_html: html, enabled }, { onConflict: "user_id" });
+        .upsert({ user_id: userId, signature_html: htmlToSave, enabled }, { onConflict: "user_id" });
       if (error) throw error;
       toast.success("Assinatura salva!");
     } catch (e: any) {
-      toast.error("Erro ao salvar: " + e.message);
+      if (!String(e?.message || "").includes("imagem externa")) {
+        toast.error("Erro ao salvar: " + e.message);
+      }
     } finally {
       setSaving(false);
     }
