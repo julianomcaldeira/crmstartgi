@@ -180,7 +180,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
       const { data: pub } = supabase.storage.from("proposals").getPublicUrl(path);
       await supabase.from("proposals").update({ pdf_url: pub.publicUrl, status: "sent", sent_at: new Date().toISOString() }).eq("id", prop.id);
 
-      const shareUrl = `${window.location.origin}/p/${prop.share_token || shareToken}`;
+      const shareUrl = proposalPublicUrl(prop.share_token || shareToken);
       const html = `
         <p>Olá ${client.company_name || ""},</p>
         <p>Segue a proposta comercial conforme conversamos.</p>
