@@ -117,8 +117,26 @@ interface Props {
 
 export function RichTextEditor({ value, onChange, placeholder = "Comece a escrever sua proposta...", minHeight = 400 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
+
+  const insertHtmlVariable = (key: string) => {
+    const ta = htmlTextareaRef.current;
+    if (!ta) {
+      setHtmlDraft((prev) => prev + key);
+      return;
+    }
+    const start = ta.selectionStart ?? htmlDraft.length;
+    const end = ta.selectionEnd ?? htmlDraft.length;
+    const next = htmlDraft.slice(0, start) + key + htmlDraft.slice(end);
+    setHtmlDraft(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + key.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
 
   const editor = useEditor({
     extensions: [
