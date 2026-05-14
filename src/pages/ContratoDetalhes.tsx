@@ -257,6 +257,14 @@ export default function ContratoDetalhes() {
           onClose={() => { setActiveRevision(null); load(); }}
         />
       )}
+
+      <SendContractEmailDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        contract={contract}
+        defaultTo={clientEmail}
+        onSent={load}
+      />
     </div>
   );
 }
