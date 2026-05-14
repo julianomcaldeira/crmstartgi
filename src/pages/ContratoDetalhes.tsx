@@ -364,7 +364,7 @@ export default function ContratoDetalhes() {
   );
 }
 
-function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables: any }) {
+function PreviewPane({ blocks, variables, pageSettings }: { blocks: ProposalBlock[]; variables: any; pageSettings?: PageSettings }) {
   return (
     <Card className="h-full flex flex-col">
       <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 shrink-0">
@@ -372,7 +372,7 @@ function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables
       </div>
       <div className="flex-1 min-h-0 overflow-auto bg-gray-100 p-4">
         <div className="mx-auto bg-white shadow" style={{ width: 794, maxWidth: "100%" }}>
-          <ProposalRenderer blocks={blocks} variables={variables} />
+          <ProposalRenderer blocks={blocks} variables={variables} pageSettings={pageSettings} />
         </div>
       </div>
     </Card>
