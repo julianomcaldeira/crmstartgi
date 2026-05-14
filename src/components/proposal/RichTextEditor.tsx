@@ -522,6 +522,24 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <style>{`
           .rte-content img { max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; border-radius: 6px; }
           .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
+          /* Code overlay (HTML mode) */
+          .rte-code-overlay { color: rgba(255,255,255,0.85); white-space: pre-wrap; word-break: break-word; }
+          .rte-code-overlay.no-wrap { white-space: pre; word-break: normal; }
+          .rte-code-overlay .rte-tag-pun { color: #94a3b8; }
+          .rte-code-overlay .rte-tag-name { color: #f472b6; }
+          .rte-code-overlay .rte-attr { color: #fbbf24; }
+          .rte-code-overlay .rte-str { color: #86efac; }
+          .rte-code-overlay .rte-var-token,
+          .rte-var-preview {
+            background: rgba(34,197,94,0.18);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.45);
+            border-radius: 4px;
+            padding: 0 3px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 600;
+          }
+          .rte-var-preview { font-size: 0.92em; }
         `}</style>
         {htmlMode ? (
           <div className="p-3 h-full flex flex-col gap-2 min-h-0 bg-muted/30">
