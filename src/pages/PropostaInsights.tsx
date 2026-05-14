@@ -160,6 +160,11 @@ export default function PropostaInsights() {
 
   const saveNewVersion = async () => {
     if (!proposal) return;
+    const reason = snapshotReason.trim();
+    if (reason.length < 3) {
+      toast.error("Informe o motivo da mudança (mínimo 3 caracteres).");
+      return;
+    }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -176,7 +181,7 @@ export default function PropostaInsights() {
         monthly_value: proposal.monthly_value,
         implementation_value: proposal.implementation_value,
         validity_days: proposal.validity_days,
-        snapshot_reason: snapshotReason || null,
+        snapshot_reason: reason,
         created_by: user.id,
       };
       const ins = await supabase.from("proposal_versions").upsert(snap, { onConflict: "proposal_id,version" });
@@ -491,13 +496,20 @@ export default function PropostaInsights() {
               Será criado um snapshot do conteúdo atual como <strong>v{proposal.version || 1}</strong>. A proposta passará a ser editada como <strong>v{(proposal.version || 1) + 1}</strong>.
             </p>
             <div>
-              <Label className="text-xs">Motivo / nota da versão (opcional)</Label>
-              <Textarea value={snapshotReason} onChange={(e) => setSnapshotReason(e.target.value)} placeholder="Ex.: ajuste de preço após reunião" rows={3} />
+              <Label className="text-xs">Motivo da mudança <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={snapshotReason}
+                onChange={(e) => setSnapshotReason(e.target.value)}
+                placeholder="Ex.: ajuste de preço após reunião com o cliente"
+                rows={3}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Obrigatório. O autor da versão será registrado automaticamente.</p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveOpen(false)} disabled={saving}>Cancelar</Button>
-            <Button onClick={saveNewVersion} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Salvar versão</Button>
+            <Button onClick={saveNewVersion} disabled={saving || snapshotReason.trim().length < 3}>{saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Salvar versão</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
