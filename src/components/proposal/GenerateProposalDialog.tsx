@@ -266,7 +266,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
               <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0">
-                <ProposalBuilder blocks={blocks} onChange={setBlocks} />
+                <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
               </TabsContent>
               <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 mt-0 bg-gray-100">
                 <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
