@@ -122,6 +122,43 @@ export default function PropostaInsights() {
     toast.success(`Link de ${r.name} copiado`);
   };
 
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteRecipient, setInviteRecipient] = useState<any | null>(null);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  const openInvite = (r: any) => {
+    if (!r.email) { toast.error("Adicione um e-mail ao destinatário antes de enviar o convite."); return; }
+    setInviteRecipient(r);
+    setInviteMessage("");
+    setInviteOpen(true);
+  };
+
+  const sendInvite = async () => {
+    if (!inviteRecipient) return;
+    setSendingInvite(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-proposal-invite", {
+        body: {
+          recipientId: inviteRecipient.id,
+          appOrigin: window.location.origin,
+          customMessage: inviteMessage.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Convite enviado para ${inviteRecipient.email}`);
+      setInviteOpen(false);
+      if (proposal?.id) {
+        await Promise.all([loadRecipients(proposal.id), load()]);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao enviar convite");
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
   const loadVersions = async (pid: string) => {
     const { data } = await supabase
       .from("proposal_versions")
