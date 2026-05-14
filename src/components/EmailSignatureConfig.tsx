@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,40 +50,10 @@ export default function EmailSignatureConfig() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasExternalImages = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      setUserId(user.id);
-      const { data } = await supabase
-        .from("email_signatures")
-        .select("signature_html, enabled")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (data) {
-        const storedHtml = data.signature_html || "";
-        if (EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(storedHtml)) {
-          try {
-            const fixedHtml = await importExternalImages(storedHtml);
-            await supabase
-              .from("email_signatures")
-              .upsert({ user_id: user.id, signature_html: fixedHtml, enabled: data.enabled }, { onConflict: "user_id" });
-          } catch {
-            setHtml(storedHtml);
-          }
-        } else {
-          setHtml(storedHtml);
-        }
-        setEnabled(data.enabled);
-      }
-      setLoading(false);
-    })();
-  }, []);
-
-  async function importExternalImages(currentHtml = html) {
+  const importSignatureImages = useCallback(async (currentHtml: string, showToast = true) => {
     const urls = getExternalSignatureImageUrls(currentHtml);
     if (!urls.length) {
-      toast.info("Nenhuma imagem externa compatível encontrada na assinatura.");
+      if (showToast) toast.info("Nenhuma imagem externa compatível encontrada na assinatura.");
       return currentHtml;
     }
 
@@ -99,14 +69,52 @@ export default function EmailSignatureConfig() {
         nextHtml = nextHtml.split(url).join(data.publicUrl);
       }
       setHtml(nextHtml);
-      toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      if (showToast) {
+        toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      }
       return nextHtml;
     } catch (err: unknown) {
-      toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
+      if (showToast) {
+        toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
+      }
       throw err;
     } finally {
       setImporting(false);
     }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+      const { data } = await supabase
+        .from("email_signatures")
+        .select("signature_html, enabled")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        const storedHtml = data.signature_html || "";
+        if (EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(storedHtml)) {
+          try {
+            const fixedHtml = await importSignatureImages(storedHtml, false);
+            await supabase
+              .from("email_signatures")
+              .upsert({ user_id: user.id, signature_html: fixedHtml, enabled: data.enabled }, { onConflict: "user_id" });
+          } catch {
+            setHtml(storedHtml);
+          }
+        } else {
+          setHtml(storedHtml);
+        }
+        setEnabled(data.enabled);
+      }
+      setLoading(false);
+    })();
+  }, [importSignatureImages]);
+
+  async function importExternalImages(currentHtml = html) {
+    return importSignatureImages(currentHtml, true);
   }
 
   async function save() {
