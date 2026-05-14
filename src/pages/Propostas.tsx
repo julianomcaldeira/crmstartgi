@@ -154,6 +154,7 @@ export default function Propostas() {
         .order("id", { ascending: false })
         .range(from, to);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
