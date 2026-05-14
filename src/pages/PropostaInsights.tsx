@@ -49,8 +49,21 @@ export default function PropostaInsights() {
   const [proposal, setProposal] = useState<any | null>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [views, setViews] = useState<any[]>([]);
+  const [versions, setVersions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [snapshotReason, setSnapshotReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const loadVersions = async (pid: string) => {
+    const { data } = await supabase
+      .from("proposal_versions")
+      .select("*, profiles:created_by(full_name)")
+      .eq("proposal_id", pid)
+      .order("version", { ascending: false });
+    setVersions(data || []);
+  };
 
   const load = async () => {
     if (!id) return;
@@ -65,10 +78,72 @@ export default function PropostaInsights() {
     setProposal(pRes.data);
     setEvents(eRes.data || []);
     setViews(vRes.data || []);
+    if (pRes.data?.id) await loadVersions(pRes.data.id);
     setLoading(false);
   };
 
   useEffect(() => { load(); }, [id]);
+
+  const saveNewVersion = async () => {
+    if (!proposal) return;
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      // Snapshot current state as the *current* version, then bump proposal.version
+      const currentVersion = proposal.version || 1;
+      const snap = {
+        proposal_id: proposal.id,
+        version: currentVersion,
+        title: proposal.title,
+        blocks: proposal.blocks,
+        variables: proposal.variables,
+        total_value: proposal.total_value,
+        monthly_value: proposal.monthly_value,
+        implementation_value: proposal.implementation_value,
+        validity_days: proposal.validity_days,
+        snapshot_reason: snapshotReason || null,
+        created_by: user.id,
+      };
+      const ins = await supabase.from("proposal_versions").upsert(snap, { onConflict: "proposal_id,version" });
+      if (ins.error) throw ins.error;
+      const upd = await supabase.from("proposals").update({ version: currentVersion + 1 }).eq("id", proposal.id);
+      if (upd.error) throw upd.error;
+      toast.success(`Versão v${currentVersion} salva. Editando v${currentVersion + 1}.`);
+      setSaveOpen(false);
+      setSnapshotReason("");
+      await load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const restoreVersion = async (v: any) => {
+    if (!proposal) return;
+    if (!confirm(`Restaurar conteúdo da v${v.version}? O conteúdo atual será perdido a menos que você salve uma nova versão antes.`)) return;
+    const { error } = await supabase.from("proposals").update({
+      title: v.title,
+      blocks: v.blocks,
+      variables: v.variables,
+      total_value: v.total_value,
+      monthly_value: v.monthly_value,
+      implementation_value: v.implementation_value,
+      validity_days: v.validity_days,
+    }).eq("id", proposal.id);
+    if (error) return toast.error(error.message);
+    toast.success(`v${v.version} restaurada como conteúdo atual`);
+    await load();
+  };
+
+  const deleteVersion = async (v: any) => {
+    if (!confirm(`Excluir versão v${v.version}?`)) return;
+    const { error } = await supabase.from("proposal_versions").delete().eq("id", v.id);
+    if (error) return toast.error(error.message);
+    toast.success("Versão excluída");
+    if (proposal?.id) loadVersions(proposal.id);
+  };
 
   // Realtime subscription for new events
   useEffect(() => {
