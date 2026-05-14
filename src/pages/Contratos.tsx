@@ -286,7 +286,20 @@ export default function Contratos() {
                       {c.clients?.company_name} • Por {c.profiles?.full_name} • {format(parseISO(c.created_at), "dd/MM/yyyy")}
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost"><Eye size={14} /></Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="sm" variant="ghost"><Eye size={14} /></Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => { e.stopPropagation(); openDeleteContract(c); }}
+                        title="Excluir contrato"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
