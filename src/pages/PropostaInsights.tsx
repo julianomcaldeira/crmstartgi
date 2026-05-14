@@ -116,8 +116,7 @@ export default function PropostaInsights() {
     toast.success("Removido");
     if (proposal?.id) loadRecipients(proposal.id);
   };
-  const recipientLink = (r: any) =>
-    `${window.location.origin}/p/${proposal?.share_token}?r=${r.id}`;
+  const recipientLink = (r: any) => proposalPublicUrl(proposal?.share_token, r.id);
   const copyRecipientLink = async (r: any) => {
     await navigator.clipboard.writeText(recipientLink(r));
     toast.success(`Link de ${r.name} copiado`);
