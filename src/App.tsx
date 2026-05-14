@@ -23,6 +23,8 @@ import InteligenciaMercado from "./pages/InteligenciaMercado";
 import PreVendas from "./pages/PreVendas";
 import Propostas from "./pages/Propostas";
 import PropostaPublica from "./pages/PropostaPublica";
+import Contratos from "./pages/Contratos";
+import ContratoDetalhes from "./pages/ContratoDetalhes";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
 
