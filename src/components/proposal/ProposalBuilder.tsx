@@ -22,8 +22,10 @@ interface Props {
 
 const BLOCK_OPTIONS: BlockType[] = ["richtext", "cover", "about", "text", "scope", "pricing", "timeline", "image", "gallery", "terms", "cta", "signature"];
 
-export function ProposalBuilder({ blocks, onChange }: Props) {
+export function ProposalBuilder({ blocks, onChange, pageSettings, onPageSettingsChange }: Props) {
   const [selected, setSelected] = useState<string | null>(blocks[0]?.id ?? null);
+  const ps: PageSettings = { ...DEFAULT_PAGE_SETTINGS, ...(pageSettings || {}) };
+  const setPs = (patch: Partial<PageSettings>) => onPageSettingsChange?.({ ...ps, ...patch });
 
   const update = (id: string, patch: any) => {
     onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
