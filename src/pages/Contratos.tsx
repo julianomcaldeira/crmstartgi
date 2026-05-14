@@ -402,6 +402,61 @@ export default function Contratos() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Exclusão de contrato com dupla checagem */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {deleteStep === 1 ? "Excluir contrato?" : "Confirmação final"}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteStep === 1 ? (
+                <>
+                  Você está prestes a excluir <span className="font-semibold text-foreground">{deleteTarget?.title}</span>.
+                  Esta ação remove o contrato, suas revisões de cláusulas, decisões e arquivos vinculados. Não é possível desfazer.
+                </>
+              ) : (
+                <>
+                  Para confirmar a exclusão definitiva, digite <span className="font-mono font-semibold text-destructive">EXCLUIR</span> abaixo.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteStep === 2 && (
+            <div className="space-y-2">
+              <Label htmlFor="confirm-delete">Confirmação</Label>
+              <Input
+                id="confirm-delete"
+                autoFocus
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Digite EXCLUIR"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleting}>
+              Cancelar
+            </Button>
+            {deleteStep === 1 ? (
+              <Button variant="destructive" onClick={() => setDeleteStep(2)}>
+                Continuar
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteContract}
+                disabled={deleting || deleteConfirmText.trim().toUpperCase() !== "EXCLUIR"}
+              >
+                {deleting ? "Excluindo..." : "Excluir definitivamente"}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
