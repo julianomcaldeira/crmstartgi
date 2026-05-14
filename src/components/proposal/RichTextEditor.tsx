@@ -117,6 +117,8 @@ interface Props {
 
 export function RichTextEditor({ value, onChange, placeholder = "Comece a escrever sua proposta...", minHeight = 400 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [htmlMode, setHtmlMode] = useState(false);
+  const [htmlDraft, setHtmlDraft] = useState(value || "");
 
   const editor = useEditor({
     extensions: [
