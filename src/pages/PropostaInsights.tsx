@@ -160,6 +160,11 @@ export default function PropostaInsights() {
 
   const saveNewVersion = async () => {
     if (!proposal) return;
+    const reason = snapshotReason.trim();
+    if (reason.length < 3) {
+      toast.error("Informe o motivo da mudança (mínimo 3 caracteres).");
+      return;
+    }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -176,7 +181,7 @@ export default function PropostaInsights() {
         monthly_value: proposal.monthly_value,
         implementation_value: proposal.implementation_value,
         validity_days: proposal.validity_days,
-        snapshot_reason: snapshotReason || null,
+        snapshot_reason: reason,
         created_by: user.id,
       };
       const ins = await supabase.from("proposal_versions").upsert(snap, { onConflict: "proposal_id,version" });
