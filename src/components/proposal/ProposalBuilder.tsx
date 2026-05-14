@@ -55,22 +55,66 @@ export function ProposalBuilder({ blocks, onChange, pageSettings, onPageSettings
     <div className="grid grid-cols-12 gap-4 h-full">
       {/* Sidebar de blocos */}
       <div className="col-span-4 border rounded-lg p-3 flex flex-col h-full bg-muted/30">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-1">
           <h3 className="font-semibold text-sm">Blocos</h3>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="sm" variant="default"><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-1">
-              <div className="grid">
-                {BLOCK_OPTIONS.map((t) => (
-                  <button key={t} className="text-left px-2 py-1.5 rounded hover:bg-accent text-sm" onClick={() => add(t)}>
-                    {BLOCK_LABELS[t]}
-                  </button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-1">
+            {onPageSettingsChange && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button size="sm" variant="outline" title="Configurar página"><Settings2 className="h-4 w-4 mr-1" /> Página</Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-3 space-y-3">
+                  <div className="text-xs font-semibold">Formatação da página</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Cor de fundo"><Input type="color" value={ps.bgColor || "#ffffff"} onChange={(e) => setPs({ bgColor: e.target.value })} /></Field>
+                    <Field label="Cor da marca"><Input type="color" value={ps.brandColor || "#22c55e"} onChange={(e) => setPs({ brandColor: e.target.value })} /></Field>
+                  </div>
+                  <Field label="Fonte">
+                    <Select value={ps.fontFamily} onValueChange={(v) => setPs({ fontFamily: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Inter, system-ui, -apple-system, Arial, sans-serif">Inter</SelectItem>
+                        <SelectItem value="Arial, sans-serif">Arial</SelectItem>
+                        <SelectItem value="Georgia, serif">Georgia</SelectItem>
+                        <SelectItem value="'Times New Roman', serif">Times New Roman</SelectItem>
+                        <SelectItem value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica</SelectItem>
+                        <SelectItem value="'Roboto', sans-serif">Roboto</SelectItem>
+                        <SelectItem value="'Courier New', monospace">Courier</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label={`Tamanho base: ${ps.fontSize}px`}>
+                    <input type="range" min={12} max={22} value={ps.fontSize} onChange={(e) => setPs({ fontSize: Number(e.target.value) })} className="w-full" />
+                  </Field>
+                  <Field label="Espaçamento da página">
+                    <Select value={ps.pagePadding} onValueChange={(v: any) => setPs({ pagePadding: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="compact">Compacto</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
+                        <SelectItem value="spacious">Amplo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Button size="sm" variant="ghost" className="w-full" onClick={() => onPageSettingsChange?.(DEFAULT_PAGE_SETTINGS)}>Restaurar padrão</Button>
+                </PopoverContent>
+              </Popover>
+            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="default"><Plus className="h-4 w-4 mr-1" /> Adicionar</Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-1">
+                <div className="grid">
+                  {BLOCK_OPTIONS.map((t) => (
+                    <button key={t} className="text-left px-2 py-1.5 rounded hover:bg-accent text-sm" onClick={() => add(t)}>
+                      {BLOCK_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto space-y-1.5">
           {blocks.length === 0 && <p className="text-xs text-muted-foreground p-3 text-center">Nenhum bloco. Adicione o primeiro.</p>}
