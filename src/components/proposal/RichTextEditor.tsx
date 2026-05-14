@@ -65,9 +65,10 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
   Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
-  Minus, Droplet
+  Minus, Droplet, Code2
 } from "lucide-react";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { Textarea } from "@/components/ui/textarea";
 import { AVAILABLE_VARIABLES } from "@/lib/proposalTypes";
 import { uploadProposalImage } from "@/lib/proposalUpload";
 import { toast } from "sonner";
