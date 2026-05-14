@@ -10,29 +10,51 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Extension } from "@tiptap/core";
 
-// Image with width attribute for resizing
+// Image with width + advanced styling attributes (align, radius, rotate, shadow, filter)
+const FILTER_CSS: Record<string, string> = {
+  none: "",
+  grayscale: "grayscale(100%)",
+  sepia: "sepia(80%)",
+  blur: "blur(2px)",
+  bright: "brightness(1.15) contrast(1.05)",
+};
+const buildImgStyle = (a: any) => {
+  const styles: string[] = ["max-width:100%", "height:auto", "display:block"];
+  if (a.width) styles.push(`width:${a.width}`);
+  styles.push(`border-radius:${a.radius != null ? a.radius : 6}px`);
+  if (a.rotate) styles.push(`transform:rotate(${a.rotate}deg)`);
+  if (a.shadow === "true" || a.shadow === true) styles.push("box-shadow:0 8px 24px rgba(0,0,0,0.18)");
+  const f = FILTER_CSS[a.filter] || "";
+  if (f) styles.push(`filter:${f}`);
+  const align = a.align || "center";
+  const m = align === "center" ? "8px auto" : align === "right" ? "8px 0 8px auto" : "8px 0";
+  styles.push(`margin:${m}`);
+  return styles.join(";");
+};
+const dataAttr = (name: string) => ({
+  default: null,
+  parseHTML: (el: any) => el.getAttribute(`data-${name}`) || null,
+  renderHTML: (attrs: any) => attrs[name] != null && attrs[name] !== "" ? { [`data-${name}`]: String(attrs[name]) } : {},
+});
 const ResizableImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
         default: null,
-        // Read width from inline style, HTML attribute or data-width fallback
-        parseHTML: (el: any) =>
-          el.style?.width ||
-          el.getAttribute("width") ||
-          el.getAttribute("data-width") ||
-          null,
-        // Persist width in BOTH inline style and a data-width attribute so the
-        // value survives copy/paste, sanitization and PDF rendering.
-        renderHTML: (attrs: any) => {
-          const w = attrs.width;
-          const base = "max-width:100%;height:auto;display:block;margin:8px auto;";
-          if (!w) return { style: base };
-          return { style: `width:${w};${base}`, "data-width": w };
-        },
+        parseHTML: (el: any) => el.getAttribute("data-width") || el.style?.width || el.getAttribute("width") || null,
+        renderHTML: (attrs: any) => attrs.width ? { "data-width": attrs.width } : {},
       },
+      align: dataAttr("align"),
+      radius: dataAttr("radius"),
+      rotate: dataAttr("rotate"),
+      shadow: dataAttr("shadow"),
+      filter: dataAttr("filter"),
     };
+  },
+  renderHTML({ HTMLAttributes, node }) {
+    const a: any = node.attrs;
+    return ["img", { ...HTMLAttributes, style: buildImgStyle(a) }];
   },
 });
 import { Button } from "@/components/ui/button";
