@@ -36,8 +36,18 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   useEffect(() => {
     if (open && opportunity?.id) {
       fetchAttachments();
+      fetchContracts();
     }
   }, [open, opportunity?.id]);
+
+  const fetchContracts = async () => {
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, title, status, version, created_at")
+      .eq("opportunity_id", opportunity.id)
+      .order("created_at", { ascending: false });
+    setContracts(data || []);
+  };
 
   if (!opportunity) return null;
 
