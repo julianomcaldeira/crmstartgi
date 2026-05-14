@@ -403,16 +403,48 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
           .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
         `}</style>
         {htmlMode ? (
-          <div className="p-3 h-full">
-            <Textarea
-              value={htmlDraft}
-              onChange={(e) => setHtmlDraft(e.target.value)}
-              className="font-mono text-xs h-full min-h-[400px] w-full"
-              placeholder="<h1>Título</h1><p>Cole ou edite seu HTML aqui...</p>"
-              spellCheck={false}
-            />
-            <p className="text-[11px] text-muted-foreground mt-1">
-              Edite o HTML diretamente. Clique em "Aplicar" para voltar ao editor visual.
+          <div className="p-3 h-full flex flex-col gap-2 min-h-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] text-muted-foreground">Editor HTML com pré-visualização ao lado.</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-xs ml-auto">
+                    <Variable className="h-3.5 w-3.5" /> Inserir variável
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-1 max-h-72 overflow-y-auto">
+                  {AVAILABLE_VARIABLES.map((v) => (
+                    <button
+                      key={v.key}
+                      type="button"
+                      className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent"
+                      onClick={() => insertHtmlVariable(v.key)}
+                    >
+                      <span className="font-mono text-primary">{v.key}</span>
+                      <span className="text-muted-foreground ml-2">{v.label}</span>
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 flex-1 min-h-0">
+              <Textarea
+                ref={htmlTextareaRef}
+                value={htmlDraft}
+                onChange={(e) => setHtmlDraft(e.target.value)}
+                className="font-mono text-xs h-full min-h-[400px] w-full resize-none"
+                placeholder="<h1>Título</h1><p>Cole ou edite seu HTML aqui...</p>"
+                spellCheck={false}
+              />
+              <div className="border rounded-md bg-white overflow-auto min-h-[400px]">
+                <div
+                  className="rte-content prose prose-sm max-w-none p-4"
+                  dangerouslySetInnerHTML={{ __html: htmlDraft }}
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Variáveis como <span className="font-mono">{`{{cliente.nome}}`}</span> aparecem como texto na pré-visualização e são substituídas ao gerar a proposta. Clique em "Aplicar" para voltar ao editor visual.
             </p>
           </div>
         ) : (
