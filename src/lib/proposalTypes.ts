@@ -100,6 +100,24 @@ export type ProposalBlock =
   | RichTextBlock | CoverBlock | TextBlock | ScopeBlock | PricingBlock
   | TimelineBlock | SignatureBlock | ImageBlock | GalleryBlock | CtaBlock;
 
+export interface PageSettings {
+  bgColor?: string;
+  pagePadding?: "compact" | "normal" | "spacious";
+  fontFamily?: string;
+  fontSize?: number;
+  brandColor?: string;
+  pageMaxWidth?: number;
+}
+
+export const DEFAULT_PAGE_SETTINGS: PageSettings = {
+  bgColor: "#ffffff",
+  pagePadding: "normal",
+  fontFamily: "Inter, system-ui, -apple-system, Arial, sans-serif",
+  fontSize: 16,
+  brandColor: "#22c55e",
+  pageMaxWidth: 794,
+};
+
 export const BLOCK_LABELS: Record<BlockType, string> = {
   richtext: "Texto Livre (Rich)",
   cover: "Capa",
