@@ -44,6 +44,7 @@ const EVENT_LABELS: Record<string, string> = {
   download: "Baixou/Imprimiu",
   share: "Compartilhou",
   heartbeat: "Permanência",
+  invite_sent: "Convite enviado",
 };
 
 export default function PropostaInsights() {
