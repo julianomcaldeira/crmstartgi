@@ -153,6 +153,53 @@ export default function Contratos() {
     loadAll();
   };
 
+  const openDeleteContract = (c: any) => {
+    setDeleteTarget(c);
+    setDeleteStep(1);
+    setDeleteConfirmText("");
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteStep(1);
+    setDeleteConfirmText("");
+  };
+
+  const confirmDeleteContract = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toUpperCase() !== "EXCLUIR") {
+      toast.error('Digite EXCLUIR para confirmar');
+      return;
+    }
+    setDeleting(true);
+    try {
+      // Limpa registros dependentes (sem FK cascade)
+      const { data: revs } = await supabase
+        .from("contract_clause_revisions")
+        .select("id")
+        .eq("contract_id", deleteTarget.id);
+      const revIds = (revs || []).map((r: any) => r.id);
+      if (revIds.length) {
+        await supabase.from("contract_clause_decisions").delete().in("revision_id", revIds);
+        await supabase.from("contract_clause_revisions").delete().in("id", revIds);
+      }
+      await supabase.from("contract_files").delete().eq("contract_id", deleteTarget.id);
+
+      const { error } = await supabase.from("contracts").delete().eq("id", deleteTarget.id);
+      if (error) throw error;
+      toast.success("Contrato excluído");
+      setDeleteTarget(null);
+      setDeleteStep(1);
+      setDeleteConfirmText("");
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao excluir contrato");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const generateContract = async () => {
     if (!genTemplateId || !genOpportunityId) {
       toast.error("Selecione modelo e oportunidade");
