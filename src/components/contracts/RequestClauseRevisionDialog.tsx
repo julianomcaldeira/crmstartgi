@@ -38,16 +38,23 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
       let extractedText = prospectInput;
 
       if (file) {
-        const path = `${user.id}/${contractId}/${Date.now()}-${file.name}`;
+        const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${contractId}/${Date.now()}-${sanitized}`;
         const { error: upErr } = await supabase.storage.from("contracts").upload(path, file, { upsert: false });
         if (upErr) throw upErr;
-        const { data: signed } = await supabase.storage.from("contracts").createSignedUrl(path, 60 * 60 * 24 * 7);
+        const { data: signed } = await supabase.storage.from("contracts").createSignedUrl(path, 60 * 60 * 24 * 30);
         attachment_url = signed?.signedUrl || path;
         attachment_name = file.name;
 
-        // Para arquivos texto, lê inline; para PDF/DOCX, deixa só o texto colado pelo usuário
-        if (file.type.startsWith("text/")) {
-          extractedText = (extractedText ? extractedText + "\n\n" : "") + (await file.text());
+        // Extrai texto do anexo via edge function (PDF via IA, DOCX via mammoth, TXT direto)
+        toast.info("Extraindo texto do anexo…");
+        const { data: extracted, error: exErr } = await supabase.functions.invoke("extract-contract-attachment", {
+          body: { storage_path: path, file_name: file.name, mime_type: file.type },
+        });
+        if (exErr) {
+          toast.warning("Não foi possível extrair texto do anexo automaticamente. Use o campo de texto acima.");
+        } else if (extracted?.text) {
+          extractedText = (extractedText ? extractedText + "\n\n" : "") + `[Conteúdo extraído de ${file.name}]\n${extracted.text}`;
         }
       }
 
@@ -78,6 +85,10 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
         toast.warning("Revisão criada, mas a IA não conseguiu extrair as mudanças. Reabra para revisar manualmente.");
       } else {
         toast.success("Revisão criada e cláusulas extraídas");
+        // Notifica admin/pré-vendas + vendedor por e-mail
+        supabase.functions.invoke("notify-contract-revision", {
+          body: { revision_id: rev.id, event: "submitted" },
+        }).catch(() => {});
       }
 
       reset();
@@ -112,9 +123,9 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
           </div>
           <div>
             <Label>Anexar arquivo (opcional)</Label>
-            <Input type="file" accept=".pdf,.docx,.doc,.txt,.md" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <Input type="file" accept=".pdf,.docx,.doc,.txt,.md,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
             <p className="text-xs text-muted-foreground mt-1">
-              Para PDF/DOCX, cole também o texto principal acima. Em breve a IA fará a extração direta do anexo.
+              PDF/imagem: extração via IA. DOCX: extração automática. TXT/MD: leitura direta.
             </p>
           </div>
         </div>

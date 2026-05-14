@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History, Mail, Send } from "lucide-react";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History, Mail, Send, ScrollText, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ import OpportunityHistoryLog from "./OpportunityHistoryLog";
 import EmailHistory from "./EmailHistory";
 import ZohoEmailComposer from "./ZohoEmailComposer";
 import { GenerateProposalDialog } from "./proposal/GenerateProposalDialog";
+import { GenerateContractDialog } from "./contracts/GenerateContractDialog";
+import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 interface OpportunityViewDialogProps {
   opportunity: any;
@@ -27,12 +29,25 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRefresh, setEmailRefresh] = useState(0);
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open && opportunity?.id) {
       fetchAttachments();
+      fetchContracts();
     }
   }, [open, opportunity?.id]);
+
+  const fetchContracts = async () => {
+    const { data } = await supabase
+      .from("contracts")
+      .select("id, title, status, version, created_at")
+      .eq("opportunity_id", opportunity.id)
+      .order("created_at", { ascending: false });
+    setContracts(data || []);
+  };
 
   if (!opportunity) return null;
 
@@ -232,19 +247,28 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
-            <Button size="sm" onClick={() => setProposalOpen(true)} className="shrink-0">
-              <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
+                <ScrollText className="h-4 w-4 mr-1" /> Gerar Contrato
+              </Button>
+              <Button size="sm" onClick={() => setProposalOpen(true)}>
+                <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="attachments">
               Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="contracts">
+              <ScrollText className="h-4 w-4 mr-1" />
+              Contratos {contracts.length > 0 && `(${contracts.length})`}
             </TabsTrigger>
             <TabsTrigger value="emails">
               <Mail className="h-4 w-4 mr-1" />
@@ -490,6 +514,37 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
             </div>
           </TabsContent>
 
+          <TabsContent value="contracts" className="mt-4 space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setContractOpen(true)}>
+                <ScrollText className="h-4 w-4 mr-2" /> Gerar contrato
+              </Button>
+            </div>
+            {contracts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                <ScrollText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhum contrato gerado para esta oportunidade.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {contracts.map((c) => (
+                  <button key={c.id} type="button" onClick={() => navigate(`/contratos/${c.id}`)}
+                    className="w-full text-left flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{c.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {c.status}{c.version > 1 ? ` • v${c.version}` : ""} • {format(parseISO(c.created_at), "dd/MM/yyyy HH:mm")}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="emails" className="mt-4 space-y-3">
             <div className="flex justify-end">
               <Button size="sm" onClick={() => setEmailOpen(true)}>
@@ -540,6 +595,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       </Dialog>
 
       <GenerateProposalDialog open={proposalOpen} onOpenChange={setProposalOpen} opportunity={opportunity} />
+      <GenerateContractDialog open={contractOpen} onOpenChange={setContractOpen} opportunity={opportunity} onCreated={fetchContracts} />
     </Dialog>
   );
 };

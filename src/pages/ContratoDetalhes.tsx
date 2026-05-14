@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown } from "lucide-react";
+import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
+import { SendContractEmailDialog } from "@/components/contracts/SendContractEmailDialog";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "bg-gray-500" },
@@ -41,6 +42,8 @@ export default function ContratoDetalhes() {
   const [roles, setRoles] = useState<string[]>([]);
   const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
   const [activeRevision, setActiveRevision] = useState<any | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string>("");
 
   useEffect(() => { if (id) load(); }, [id]);
 
@@ -53,11 +56,12 @@ export default function ContratoDetalhes() {
       setRoles((r || []).map(x => x.role));
     }
     const [{ data: c }, { data: rev }, { data: fs }] = await Promise.all([
-      supabase.from("contracts").select("*, clients(company_name), profiles!contracts_created_by_fkey(full_name, email)").eq("id", id).single(),
+      supabase.from("contracts").select("*, clients(company_name, email), profiles!contracts_created_by_fkey(full_name, email)").eq("id", id).single(),
       supabase.from("contract_clause_revisions").select("*").eq("contract_id", id).order("submitted_at", { ascending: false }),
       supabase.from("contract_files").select("*").eq("contract_id", id).order("created_at", { ascending: false }),
     ]);
     setContract(c);
+    setClientEmail((c as any)?.clients?.email || "");
     setRevisions(rev || []);
     setFiles(fs || []);
     setLoading(false);
@@ -145,6 +149,11 @@ export default function ContratoDetalhes() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {contract.status !== "final" && isOwner && (
+            <Button size="sm" variant="default" onClick={() => setSendOpen(true)} className="gap-1">
+              <Mail size={14} /> Enviar por e-mail
+            </Button>
+          )}
           {contract.status === "draft" && isOwner && (
             <Button size="sm" variant="outline" onClick={() => updateStatus("sent")} className="gap-1">
               <Send size={14} /> Marcar como enviado
@@ -248,6 +257,14 @@ export default function ContratoDetalhes() {
           onClose={() => { setActiveRevision(null); load(); }}
         />
       )}
+
+      <SendContractEmailDialog
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        contract={contract}
+        defaultTo={clientEmail}
+        onSent={load}
+      />
     </div>
   );
 }
