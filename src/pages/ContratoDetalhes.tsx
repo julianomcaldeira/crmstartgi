@@ -232,24 +232,45 @@ export default function ContratoDetalhes() {
 
         <TabsContent value="content">
           {editing ? (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-              <Card><CardContent className="p-3">
-                <div className="h-[78vh]">
-                  <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-end gap-1 bg-muted/40 border rounded-md p-1">
+                <span className="text-xs text-muted-foreground mr-2">Layout do preview:</span>
+                <Button size="sm" variant={previewMode === "side" ? "default" : "ghost"} onClick={() => setPreviewMode("side")} className="h-7 gap-1 text-xs">
+                  <Columns2 size={13} /> Lado a lado
+                </Button>
+                <Button size="sm" variant={previewMode === "stacked" ? "default" : "ghost"} onClick={() => setPreviewMode("stacked")} className="h-7 gap-1 text-xs">
+                  <Rows2 size={13} /> Empilhado
+                </Button>
+                <Button size="sm" variant={previewMode === "hidden" ? "default" : "ghost"} onClick={() => setPreviewMode("hidden")} className="h-7 gap-1 text-xs">
+                  <EyeOff size={13} /> Ocultar
+                </Button>
+              </div>
+
+              {previewMode === "side" && (
+                <SplitPane
+                  splitPct={splitPct}
+                  onSplitChange={setSplitPct}
+                  left={
+                    <Card className="h-full"><CardContent className="p-3 h-full">
+                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div>
+                    </CardContent></Card>
+                  }
+                  right={
+                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} />
+                  }
+                />
+              )}
+
+              {previewMode === "stacked" && (
+                <div className="space-y-3">
+                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} /></div>
                 </div>
-              </CardContent></Card>
-              <Card>
-                <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 sticky top-0 bg-background z-10">
-                  <FileText size={12} /> Pré-visualização em tempo real
-                </div>
-                <CardContent className="p-0">
-                  <div className="h-[78vh] overflow-y-auto bg-gray-100 p-4">
-                    <div className="mx-auto bg-white shadow" style={{ width: 794 }}>
-                      <ProposalRenderer blocks={editBlocks} variables={contract.variables || {}} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              )}
+
+              {previewMode === "hidden" && (
+                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+              )}
             </div>
           ) : (
             <Card><CardContent className="p-4 md:p-6">
