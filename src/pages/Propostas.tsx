@@ -338,7 +338,30 @@ export default function Propostas() {
           </div>
 
           {/* KPIs agregados */}
-          {aggregates && (
+          {aggregatesLoading && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2" aria-busy="true" aria-label="Calculando métricas">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Card key={i} className="p-3 space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-2.5 w-24" />
+                </Card>
+              ))}
+            </div>
+          )}
+          {!aggregatesLoading && aggregatesError && (
+            <Card className="p-3 border-destructive/40 bg-destructive/5 flex items-center gap-3">
+              <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-destructive">Erro ao carregar métricas</div>
+                <div className="text-xs text-muted-foreground truncate">{aggregatesError}</div>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => loadAggregates()}>
+                <RefreshCw className="h-3.5 w-3.5" /> Tentar novamente
+              </Button>
+            </Card>
+          )}
+          {!aggregatesLoading && !aggregatesError && aggregates && (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
               <AggCard icon={<FileText className="h-4 w-4" />} label="Propostas" value={String(aggregates.total)} />
               <AggCard icon={<Activity className="h-4 w-4" />} label="Enviadas" value={String(aggregates.sent)} />
