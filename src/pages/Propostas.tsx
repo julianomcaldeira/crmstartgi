@@ -130,7 +130,7 @@ export default function Propostas() {
     setLoading(true);
     const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
     setTemplates(tplRes.data || []);
-    await loadProposals(1);
+    await Promise.all([loadProposals(1), loadSellers(), loadAggregates()]);
     setProposalsPage(1);
     setLoading(false);
   };
