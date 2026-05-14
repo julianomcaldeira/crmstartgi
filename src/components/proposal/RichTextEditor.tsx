@@ -161,15 +161,86 @@ interface Props {
   minHeight?: number;
 }
 
+const VAR_RE = /\{\{\s*[\w.\-]+\s*\}\}/g;
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+// Build syntax-highlighted HTML for the dark code editor overlay
+function highlightCode(src: string): string {
+  const escaped = escapeHtml(src);
+  // Variables {{...}}
+  let out = escaped.replace(
+    /\{\{\s*[\w.\-]+\s*\}\}/g,
+    (m) => `<span class="rte-var-token">${m}</span>`
+  );
+  // Tag names + attributes (apply on already-escaped text, so tags are &lt;tag...&gt;)
+  out = out.replace(
+    /(&lt;\/?)([a-zA-Z][\w-]*)([^&]*?)(\/?&gt;)/g,
+    (_m, lt, name, attrs, gt) => {
+      const colored = attrs.replace(
+        /([a-zA-Z_:][\w:.-]*)(=)((?:&quot;[^&]*?&quot;)|(?:&#39;[^&]*?&#39;))/g,
+        (_x: string, k: string, eq: string, v: string) =>
+          `<span class="rte-attr">${k}</span>${eq}<span class="rte-str">${v}</span>`
+      );
+      return `<span class="rte-tag-pun">${lt}</span><span class="rte-tag-name">${name}</span>${colored}<span class="rte-tag-pun">${gt}</span>`;
+    }
+  );
+  // Trailing newline so last line keeps its height in the overlay
+  return out + "\n";
+}
+// Wrap {{...}} occurrences inside text nodes only (preserves HTML attributes/tags)
+function highlightVariablesInPreview(html: string): string {
+  if (!html) return "";
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__root__">${html}</div>`, "text/html");
+    const root = doc.getElementById("__root__");
+    if (!root) return html;
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const textNodes: Text[] = [];
+    let n: Node | null;
+    while ((n = walker.nextNode())) textNodes.push(n as Text);
+    for (const tn of textNodes) {
+      const txt = tn.nodeValue || "";
+      if (!VAR_RE.test(txt)) continue;
+      VAR_RE.lastIndex = 0;
+      const frag = doc.createDocumentFragment();
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = VAR_RE.exec(txt))) {
+        if (m.index > last) frag.appendChild(doc.createTextNode(txt.slice(last, m.index)));
+        const span = doc.createElement("span");
+        span.className = "rte-var-preview";
+        span.setAttribute("data-var", m[0]);
+        span.textContent = m[0];
+        frag.appendChild(span);
+        last = m.index + m[0].length;
+      }
+      if (last < txt.length) frag.appendChild(doc.createTextNode(txt.slice(last)));
+      tn.parentNode?.replaceChild(frag, tn);
+    }
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 export function RichTextEditor({ value, onChange, placeholder = "Comece a escrever sua proposta...", minHeight = 400 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const htmlOverlayRef = useRef<HTMLDivElement>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
   const [htmlView, setHtmlView] = useState<"split" | "code" | "preview">("split");
   const [htmlWrap, setHtmlWrap] = useState(true);
   const [htmlCopied, setHtmlCopied] = useState(false);
   const lineCount = (htmlDraft.match(/\n/g)?.length ?? 0) + 1;
+  const varCount = (htmlDraft.match(VAR_RE) || []).length;
 
   const insertHtmlVariable = (key: string) => {
     const ta = htmlTextareaRef.current;
