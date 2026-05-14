@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail, Pencil, Save, X } from "lucide-react";
+import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail, Pencil, Save, X, Columns2, Rows2, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
