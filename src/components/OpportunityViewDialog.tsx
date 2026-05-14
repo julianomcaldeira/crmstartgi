@@ -29,6 +29,9 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailRefresh, setEmailRefresh] = useState(0);
   const [proposalOpen, setProposalOpen] = useState(false);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open && opportunity?.id) {
