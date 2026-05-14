@@ -11,6 +11,12 @@ import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react
 
 const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
 
+type SignatureImportResult = {
+  publicUrl?: string;
+  error?: string;
+  fallback?: boolean;
+};
+
 function getExternalSignatureImageUrls(signatureHtml: string) {
   if (!signatureHtml) return [];
   const doc = new DOMParser().parseFromString(signatureHtml, "text/html");
@@ -61,10 +67,13 @@ export default function EmailSignatureConfig() {
     try {
       let nextHtml = currentHtml;
       for (const url of urls) {
-        const { data, error } = await supabase.functions.invoke("import-signature-image", {
+        const { data, error } = await supabase.functions.invoke<SignatureImportResult>("import-signature-image", {
           body: { url },
         });
         if (error) throw error;
+        if (data?.fallback) {
+          throw new Error(data.error || "O provedor externo bloqueou o download automático da imagem.");
+        }
         if (!data?.publicUrl) throw new Error("A imagem externa não pôde ser importada.");
         nextHtml = nextHtml.split(url).join(data.publicUrl);
       }
@@ -77,7 +86,7 @@ export default function EmailSignatureConfig() {
       if (showToast) {
         toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
       }
-      throw err;
+      return currentHtml;
     } finally {
       setImporting(false);
     }
