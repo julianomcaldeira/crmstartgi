@@ -2298,6 +2298,65 @@ export type Database = {
           },
         ]
       }
+      proposal_recipients: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string | null
+          engagement_score: number
+          id: string
+          last_viewed_at: string | null
+          name: string
+          notes: string | null
+          proposal_id: string
+          role: string | null
+          status: string
+          total_time_ms: number
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email?: string | null
+          engagement_score?: number
+          id?: string
+          last_viewed_at?: string | null
+          name: string
+          notes?: string | null
+          proposal_id: string
+          role?: string | null
+          status?: string
+          total_time_ms?: number
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          engagement_score?: number
+          id?: string
+          last_viewed_at?: string | null
+          name?: string
+          notes?: string | null
+          proposal_id?: string
+          role?: string | null
+          status?: string
+          total_time_ms?: number
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_recipients_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_templates: {
         Row: {
           blocks: Json
