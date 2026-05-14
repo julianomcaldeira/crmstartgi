@@ -301,7 +301,7 @@ export default function EmailSignatureConfig() {
                 <Label className="text-xs text-muted-foreground">Pré-visualização (renderizada como o destinatário verá)</Label>
                 <iframe
                   title="Pré-visualização da assinatura"
-                  className="w-full border rounded bg-background"
+                  className="w-full rounded bg-background border-0"
                   style={{ height: 280 }}
                   referrerPolicy="no-referrer"
                   srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;background:#fff;}img{max-width:100%;height:auto;}</style></head><body>${normalizeSignatureImagesForPreview(html)}</body></html>`}
