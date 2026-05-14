@@ -29,6 +29,9 @@ export default function Propostas() {
   const [tab, setTab] = useState(() => searchParams.get("tab") || "templates");
   const [proposalsPage, setProposalsPage] = useState(() => Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
+  const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
+  const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
+  const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
