@@ -65,7 +65,7 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   List, ListOrdered, Quote, Heading1, Heading2, Heading3,
   Image as ImageIcon, Link2, Variable, Undo, Redo, Palette, Type,
-  Minus, Droplet, Code2
+  Minus, Droplet, Code2, Wand2, Eraser, Copy, Check, Eye
 } from "lucide-react";
 import { useRef, useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
