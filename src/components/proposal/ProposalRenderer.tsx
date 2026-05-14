@@ -60,13 +60,21 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
     }
     case "text":
     case "about":
-    case "terms":
+    case "terms": {
+      const padMap = { compact: "24px 40px", normal: "48px 56px", spacious: "72px 80px" } as const;
+      const padding = padMap[(block as any).padding as keyof typeof padMap] || padMap.normal;
+      const align = (block as any).align || "left";
+      const titleColor = (block as any).titleColor || brandColor;
+      const textColor = (block as any).textColor || "#111827";
+      const bg = (block as any).bgColor;
+      const fs = (block as any).fontSize || 16;
       return (
-        <section className="pg">
-          {block.title && <h2 style={{ fontSize: 32, color: brandColor, marginBottom: 16 }}>{interpolate(block.title, variables)}</h2>}
-          <div className="pre-line" style={{ fontSize: 16 }}>{interpolate(block.content, variables)}</div>
+        <section className="pg" style={{ padding, background: bg || undefined, color: textColor, textAlign: align as any }}>
+          {block.title && <h2 style={{ fontSize: 32, color: titleColor, marginBottom: 16, textAlign: align as any }}>{interpolate(block.title, variables)}</h2>}
+          <div className="pre-line" style={{ fontSize: fs, color: textColor }}>{interpolate(block.content, variables)}</div>
         </section>
       );
+    }
     case "scope":
       return (
         <section className="pg">
