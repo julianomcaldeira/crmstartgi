@@ -33,7 +33,14 @@ export default function Contratos() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("contracts");
   const [hasTemplateAccess, setHasTemplateAccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Exclusão de contrato (dupla checagem)
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const [templates, setTemplates] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
