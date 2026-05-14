@@ -59,9 +59,10 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     setTitle(`Proposta Comercial - ${(clientRes.data as any)?.company_name || opportunity?.title || ""}`.slice(0, 100));
   };
 
-  const variables = useMemo(() => buildVariableContext({
-    client, opportunity, seller, validity_days: validityDays,
-  }), [client, opportunity, seller, validityDays]);
+  const variables = useMemo(() => ({
+    ...buildVariableContext({ client, opportunity, seller, validity_days: validityDays }),
+    _page: pageSettings,
+  }), [client, opportunity, seller, validityDays, pageSettings]);
 
   const pickTemplate = (tpl: any) => {
     setTemplateId(tpl.id);
