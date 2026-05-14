@@ -1,88 +1,126 @@
 ## Objetivo
 
-Permitir que **qualquer vendedor** solicite a transferência de um prospect que pertence a outro vendedor. O **dono atual** recebe a solicitação e pode **aprovar** (a posse muda automaticamente) ou **recusar**. Admin e gestor mantêm o poder de transferir direto, como hoje.
+Criar um módulo completo de **Contratos StartGi** com:
+- Editor de modelos com variáveis (estilo Propostas) — acesso só super admin e pré-vendas.
+- Geração de contrato padrão por qualquer vendedor em qualquer fase da oportunidade.
+- Envio do contrato por e-mail pelo sistema (aba Emails).
+- Fluxo de **negociação de cláusulas** com aprovação do super admin, registro de tudo, notificações por e-mail e geração de Word com a devolutiva.
+- Geração e arquivamento da **versão final consolidada**.
 
-## Backend
+---
 
-### 1. Nova tabela `prospect_transfer_requests`
+## Papéis e permissões
 
-Campos de domínio:
-- `client_id` (uuid) — prospect solicitado
-- `requester_id` (uuid) — vendedor que está pedindo
-- `owner_id` (uuid) — vendedor dono no momento do pedido (snapshot)
-- `status` (text: `pending` | `approved` | `rejected` | `cancelled`)
-- `request_message` (text) — justificativa do solicitante (opcional)
-- `response_message` (text) — motivo da resposta do dono (opcional)
-- `responded_at` (timestamptz)
-- `responded_by` (uuid)
+- **Super admin** (`juliano@startgi.com.br`): cria/edita modelos, aprova/rejeita cláusulas, vê tudo.
+- **Pré-vendas**: cria/edita modelos, vê todos os contratos. (Nova role `pre_vendas` ou reaproveitar role já existente — verificar `user_roles`.)
+- **Vendedor**: gera contrato a partir de modelo, envia, abre solicitação de mudança de cláusulas, recebe devolutiva, gera versão final.
+- **Gestor**: visualiza tudo, sem editar modelos.
 
-Índice único parcial: um único pedido `pending` por (`client_id`, `requester_id`) para evitar spam.
+Menu lateral "Contratos" (modelos) → visível só para super admin + pré-vendas.
+Botão "Gerar contrato" na oportunidade → visível para qualquer vendedor dono.
 
-### 2. RLS
+---
 
-- **INSERT**: vendedor autenticado pode criar pedido onde `requester_id = auth.uid()`, desde que o prospect exista, ele **não seja** o dono atual e ainda não exista pedido `pending` dele para esse prospect.
-- **SELECT**: visíveis para `requester_id`, `owner_id`, admin e gestor.
-- **UPDATE**: apenas o `owner_id` (ou admin/gestor) pode mudar `status` de `pending` para `approved`/`rejected`. O `requester_id` pode mudar `pending` para `cancelled`.
-- **DELETE**: apenas admin.
+## Backend (Lovable Cloud)
 
-### 3. Trigger / função SECURITY DEFINER
+### Tabelas
 
-Quando `status` muda para `approved`:
-- Verifica se quem aprovou é realmente o `owner_id` atual do prospect (defesa contra disputa).
-- Atualiza `clients.created_by = requester_id`.
-- Marca outros pedidos `pending` do mesmo prospect como `cancelled` automaticamente.
-- Grava `responded_at = now()` e `responded_by = auth.uid()`.
+1. **`contract_templates`** — modelos de contrato editáveis
+   - `name`, `description`, `blocks` (jsonb — mesmo formato dos `proposals.blocks`), `variables` (jsonb), `is_active`, `created_by`, timestamps.
+   - RLS: SELECT para todos autenticados (vendedor precisa ler para gerar). INSERT/UPDATE/DELETE só admin + pré-vendas.
 
-Função SECURITY DEFINER necessária porque o `requester_id` (novo dono) não tem permissão de UPDATE direto em `clients` pelas policies atuais — e queremos manter assim.
+2. **`contracts`** — instâncias geradas a partir de um modelo
+   - `template_id`, `opportunity_id`, `client_id`, `created_by`, `title`, `blocks` (jsonb — snapshot já com variáveis substituídas), `variables` (jsonb), `status` (`draft` | `sent` | `under_negotiation` | `approved` | `final` | `cancelled`), `version` (int), `parent_contract_id` (para versão final referenciar a inicial), `share_token`, timestamps.
+   - RLS: vendedor vê os próprios; admin/pré-vendas/gestor veem todos.
 
-### 4. Reverter policy criada por engano
+3. **`contract_clause_revisions`** — solicitação de mudança de cláusulas
+   - `contract_id`, `requested_by` (vendedor), `prospect_input` (text — texto bruto que o vendedor cola/anexa do prospect), `attachment_url` (opcional, storage), `extracted_changes` (jsonb — IA extrai cláusula → mudança proposta), `status` (`pending_admin_review` | `reviewed` | `final_consolidated`), `submitted_at`, `reviewed_at`, `reviewed_by`.
 
-Remover a policy `Eduardo and Thiago can transfer any client` da tabela `clients` (foi adicionada na interpretação errada anterior).
+4. **`contract_clause_decisions`** — decisão cláusula a cláusula do super admin
+   - `revision_id`, `clause_reference` (texto/identificador da cláusula), `original_text`, `proposed_change`, `decision` (`accepted` | `rejected` | `counter_proposal`), `admin_comment`, `counter_text` (opcional), timestamps.
+
+5. **`contract_files`** — arquivos gerados (Word de devolutiva, PDF do contrato, contrato final)
+   - `contract_id`, `revision_id` (nullable), `kind` (`generated_pdf` | `negotiation_docx` | `final_pdf` | `prospect_attachment`), `file_url`, `file_name`, `created_by`.
+
+6. **Storage bucket `contracts`** (privado) — anexos do prospect, Word de devolutiva, PDFs gerados, contrato final.
+
+### Edge Functions
+
+- **`analyze-contract-changes`** — recebe `revision_id`, lê `prospect_input` (+ texto extraído do anexo), usa Lovable AI (`google/gemini-2.5-pro`) para identificar **cláusula por cláusula** as mudanças solicitadas → grava em `extracted_changes` + cria registros `contract_clause_decisions` (status inicial vazio).
+- **`notify-contract-revision`** — dispara e-mails (Resend já em uso) ao submeter revisão (vendedor + super admin + pré-vendas) e ao concluir review (vendedor).
+- **`generate-negotiation-docx`** — gera arquivo `.docx` com todas as cláusulas, decisões do admin, comentários e contrapropostas. Faz upload no bucket `contracts`. (Usa biblioteca `docx` em Deno via npm specifier.)
+- **`generate-final-contract`** — quando todas as cláusulas estão `accepted` (ou prospect aceitou contrapropostas), aplica os ajustes nos `blocks` e cria novo `contracts` com `status='final'`, `version+1`, `parent_contract_id`. Gera PDF final.
+- **`send-contract-email`** — envia o contrato (PDF) ao prospect via Resend; registra envio no histórico de e-mails da oportunidade.
+
+---
 
 ## Frontend
 
-### 1. Botão na lista/card de prospect (`src/pages/Prospects.tsx`)
+### Páginas novas
 
-- Se `canEditClient(client)` → mostra botão **"Transferir prospect"** (atual, inalterado).
-- Senão, se usuário é vendedor e `client.created_by` é outro vendedor → mostra botão **"Solicitar transferência"** (ícone `UserPlus` / `HandshakeIcon`).
-  - Se já existe pedido `pending` desse vendedor para esse prospect, troca para badge **"Solicitação pendente"** (desabilita botão).
+1. **`/contratos/modelos`** (`ContratoModelos.tsx`) — só admin/pré-vendas.
+   - Lista de modelos + criar/editar.
+   - Editor reaproveitando `ProposalBuilder` (renomear/abstrair se necessário) com variáveis.
 
-### 2. Diálogo "Solicitar transferência"
+2. **`/contratos`** (`Contratos.tsx`) — lista de contratos gerados.
+   - Filtros por status, oportunidade, vendedor.
+   - Indicador visual quando há revisão pendente.
 
-- Mostra dono atual.
-- Campo opcional `request_message` (textarea, motivo).
-- Botão **Enviar solicitação** → insere em `prospect_transfer_requests`.
-- Toast de sucesso explicando que o dono precisa aprovar.
+3. **`/contratos/:id`** (`ContratoDetalhes.tsx`) — visualização do contrato + abas:
+   - **Conteúdo**: visualizador (`ProposalRenderer`).
+   - **Revisões**: lista de `clause_revisions`, status, botão "Nova solicitação de revisão" (vendedor).
+   - **Aprovação** (admin): cláusula a cláusula, decisão + comentário + contraproposta. Botão "Concluir revisão" → gera Word + envia e-mail.
+   - **Versão final**: botão "Gerar contrato final" quando aplicável.
+   - **Arquivos**: lista de `contract_files`.
 
-### 3. Painel "Solicitações de transferência" para o dono
+### Componentes
 
-Novo componente `TransferRequestsPanel` exibido:
-- Como aba/seção em **Prospects** (badge com contador no topo da página).
-- Opcionalmente também como item no `NotificationSystem` existente (futuro).
+- **`GenerateContractDialog`** — botão "Gerar contrato" na página de Oportunidade (qualquer fase). Escolhe template, preenche variáveis automaticamente (cliente, valor, etc.), cria `contracts` com `status='draft'`.
+- **`SendContractEmailDialog`** — usa fluxo Zoho/Resend já existente, anexa PDF.
+- **`RequestClauseRevisionDialog`** — vendedor cola texto do prospect e/ou anexa arquivo (PDF/DOCX). Submete → chama `analyze-contract-changes` → mostra preview do que a IA extraiu antes de confirmar.
+- **`ClauseReviewPanel`** (admin) — para cada cláusula extraída: aceitar / rejeitar / contraproposta + comentário obrigatório quando rejeitar.
+- **`ContractNegotiationTimeline`** — histórico visual de revisões.
 
-Cada item: prospect (company_name), solicitante, mensagem, data. Botões **Aprovar** e **Recusar** (com diálogo de confirmação e campo opcional de `response_message`).
+### Integrações com Oportunidade
 
-### 4. Histórico para o solicitante
+- Em `OpportunityViewDialog` / página de oportunidade: nova aba "Contratos" listando contratos vinculados + botão gerar.
+- Em `EmailHistory` / aba Emails da oportunidade: ao enviar contrato, registra mensagem com anexo.
 
-Mesmo painel, aba **"Minhas solicitações"**, mostrando status (pending/approved/rejected/cancelled) e mensagens. Permite **cancelar** se ainda `pending`.
+---
 
-## Detalhes técnicos
+## Fluxo end-to-end (resumo)
 
-- Realtime (opcional): assinar `prospect_transfer_requests` para atualizar contador em tempo real. Adicionar tabela ao publication `supabase_realtime`.
-- Reaproveitar `useQueries.ts` com novo hook `useTransferRequests(userId)`.
-- Usar `parseDateOnly` não se aplica aqui — datas são timestamps, `new Date()` funciona.
-- Toast: `sonner` já em uso.
+1. Admin/pré-vendas cria **modelo** com variáveis.
+2. Vendedor abre oportunidade → "Gerar contrato" → escolhe modelo → contrato `draft` criado.
+3. Vendedor envia contrato por e-mail (sistema registra no histórico).
+4. Prospect devolve com pedidos de mudança → vendedor abre **"Solicitar revisão de cláusulas"**, cola texto/anexa arquivo.
+5. IA extrai mudanças cláusula por cláusula → vendedor confirma → status `under_negotiation`. E-mail para vendedor + admin + pré-vendas.
+6. Super admin abre painel, decide cláusula a cláusula com comentários, conclui revisão.
+7. Sistema gera **Word de devolutiva** + envia e-mail ao vendedor com resumo ponto a ponto.
+8. Vendedor envia devolutiva ao prospect. Se prospect aceita tudo → vendedor clica **"Gerar contrato final"** → novo contrato `status='final'` consolidando todas as decisões aceitas + contrapropostas aceitas. PDF arquivado em `contract_files`.
 
-## Fora de escopo
+---
 
-- Notificação por e-mail (pode entrar depois, usando o padrão Resend já existente).
-- Bulk transfer requests.
-- Aprovação automática por regra de negócio.
+## Pontos a confirmar com o usuário
+
+1. **Role pré-vendas**: já existe na tabela `user_roles` ou devo criar `pre_vendas` no enum `app_role`?
+2. **Anexo do prospect**: aceitar PDF e DOCX? (extração de texto via Lovable AI multimodal ou parser dedicado?)
+3. **Contrato final**: deve gerar PDF (como Propostas) ou também Word editável?
+4. **Notificação**: usar o template de e-mail do Resend já configurado, ou desenhar visual específico StartGi?
+5. **Versionamento**: manter histórico de **todas** as versões intermediárias do contrato, ou só inicial + final?
+
+---
+
+## Fora do escopo (sugestões para depois)
+
+- Assinatura eletrônica (DocuSign/ClickSign).
+- Fluxo de aprovação multi-nível (mais de um aprovador).
+- Comparação visual diff entre versões.
+
+---
 
 ## Arquivos a criar/editar
 
-- Migração SQL (nova tabela + RLS + função/trigger + remoção da policy errada).
-- `src/pages/Prospects.tsx` — botão condicional + integração do painel.
-- `src/components/TransferRequestsPanel.tsx` — novo.
-- `src/components/RequestTransferDialog.tsx` — novo.
-- `src/hooks/useQueries.ts` — hook de pedidos.
+**SQL**: 1 migração (5 tabelas + RLS + bucket).
+**Edge functions**: `analyze-contract-changes`, `notify-contract-revision`, `generate-negotiation-docx`, `generate-final-contract`, `send-contract-email`.
+**Frontend**: `src/pages/ContratoModelos.tsx`, `src/pages/Contratos.tsx`, `src/pages/ContratoDetalhes.tsx`, componentes listados acima, novos itens em `App.tsx` e na sidebar (`Layout.tsx`), botão na página de Oportunidades.

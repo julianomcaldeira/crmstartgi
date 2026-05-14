@@ -21,6 +21,7 @@ import {
   Brain,
   Mail,
   FileText,
+  ScrollText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -112,6 +113,7 @@ const Layout = ({ children }: LayoutProps) => {
     { icon: UsersRound, label: "Métricas de Equipe", path: "/metricas-equipe" },
     { icon: Mail, label: "Dashboard E-mails", path: "/emails-dashboard" },
     ...(isAdmin || isPreVendas ? [{ icon: FileText, label: "Propostas", path: "/propostas" }] : []),
+    { icon: ScrollText, label: "Contratos", path: "/contratos" },
     ...(isAdmin ? [{ icon: Settings, label: "Admin", path: "/admin" }] : []),
     { icon: Settings, label: "Configurações", path: "/configuracoes" },
   ];
