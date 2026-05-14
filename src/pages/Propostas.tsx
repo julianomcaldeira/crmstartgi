@@ -32,6 +32,8 @@ export default function Propostas() {
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
+  const [aggregatesLoading, setAggregatesLoading] = useState(false);
+  const [aggregatesError, setAggregatesError] = useState<string | null>(null);
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
