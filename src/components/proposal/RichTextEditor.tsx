@@ -271,23 +271,63 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <Btn onClick={() => fileRef.current?.click()} title="Inserir imagem"><ImageIcon className="h-4 w-4" /></Btn>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
 
-        {/* Image size (when image selected) */}
+        {/* Image edit (when image selected) */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Tamanho da imagem" disabled={!editor.isActive("image")}>
-              Tam
+            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Editar imagem selecionada" disabled={!editor.isActive("image")}>
+              Imagem
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-40 p-1">
-            {[
-              { label: "25%", v: "25%" },
-              { label: "50%", v: "50%" },
-              { label: "75%", v: "75%" },
-              { label: "100%", v: "100%" },
-              { label: "Original", v: "" },
-            ].map((o) => (
-              <button key={o.label} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent" onClick={() => setImageWidth(o.v)}>{o.label}</button>
-            ))}
+          <PopoverContent className="w-72 p-3 space-y-2">
+            {(() => {
+              const a: any = editor.getAttributes("image");
+              const upd = (patch: any) => editor.chain().focus().updateAttributes("image", patch).run();
+              return (
+                <>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Largura</div>
+                    <div className="flex flex-wrap gap-1">
+                      {["25%", "50%", "75%", "100%", ""].map((v) => (
+                        <button key={v || "orig"} className="px-2 py-1 text-xs rounded border hover:bg-accent" onClick={() => upd({ width: v })}>{v || "Original"}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Alinhamento</div>
+                    <div className="flex gap-1">
+                      {[["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight]].map(([v, Ic]: any) => (
+                        <Button key={v} type="button" size="sm" variant={a.align === v ? "default" : "outline"} className="h-7 w-7 p-0" onClick={() => upd({ align: v })}><Ic className="h-3.5 w-3.5" /></Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Raio: {a.radius ?? 6}px</div>
+                    <input type="range" min={0} max={48} value={Number(a.radius ?? 6)} onChange={(e) => upd({ radius: e.target.value })} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Rotação: {a.rotate || 0}°</div>
+                    <input type="range" min={-180} max={180} value={Number(a.rotate || 0)} onChange={(e) => upd({ rotate: e.target.value })} className="w-full" />
+                  </div>
+                  <label className="flex items-center justify-between text-xs">
+                    <span className="font-medium">Sombra</span>
+                    <input type="checkbox" checked={a.shadow === "true" || a.shadow === true} onChange={(e) => upd({ shadow: e.target.checked ? "true" : null })} />
+                  </label>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Filtro</div>
+                    <Select value={a.filter || "none"} onValueChange={(v) => upd({ filter: v === "none" ? null : v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        <SelectItem value="grayscale">Preto e branco</SelectItem>
+                        <SelectItem value="sepia">Sépia</SelectItem>
+                        <SelectItem value="blur">Desfoque</SelectItem>
+                        <SelectItem value="bright">Brilho+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              );
+            })()}
           </PopoverContent>
         </Popover>
 
