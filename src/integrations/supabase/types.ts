@@ -524,6 +524,292 @@ export type Database = {
           },
         ]
       }
+      contract_clause_decisions: {
+        Row: {
+          admin_comment: string | null
+          clause_reference: string
+          counter_text: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision: string | null
+          id: string
+          original_text: string | null
+          position: number
+          proposed_change: string
+          revision_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_comment?: string | null
+          clause_reference: string
+          counter_text?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          id?: string
+          original_text?: string | null
+          position?: number
+          proposed_change: string
+          revision_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_comment?: string | null
+          clause_reference?: string
+          counter_text?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision?: string | null
+          id?: string
+          original_text?: string | null
+          position?: number
+          proposed_change?: string
+          revision_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_clause_decisions_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "contract_clause_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_clause_revisions: {
+        Row: {
+          admin_summary: string | null
+          attachment_name: string | null
+          attachment_url: string | null
+          contract_id: string
+          created_at: string
+          extracted_changes: Json | null
+          id: string
+          negotiation_docx_url: string | null
+          notes: string | null
+          prospect_input: string | null
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          admin_summary?: string | null
+          attachment_name?: string | null
+          attachment_url?: string | null
+          contract_id: string
+          created_at?: string
+          extracted_changes?: Json | null
+          id?: string
+          negotiation_docx_url?: string | null
+          notes?: string | null
+          prospect_input?: string | null
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_summary?: string | null
+          attachment_name?: string | null
+          attachment_url?: string | null
+          contract_id?: string
+          created_at?: string
+          extracted_changes?: Json | null
+          id?: string
+          negotiation_docx_url?: string | null
+          notes?: string | null
+          prospect_input?: string | null
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_clause_revisions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_files: {
+        Row: {
+          contract_id: string
+          created_at: string
+          created_by: string
+          file_name: string
+          file_size: number | null
+          file_url: string
+          id: string
+          kind: string
+          mime_type: string | null
+          revision_id: string | null
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          id?: string
+          kind: string
+          mime_type?: string | null
+          revision_id?: string | null
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          revision_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_files_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_files_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "contract_clause_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_templates: {
+        Row: {
+          blocks: Json
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: []
+      }
+      contracts: {
+        Row: {
+          blocks: Json
+          client_id: string
+          created_at: string
+          created_by: string
+          finalized_at: string | null
+          id: string
+          opportunity_id: string
+          parent_contract_id: string | null
+          pdf_url: string | null
+          sent_at: string | null
+          share_token: string
+          status: string
+          template_id: string | null
+          title: string
+          updated_at: string
+          variables: Json
+          version: number
+        }
+        Insert: {
+          blocks?: Json
+          client_id: string
+          created_at?: string
+          created_by: string
+          finalized_at?: string | null
+          id?: string
+          opportunity_id: string
+          parent_contract_id?: string | null
+          pdf_url?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          variables?: Json
+          version?: number
+        }
+        Update: {
+          blocks?: Json
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          finalized_at?: string | null
+          id?: string
+          opportunity_id?: string
+          parent_contract_id?: string | null
+          pdf_url?: string | null
+          sent_at?: string | null
+          share_token?: string
+          status?: string
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          variables?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_parent_contract_id_fkey"
+            columns: ["parent_contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diagnostic_question_options: {
         Row: {
           created_at: string | null
