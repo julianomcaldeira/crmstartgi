@@ -523,6 +523,7 @@ const ClienteDetalhes = () => {
           email: contactFormData.email || null,
           phone: contactFormData.phone ? autoAddMobileNine(contactFormData.phone) : null,
           mobile: contactFormData.mobile ? autoAddMobileNine(contactFormData.mobile) : null,
+          linkedin: contactFormData.linkedin || null,
           rating: contactFormData.rating,
           is_primary: contactFormData.is_primary,
         })
