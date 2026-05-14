@@ -371,7 +371,86 @@ export default function PropostaInsights() {
 
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Histórico de versões ({versions.length})</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4" /> Destinatários da Deal Room ({recipients.length})</CardTitle>
+          <Button size="sm" onClick={openNewRecipient}><UserPlus className="h-3 w-3 mr-1" /> Adicionar destinatário</Button>
+        </CardHeader>
+        <CardContent>
+          {recipients.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              Nenhum destinatário cadastrado. Adicione pessoas para gerar links únicos e rastrear o engajamento individual.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Pessoa</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Score</TableHead>
+                  <TableHead>Aberturas</TableHead>
+                  <TableHead>Tempo</TableHead>
+                  <TableHead>Última visita</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recipients.map((r) => {
+                  const rcls = classify(r.engagement_score || 0);
+                  return (
+                    <TableRow key={r.id}>
+                      <TableCell>
+                        <div className="font-medium text-sm">{r.name}</div>
+                        {r.email && <div className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" />{r.email}</div>}
+                      </TableCell>
+                      <TableCell className="text-xs">{r.role || "—"}</TableCell>
+                      <TableCell><Badge variant="outline">{r.status}</Badge></TableCell>
+                      <TableCell><Badge className={rcls.color}><rcls.Icon className="h-3 w-3 mr-1" />{r.engagement_score || 0}</Badge></TableCell>
+                      <TableCell className="text-xs">{r.view_count || 0}</TableCell>
+                      <TableCell className="text-xs">{formatDuration(r.total_time_ms || 0)}</TableCell>
+                      <TableCell className="text-xs">
+                        {r.last_viewed_at ? formatDistanceToNow(parseISO(r.last_viewed_at), { addSuffix: true, locale: ptBR }) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button size="sm" variant="outline" onClick={() => copyRecipientLink(r)} title="Copiar link único"><Link2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="outline" className="ml-1" onClick={() => window.open(recipientLink(r), "_blank")} title="Abrir como destinatário"><ExternalLink className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="ghost" className="ml-1" onClick={() => openEditRecipient(r)} title="Editar">✎</Button>
+                        <Button size="sm" variant="ghost" className="text-destructive ml-1" onClick={() => deleteRecipient(r)}><Trash2 className="h-3 w-3" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={recipientOpen} onOpenChange={setRecipientOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingRecipient ? "Editar destinatário" : "Novo destinatário"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label className="text-xs">Nome *</Label><Input value={rName} onChange={(e) => setRName(e.target.value)} placeholder="Ex.: Maria Souza" /></div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label className="text-xs">E-mail</Label><Input type="email" value={rEmail} onChange={(e) => setREmail(e.target.value)} /></div>
+              <div><Label className="text-xs">Cargo</Label><Input value={rRole} onChange={(e) => setRRole(e.target.value)} placeholder="Ex.: Diretora Comercial" /></div>
+            </div>
+            <div><Label className="text-xs">Notas</Label><Textarea value={rNotes} onChange={(e) => setRNotes(e.target.value)} rows={2} /></div>
+            {editingRecipient && (
+              <div className="text-xs text-muted-foreground break-all p-2 bg-muted rounded">
+                Link único: {recipientLink(editingRecipient)}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecipientOpen(false)}>Cancelar</Button>
+            <Button onClick={saveRecipient}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
           <Badge variant="outline">Versão atual: v{proposal.version || 1}</Badge>
         </CardHeader>
         <CardContent>
