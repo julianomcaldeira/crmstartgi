@@ -61,7 +61,19 @@ export default function EmailSignatureConfig() {
         .eq("user_id", user.id)
         .maybeSingle();
       if (data) {
-        setHtml(data.signature_html || "");
+        const storedHtml = data.signature_html || "";
+        if (EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(storedHtml)) {
+          try {
+            const fixedHtml = await importExternalImages(storedHtml);
+            await supabase
+              .from("email_signatures")
+              .upsert({ user_id: user.id, signature_html: fixedHtml, enabled: data.enabled }, { onConflict: "user_id" });
+          } catch {
+            setHtml(storedHtml);
+          }
+        } else {
+          setHtml(storedHtml);
+        }
         setEnabled(data.enabled);
       }
       setLoading(false);
