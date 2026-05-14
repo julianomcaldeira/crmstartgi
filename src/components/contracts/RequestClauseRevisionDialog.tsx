@@ -38,16 +38,23 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
       let extractedText = prospectInput;
 
       if (file) {
-        const path = `${user.id}/${contractId}/${Date.now()}-${file.name}`;
+        const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${contractId}/${Date.now()}-${sanitized}`;
         const { error: upErr } = await supabase.storage.from("contracts").upload(path, file, { upsert: false });
         if (upErr) throw upErr;
-        const { data: signed } = await supabase.storage.from("contracts").createSignedUrl(path, 60 * 60 * 24 * 7);
+        const { data: signed } = await supabase.storage.from("contracts").createSignedUrl(path, 60 * 60 * 24 * 30);
         attachment_url = signed?.signedUrl || path;
         attachment_name = file.name;
 
-        // Para arquivos texto, lê inline; para PDF/DOCX, deixa só o texto colado pelo usuário
-        if (file.type.startsWith("text/")) {
-          extractedText = (extractedText ? extractedText + "\n\n" : "") + (await file.text());
+        // Extrai texto do anexo via edge function (PDF via IA, DOCX via mammoth, TXT direto)
+        toast.info("Extraindo texto do anexo…");
+        const { data: extracted, error: exErr } = await supabase.functions.invoke("extract-contract-attachment", {
+          body: { storage_path: path, file_name: file.name, mime_type: file.type },
+        });
+        if (exErr) {
+          toast.warning("Não foi possível extrair texto do anexo automaticamente. Use o campo de texto acima.");
+        } else if (extracted?.text) {
+          extractedText = (extractedText ? extractedText + "\n\n" : "") + `[Conteúdo extraído de ${file.name}]\n${extracted.text}`;
         }
       }
 
