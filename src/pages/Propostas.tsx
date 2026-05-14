@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
@@ -28,6 +29,9 @@ export default function Propostas() {
   const [tab, setTab] = useState(() => searchParams.get("tab") || "templates");
   const [proposalsPage, setProposalsPage] = useState(() => Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
+  const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
+  const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
+  const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
@@ -53,39 +57,80 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter]);
+
+  useEffect(() => {
+    if (hasAccess) loadAggregates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAccess, statusFilter, sellerFilter]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, sellerFilter]);
 
-  // Persist tab/page/status filter into the URL so reload/back keeps state
+  // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     if (tab !== "templates") next.set("tab", tab); else next.delete("tab");
     if (proposalsPage > 1) next.set("page", String(proposalsPage)); else next.delete("page");
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
+    if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return setHasAccess(false);
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     const roles = (data || []).map((r) => r.role);
-    const ok = roles.includes("admin") || roles.includes("pre_vendas");
+    const ok = roles.includes("admin") || roles.includes("pre_vendas") || roles.includes("gestor");
     setHasAccess(ok);
     if (ok) loadAll();
+  };
+
+  const loadSellers = async () => {
+    // Distinct created_by from proposals + their full_name
+    const { data: props } = await supabase.from("proposals").select("created_by");
+    const ids = Array.from(new Set((props || []).map((p: any) => p.created_by).filter(Boolean))) as string[];
+    if (!ids.length) { setSellers([]); return; }
+    const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+    setSellers(((profs || []) as any[])
+      .map((p) => ({ id: p.id, full_name: p.full_name || "(sem nome)" }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name)));
+  };
+
+  const loadAggregates = async () => {
+    let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
+    if (statusFilter !== "all") q = q.eq("status", statusFilter);
+    if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+    const { data } = await q;
+    const rows = (data || []) as any[];
+    const total = rows.length;
+    const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
+    const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
+    const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
+    const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
+    const count = (s: string) => rows.filter((r) => r.status === s).length;
+    setAggregates({
+      total,
+      sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
+      viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
+      accepted: count("accepted"),
+      rejected: count("rejected"),
+      totalValue,
+      avgScore,
+      uniqueVisitors,
+    });
   };
 
   const loadAll = async () => {
     setLoading(true);
     const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
     setTemplates(tplRes.data || []);
-    await loadProposals(1);
+    await Promise.all([loadProposals(1), loadSellers(), loadAggregates()]);
     setProposalsPage(1);
     setLoading(false);
   };
@@ -109,6 +154,7 @@ export default function Propostas() {
         .order("id", { ascending: false })
         .range(from, to);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
@@ -241,29 +287,56 @@ export default function Propostas() {
           </div>
         </TabsContent>
 
-        <TabsContent value="proposals" className="space-y-2 mt-4">
-          {/* Filtros por status */}
-          <div className="flex flex-wrap gap-1.5 items-center pb-1">
-            <span className="text-xs text-muted-foreground mr-1">Status:</span>
-            {[
-              { v: "all", label: "Todas" },
-              { v: "draft", label: "Rascunho" },
-              { v: "sent", label: "Enviada" },
-              { v: "viewed", label: "Visualizada" },
-              { v: "accepted", label: "Aprovada" },
-              { v: "rejected", label: "Recusada" },
-            ].map((f) => (
-              <Button
-                key={f.v}
-                size="sm"
-                variant={statusFilter === f.v ? "default" : "outline"}
-                className="h-7 text-xs"
-                onClick={() => setStatusFilter(f.v)}
-              >
-                {f.label}
-              </Button>
-            ))}
+        <TabsContent value="proposals" className="space-y-3 mt-4">
+          {/* Filtros */}
+          <div className="flex flex-wrap gap-2 items-center pb-1">
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs text-muted-foreground mr-1">Status:</span>
+              {[
+                { v: "all", label: "Todas" },
+                { v: "draft", label: "Rascunho" },
+                { v: "sent", label: "Enviada" },
+                { v: "viewed", label: "Visualizada" },
+                { v: "accepted", label: "Aprovada" },
+                { v: "rejected", label: "Recusada" },
+              ].map((f) => (
+                <Button
+                  key={f.v}
+                  size="sm"
+                  variant={statusFilter === f.v ? "default" : "outline"}
+                  className="h-7 text-xs"
+                  onClick={() => setStatusFilter(f.v)}
+                >
+                  {f.label}
+                </Button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <span className="text-xs text-muted-foreground">Vendedor:</span>
+              <Select value={sellerFilter} onValueChange={setSellerFilter}>
+                <SelectTrigger className="h-8 w-[220px] text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
+                  {sellers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {/* KPIs agregados */}
+          {aggregates && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              <AggCard icon={<FileText className="h-4 w-4" />} label="Propostas" value={String(aggregates.total)} />
+              <AggCard icon={<Activity className="h-4 w-4" />} label="Enviadas" value={String(aggregates.sent)} />
+              <AggCard icon={<Eye className="h-4 w-4" />} label="Visualizadas" value={String(aggregates.viewed)} />
+              <AggCard icon={<Flame className="h-4 w-4" />} label="Aprovadas" value={String(aggregates.accepted)} />
+              <AggCard icon={<Snowflake className="h-4 w-4" />} label="Recusadas" value={String(aggregates.rejected)} />
+              <AggCard icon={<Users className="h-4 w-4" />} label="Visitantes únicos" value={String(aggregates.uniqueVisitors)} />
+              <AggCard icon={<DollarSign className="h-4 w-4" />} label="Valor total" value={aggregates.totalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} sub={`Score médio ${aggregates.avgScore}`} />
+            </div>
+          )}
 
           {/* Skeleton de carregamento */}
           {proposalsLoading && (
@@ -389,5 +462,17 @@ export default function Propostas() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function AggCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+  return (
+    <Card className="p-3">
+      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] uppercase tracking-wide">
+        {icon}<span>{label}</span>
+      </div>
+      <div className="text-lg font-semibold mt-1 leading-tight">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+    </Card>
   );
 }
