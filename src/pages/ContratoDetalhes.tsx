@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail, Pencil, Save, X } from "lucide-react";
+import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail, Pencil, Save, X, Columns2, Rows2, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
@@ -49,6 +49,8 @@ export default function ContratoDetalhes() {
   const [editing, setEditing] = useState(false);
   const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"side" | "stacked" | "hidden">("side");
+  const [splitPct, setSplitPct] = useState<number>(50);
 
   useEffect(() => { if (id) load(); }, [id]);
 
@@ -230,24 +232,45 @@ export default function ContratoDetalhes() {
 
         <TabsContent value="content">
           {editing ? (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-              <Card><CardContent className="p-3">
-                <div className="h-[78vh]">
-                  <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-end gap-1 bg-muted/40 border rounded-md p-1">
+                <span className="text-xs text-muted-foreground mr-2">Layout do preview:</span>
+                <Button size="sm" variant={previewMode === "side" ? "default" : "ghost"} onClick={() => setPreviewMode("side")} className="h-7 gap-1 text-xs">
+                  <Columns2 size={13} /> Lado a lado
+                </Button>
+                <Button size="sm" variant={previewMode === "stacked" ? "default" : "ghost"} onClick={() => setPreviewMode("stacked")} className="h-7 gap-1 text-xs">
+                  <Rows2 size={13} /> Empilhado
+                </Button>
+                <Button size="sm" variant={previewMode === "hidden" ? "default" : "ghost"} onClick={() => setPreviewMode("hidden")} className="h-7 gap-1 text-xs">
+                  <EyeOff size={13} /> Ocultar
+                </Button>
+              </div>
+
+              {previewMode === "side" && (
+                <SplitPane
+                  splitPct={splitPct}
+                  onSplitChange={setSplitPct}
+                  left={
+                    <Card className="h-full"><CardContent className="p-3 h-full">
+                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div>
+                    </CardContent></Card>
+                  }
+                  right={
+                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} />
+                  }
+                />
+              )}
+
+              {previewMode === "stacked" && (
+                <div className="space-y-3">
+                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} /></div>
                 </div>
-              </CardContent></Card>
-              <Card>
-                <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 sticky top-0 bg-background z-10">
-                  <FileText size={12} /> Pré-visualização em tempo real
-                </div>
-                <CardContent className="p-0">
-                  <div className="h-[78vh] overflow-y-auto bg-gray-100 p-4">
-                    <div className="mx-auto bg-white shadow" style={{ width: 794 }}>
-                      <ProposalRenderer blocks={editBlocks} variables={contract.variables || {}} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              )}
+
+              {previewMode === "hidden" && (
+                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+              )}
             </div>
           ) : (
             <Card><CardContent className="p-4 md:p-6">
@@ -334,6 +357,52 @@ export default function ContratoDetalhes() {
         defaultTo={clientEmail}
         onSent={load}
       />
+    </div>
+  );
+}
+
+function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables: any }) {
+  return (
+    <Card className="h-full flex flex-col">
+      <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 shrink-0">
+        <FileText size={12} /> Pré-visualização em tempo real
+      </div>
+      <div className="flex-1 min-h-0 overflow-auto bg-gray-100 p-4">
+        <div className="mx-auto bg-white shadow" style={{ width: 794, maxWidth: "100%" }}>
+          <ProposalRenderer blocks={blocks} variables={variables} />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function SplitPane({ left, right, splitPct, onSplitChange }: { left: React.ReactNode; right: React.ReactNode; splitPct: number; onSplitChange: (n: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) => {
+      const el = ref.current; if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      onSplitChange(Math.min(80, Math.max(20, pct)));
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [dragging, onSplitChange]);
+
+  return (
+    <div ref={ref} className="flex h-[78vh] w-full select-none" style={{ cursor: dragging ? "col-resize" : "auto" }}>
+      <div style={{ width: `${splitPct}%` }} className="min-w-0 pr-1">{left}</div>
+      <div
+        onMouseDown={() => setDragging(true)}
+        className="w-1.5 bg-border hover:bg-primary/60 cursor-col-resize transition-colors rounded-full mx-0.5"
+        title="Arraste para redimensionar"
+      />
+      <div style={{ width: `${100 - splitPct}%` }} className="min-w-0 pl-1">{right}</div>
     </div>
   );
 }
