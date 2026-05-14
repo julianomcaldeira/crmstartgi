@@ -247,19 +247,28 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
             <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
-            <Button size="sm" onClick={() => setProposalOpen(true)} className="shrink-0">
-              <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
-            </Button>
+            <div className="flex gap-2 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
+                <ScrollText className="h-4 w-4 mr-1" /> Gerar Contrato
+              </Button>
+              <Button size="sm" onClick={() => setProposalOpen(true)}>
+                <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="attachments">
               Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="contracts">
+              <ScrollText className="h-4 w-4 mr-1" />
+              Contratos {contracts.length > 0 && `(${contracts.length})`}
             </TabsTrigger>
             <TabsTrigger value="emails">
               <Mail className="h-4 w-4 mr-1" />
