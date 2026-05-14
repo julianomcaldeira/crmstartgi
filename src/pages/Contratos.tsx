@@ -71,18 +71,26 @@ export default function Contratos() {
       supabase.from("contract_templates").select("*").order("created_at", { ascending: false }),
       supabase
         .from("contracts")
-        .select("*, clients!inner(company_name), profiles!contracts_created_by_fkey(full_name)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(200),
       supabase
         .from("opportunities")
-        .select("id, title, client_id, value, monthly_value, clients!inner(company_name)")
+        .select("id, title, client_id, value, monthly_value")
         .order("created_at", { ascending: false })
         .limit(200),
     ]);
+    const clientIds = Array.from(new Set([...(cs || []).map((c: any) => c.client_id), ...(opps || []).map((o: any) => o.client_id)].filter(Boolean)));
+    const profileIds = Array.from(new Set((cs || []).map((c: any) => c.created_by).filter(Boolean)));
+    const [{ data: clients }, { data: profiles }] = await Promise.all([
+      clientIds.length ? supabase.from("clients").select("id, company_name").in("id", clientIds) : Promise.resolve({ data: [] } as any),
+      profileIds.length ? supabase.from("profiles").select("id, full_name").in("id", profileIds) : Promise.resolve({ data: [] } as any),
+    ]);
+    const clientById = new Map((clients || []).map((c: any) => [c.id, c]));
+    const profileById = new Map((profiles || []).map((p: any) => [p.id, p]));
     setTemplates(tpls || []);
-    setContracts(cs || []);
-    setOpportunities(opps || []);
+    setContracts((cs || []).map((c: any) => ({ ...c, clients: clientById.get(c.client_id), profiles: profileById.get(c.created_by) })));
+    setOpportunities((opps || []).map((o: any) => ({ ...o, clients: clientById.get(o.client_id) })));
   };
 
   const openNewTemplate = () => {
