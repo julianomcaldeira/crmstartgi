@@ -514,6 +514,37 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
             </div>
           </TabsContent>
 
+          <TabsContent value="contracts" className="mt-4 space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setContractOpen(true)}>
+                <ScrollText className="h-4 w-4 mr-2" /> Gerar contrato
+              </Button>
+            </div>
+            {contracts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                <ScrollText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhum contrato gerado para esta oportunidade.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {contracts.map((c) => (
+                  <button key={c.id} type="button" onClick={() => navigate(`/contratos/${c.id}`)}
+                    className="w-full text-left flex items-center justify-between p-3 rounded-lg border bg-muted/30 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{c.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {c.status}{c.version > 1 ? ` • v${c.version}` : ""} • {format(parseISO(c.created_at), "dd/MM/yyyy HH:mm")}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="emails" className="mt-4 space-y-3">
             <div className="flex justify-end">
               <Button size="sm" onClick={() => setEmailOpen(true)}>
