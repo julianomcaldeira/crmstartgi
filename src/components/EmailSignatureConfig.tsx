@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,47 +7,133 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Save, FileSignature, ImagePlus, Copy } from "lucide-react";
+import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react";
+
+const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
+
+function getExternalSignatureImageUrls(signatureHtml: string) {
+  if (!signatureHtml) return [];
+  const doc = new DOMParser().parseFromString(signatureHtml, "text/html");
+  const urls = Array.from(doc.querySelectorAll("img[src]"))
+    .map((img) => img.getAttribute("src")?.trim())
+    .filter((src): src is string => !!src && EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(src));
+
+  return Array.from(new Set(urls));
+}
+
+function normalizeSignatureImagesForPreview(signatureHtml: string) {
+  return signatureHtml.replace(/<img\b[^>]*>/gi, (tag) => {
+    let next = tag;
+    if (!/referrerpolicy\s*=/i.test(next)) {
+      next = next.replace(/\s*\/?>$/, ' referrerpolicy="origin-when-cross-origin"$&');
+    }
+    if (!/style\s*=/i.test(next)) {
+      next = next.replace(/\s*\/?>$/, ' style="max-width:100%;height:auto;display:block;"$&');
+    }
+    return next;
+  });
+}
+
+function errorMessage(error: unknown, fallback = "erro inesperado") {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function EmailSignatureConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [html, setHtml] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasExternalImages = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html);
+
+  const importSignatureImages = useCallback(async (currentHtml: string, showToast = true) => {
+    const urls = getExternalSignatureImageUrls(currentHtml);
+    if (!urls.length) {
+      if (showToast) toast.info("Nenhuma imagem externa compatível encontrada na assinatura.");
+      return currentHtml;
+    }
+
+    setImporting(true);
+    try {
+      let nextHtml = currentHtml;
+      for (const url of urls) {
+        const { data, error } = await supabase.functions.invoke("import-signature-image", {
+          body: { url },
+        });
+        if (error) throw error;
+        if (!data?.publicUrl) throw new Error("A imagem externa não pôde ser importada.");
+        nextHtml = nextHtml.split(url).join(data.publicUrl);
+      }
+      setHtml(nextHtml);
+      if (showToast) {
+        toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      }
+      return nextHtml;
+    } catch (err: unknown) {
+      if (showToast) {
+        toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
+      }
+      throw err;
+    } finally {
+      setImporting(false);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("email_signatures")
         .select("signature_html, enabled")
         .eq("user_id", user.id)
         .maybeSingle();
       if (data) {
-        setHtml(data.signature_html || "");
+        const storedHtml = data.signature_html || "";
+        if (EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(storedHtml)) {
+          try {
+            const fixedHtml = await importSignatureImages(storedHtml, false);
+            await supabase
+              .from("email_signatures")
+              .upsert({ user_id: user.id, signature_html: fixedHtml, enabled: data.enabled }, { onConflict: "user_id" });
+          } catch {
+            setHtml(storedHtml);
+          }
+        } else {
+          setHtml(storedHtml);
+        }
         setEnabled(data.enabled);
       }
       setLoading(false);
     })();
-  }, []);
+  }, [importSignatureImages]);
+
+  async function importExternalImages(currentHtml = html) {
+    return importSignatureImages(currentHtml, true);
+  }
 
   async function save() {
     if (!userId) return;
     setSaving(true);
     try {
-      const { error } = await (supabase as any)
+      const htmlToSave = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html)
+        ? await importExternalImages(html)
+        : html;
+      const { error } = await supabase
         .from("email_signatures")
-        .upsert({ user_id: userId, signature_html: html, enabled }, { onConflict: "user_id" });
+        .upsert({ user_id: userId, signature_html: htmlToSave, enabled }, { onConflict: "user_id" });
       if (error) throw error;
       toast.success("Assinatura salva!");
-    } catch (e: any) {
-      toast.error("Erro ao salvar: " + e.message);
+    } catch (e: unknown) {
+      const message = errorMessage(e);
+      if (!message.includes("imagem externa")) {
+        toast.error("Erro ao salvar: " + message);
+      }
     } finally {
       setSaving(false);
     }
@@ -94,8 +180,8 @@ export default function EmailSignatureConfig() {
       const tag = `<img src="${publicUrl}" alt="assinatura" style="max-width:200px;height:auto;display:block;" />`;
       insertAtCursor(tag);
       toast.success("Imagem adicionada à assinatura!");
-    } catch (err: any) {
-      toast.error("Erro no upload: " + err.message);
+    } catch (err: unknown) {
+      toast.error("Erro no upload: " + errorMessage(err));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -138,7 +224,7 @@ export default function EmailSignatureConfig() {
                 variant="outline"
                 size="sm"
                 onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                disabled={uploading || importing}
               >
                 {uploading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -147,6 +233,22 @@ export default function EmailSignatureConfig() {
                 )}
                 Anexar imagem (foto/logo)
               </Button>
+              {hasExternalImages && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => importExternalImages()}
+                  disabled={importing || uploading || saving}
+                >
+                  {importing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Corrigir imagem externa
+                </Button>
+              )}
             </div>
 
             <div>
@@ -169,20 +271,20 @@ export default function EmailSignatureConfig() {
                 <Label className="text-xs text-muted-foreground">Pré-visualização (renderizada como o destinatário verá)</Label>
                 <iframe
                   title="Pré-visualização da assinatura"
-                  className="w-full border rounded bg-white"
+                  className="w-full border rounded bg-background"
                   style={{ height: 280 }}
-                  sandbox=""
-                  srcDoc={`<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;}img{max-width:100%;height:auto;}</style></head><body>${html}</body></html>`}
+                  referrerPolicy="origin-when-cross-origin"
+                  srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;background:#fff;}img{max-width:100%;height:auto;}</style></head><body>${normalizeSignatureImagesForPreview(html)}</body></html>`}
                 />
-                {/postimg\.cc|imgbb\.com|ibb\.co/i.test(html) && (
-                  <p className="text-xs text-amber-600 mt-2">
-                    ⚠️ Detectamos uma imagem hospedada em serviço gratuito (postimg/imgbb). Esses serviços às vezes substituem a imagem por um banner de "Upgrade" quando carregada fora do site deles. Recomendamos usar o botão <strong>"Anexar imagem"</strong> acima — ela será hospedada no seu próprio servidor e nunca será trocada.
+                {hasExternalImages && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Detectamos uma imagem externa de assinatura. Clique em <strong>"Corrigir imagem externa"</strong> para importar a imagem real e substituir o link instável antes de salvar.
                   </p>
                 )}
               </div>
             )}
-            <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            <Button onClick={save} disabled={saving || importing}>
+              {saving || importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Salvar assinatura
             </Button>
           </>
