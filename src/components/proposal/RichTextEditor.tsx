@@ -161,15 +161,86 @@ interface Props {
   minHeight?: number;
 }
 
+const VAR_RE = /\{\{\s*[\w.\-]+\s*\}\}/g;
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+// Build syntax-highlighted HTML for the dark code editor overlay
+function highlightCode(src: string): string {
+  const escaped = escapeHtml(src);
+  // Variables {{...}}
+  let out = escaped.replace(
+    /\{\{\s*[\w.\-]+\s*\}\}/g,
+    (m) => `<span class="rte-var-token">${m}</span>`
+  );
+  // Tag names + attributes (apply on already-escaped text, so tags are &lt;tag...&gt;)
+  out = out.replace(
+    /(&lt;\/?)([a-zA-Z][\w-]*)([^&]*?)(\/?&gt;)/g,
+    (_m, lt, name, attrs, gt) => {
+      const colored = attrs.replace(
+        /([a-zA-Z_:][\w:.-]*)(=)((?:&quot;[^&]*?&quot;)|(?:&#39;[^&]*?&#39;))/g,
+        (_x: string, k: string, eq: string, v: string) =>
+          `<span class="rte-attr">${k}</span>${eq}<span class="rte-str">${v}</span>`
+      );
+      return `<span class="rte-tag-pun">${lt}</span><span class="rte-tag-name">${name}</span>${colored}<span class="rte-tag-pun">${gt}</span>`;
+    }
+  );
+  // Trailing newline so last line keeps its height in the overlay
+  return out + "\n";
+}
+// Wrap {{...}} occurrences inside text nodes only (preserves HTML attributes/tags)
+function highlightVariablesInPreview(html: string): string {
+  if (!html) return "";
+  if (typeof window === "undefined" || typeof DOMParser === "undefined") return html;
+  try {
+    const doc = new DOMParser().parseFromString(`<div id="__root__">${html}</div>`, "text/html");
+    const root = doc.getElementById("__root__");
+    if (!root) return html;
+    const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    const textNodes: Text[] = [];
+    let n: Node | null;
+    while ((n = walker.nextNode())) textNodes.push(n as Text);
+    for (const tn of textNodes) {
+      const txt = tn.nodeValue || "";
+      if (!VAR_RE.test(txt)) continue;
+      VAR_RE.lastIndex = 0;
+      const frag = doc.createDocumentFragment();
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = VAR_RE.exec(txt))) {
+        if (m.index > last) frag.appendChild(doc.createTextNode(txt.slice(last, m.index)));
+        const span = doc.createElement("span");
+        span.className = "rte-var-preview";
+        span.setAttribute("data-var", m[0]);
+        span.textContent = m[0];
+        frag.appendChild(span);
+        last = m.index + m[0].length;
+      }
+      if (last < txt.length) frag.appendChild(doc.createTextNode(txt.slice(last)));
+      tn.parentNode?.replaceChild(frag, tn);
+    }
+    return root.innerHTML;
+  } catch {
+    return html;
+  }
+}
+
 export function RichTextEditor({ value, onChange, placeholder = "Comece a escrever sua proposta...", minHeight = 400 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const htmlTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const htmlOverlayRef = useRef<HTMLDivElement>(null);
   const [htmlMode, setHtmlMode] = useState(false);
   const [htmlDraft, setHtmlDraft] = useState(value || "");
   const [htmlView, setHtmlView] = useState<"split" | "code" | "preview">("split");
   const [htmlWrap, setHtmlWrap] = useState(true);
   const [htmlCopied, setHtmlCopied] = useState(false);
   const lineCount = (htmlDraft.match(/\n/g)?.length ?? 0) + 1;
+  const varCount = (htmlDraft.match(VAR_RE) || []).length;
 
   const insertHtmlVariable = (key: string) => {
     const ta = htmlTextareaRef.current;
@@ -451,6 +522,24 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <style>{`
           .rte-content img { max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; border-radius: 6px; }
           .rte-content p:has(> img) { line-height: 0; margin: 0; font-size: 0; }
+          /* Code overlay (HTML mode) */
+          .rte-code-overlay { color: rgba(255,255,255,0.85); white-space: pre-wrap; word-break: break-word; }
+          .rte-code-overlay.no-wrap { white-space: pre; word-break: normal; }
+          .rte-code-overlay .rte-tag-pun { color: #94a3b8; }
+          .rte-code-overlay .rte-tag-name { color: #f472b6; }
+          .rte-code-overlay .rte-attr { color: #fbbf24; }
+          .rte-code-overlay .rte-str { color: #86efac; }
+          .rte-code-overlay .rte-var-token,
+          .rte-var-preview {
+            background: rgba(34,197,94,0.18);
+            color: #22c55e;
+            border: 1px solid rgba(34,197,94,0.45);
+            border-radius: 4px;
+            padding: 0 3px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-weight: 600;
+          }
+          .rte-var-preview { font-size: 0.92em; }
         `}</style>
         {htmlMode ? (
           <div className="p-3 h-full flex flex-col gap-2 min-h-0 bg-muted/30">
@@ -565,7 +654,14 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                 <div className="flex flex-col rounded-md border overflow-hidden bg-[hsl(220,15%,12%)] min-h-[400px]">
                   <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/10 text-[11px] text-white/60 bg-white/5">
                     <span className="inline-flex items-center gap-1.5"><Code2 className="h-3 w-3" /> HTML</span>
-                    <span>{lineCount} linha{lineCount === 1 ? "" : "s"} · {htmlDraft.length} caracteres</span>
+                    <span>
+                      {lineCount} linha{lineCount === 1 ? "" : "s"} · {htmlDraft.length} caracteres
+                      {varCount > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[#22c55e]">
+                          <Variable className="h-3 w-3" /> {varCount} variável{varCount === 1 ? "" : "is"}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex-1 flex overflow-hidden">
                     {/* Line numbers */}
@@ -578,15 +674,31 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                         <div key={i}>{i + 1}</div>
                       ))}
                     </div>
-                    <textarea
-                      ref={htmlTextareaRef}
-                      value={htmlDraft}
-                      onChange={(e) => setHtmlDraft(e.target.value)}
-                      spellCheck={false}
-                      wrap={htmlWrap ? "soft" : "off"}
-                      className="flex-1 resize-none bg-transparent text-white/90 font-mono text-[12px] leading-5 py-3 px-3 focus:outline-none placeholder:text-white/30 caret-primary"
-                      placeholder="<h1>Título</h1>&#10;<p>Cole ou edite seu HTML aqui...</p>"
-                    />
+                    {/* Highlighted overlay + transparent textarea */}
+                    <div className="relative flex-1 overflow-auto">
+                      <div
+                        ref={htmlOverlayRef}
+                        aria-hidden
+                        className={`rte-code-overlay absolute inset-0 pointer-events-none font-mono text-[12px] leading-5 py-3 px-3 ${htmlWrap ? "" : "no-wrap"}`}
+                        dangerouslySetInnerHTML={{ __html: highlightCode(htmlDraft) }}
+                      />
+                      <textarea
+                        ref={htmlTextareaRef}
+                        value={htmlDraft}
+                        onChange={(e) => setHtmlDraft(e.target.value)}
+                        onScroll={(e) => {
+                          const ov = htmlOverlayRef.current;
+                          if (ov) {
+                            ov.scrollTop = (e.target as HTMLTextAreaElement).scrollTop;
+                            ov.scrollLeft = (e.target as HTMLTextAreaElement).scrollLeft;
+                          }
+                        }}
+                        spellCheck={false}
+                        wrap={htmlWrap ? "soft" : "off"}
+                        className="relative w-full h-full min-h-[400px] resize-none bg-transparent text-transparent font-mono text-[12px] leading-5 py-3 px-3 focus:outline-none placeholder:text-white/30 caret-[#22c55e] selection:bg-white/20"
+                        placeholder="<h1>Título</h1>&#10;<p>Cole ou edite seu HTML aqui...</p>"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -594,12 +706,19 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                 <div className="flex flex-col rounded-md border bg-white overflow-hidden min-h-[400px]">
                   <div className="flex items-center justify-between px-3 py-1.5 border-b text-[11px] text-muted-foreground bg-muted/40">
                     <span className="inline-flex items-center gap-1.5"><Eye className="h-3 w-3" /> Pré-visualização</span>
-                    <span>Atualiza ao digitar</span>
+                    <span>
+                      Atualiza ao digitar
+                      {varCount > 0 && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-primary">
+                          <Variable className="h-3 w-3" /> {varCount}
+                        </span>
+                      )}
+                    </span>
                   </div>
                   <div className="flex-1 overflow-auto">
                     <div
                       className="rte-content prose prose-sm max-w-none p-4"
-                      dangerouslySetInnerHTML={{ __html: htmlDraft }}
+                      dangerouslySetInnerHTML={{ __html: highlightVariablesInPreview(htmlDraft) }}
                     />
                   </div>
                 </div>
