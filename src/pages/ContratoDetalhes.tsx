@@ -229,15 +229,31 @@ export default function ContratoDetalhes() {
         </TabsList>
 
         <TabsContent value="content">
-          <Card><CardContent className="p-4 md:p-6">
-            {editing ? (
-              <div className="h-[75vh]">
-                <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
-              </div>
-            ) : (
+          {editing ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+              <Card><CardContent className="p-3">
+                <div className="h-[78vh]">
+                  <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
+                </div>
+              </CardContent></Card>
+              <Card>
+                <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 sticky top-0 bg-background z-10">
+                  <FileText size={12} /> Pré-visualização em tempo real
+                </div>
+                <CardContent className="p-0">
+                  <div className="h-[78vh] overflow-y-auto bg-gray-100 p-4">
+                    <div className="mx-auto bg-white shadow" style={{ width: 794 }}>
+                      <ProposalRenderer blocks={editBlocks} variables={contract.variables || {}} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card><CardContent className="p-4 md:p-6">
               <ProposalRenderer blocks={contract.blocks || []} variables={contract.variables || {}} />
-            )}
-          </CardContent></Card>
+            </CardContent></Card>
+          )}
         </TabsContent>
 
         <TabsContent value="revisions" className="space-y-3">
