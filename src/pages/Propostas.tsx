@@ -105,27 +105,37 @@ export default function Propostas() {
   };
 
   const loadAggregates = async () => {
-    let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
-    if (statusFilter !== "all") q = q.eq("status", statusFilter);
-    if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
-    const { data } = await q;
-    const rows = (data || []) as any[];
-    const total = rows.length;
-    const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
-    const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
-    const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
-    const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
-    const count = (s: string) => rows.filter((r) => r.status === s).length;
-    setAggregates({
-      total,
-      sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
-      viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
-      accepted: count("accepted"),
-      rejected: count("rejected"),
-      totalValue,
-      avgScore,
-      uniqueVisitors,
-    });
+    setAggregatesLoading(true);
+    setAggregatesError(null);
+    try {
+      let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data || []) as any[];
+      const total = rows.length;
+      const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
+      const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
+      const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
+      const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
+      const count = (s: string) => rows.filter((r) => r.status === s).length;
+      setAggregates({
+        total,
+        sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
+        viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
+        accepted: count("accepted"),
+        rejected: count("rejected"),
+        totalValue,
+        avgScore,
+        uniqueVisitors,
+      });
+    } catch (e: any) {
+      setAggregates(null);
+      setAggregatesError(e?.message || "Não foi possível calcular as métricas.");
+    } finally {
+      setAggregatesLoading(false);
+    }
   };
 
   const loadAll = async () => {
