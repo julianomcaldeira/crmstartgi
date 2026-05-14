@@ -1795,6 +1795,16 @@ const ClienteDetalhes = () => {
                         </Select>
                       </div>
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_linkedin">LinkedIn</Label>
+                      <Input
+                        id="contact_linkedin"
+                        type="url"
+                        value={contactFormData.linkedin}
+                        onChange={(e) => setContactFormData({ ...contactFormData, linkedin: e.target.value })}
+                        placeholder="https://www.linkedin.com/in/usuario"
+                      />
+                    </div>
                     <div className="flex items-center space-x-2">
                       <input
                         type="checkbox"
