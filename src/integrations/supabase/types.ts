@@ -2305,6 +2305,8 @@ export type Database = {
           email: string | null
           engagement_score: number
           id: string
+          invite_count: number
+          invited_at: string | null
           last_viewed_at: string | null
           name: string
           notes: string | null
@@ -2321,6 +2323,8 @@ export type Database = {
           email?: string | null
           engagement_score?: number
           id?: string
+          invite_count?: number
+          invited_at?: string | null
           last_viewed_at?: string | null
           name: string
           notes?: string | null
@@ -2337,6 +2341,8 @@ export type Database = {
           email?: string | null
           engagement_score?: number
           id?: string
+          invite_count?: number
+          invited_at?: string | null
           last_viewed_at?: string | null
           name?: string
           notes?: string | null

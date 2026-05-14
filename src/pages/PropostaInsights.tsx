@@ -10,7 +10,7 @@ import {
 import {
   ArrowLeft, Eye, Users, Clock, Activity, Flame, Snowflake, Thermometer,
   ExternalLink, Copy, Loader2, History, Save, RotateCcw, Trash2,
-  UserPlus, Mail, Link2,
+  UserPlus, Mail, Link2, Send,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,6 +44,7 @@ const EVENT_LABELS: Record<string, string> = {
   download: "Baixou/Imprimiu",
   share: "Compartilhou",
   heartbeat: "Permanência",
+  invite_sent: "Convite enviado",
 };
 
 export default function PropostaInsights() {
@@ -119,6 +120,43 @@ export default function PropostaInsights() {
   const copyRecipientLink = async (r: any) => {
     await navigator.clipboard.writeText(recipientLink(r));
     toast.success(`Link de ${r.name} copiado`);
+  };
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteRecipient, setInviteRecipient] = useState<any | null>(null);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  const openInvite = (r: any) => {
+    if (!r.email) { toast.error("Adicione um e-mail ao destinatário antes de enviar o convite."); return; }
+    setInviteRecipient(r);
+    setInviteMessage("");
+    setInviteOpen(true);
+  };
+
+  const sendInvite = async () => {
+    if (!inviteRecipient) return;
+    setSendingInvite(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-proposal-invite", {
+        body: {
+          recipientId: inviteRecipient.id,
+          appOrigin: window.location.origin,
+          customMessage: inviteMessage.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success(`Convite enviado para ${inviteRecipient.email}`);
+      setInviteOpen(false);
+      if (proposal?.id) {
+        await Promise.all([loadRecipients(proposal.id), load()]);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Falha ao enviar convite");
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const loadVersions = async (pid: string) => {
@@ -414,9 +452,18 @@ export default function PropostaInsights() {
                       <TableCell className="text-xs">{formatDuration(r.total_time_ms || 0)}</TableCell>
                       <TableCell className="text-xs">
                         {r.last_viewed_at ? formatDistanceToNow(parseISO(r.last_viewed_at), { addSuffix: true, locale: ptBR }) : "—"}
+                        {r.invited_at && (
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            Convite: {formatDistanceToNow(parseISO(r.invited_at), { addSuffix: true, locale: ptBR })}
+                            {r.invite_count > 1 ? ` (${r.invite_count}x)` : ""}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => copyRecipientLink(r)} title="Copiar link único"><Link2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="default" onClick={() => openInvite(r)} title={r.invited_at ? "Reenviar convite" : "Enviar convite por e-mail"} disabled={!r.email}>
+                          <Send className="h-3 w-3 mr-1" />{r.invited_at ? "Reenviar" : "Enviar"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="ml-1" onClick={() => copyRecipientLink(r)} title="Copiar link único"><Link2 className="h-3 w-3" /></Button>
                         <Button size="sm" variant="outline" className="ml-1" onClick={() => window.open(recipientLink(r), "_blank")} title="Abrir como destinatário"><ExternalLink className="h-3 w-3" /></Button>
                         <Button size="sm" variant="ghost" className="ml-1" onClick={() => openEditRecipient(r)} title="Editar">✎</Button>
                         <Button size="sm" variant="ghost" className="text-destructive ml-1" onClick={() => deleteRecipient(r)}><Trash2 className="h-3 w-3" /></Button>
@@ -451,6 +498,47 @@ export default function PropostaInsights() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setRecipientOpen(false)}>Cancelar</Button>
             <Button onClick={saveRecipient}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar convite por e-mail</DialogTitle>
+          </DialogHeader>
+          {inviteRecipient && (
+            <div className="space-y-3">
+              <div className="text-sm">
+                Para: <strong>{inviteRecipient.name}</strong>{" "}
+                <span className="text-muted-foreground">&lt;{inviteRecipient.email}&gt;</span>
+              </div>
+              <div className="text-xs text-muted-foreground break-all p-2 bg-muted rounded">
+                Link único: {recipientLink(inviteRecipient)}
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem personalizada (opcional)</Label>
+                <Textarea
+                  value={inviteMessage}
+                  onChange={(e) => setInviteMessage(e.target.value)}
+                  placeholder="Ex.: Conforme conversamos, segue a proposta para sua avaliação."
+                  rows={4}
+                  maxLength={1000}
+                />
+              </div>
+              {inviteRecipient.invited_at && (
+                <p className="text-xs text-amber-600">
+                  Este destinatário já recebeu {inviteRecipient.invite_count || 1} convite(s). Será enviado novamente.
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={sendingInvite}>Cancelar</Button>
+            <Button onClick={sendInvite} disabled={sendingInvite}>
+              {sendingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+              Enviar convite
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
