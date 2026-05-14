@@ -452,9 +452,18 @@ export default function PropostaInsights() {
                       <TableCell className="text-xs">{formatDuration(r.total_time_ms || 0)}</TableCell>
                       <TableCell className="text-xs">
                         {r.last_viewed_at ? formatDistanceToNow(parseISO(r.last_viewed_at), { addSuffix: true, locale: ptBR }) : "—"}
+                        {r.invited_at && (
+                          <div className="text-[10px] text-muted-foreground mt-1">
+                            Convite: {formatDistanceToNow(parseISO(r.invited_at), { addSuffix: true, locale: ptBR })}
+                            {r.invite_count > 1 ? ` (${r.invite_count}x)` : ""}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => copyRecipientLink(r)} title="Copiar link único"><Link2 className="h-3 w-3" /></Button>
+                        <Button size="sm" variant="default" onClick={() => openInvite(r)} title={r.invited_at ? "Reenviar convite" : "Enviar convite por e-mail"} disabled={!r.email}>
+                          <Send className="h-3 w-3 mr-1" />{r.invited_at ? "Reenviar" : "Enviar"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="ml-1" onClick={() => copyRecipientLink(r)} title="Copiar link único"><Link2 className="h-3 w-3" /></Button>
                         <Button size="sm" variant="outline" className="ml-1" onClick={() => window.open(recipientLink(r), "_blank")} title="Abrir como destinatário"><ExternalLink className="h-3 w-3" /></Button>
                         <Button size="sm" variant="ghost" className="ml-1" onClick={() => openEditRecipient(r)} title="Editar">✎</Button>
                         <Button size="sm" variant="ghost" className="text-destructive ml-1" onClick={() => deleteRecipient(r)}><Trash2 className="h-3 w-3" /></Button>
