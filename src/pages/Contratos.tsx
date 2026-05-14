@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,14 @@ export default function Contratos() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("contracts");
   const [hasTemplateAccess, setHasTemplateAccess] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Exclusão de contrato (dupla checagem)
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const [templates, setTemplates] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
@@ -62,6 +69,7 @@ export default function Contratos() {
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     const r = (roles || []).map(x => x.role);
     setHasTemplateAccess(r.includes("admin") || r.includes("pre_vendas"));
+    setIsAdmin(r.includes("admin"));
     await loadAll();
     setLoading(false);
   };
@@ -143,6 +151,53 @@ export default function Contratos() {
     if (error) return toast.error(error.message);
     toast.success("Modelo excluído");
     loadAll();
+  };
+
+  const openDeleteContract = (c: any) => {
+    setDeleteTarget(c);
+    setDeleteStep(1);
+    setDeleteConfirmText("");
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleting) return;
+    setDeleteTarget(null);
+    setDeleteStep(1);
+    setDeleteConfirmText("");
+  };
+
+  const confirmDeleteContract = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmText.trim().toUpperCase() !== "EXCLUIR") {
+      toast.error('Digite EXCLUIR para confirmar');
+      return;
+    }
+    setDeleting(true);
+    try {
+      // Limpa registros dependentes (sem FK cascade)
+      const { data: revs } = await supabase
+        .from("contract_clause_revisions")
+        .select("id")
+        .eq("contract_id", deleteTarget.id);
+      const revIds = (revs || []).map((r: any) => r.id);
+      if (revIds.length) {
+        await supabase.from("contract_clause_decisions").delete().in("revision_id", revIds);
+        await supabase.from("contract_clause_revisions").delete().in("id", revIds);
+      }
+      await supabase.from("contract_files").delete().eq("contract_id", deleteTarget.id);
+
+      const { error } = await supabase.from("contracts").delete().eq("id", deleteTarget.id);
+      if (error) throw error;
+      toast.success("Contrato excluído");
+      setDeleteTarget(null);
+      setDeleteStep(1);
+      setDeleteConfirmText("");
+      loadAll();
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao excluir contrato");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const generateContract = async () => {
@@ -231,7 +286,20 @@ export default function Contratos() {
                       {c.clients?.company_name} • Por {c.profiles?.full_name} • {format(parseISO(c.created_at), "dd/MM/yyyy")}
                     </div>
                   </div>
-                  <Button size="sm" variant="ghost"><Eye size={14} /></Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button size="sm" variant="ghost"><Eye size={14} /></Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => { e.stopPropagation(); openDeleteContract(c); }}
+                        title="Excluir contrato"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -332,6 +400,61 @@ export default function Contratos() {
               <Button onClick={generateContract}>Gerar</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exclusão de contrato com dupla checagem */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {deleteStep === 1 ? "Excluir contrato?" : "Confirmação final"}
+            </DialogTitle>
+            <DialogDescription>
+              {deleteStep === 1 ? (
+                <>
+                  Você está prestes a excluir <span className="font-semibold text-foreground">{deleteTarget?.title}</span>.
+                  Esta ação remove o contrato, suas revisões de cláusulas, decisões e arquivos vinculados. Não é possível desfazer.
+                </>
+              ) : (
+                <>
+                  Para confirmar a exclusão definitiva, digite <span className="font-mono font-semibold text-destructive">EXCLUIR</span> abaixo.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteStep === 2 && (
+            <div className="space-y-2">
+              <Label htmlFor="confirm-delete">Confirmação</Label>
+              <Input
+                id="confirm-delete"
+                autoFocus
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Digite EXCLUIR"
+              />
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDeleteDialog} disabled={deleting}>
+              Cancelar
+            </Button>
+            {deleteStep === 1 ? (
+              <Button variant="destructive" onClick={() => setDeleteStep(2)}>
+                Continuar
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                onClick={confirmDeleteContract}
+                disabled={deleting || deleteConfirmText.trim().toUpperCase() !== "EXCLUIR"}
+              >
+                {deleting ? "Excluindo..." : "Excluir definitivamente"}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
