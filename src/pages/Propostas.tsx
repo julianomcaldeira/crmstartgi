@@ -13,6 +13,7 @@ import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, 
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
+import { proposalPublicUrl } from "@/lib/publicUrls";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { useNavigate, useSearchParams } from "react-router-dom";
