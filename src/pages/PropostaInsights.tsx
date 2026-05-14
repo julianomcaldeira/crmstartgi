@@ -59,10 +59,17 @@ export default function PropostaInsights() {
   const loadVersions = async (pid: string) => {
     const { data } = await supabase
       .from("proposal_versions")
-      .select("*, profiles:created_by(full_name)")
+      .select("*")
       .eq("proposal_id", pid)
       .order("version", { ascending: false });
-    setVersions(data || []);
+    const rows = data || [];
+    const userIds = Array.from(new Set(rows.map((r: any) => r.created_by).filter(Boolean)));
+    let profMap = new Map<string, any>();
+    if (userIds.length) {
+      const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+      profMap = new Map((profs || []).map((p: any) => [p.id, p]));
+    }
+    setVersions(rows.map((r: any) => ({ ...r, profiles: profMap.get(r.created_by) || null })));
   };
 
   const load = async () => {
