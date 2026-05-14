@@ -199,7 +199,7 @@ export default function EmailSignatureConfig() {
                 variant="outline"
                 size="sm"
                 onClick={() => fileRef.current?.click()}
-                disabled={uploading}
+                disabled={uploading || importing}
               >
                 {uploading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -208,6 +208,22 @@ export default function EmailSignatureConfig() {
                 )}
                 Anexar imagem (foto/logo)
               </Button>
+              {hasExternalImages && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => importExternalImages()}
+                  disabled={importing || uploading || saving}
+                >
+                  {importing ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                  )}
+                  Corrigir imagem externa
+                </Button>
+              )}
             </div>
 
             <div>
@@ -230,20 +246,20 @@ export default function EmailSignatureConfig() {
                 <Label className="text-xs text-muted-foreground">Pré-visualização (renderizada como o destinatário verá)</Label>
                 <iframe
                   title="Pré-visualização da assinatura"
-                  className="w-full border rounded bg-white"
+                  className="w-full border rounded bg-background"
                   style={{ height: 280 }}
-                  sandbox=""
-                  srcDoc={`<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;}img{max-width:100%;height:auto;}</style></head><body>${html}</body></html>`}
+                  referrerPolicy="origin-when-cross-origin"
+                  srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;background:#fff;}img{max-width:100%;height:auto;}</style></head><body>${normalizeSignatureImagesForPreview(html)}</body></html>`}
                 />
-                {/postimg\.cc|imgbb\.com|ibb\.co/i.test(html) && (
-                  <p className="text-xs text-amber-600 mt-2">
-                    ⚠️ Detectamos uma imagem hospedada em serviço gratuito (postimg/imgbb). Esses serviços às vezes substituem a imagem por um banner de "Upgrade" quando carregada fora do site deles. Recomendamos usar o botão <strong>"Anexar imagem"</strong> acima — ela será hospedada no seu próprio servidor e nunca será trocada.
+                {hasExternalImages && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Detectamos uma imagem externa de assinatura. Clique em <strong>"Corrigir imagem externa"</strong> para importar a imagem real e substituir o link instável antes de salvar.
                   </p>
                 )}
               </div>
             )}
-            <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            <Button onClick={save} disabled={saving || importing}>
+              {saving || importing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Salvar assinatura
             </Button>
           </>
