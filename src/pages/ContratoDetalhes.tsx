@@ -149,6 +149,11 @@ export default function ContratoDetalhes() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {contract.status !== "final" && isOwner && (
+            <Button size="sm" variant="default" onClick={() => setSendOpen(true)} className="gap-1">
+              <Mail size={14} /> Enviar por e-mail
+            </Button>
+          )}
           {contract.status === "draft" && isOwner && (
             <Button size="sm" variant="outline" onClick={() => updateStatus("sent")} className="gap-1">
               <Send size={14} /> Marcar como enviado
