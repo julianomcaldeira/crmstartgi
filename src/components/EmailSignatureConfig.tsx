@@ -34,6 +34,10 @@ function normalizeSignatureImagesForPreview(signatureHtml: string) {
   });
 }
 
+function errorMessage(error: unknown, fallback = "erro inesperado") {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export default function EmailSignatureConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -51,7 +55,7 @@ export default function EmailSignatureConfig() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("email_signatures")
         .select("signature_html, enabled")
         .eq("user_id", user.id)
@@ -85,8 +89,8 @@ export default function EmailSignatureConfig() {
       setHtml(nextHtml);
       toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
       return nextHtml;
-    } catch (err: any) {
-      toast.error("Erro ao corrigir imagem externa: " + (err.message || "tente anexar a imagem pelo botão de upload"));
+    } catch (err: unknown) {
+      toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
       throw err;
     } finally {
       setImporting(false);
@@ -100,14 +104,15 @@ export default function EmailSignatureConfig() {
       const htmlToSave = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html)
         ? await importExternalImages(html)
         : html;
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("email_signatures")
         .upsert({ user_id: userId, signature_html: htmlToSave, enabled }, { onConflict: "user_id" });
       if (error) throw error;
       toast.success("Assinatura salva!");
-    } catch (e: any) {
-      if (!String(e?.message || "").includes("imagem externa")) {
-        toast.error("Erro ao salvar: " + e.message);
+    } catch (e: unknown) {
+      const message = errorMessage(e);
+      if (!message.includes("imagem externa")) {
+        toast.error("Erro ao salvar: " + message);
       }
     } finally {
       setSaving(false);
@@ -155,8 +160,8 @@ export default function EmailSignatureConfig() {
       const tag = `<img src="${publicUrl}" alt="assinatura" style="max-width:200px;height:auto;display:block;" />`;
       insertAtCursor(tag);
       toast.success("Imagem adicionada à assinatura!");
-    } catch (err: any) {
-      toast.error("Erro no upload: " + err.message);
+    } catch (err: unknown) {
+      toast.error("Erro no upload: " + errorMessage(err));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
