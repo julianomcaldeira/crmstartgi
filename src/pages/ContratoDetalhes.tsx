@@ -6,9 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail } from "lucide-react";
+import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail, Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
+import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
+import { ProposalBlock } from "@/lib/proposalTypes";
 import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
@@ -44,6 +46,9 @@ export default function ContratoDetalhes() {
   const [activeRevision, setActiveRevision] = useState<any | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState<string>("");
+  const [editing, setEditing] = useState(false);
+  const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => { if (id) load(); }, [id]);
 
@@ -82,6 +87,23 @@ export default function ContratoDetalhes() {
   const isOwner = contract && userId === contract.created_by;
   const canRequest = isOwner || isAdmin || isPreVendas;
   const canReview = isAdmin || isPreVendas;
+  const canEdit = (isOwner || isAdmin) && contract?.status !== "final";
+
+  const startEdit = () => {
+    setEditBlocks((contract?.blocks || []) as ProposalBlock[]);
+    setEditing(true);
+  };
+  const cancelEdit = () => { setEditing(false); setEditBlocks([]); };
+  const saveEdit = async () => {
+    if (!contract) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any }).eq("id", contract.id);
+    setSavingEdit(false);
+    if (error) return toast.error(error.message);
+    toast.success("Conteúdo atualizado");
+    setEditing(false);
+    load();
+  };
 
   const updateStatus = async (status: string) => {
     const { error } = await supabase.from("contracts").update({ status, ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}) }).eq("id", id);
@@ -159,22 +181,37 @@ export default function ContratoDetalhes() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {contract.status !== "final" && isOwner && (
+          {!editing && canEdit && (
+            <Button size="sm" variant="outline" onClick={startEdit} className="gap-1">
+              <Pencil size={14} /> Editar conteúdo
+            </Button>
+          )}
+          {editing && (
+            <>
+              <Button size="sm" variant="outline" onClick={cancelEdit} disabled={savingEdit} className="gap-1">
+                <X size={14} /> Cancelar
+              </Button>
+              <Button size="sm" onClick={saveEdit} disabled={savingEdit} className="gap-1">
+                <Save size={14} /> {savingEdit ? "Salvando..." : "Salvar"}
+              </Button>
+            </>
+          )}
+          {!editing && contract.status !== "final" && isOwner && (
             <Button size="sm" variant="default" onClick={() => setSendOpen(true)} className="gap-1">
               <Mail size={14} /> Enviar por e-mail
             </Button>
           )}
-          {contract.status === "draft" && isOwner && (
+          {!editing && contract.status === "draft" && isOwner && (
             <Button size="sm" variant="outline" onClick={() => updateStatus("sent")} className="gap-1">
               <Send size={14} /> Marcar como enviado
             </Button>
           )}
-          {canRequest && contract.status !== "final" && (
+          {!editing && canRequest && contract.status !== "final" && (
             <Button size="sm" onClick={() => setRevisionDialogOpen(true)} className="gap-1">
               <MessageSquarePlus size={14} /> Solicitar revisão
             </Button>
           )}
-          {canRequest && contract.status !== "final" && revisions.some(r => r.status === "reviewed") && (
+          {!editing && canRequest && contract.status !== "final" && revisions.some(r => r.status === "reviewed") && (
             <Button size="sm" variant="default" onClick={generateFinalContract} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
               <CheckCircle2 size={14} /> Gerar contrato final
             </Button>
@@ -193,7 +230,13 @@ export default function ContratoDetalhes() {
 
         <TabsContent value="content">
           <Card><CardContent className="p-4 md:p-6">
-            <ProposalRenderer blocks={contract.blocks || []} variables={contract.variables || {}} />
+            {editing ? (
+              <div className="h-[75vh]">
+                <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
+              </div>
+            ) : (
+              <ProposalRenderer blocks={contract.blocks || []} variables={contract.variables || {}} />
+            )}
           </CardContent></Card>
         </TabsContent>
 

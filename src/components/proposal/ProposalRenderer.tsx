@@ -60,13 +60,21 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
     }
     case "text":
     case "about":
-    case "terms":
+    case "terms": {
+      const padMap = { compact: "24px 40px", normal: "48px 56px", spacious: "72px 80px" } as const;
+      const padding = padMap[(block as any).padding as keyof typeof padMap] || padMap.normal;
+      const align = (block as any).align || "left";
+      const titleColor = (block as any).titleColor || brandColor;
+      const textColor = (block as any).textColor || "#111827";
+      const bg = (block as any).bgColor;
+      const fs = (block as any).fontSize || 16;
       return (
-        <section className="pg">
-          {block.title && <h2 style={{ fontSize: 32, color: brandColor, marginBottom: 16 }}>{interpolate(block.title, variables)}</h2>}
-          <div className="pre-line" style={{ fontSize: 16 }}>{interpolate(block.content, variables)}</div>
+        <section className="pg" style={{ padding, background: bg || undefined, color: textColor, textAlign: align as any }}>
+          {block.title && <h2 style={{ fontSize: 32, color: titleColor, marginBottom: 16, textAlign: align as any }}>{interpolate(block.title, variables)}</h2>}
+          <div className="pre-line" style={{ fontSize: fs, color: textColor }}>{interpolate(block.content, variables)}</div>
         </section>
       );
+    }
     case "scope":
       return (
         <section className="pg">
@@ -162,13 +170,19 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
         </section>
       );
     case "image": {
-      const w = block.width === "small" ? "40%" : block.width === "medium" ? "70%" : "100%";
+      const presetW = block.width === "small" ? 40 : block.width === "medium" ? 70 : 100;
+      const wPct = typeof block.widthPct === "number" ? block.widthPct : presetW;
+      const align = block.align || "center";
+      const justify = align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center";
+      const filterMap: Record<string, string> = { none: "", grayscale: "grayscale(100%)", sepia: "sepia(80%)", blur: "blur(2px)", bright: "brightness(1.15) contrast(1.05)" };
+      const filter = filterMap[block.filter || "none"] || "";
+      const shadow = block.shadow ? "0 8px 24px rgba(0,0,0,0.18)" : "none";
       return (
-        <section className="pg" style={{ textAlign: "center" }}>
+        <section className="pg" style={{ background: block.bgColor || undefined, display: "flex", flexDirection: "column", alignItems: justify }}>
           {block.url
-            ? <img src={block.url} alt={block.caption || ""} style={{ width: w, maxWidth: "100%", borderRadius: 8, display: "inline-block" }} />
-            : <div style={{ padding: 48, background: "#f3f4f6", borderRadius: 8, color: "#9ca3af" }}>(Sem imagem)</div>}
-          {block.caption && <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280" }}>{block.caption}</div>}
+            ? <img src={block.url} alt={block.caption || ""} style={{ width: `${wPct}%`, maxWidth: "100%", borderRadius: (block.borderRadius ?? 8) + "px", boxShadow: shadow, transform: `rotate(${block.rotate || 0}deg)`, filter, objectFit: block.objectFit || "contain", display: "block" }} />
+            : <div style={{ padding: 48, background: "#f3f4f6", borderRadius: 8, color: "#9ca3af", width: "100%", textAlign: "center" }}>(Sem imagem)</div>}
+          {block.caption && <div style={{ marginTop: 8, fontSize: 13, color: "#6b7280", textAlign: align as any, width: "100%" }}>{block.caption}</div>}
         </section>
       );
     }

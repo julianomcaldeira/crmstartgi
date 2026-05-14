@@ -142,8 +142,39 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
         <div className="space-y-3">
           <Field label="Título"><Input value={block.title || ""} onChange={(e) => onChange({ title: e.target.value })} /></Field>
           <Field label="Conteúdo" right={<VarPicker onPick={(v) => append("content", v)} />}>
-            <Textarea rows={12} value={block.content} onChange={(e) => onChange({ content: e.target.value })} />
+            <Textarea rows={10} value={block.content} onChange={(e) => onChange({ content: e.target.value })} />
           </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Cor de fundo"><Input type="color" value={(block as any).bgColor || "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} /></Field>
+            <Field label="Cor do título"><Input type="color" value={(block as any).titleColor || "#22c55e"} onChange={(e) => onChange({ titleColor: e.target.value })} /></Field>
+            <Field label="Cor do texto"><Input type="color" value={(block as any).textColor || "#111827"} onChange={(e) => onChange({ textColor: e.target.value })} /></Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Alinhamento">
+              <Select value={(block as any).align || "left"} onValueChange={(v) => onChange({ align: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Esquerda</SelectItem>
+                  <SelectItem value="center">Centro</SelectItem>
+                  <SelectItem value="right">Direita</SelectItem>
+                  <SelectItem value="justify">Justificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Espaçamento">
+              <Select value={(block as any).padding || "normal"} onValueChange={(v) => onChange({ padding: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="compact">Compacto</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="spacious">Amplo</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label={`Tamanho fonte: ${(block as any).fontSize || 16}px`}>
+              <input type="range" min={12} max={28} step={1} value={(block as any).fontSize || 16} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} className="w-full" />
+            </Field>
+          </div>
         </div>
       );
     case "scope": {
@@ -277,27 +308,69 @@ function ImageUploadButton({ onUploaded, label = "Enviar imagem" }: { onUploaded
 }
 
 function ImageEditor({ block, onChange }: { block: Extract<ProposalBlock, { type: "image" }>; onChange: (p: any) => void }) {
+  const wPct = typeof block.widthPct === "number" ? block.widthPct : (block.width === "small" ? 40 : block.width === "medium" ? 70 : 100);
+  const radius = block.borderRadius ?? 8;
+  const rotate = block.rotate ?? 0;
+  const filter = block.filter || "none";
+  const filterCss: Record<string, string> = { none: "", grayscale: "grayscale(100%)", sepia: "sepia(80%)", blur: "blur(2px)", bright: "brightness(1.15) contrast(1.05)" };
   return (
     <div className="space-y-3">
       <Field label="Imagem" right={<ImageUploadButton onUploaded={(url) => onChange({ url })} />}>
         <Input value={block.url} onChange={(e) => onChange({ url: e.target.value })} placeholder="URL ou faça upload" />
       </Field>
       {block.url && (
-        <div className="border rounded p-2 bg-muted/30 flex justify-center">
-          <img src={block.url} alt="" className="max-h-48 object-contain" />
+        <div className="border rounded p-3 bg-muted/30 flex justify-center overflow-hidden">
+          <img src={block.url} alt="" style={{ width: `${wPct}%`, maxHeight: 240, borderRadius: radius, transform: `rotate(${rotate}deg)`, boxShadow: block.shadow ? "0 8px 24px rgba(0,0,0,0.18)" : "none", filter: filterCss[filter], objectFit: block.objectFit || "contain" }} />
         </div>
       )}
       <Field label="Legenda"><Input value={block.caption || ""} onChange={(e) => onChange({ caption: e.target.value })} /></Field>
-      <Field label="Largura">
-        <Select value={block.width || "full"} onValueChange={(v: any) => onChange({ width: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="small">Pequena</SelectItem>
-            <SelectItem value="medium">Média</SelectItem>
-            <SelectItem value="full">Largura total</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={`Largura: ${wPct}%`}>
+          <input type="range" min={10} max={100} step={5} value={wPct} onChange={(e) => onChange({ widthPct: Number(e.target.value), width: "full" })} className="w-full" />
+        </Field>
+        <Field label="Alinhamento">
+          <Select value={block.align || "center"} onValueChange={(v: any) => onChange({ align: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Esquerda</SelectItem>
+              <SelectItem value="center">Centro</SelectItem>
+              <SelectItem value="right">Direita</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label={`Borda arredondada: ${radius}px`}>
+          <input type="range" min={0} max={48} step={2} value={radius} onChange={(e) => onChange({ borderRadius: Number(e.target.value) })} className="w-full" />
+        </Field>
+        <Field label={`Rotação: ${rotate}°`}>
+          <input type="range" min={-180} max={180} step={5} value={rotate} onChange={(e) => onChange({ rotate: Number(e.target.value) })} className="w-full" />
+        </Field>
+        <Field label="Filtro">
+          <Select value={filter} onValueChange={(v: any) => onChange({ filter: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Nenhum</SelectItem>
+              <SelectItem value="grayscale">Preto e branco</SelectItem>
+              <SelectItem value="sepia">Sépia</SelectItem>
+              <SelectItem value="blur">Desfoque</SelectItem>
+              <SelectItem value="bright">Realce</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Ajuste">
+          <Select value={block.objectFit || "contain"} onValueChange={(v: any) => onChange({ objectFit: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contain">Conter</SelectItem>
+              <SelectItem value="cover">Preencher</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Sombra</Label>
+        <Switch checked={!!block.shadow} onCheckedChange={(v) => onChange({ shadow: v })} />
+      </div>
+      <Field label="Cor de fundo do bloco"><Input type="color" value={block.bgColor || "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} /></Field>
     </div>
   );
 }

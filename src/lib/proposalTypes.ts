@@ -30,6 +30,12 @@ export interface TextBlock extends BaseBlock {
   type: "text" | "about" | "terms";
   title?: string;
   content: string;
+  bgColor?: string;
+  titleColor?: string;
+  textColor?: string;
+  align?: "left" | "center" | "right" | "justify";
+  padding?: "compact" | "normal" | "spacious";
+  fontSize?: number;
 }
 export interface ScopeItem { name: string; description?: string }
 export interface ScopeBlock extends BaseBlock {
@@ -63,6 +69,14 @@ export interface ImageBlock extends BaseBlock {
   url: string;
   caption?: string;
   width?: "small" | "medium" | "full";
+  widthPct?: number; // 10-100 — overrides width preset
+  align?: "left" | "center" | "right";
+  borderRadius?: number; // 0-48 px
+  shadow?: boolean;
+  rotate?: number; // -180 to 180 deg
+  objectFit?: "contain" | "cover";
+  bgColor?: string;
+  filter?: "none" | "grayscale" | "sepia" | "blur" | "bright";
 }
 export interface GalleryImage { url: string; caption?: string }
 export interface GalleryBlock extends BaseBlock {
