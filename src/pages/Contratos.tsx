@@ -69,6 +69,7 @@ export default function Contratos() {
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     const r = (roles || []).map(x => x.role);
     setHasTemplateAccess(r.includes("admin") || r.includes("pre_vendas"));
+    setIsAdmin(r.includes("admin"));
     await loadAll();
     setLoading(false);
   };
