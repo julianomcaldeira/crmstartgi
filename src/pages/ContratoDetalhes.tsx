@@ -360,3 +360,49 @@ export default function ContratoDetalhes() {
     </div>
   );
 }
+
+function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables: any }) {
+  return (
+    <Card className="h-full flex flex-col">
+      <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 shrink-0">
+        <FileText size={12} /> Pré-visualização em tempo real
+      </div>
+      <div className="flex-1 min-h-0 overflow-auto bg-gray-100 p-4">
+        <div className="mx-auto bg-white shadow" style={{ width: 794, maxWidth: "100%" }}>
+          <ProposalRenderer blocks={blocks} variables={variables} />
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function SplitPane({ left, right, splitPct, onSplitChange }: { left: React.ReactNode; right: React.ReactNode; splitPct: number; onSplitChange: (n: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) => {
+      const el = ref.current; if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      onSplitChange(Math.min(80, Math.max(20, pct)));
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [dragging, onSplitChange]);
+
+  return (
+    <div ref={ref} className="flex h-[78vh] w-full select-none" style={{ cursor: dragging ? "col-resize" : "auto" }}>
+      <div style={{ width: `${splitPct}%` }} className="min-w-0 pr-1">{left}</div>
+      <div
+        onMouseDown={() => setDragging(true)}
+        className="w-1.5 bg-border hover:bg-primary/60 cursor-col-resize transition-colors rounded-full mx-0.5"
+        title="Arraste para redimensionar"
+      />
+      <div style={{ width: `${100 - splitPct}%` }} className="min-w-0 pl-1">{right}</div>
+    </div>
+  );
+}
