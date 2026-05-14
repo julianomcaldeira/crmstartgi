@@ -48,6 +48,10 @@ function errorMessage(error: unknown, fallback = "erro inesperado") {
   return error instanceof Error ? error.message : fallback;
 }
 
+function replaceKnownBlockedSignatureImages(signatureHtml: string) {
+  return signatureHtml.replace(BLOCKED_STARTGI_POSTIMG_LOGO_PATTERN, STARTGI_SIGNATURE_LOGO_URL);
+}
+
 export default function EmailSignatureConfig() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,6 +65,13 @@ export default function EmailSignatureConfig() {
   const hasExternalImages = EXTERNAL_SIGNATURE_IMAGE_PATTERN.test(html);
 
   const importSignatureImages = useCallback(async (currentHtml: string, showToast = true) => {
+    const knownFixedHtml = replaceKnownBlockedSignatureImages(currentHtml);
+    if (knownFixedHtml !== currentHtml) {
+      setHtml(knownFixedHtml);
+      if (showToast) toast.success("Logo da assinatura corrigido!");
+      return knownFixedHtml;
+    }
+
     const urls = getExternalSignatureImageUrls(currentHtml);
     if (!urls.length) {
       if (showToast) toast.info("Nenhuma imagem externa compatível encontrada na assinatura.");
