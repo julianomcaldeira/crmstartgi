@@ -27,7 +27,7 @@ export interface TrackEvent {
   recipient_id?: string;
 }
 
-export function flush(token: string, events: TrackEvent[], useBeacon = false) {
+export function flush(token: string, events: TrackEvent[], _useBeacon = false) {
   if (!events.length) return;
   const body = JSON.stringify({ token, events });
   const headers: Record<string, string> = {
@@ -35,13 +35,7 @@ export function flush(token: string, events: TrackEvent[], useBeacon = false) {
     apikey: ANON,
     Authorization: `Bearer ${ANON}`,
   };
-  if (useBeacon && navigator.sendBeacon) {
-    // Beacon doesn't support custom headers reliably; fall back to fetch with keepalive
-    try {
-      const blob = new Blob([body], { type: "application/json" });
-      const ok = navigator.sendBeacon(ENDPOINT + `?apikey=${encodeURIComponent(ANON)}`, blob);
-      if (ok) return;
-    } catch { /* fall through */ }
-  }
+  // sendBeacon can't set custom headers, and the Supabase gateway requires an
+  // apikey header — so we always use fetch with keepalive (works during unload).
   fetch(ENDPOINT, { method: "POST", headers, body, keepalive: true }).catch(() => {});
 }
