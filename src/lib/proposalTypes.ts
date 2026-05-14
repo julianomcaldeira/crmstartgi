@@ -30,6 +30,12 @@ export interface TextBlock extends BaseBlock {
   type: "text" | "about" | "terms";
   title?: string;
   content: string;
+  bgColor?: string;
+  titleColor?: string;
+  textColor?: string;
+  align?: "left" | "center" | "right" | "justify";
+  padding?: "compact" | "normal" | "spacious";
+  fontSize?: number;
 }
 export interface ScopeItem { name: string; description?: string }
 export interface ScopeBlock extends BaseBlock {
