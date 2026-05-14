@@ -496,8 +496,15 @@ export default function PropostaInsights() {
               Será criado um snapshot do conteúdo atual como <strong>v{proposal.version || 1}</strong>. A proposta passará a ser editada como <strong>v{(proposal.version || 1) + 1}</strong>.
             </p>
             <div>
-              <Label className="text-xs">Motivo / nota da versão (opcional)</Label>
-              <Textarea value={snapshotReason} onChange={(e) => setSnapshotReason(e.target.value)} placeholder="Ex.: ajuste de preço após reunião" rows={3} />
+              <Label className="text-xs">Motivo da mudança <span className="text-destructive">*</span></Label>
+              <Textarea
+                value={snapshotReason}
+                onChange={(e) => setSnapshotReason(e.target.value)}
+                placeholder="Ex.: ajuste de preço após reunião com o cliente"
+                rows={3}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Obrigatório. O autor da versão será registrado automaticamente.</p>
             </div>
           </div>
           <DialogFooter>
