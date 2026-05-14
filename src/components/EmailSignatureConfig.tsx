@@ -166,11 +166,19 @@ export default function EmailSignatureConfig() {
 
             {html && (
               <div>
-                <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
-                <div
-                  className="border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: html }}
+                <Label className="text-xs text-muted-foreground">Pré-visualização (renderizada como o destinatário verá)</Label>
+                <iframe
+                  title="Pré-visualização da assinatura"
+                  className="w-full border rounded bg-white"
+                  style={{ height: 280 }}
+                  sandbox=""
+                  srcDoc={`<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;}img{max-width:100%;height:auto;}</style></head><body>${html}</body></html>`}
                 />
+                {/postimg\.cc|imgbb\.com|ibb\.co/i.test(html) && (
+                  <p className="text-xs text-amber-600 mt-2">
+                    ⚠️ Detectamos uma imagem hospedada em serviço gratuito (postimg/imgbb). Esses serviços às vezes substituem a imagem por um banner de "Upgrade" quando carregada fora do site deles. Recomendamos usar o botão <strong>"Anexar imagem"</strong> acima — ela será hospedada no seu próprio servidor e nunca será trocada.
+                  </p>
+                )}
               </div>
             )}
             <Button onClick={save} disabled={saving}>
