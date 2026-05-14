@@ -298,8 +298,7 @@ export default function PropostaInsights() {
 
   const copyLink = async () => {
     if (!proposal?.share_token) return;
-    const url = `${window.location.origin}/p/${proposal.share_token}`;
-    await navigator.clipboard.writeText(url);
+    await navigator.clipboard.writeText(proposalPublicUrl(proposal.share_token));
     toast.success("Link copiado");
   };
 
