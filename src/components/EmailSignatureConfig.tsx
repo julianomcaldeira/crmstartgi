@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react";
 
 const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
+const STARTGI_SIGNATURE_LOGO_URL = "https://eifsbqqrimniclsssoru.supabase.co/storage/v1/object/public/email-signatures/shared%2Fstartgi-logo-page.jpg";
+const BLOCKED_STARTGI_POSTIMG_LOGO_PATTERN = /https?:\/\/i\.postimg\.cc\/(?:XN1ZPRW8|g2STGG1G)\/(?:Logo-Start-Gi-Verde|image)\.(?:jpe?g|png)/gi;
 
 type SignatureImportResult = {
   publicUrl?: string;
@@ -28,7 +30,7 @@ function getExternalSignatureImageUrls(signatureHtml: string) {
 }
 
 function normalizeSignatureImagesForPreview(signatureHtml: string) {
-  return signatureHtml.replace(/<img\b[^>]*>/gi, (tag) => {
+  return signatureHtml.replace(BLOCKED_STARTGI_POSTIMG_LOGO_PATTERN, STARTGI_SIGNATURE_LOGO_URL).replace(/<img\b[^>]*>/gi, (tag) => {
     let next = tag;
     if (/referrerpolicy\s*=/i.test(next)) {
       next = next.replace(/referrerpolicy\s*=\s*(["'])[^"']*\1/i, 'referrerpolicy="no-referrer"');
