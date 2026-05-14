@@ -2236,6 +2236,68 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_events: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          device: string | null
+          duration_ms: number | null
+          event_type: string
+          id: string
+          ip: unknown
+          metadata: Json | null
+          proposal_id: string
+          recipient_id: string | null
+          section_id: string | null
+          user_agent: string | null
+          visitor_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          duration_ms?: number | null
+          event_type: string
+          id?: string
+          ip?: unknown
+          metadata?: Json | null
+          proposal_id: string
+          recipient_id?: string | null
+          section_id?: string | null
+          user_agent?: string | null
+          visitor_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          device?: string | null
+          duration_ms?: number | null
+          event_type?: string
+          id?: string
+          ip?: unknown
+          metadata?: Json | null
+          proposal_id?: string
+          recipient_id?: string | null
+          section_id?: string | null
+          user_agent?: string | null
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_templates: {
         Row: {
           blocks: Json
@@ -2278,6 +2340,56 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_views: {
+        Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
+          device: string | null
+          first_view_at: string
+          id: string
+          last_view_at: string
+          proposal_id: string
+          total_time_ms: number
+          view_count: number
+          visitor_id: string
+        }
+        Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device?: string | null
+          first_view_at?: string
+          id?: string
+          last_view_at?: string
+          proposal_id: string
+          total_time_ms?: number
+          view_count?: number
+          visitor_id: string
+        }
+        Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
+          device?: string | null
+          first_view_at?: string
+          id?: string
+          last_view_at?: string
+          proposal_id?: string
+          total_time_ms?: number
+          view_count?: number
+          visitor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_views_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           accepted_at: string | null
@@ -2285,8 +2397,11 @@ export type Database = {
           client_id: string
           created_at: string
           created_by: string
+          engagement_score: number
+          expires_at: string | null
           id: string
           implementation_value: number | null
+          is_locked: boolean
           monthly_value: number | null
           opportunity_id: string
           pdf_url: string | null
@@ -2296,10 +2411,13 @@ export type Database = {
           status: string
           template_id: string | null
           title: string
+          total_time_ms: number
           total_value: number | null
+          unique_visitors: number
           updated_at: string
           validity_days: number | null
           variables: Json
+          version: number
           view_count: number
           viewed_at: string | null
         }
@@ -2309,8 +2427,11 @@ export type Database = {
           client_id: string
           created_at?: string
           created_by: string
+          engagement_score?: number
+          expires_at?: string | null
           id?: string
           implementation_value?: number | null
+          is_locked?: boolean
           monthly_value?: number | null
           opportunity_id: string
           pdf_url?: string | null
@@ -2320,10 +2441,13 @@ export type Database = {
           status?: string
           template_id?: string | null
           title: string
+          total_time_ms?: number
           total_value?: number | null
+          unique_visitors?: number
           updated_at?: string
           validity_days?: number | null
           variables?: Json
+          version?: number
           view_count?: number
           viewed_at?: string | null
         }
@@ -2333,8 +2457,11 @@ export type Database = {
           client_id?: string
           created_at?: string
           created_by?: string
+          engagement_score?: number
+          expires_at?: string | null
           id?: string
           implementation_value?: number | null
+          is_locked?: boolean
           monthly_value?: number | null
           opportunity_id?: string
           pdf_url?: string | null
@@ -2344,10 +2471,13 @@ export type Database = {
           status?: string
           template_id?: string | null
           title?: string
+          total_time_ms?: number
           total_value?: number | null
+          unique_visitors?: number
           updated_at?: string
           validity_days?: number | null
           variables?: Json
+          version?: number
           view_count?: number
           viewed_at?: string | null
         }
@@ -3180,6 +3310,7 @@ export type Database = {
           blocks: Json
           client_company: string
           created_at: string
+          expires_at: string
           id: string
           implementation_value: number
           monthly_value: number
@@ -3197,6 +3328,24 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      record_proposal_event: {
+        Args: {
+          _browser?: string
+          _city?: string
+          _country?: string
+          _device?: string
+          _duration_ms?: number
+          _event_type: string
+          _ip?: unknown
+          _metadata?: Json
+          _recipient_id?: string
+          _section_id?: string
+          _token: string
+          _user_agent?: string
+          _visitor_id: string
+        }
+        Returns: Json
       }
       register_proposal_view: { Args: { _token: string }; Returns: undefined }
     }
