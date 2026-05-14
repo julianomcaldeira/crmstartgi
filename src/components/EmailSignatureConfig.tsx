@@ -11,6 +11,12 @@ import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react
 
 const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
 
+type SignatureImportResult = {
+  publicUrl?: string;
+  error?: string;
+  fallback?: boolean;
+};
+
 function getExternalSignatureImageUrls(signatureHtml: string) {
   if (!signatureHtml) return [];
   const doc = new DOMParser().parseFromString(signatureHtml, "text/html");
@@ -24,8 +30,10 @@ function getExternalSignatureImageUrls(signatureHtml: string) {
 function normalizeSignatureImagesForPreview(signatureHtml: string) {
   return signatureHtml.replace(/<img\b[^>]*>/gi, (tag) => {
     let next = tag;
-    if (!/referrerpolicy\s*=/i.test(next)) {
-      next = next.replace(/\s*\/?>$/, ' referrerpolicy="origin-when-cross-origin"$&');
+    if (/referrerpolicy\s*=/i.test(next)) {
+      next = next.replace(/referrerpolicy\s*=\s*(["'])[^"']*\1/i, 'referrerpolicy="no-referrer"');
+    } else {
+      next = next.replace(/\s*\/?>$/, ' referrerpolicy="no-referrer"$&');
     }
     if (!/style\s*=/i.test(next)) {
       next = next.replace(/\s*\/?>$/, ' style="max-width:100%;height:auto;display:block;"$&');
@@ -60,24 +68,33 @@ export default function EmailSignatureConfig() {
     setImporting(true);
     try {
       let nextHtml = currentHtml;
+      let importedCount = 0;
       for (const url of urls) {
-        const { data, error } = await supabase.functions.invoke("import-signature-image", {
+        const { data, error } = await supabase.functions.invoke<SignatureImportResult>("import-signature-image", {
           body: { url },
         });
         if (error) throw error;
+        if (data?.fallback) {
+          if (showToast) {
+            toast.warning(data.error || "O provedor externo bloqueou o download automático; mantivemos o link original.");
+          }
+          continue;
+        }
         if (!data?.publicUrl) throw new Error("A imagem externa não pôde ser importada.");
         nextHtml = nextHtml.split(url).join(data.publicUrl);
+        importedCount += 1;
       }
       setHtml(nextHtml);
-      if (showToast) {
-        toast.success(urls.length === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
+      if (showToast && importedCount > 0) {
+        toast.success(importedCount === 1 ? "Imagem externa corrigida!" : "Imagens externas corrigidas!");
       }
       return nextHtml;
     } catch (err: unknown) {
+      setHtml(currentHtml);
       if (showToast) {
         toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
       }
-      throw err;
+      return currentHtml;
     } finally {
       setImporting(false);
     }
@@ -273,7 +290,7 @@ export default function EmailSignatureConfig() {
                   title="Pré-visualização da assinatura"
                   className="w-full border rounded bg-background"
                   style={{ height: 280 }}
-                  referrerPolicy="origin-when-cross-origin"
+                  referrerPolicy="no-referrer"
                   srcDoc={`<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:14px;color:#111;margin:12px;background:#fff;}img{max-width:100%;height:auto;}</style></head><body>${normalizeSignatureImagesForPreview(html)}</body></html>`}
                 />
                 {hasExternalImages && (
