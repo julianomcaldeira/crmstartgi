@@ -155,7 +155,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const copyShareLink = async () => {
     let prop = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("draft");
     if (!prop) return;
-    const url = `${window.location.origin}/p/${prop.share_token || shareToken}`;
+    const url = proposalPublicUrl(prop.share_token || shareToken);
     await navigator.clipboard.writeText(url);
     toast.success("Link copiado!");
   };
