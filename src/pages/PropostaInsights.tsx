@@ -179,12 +179,24 @@ export default function PropostaInsights() {
     setLoading(true);
     setError(null);
     const [pRes, eRes, vRes] = await Promise.all([
-      supabase.from("proposals").select("*, clients(company_name), opportunities(title)").eq("id", id).maybeSingle(),
+      supabase.from("proposals").select("*").eq("id", id).maybeSingle(),
       supabase.from("proposal_events").select("*").eq("proposal_id", id).order("created_at", { ascending: false }).limit(500),
       supabase.from("proposal_views").select("*").eq("proposal_id", id).order("last_view_at", { ascending: false }),
     ]);
     if (pRes.error) setError(pRes.error.message);
-    setProposal(pRes.data);
+    let proposalData: any = pRes.data;
+    if (proposalData) {
+      const [cRes, oRes] = await Promise.all([
+        proposalData.client_id
+          ? supabase.from("clients").select("company_name").eq("id", proposalData.client_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+        proposalData.opportunity_id
+          ? supabase.from("opportunities").select("title").eq("id", proposalData.opportunity_id).maybeSingle()
+          : Promise.resolve({ data: null }),
+      ]);
+      proposalData = { ...proposalData, clients: cRes.data, opportunities: oRes.data };
+    }
+    setProposal(proposalData);
     setEvents(eRes.data || []);
     setViews(vRes.data || []);
     if (pRes.data?.id) {
