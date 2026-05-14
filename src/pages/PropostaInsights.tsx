@@ -10,7 +10,7 @@ import {
 import {
   ArrowLeft, Eye, Users, Clock, Activity, Flame, Snowflake, Thermometer,
   ExternalLink, Copy, Loader2, History, Save, RotateCcw, Trash2,
-  UserPlus, Mail, Link2,
+  UserPlus, Mail, Link2, Send,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
