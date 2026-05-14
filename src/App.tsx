@@ -55,6 +55,8 @@ const App = () => {
         <Route path="/inteligencia-mercado" element={<Layout><InteligenciaMercado /></Layout>} />
         <Route path="/pre-vendas" element={<Layout><PreVendas /></Layout>} />
         <Route path="/propostas" element={<Layout><Propostas /></Layout>} />
+        <Route path="/contratos" element={<Layout><Contratos /></Layout>} />
+        <Route path="/contratos/:id" element={<Layout><ContratoDetalhes /></Layout>} />
         <Route path="/p/:token" element={<PropostaPublica />} />
         <Route path="/configuracoes" element={<Layout><Configuracoes /></Layout>} />
         <Route path="/emails-dashboard" element={<Layout><EmailDashboard /></Layout>} />
