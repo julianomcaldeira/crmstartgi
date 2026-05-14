@@ -464,3 +464,15 @@ export default function Propostas() {
     </div>
   );
 }
+
+function AggCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: string; sub?: string }) {
+  return (
+    <Card className="p-3">
+      <div className="flex items-center gap-1.5 text-muted-foreground text-[11px] uppercase tracking-wide">
+        {icon}<span>{label}</span>
+      </div>
+      <div className="text-lg font-semibold mt-1 leading-tight">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+    </Card>
+  );
+}
