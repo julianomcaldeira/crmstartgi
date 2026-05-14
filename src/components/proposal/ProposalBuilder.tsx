@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ProposalBlock, BlockType, BLOCK_LABELS, newBlock, AVAILABLE_VARIABLES, PricingItem, ScopeItem, TimelinePhase, GalleryImage } from "@/lib/proposalTypes";
+import { ProposalBlock, BlockType, BLOCK_LABELS, newBlock, AVAILABLE_VARIABLES, PricingItem, ScopeItem, TimelinePhase, GalleryImage, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { RichTextEditor } from "./RichTextEditor";
 import { uploadProposalImage } from "@/lib/proposalUpload";
 import { toast } from "sonner";
