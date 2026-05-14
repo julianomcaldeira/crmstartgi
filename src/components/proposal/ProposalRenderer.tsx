@@ -24,7 +24,9 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
       }}
     >
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} variables={variables} brandColor={brand} />
+        <div key={b.id} data-block-id={b.id} data-block-type={b.type}>
+          <BlockView block={b} variables={variables} brandColor={brand} />
+        </div>
       ))}
       <style>{`
         .proposal-doc { line-height: 1.6; }

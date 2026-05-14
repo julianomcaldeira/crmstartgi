@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
@@ -298,7 +298,14 @@ export default function Propostas() {
           )}
 
           {/* Lista */}
-          {!proposalsLoading && !proposalsError && proposals.map((p) => (
+          {!proposalsLoading && !proposalsError && proposals.map((p) => {
+            const score = p.engagement_score || 0;
+            const cls = score >= 60
+              ? { label: "Quente", color: "bg-red-500 text-white", Icon: Flame }
+              : score >= 30
+              ? { label: "Morno", color: "bg-amber-500 text-white", Icon: Thermometer }
+              : { label: "Frio", color: "bg-slate-400 text-white", Icon: Snowflake };
+            return (
             <Card key={p.id} className="p-3 flex items-center gap-3">
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div className="flex-1 min-w-0">
@@ -309,10 +316,16 @@ export default function Propostas() {
               </div>
               <Badge variant={p.status === "sent" ? "default" : p.status === "accepted" ? "default" : "outline"}>{p.status}</Badge>
               {p.view_count > 0 && <Badge variant="secondary"><Eye className="h-3 w-3 mr-1" />{p.view_count}</Badge>}
+              {p.unique_visitors > 0 && (
+                <Badge className={cls.color} title={`Score ${score} · ${cls.label}`}>
+                  <cls.Icon className="h-3 w-3 mr-1" />{score}
+                </Badge>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate(`/propostas/${p.id}/insights`)}><BarChart3 className="h-3 w-3 mr-1" /> Insights</Button>
               <Button size="sm" variant="outline" onClick={() => window.open(`/p/${p.share_token}`, "_blank")}>Abrir link</Button>
               <Button size="sm" variant="ghost" className="text-destructive" onClick={() => deleteProposal(p.id)}><Trash2 className="h-3 w-3" /></Button>
             </Card>
-          ))}
+          );})}
 
           {/* Vazio */}
           {!proposalsLoading && !proposalsError && proposals.length === 0 && (
