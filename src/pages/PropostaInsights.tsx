@@ -502,6 +502,47 @@ export default function PropostaInsights() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar convite por e-mail</DialogTitle>
+          </DialogHeader>
+          {inviteRecipient && (
+            <div className="space-y-3">
+              <div className="text-sm">
+                Para: <strong>{inviteRecipient.name}</strong>{" "}
+                <span className="text-muted-foreground">&lt;{inviteRecipient.email}&gt;</span>
+              </div>
+              <div className="text-xs text-muted-foreground break-all p-2 bg-muted rounded">
+                Link único: {recipientLink(inviteRecipient)}
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem personalizada (opcional)</Label>
+                <Textarea
+                  value={inviteMessage}
+                  onChange={(e) => setInviteMessage(e.target.value)}
+                  placeholder="Ex.: Conforme conversamos, segue a proposta para sua avaliação."
+                  rows={4}
+                  maxLength={1000}
+                />
+              </div>
+              {inviteRecipient.invited_at && (
+                <p className="text-xs text-amber-600">
+                  Este destinatário já recebeu {inviteRecipient.invite_count || 1} convite(s). Será enviado novamente.
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setInviteOpen(false)} disabled={sendingInvite}>Cancelar</Button>
+            <Button onClick={sendInvite} disabled={sendingInvite}>
+              {sendingInvite ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+              Enviar convite
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Histórico de versões ({versions.length})</CardTitle>
