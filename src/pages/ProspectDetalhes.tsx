@@ -118,6 +118,7 @@ const ClienteDetalhes = () => {
     email: "",
     phone: "",
     mobile: "",
+    linkedin: "",
     rating: 3,
     is_primary: false,
   });
@@ -462,6 +463,7 @@ const ClienteDetalhes = () => {
           email: contactFormData.email || null,
           phone: contactFormData.phone ? autoAddMobileNine(contactFormData.phone) : null,
           mobile: contactFormData.mobile ? autoAddMobileNine(contactFormData.mobile) : null,
+          linkedin: contactFormData.linkedin || null,
           rating: contactFormData.rating,
           is_primary: contactFormData.is_primary,
           created_by: user.id,
@@ -499,6 +501,7 @@ const ClienteDetalhes = () => {
       email: contact.email || "",
       phone: contact.phone || "",
       mobile: contact.mobile || "",
+      linkedin: contact.linkedin || "",
       rating: contact.rating || 3,
       is_primary: contact.is_primary || false,
     });
@@ -520,6 +523,7 @@ const ClienteDetalhes = () => {
           email: contactFormData.email || null,
           phone: contactFormData.phone ? autoAddMobileNine(contactFormData.phone) : null,
           mobile: contactFormData.mobile ? autoAddMobileNine(contactFormData.mobile) : null,
+          linkedin: contactFormData.linkedin || null,
           rating: contactFormData.rating,
           is_primary: contactFormData.is_primary,
         })
@@ -581,6 +585,7 @@ const ClienteDetalhes = () => {
       email: "",
       phone: "",
       mobile: "",
+      linkedin: "",
       rating: 3,
       is_primary: false,
     });
@@ -956,6 +961,14 @@ const ClienteDetalhes = () => {
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleCopy(contact.mobile, `contact-mobile-${idx}`)} title="Copiar celular">
                           {copiedField === `contact-mobile-${idx}` ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                         </Button>
+                      </div>
+                    )}
+                    {contact.linkedin && (
+                      <div className="flex items-center gap-2">
+                        <svg className="h-3 w-3 text-muted-foreground" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                        <a href={contact.linkedin} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate max-w-[220px]">
+                          {contact.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\//, '')}
+                        </a>
                       </div>
                     )}
                   </div>
@@ -1789,6 +1802,16 @@ const ClienteDetalhes = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_linkedin">LinkedIn</Label>
+                      <Input
+                        id="contact_linkedin"
+                        type="url"
+                        value={contactFormData.linkedin}
+                        onChange={(e) => setContactFormData({ ...contactFormData, linkedin: e.target.value })}
+                        placeholder="https://www.linkedin.com/in/usuario"
+                      />
                     </div>
                     <div className="flex items-center space-x-2">
                       <input
