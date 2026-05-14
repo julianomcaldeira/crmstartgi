@@ -10,6 +10,7 @@ import {
 import {
   ArrowLeft, Eye, Users, Clock, Activity, Flame, Snowflake, Thermometer,
   ExternalLink, Copy, Loader2, History, Save, RotateCcw, Trash2,
+  UserPlus, Mail, Link2,
 } from "lucide-react";
 import { format, parseISO, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 function classify(score: number): { label: string; color: string; Icon: any } {
   if (score >= 60) return { label: "Quente", color: "bg-red-500 text-white", Icon: Flame };
