@@ -10,7 +10,7 @@ import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, M
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
-import { ProposalBlock } from "@/lib/proposalTypes";
+import { ProposalBlock, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
