@@ -32,6 +32,8 @@ export default function Propostas() {
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
+  const [aggregatesLoading, setAggregatesLoading] = useState(false);
+  const [aggregatesError, setAggregatesError] = useState<string | null>(null);
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
@@ -103,27 +105,37 @@ export default function Propostas() {
   };
 
   const loadAggregates = async () => {
-    let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
-    if (statusFilter !== "all") q = q.eq("status", statusFilter);
-    if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
-    const { data } = await q;
-    const rows = (data || []) as any[];
-    const total = rows.length;
-    const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
-    const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
-    const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
-    const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
-    const count = (s: string) => rows.filter((r) => r.status === s).length;
-    setAggregates({
-      total,
-      sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
-      viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
-      accepted: count("accepted"),
-      rejected: count("rejected"),
-      totalValue,
-      avgScore,
-      uniqueVisitors,
-    });
+    setAggregatesLoading(true);
+    setAggregatesError(null);
+    try {
+      let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
+      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data || []) as any[];
+      const total = rows.length;
+      const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
+      const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
+      const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
+      const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
+      const count = (s: string) => rows.filter((r) => r.status === s).length;
+      setAggregates({
+        total,
+        sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
+        viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
+        accepted: count("accepted"),
+        rejected: count("rejected"),
+        totalValue,
+        avgScore,
+        uniqueVisitors,
+      });
+    } catch (e: any) {
+      setAggregates(null);
+      setAggregatesError(e?.message || "Não foi possível calcular as métricas.");
+    } finally {
+      setAggregatesLoading(false);
+    }
   };
 
   const loadAll = async () => {
@@ -326,7 +338,30 @@ export default function Propostas() {
           </div>
 
           {/* KPIs agregados */}
-          {aggregates && (
+          {aggregatesLoading && (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2" aria-busy="true" aria-label="Calculando métricas">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <Card key={i} className="p-3 space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-2.5 w-24" />
+                </Card>
+              ))}
+            </div>
+          )}
+          {!aggregatesLoading && aggregatesError && (
+            <Card className="p-3 border-destructive/40 bg-destructive/5 flex items-center gap-3">
+              <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-destructive">Erro ao carregar métricas</div>
+                <div className="text-xs text-muted-foreground truncate">{aggregatesError}</div>
+              </div>
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => loadAggregates()}>
+                <RefreshCw className="h-3.5 w-3.5" /> Tentar novamente
+              </Button>
+            </Card>
+          )}
+          {!aggregatesLoading && !aggregatesError && aggregates && (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
               <AggCard icon={<FileText className="h-4 w-4" />} label="Propostas" value={String(aggregates.total)} />
               <AggCard icon={<Activity className="h-4 w-4" />} label="Enviadas" value={String(aggregates.sent)} />
