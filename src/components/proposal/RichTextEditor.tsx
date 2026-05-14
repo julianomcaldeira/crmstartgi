@@ -10,29 +10,51 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Extension } from "@tiptap/core";
 
-// Image with width attribute for resizing
+// Image with width + advanced styling attributes (align, radius, rotate, shadow, filter)
+const FILTER_CSS: Record<string, string> = {
+  none: "",
+  grayscale: "grayscale(100%)",
+  sepia: "sepia(80%)",
+  blur: "blur(2px)",
+  bright: "brightness(1.15) contrast(1.05)",
+};
+const buildImgStyle = (a: any) => {
+  const styles: string[] = ["max-width:100%", "height:auto", "display:block"];
+  if (a.width) styles.push(`width:${a.width}`);
+  styles.push(`border-radius:${a.radius != null ? a.radius : 6}px`);
+  if (a.rotate) styles.push(`transform:rotate(${a.rotate}deg)`);
+  if (a.shadow === "true" || a.shadow === true) styles.push("box-shadow:0 8px 24px rgba(0,0,0,0.18)");
+  const f = FILTER_CSS[a.filter] || "";
+  if (f) styles.push(`filter:${f}`);
+  const align = a.align || "center";
+  const m = align === "center" ? "8px auto" : align === "right" ? "8px 0 8px auto" : "8px 0";
+  styles.push(`margin:${m}`);
+  return styles.join(";");
+};
+const dataAttr = (name: string) => ({
+  default: null,
+  parseHTML: (el: any) => el.getAttribute(`data-${name}`) || null,
+  renderHTML: (attrs: any) => attrs[name] != null && attrs[name] !== "" ? { [`data-${name}`]: String(attrs[name]) } : {},
+});
 const ResizableImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
         default: null,
-        // Read width from inline style, HTML attribute or data-width fallback
-        parseHTML: (el: any) =>
-          el.style?.width ||
-          el.getAttribute("width") ||
-          el.getAttribute("data-width") ||
-          null,
-        // Persist width in BOTH inline style and a data-width attribute so the
-        // value survives copy/paste, sanitization and PDF rendering.
-        renderHTML: (attrs: any) => {
-          const w = attrs.width;
-          const base = "max-width:100%;height:auto;display:block;margin:8px auto;";
-          if (!w) return { style: base };
-          return { style: `width:${w};${base}`, "data-width": w };
-        },
+        parseHTML: (el: any) => el.getAttribute("data-width") || el.style?.width || el.getAttribute("width") || null,
+        renderHTML: (attrs: any) => attrs.width ? { "data-width": attrs.width } : {},
       },
+      align: dataAttr("align"),
+      radius: dataAttr("radius"),
+      rotate: dataAttr("rotate"),
+      shadow: dataAttr("shadow"),
+      filter: dataAttr("filter"),
     };
+  },
+  renderHTML({ HTMLAttributes, node }) {
+    const a: any = node.attrs;
+    return ["img", { ...HTMLAttributes, style: buildImgStyle(a) }];
   },
 });
 import { Button } from "@/components/ui/button";
@@ -249,23 +271,63 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
         <Btn onClick={() => fileRef.current?.click()} title="Inserir imagem"><ImageIcon className="h-4 w-4" /></Btn>
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files?.[0])} />
 
-        {/* Image size (when image selected) */}
+        {/* Image edit (when image selected) */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Tamanho da imagem" disabled={!editor.isActive("image")}>
-              Tam
+            <Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" title="Editar imagem selecionada" disabled={!editor.isActive("image")}>
+              Imagem
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-40 p-1">
-            {[
-              { label: "25%", v: "25%" },
-              { label: "50%", v: "50%" },
-              { label: "75%", v: "75%" },
-              { label: "100%", v: "100%" },
-              { label: "Original", v: "" },
-            ].map((o) => (
-              <button key={o.label} className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-accent" onClick={() => setImageWidth(o.v)}>{o.label}</button>
-            ))}
+          <PopoverContent className="w-72 p-3 space-y-2">
+            {(() => {
+              const a: any = editor.getAttributes("image");
+              const upd = (patch: any) => editor.chain().focus().updateAttributes("image", patch).run();
+              return (
+                <>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Largura</div>
+                    <div className="flex flex-wrap gap-1">
+                      {["25%", "50%", "75%", "100%", ""].map((v) => (
+                        <button key={v || "orig"} className="px-2 py-1 text-xs rounded border hover:bg-accent" onClick={() => upd({ width: v })}>{v || "Original"}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Alinhamento</div>
+                    <div className="flex gap-1">
+                      {[["left", AlignLeft], ["center", AlignCenter], ["right", AlignRight]].map(([v, Ic]: any) => (
+                        <Button key={v} type="button" size="sm" variant={a.align === v ? "default" : "outline"} className="h-7 w-7 p-0" onClick={() => upd({ align: v })}><Ic className="h-3.5 w-3.5" /></Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Raio: {a.radius ?? 6}px</div>
+                    <input type="range" min={0} max={48} value={Number(a.radius ?? 6)} onChange={(e) => upd({ radius: e.target.value })} className="w-full" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Rotação: {a.rotate || 0}°</div>
+                    <input type="range" min={-180} max={180} value={Number(a.rotate || 0)} onChange={(e) => upd({ rotate: e.target.value })} className="w-full" />
+                  </div>
+                  <label className="flex items-center justify-between text-xs">
+                    <span className="font-medium">Sombra</span>
+                    <input type="checkbox" checked={a.shadow === "true" || a.shadow === true} onChange={(e) => upd({ shadow: e.target.checked ? "true" : null })} />
+                  </label>
+                  <div>
+                    <div className="text-xs font-medium mb-1">Filtro</div>
+                    <Select value={a.filter || "none"} onValueChange={(v) => upd({ filter: v === "none" ? null : v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        <SelectItem value="grayscale">Preto e branco</SelectItem>
+                        <SelectItem value="sepia">Sépia</SelectItem>
+                        <SelectItem value="blur">Desfoque</SelectItem>
+                        <SelectItem value="bright">Brilho+</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              );
+            })()}
           </PopoverContent>
         </Popover>
 

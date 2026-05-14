@@ -10,7 +10,7 @@ import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, M
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { ProposalBuilder } from "@/components/proposal/ProposalBuilder";
-import { ProposalBlock } from "@/lib/proposalTypes";
+import { ProposalBlock, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
@@ -48,6 +48,7 @@ export default function ContratoDetalhes() {
   const [clientEmail, setClientEmail] = useState<string>("");
   const [editing, setEditing] = useState(false);
   const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
+  const [editPage, setEditPage] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS);
   const [savingEdit, setSavingEdit] = useState(false);
   const [previewMode, setPreviewMode] = useState<"side" | "stacked" | "hidden">("side");
   const [splitPct, setSplitPct] = useState<number>(50);
@@ -93,13 +94,15 @@ export default function ContratoDetalhes() {
 
   const startEdit = () => {
     setEditBlocks((contract?.blocks || []) as ProposalBlock[]);
+    setEditPage({ ...DEFAULT_PAGE_SETTINGS, ...((contract?.variables as any)?._page || {}) });
     setEditing(true);
   };
   const cancelEdit = () => { setEditing(false); setEditBlocks([]); };
   const saveEdit = async () => {
     if (!contract) return;
     setSavingEdit(true);
-    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any }).eq("id", contract.id);
+    const newVars = { ...(contract.variables || {}), _page: editPage };
+    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any, variables: newVars as any }).eq("id", contract.id);
     setSavingEdit(false);
     if (error) return toast.error(error.message);
     toast.success("Conteúdo atualizado");
@@ -252,24 +255,24 @@ export default function ContratoDetalhes() {
                   onSplitChange={setSplitPct}
                   left={
                     <Card className="h-full"><CardContent className="p-3 h-full">
-                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div>
+                      <div className="h-full"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div>
                     </CardContent></Card>
                   }
                   right={
-                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} />
+                    <PreviewPane blocks={editBlocks} variables={contract.variables || {}} pageSettings={editPage} />
                   }
                 />
               )}
 
               {previewMode === "stacked" && (
                 <div className="space-y-3">
-                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
-                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} /></div>
+                  <Card><CardContent className="p-3"><div className="h-[55vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div></CardContent></Card>
+                  <div className="h-[55vh]"><PreviewPane blocks={editBlocks} variables={contract.variables || {}} pageSettings={editPage} /></div>
                 </div>
               )}
 
               {previewMode === "hidden" && (
-                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} /></div></CardContent></Card>
+                <Card><CardContent className="p-3"><div className="h-[78vh]"><ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} pageSettings={editPage} onPageSettingsChange={setEditPage} /></div></CardContent></Card>
               )}
             </div>
           ) : (
@@ -361,7 +364,7 @@ export default function ContratoDetalhes() {
   );
 }
 
-function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables: any }) {
+function PreviewPane({ blocks, variables, pageSettings }: { blocks: ProposalBlock[]; variables: any; pageSettings?: PageSettings }) {
   return (
     <Card className="h-full flex flex-col">
       <div className="px-4 py-2 border-b text-xs font-medium text-muted-foreground flex items-center gap-2 shrink-0">
@@ -369,7 +372,7 @@ function PreviewPane({ blocks, variables }: { blocks: ProposalBlock[]; variables
       </div>
       <div className="flex-1 min-h-0 overflow-auto bg-gray-100 p-4">
         <div className="mx-auto bg-white shadow" style={{ width: 794, maxWidth: "100%" }}>
-          <ProposalRenderer blocks={blocks} variables={variables} />
+          <ProposalRenderer blocks={blocks} variables={variables} pageSettings={pageSettings} />
         </div>
       </div>
     </Card>

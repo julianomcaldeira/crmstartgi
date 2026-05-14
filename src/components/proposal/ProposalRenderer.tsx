@@ -1,21 +1,34 @@
-import { ProposalBlock, interpolate, VariableContext, formatBRL, calcPricingTotals } from "@/lib/proposalTypes";
+import { ProposalBlock, interpolate, VariableContext, formatBRL, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 
 interface Props {
   blocks: ProposalBlock[];
   variables: VariableContext;
   brandColor?: string;
+  pageSettings?: PageSettings;
 }
 
-export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: Props) {
+export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }: Props) {
+  const ps: PageSettings = { ...DEFAULT_PAGE_SETTINGS, ...((variables as any)?._page || {}), ...(pageSettings || {}) };
+  const brand = brandColor || ps.brandColor || "#22c55e";
+  const padMap = { compact: "32px 40px", normal: "48px 56px", spacious: "72px 80px" } as const;
+  const pgPad = padMap[ps.pagePadding || "normal"];
   return (
-    <div className="proposal-doc bg-white text-gray-900" style={{ ["--brand" as any]: brandColor }}>
+    <div
+      className="proposal-doc"
+      style={{
+        ["--brand" as any]: brand,
+        background: ps.bgColor || "#ffffff",
+        color: "#111827",
+        fontFamily: ps.fontFamily,
+        fontSize: ps.fontSize,
+      }}
+    >
       {blocks.map((b) => (
-        <BlockView key={b.id} block={b} variables={variables} brandColor={brandColor} />
+        <BlockView key={b.id} block={b} variables={variables} brandColor={brand} />
       ))}
-      {/* Print/PDF helper styles scoped to .proposal-doc */}
       <style>{`
-        .proposal-doc { font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif; line-height: 1.6; }
-        .proposal-doc .pg { padding: 48px 56px; page-break-after: always; }
+        .proposal-doc { line-height: 1.6; }
+        .proposal-doc .pg { padding: ${pgPad}; page-break-after: always; }
         .proposal-doc .pg:last-child { page-break-after: auto; }
         .proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-weight: 700; }
         .proposal-doc .pre-line { white-space: pre-line; }
@@ -27,7 +40,7 @@ export function ProposalRenderer({ blocks, variables, brandColor = "#22c55e" }: 
         .proposal-doc .richtext-block ul { list-style: disc; }
         .proposal-doc .richtext-block ol { list-style: decimal; }
         .proposal-doc .richtext-block blockquote { border-left: 4px solid #e5e7eb; padding-left: 16px; color: #4b5563; font-style: italic; margin: 12px 0; }
-        .proposal-doc .richtext-block img { max-width: 100%; height: auto; border-radius: 8px; margin: 12px auto; display: block; }
+        .proposal-doc .richtext-block img { max-width: 100%; height: auto; display: block; }
         .proposal-doc .richtext-block p:has(> img) { margin: 0; line-height: 0; }
         .proposal-doc .richtext-block a { color: var(--brand); text-decoration: underline; }
         .proposal-doc .richtext-block strong { font-weight: 700; }

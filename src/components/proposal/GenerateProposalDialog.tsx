@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ProposalBlock, buildVariableContext, calcPricingTotals } from "@/lib/proposalTypes";
+import { ProposalBlock, buildVariableContext, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
 import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench } from "lucide-react";
@@ -27,6 +27,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [title, setTitle] = useState("Proposta Comercial");
   const [validityDays, setValidityDays] = useState(30);
   const [blocks, setBlocks] = useState<ProposalBlock[]>([]);
+  const [pageSettings, setPageSettings] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
@@ -58,9 +59,10 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     setTitle(`Proposta Comercial - ${(clientRes.data as any)?.company_name || opportunity?.title || ""}`.slice(0, 100));
   };
 
-  const variables = useMemo(() => buildVariableContext({
-    client, opportunity, seller, validity_days: validityDays,
-  }), [client, opportunity, seller, validityDays]);
+  const variables = useMemo(() => ({
+    ...buildVariableContext({ client, opportunity, seller, validity_days: validityDays }),
+    _page: pageSettings,
+  }), [client, opportunity, seller, validityDays, pageSettings]);
 
   const pickTemplate = (tpl: any) => {
     setTemplateId(tpl.id);
@@ -264,7 +266,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
               <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0">
-                <ProposalBuilder blocks={blocks} onChange={setBlocks} />
+                <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
               </TabsContent>
               <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 mt-0 bg-gray-100">
                 <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
