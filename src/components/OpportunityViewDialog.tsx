@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History, Mail, Send } from "lucide-react";
+import { Calendar, DollarSign, User, Building2, Package, TrendingUp, Target, Briefcase, Paperclip, Upload, Download, Trash2, Clock, History, Mail, Send, ScrollText, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ import OpportunityHistoryLog from "./OpportunityHistoryLog";
 import EmailHistory from "./EmailHistory";
 import ZohoEmailComposer from "./ZohoEmailComposer";
 import { GenerateProposalDialog } from "./proposal/GenerateProposalDialog";
+import { GenerateContractDialog } from "./contracts/GenerateContractDialog";
+import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 interface OpportunityViewDialogProps {
   opportunity: any;
