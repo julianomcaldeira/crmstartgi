@@ -433,10 +433,10 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
             title="Editar código HTML"
             onClick={() => {
               if (!htmlMode) {
-                setHtmlDraft(editor.getHTML());
+                setHtmlDraft(formatHtml(editor.getHTML()));
                 setHtmlMode(true);
               } else {
-                editor.commands.setContent(htmlDraft || "", { emitUpdate: true });
+                editor.commands.setContent(minifyHtml(htmlDraft || ""), { emitUpdate: true });
                 setHtmlMode(false);
               }
             }}
