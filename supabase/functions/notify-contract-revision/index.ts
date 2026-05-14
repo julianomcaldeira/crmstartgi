@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { getValidTokens, mailBase } from "../_shared/zoho.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,16 +123,72 @@ Deno.serve(async (req) => {
 
     if (!to.length) return new Response(JSON.stringify({ ok: true, skipped: "no recipients" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
+    // 1) Try sending via the seller's (contract owner) Zoho account
+    let sentVia: "zoho" | "resend" | null = null;
+    let zohoError: string | null = null;
+    try {
+      const tokens = await getValidTokens(admin, contract.created_by);
+      if (!tokens.zoho_email) throw new Error("Conta Zoho do vendedor sem e-mail associado");
+
+      const accRes = await fetch(`${mailBase(tokens.data_center)}/api/accounts`, {
+        headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
+      });
+      const accData = await accRes.json();
+      const accountId = accData?.data?.[0]?.accountId;
+      if (!accountId) throw new Error("Não foi possível obter accountId do Zoho Mail do vendedor");
+
+      const sendRes = await fetch(`${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fromAddress: tokens.zoho_email,
+          toAddress: to.join(","),
+          subject,
+          content: html,
+          mailFormat: "html",
+        }),
+      });
+      const sendData = await sendRes.json();
+      if (!sendRes.ok) throw new Error(`Zoho Mail: ${JSON.stringify(sendData)}`);
+
+      sentVia = "zoho";
+      // log no histórico de e-mails
+      await admin.from("email_invitation_log").insert({
+        opportunity_id: contract.opportunity_id,
+        sent_by: contract.created_by,
+        recipients: to,
+        subject,
+        body: html,
+        status: "sent",
+        zoho_message_id: sendData?.data?.messageId || null,
+        direction: "outbound",
+        from_email: tokens.zoho_email,
+        thread_id: sendData?.data?.threadId || null,
+      });
+
+      return new Response(JSON.stringify({ ok: true, via: "zoho", from: tokens.zoho_email, to }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } catch (err) {
+      zohoError = err instanceof Error ? err.message : String(err);
+      console.warn("Zoho do vendedor indisponível, fallback para Resend:", zohoError);
+    }
+
+    // 2) Fallback: Resend
     if (!RESEND_API_KEY) {
       console.log("RESEND_API_KEY ausente — notificação não enviada", { to, subject });
-      return new Response(JSON.stringify({ ok: true, warning: "RESEND_API_KEY não configurada" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ ok: true, warning: "Vendedor sem Zoho conectado e RESEND_API_KEY não configurada", zohoError }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "CRM StartGI <onboarding@resend.dev>",
+        from: vendedor?.email ? `${vendedor.full_name || "CRM StartGI"} <onboarding@resend.dev>` : "CRM StartGI <onboarding@resend.dev>",
+        reply_to: vendedor?.email || undefined,
         to,
         subject,
         html,
@@ -140,9 +197,9 @@ Deno.serve(async (req) => {
     const j = await resp.json();
     if (!resp.ok) {
       console.error("Resend error", j);
-      return new Response(JSON.stringify({ error: "Falha ao enviar e-mail", detail: j }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Falha ao enviar e-mail", detail: j, zohoError }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ ok: true, id: j.id, to }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ ok: true, via: "resend", id: j.id, to, zohoError }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("notify-contract-revision error", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "erro" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
