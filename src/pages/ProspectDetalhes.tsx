@@ -583,6 +583,7 @@ const ClienteDetalhes = () => {
       email: "",
       phone: "",
       mobile: "",
+      linkedin: "",
       rating: 3,
       is_primary: false,
     });
