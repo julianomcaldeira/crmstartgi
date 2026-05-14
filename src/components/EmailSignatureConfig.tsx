@@ -83,6 +83,7 @@ export default function EmailSignatureConfig() {
       }
       return nextHtml;
     } catch (err: unknown) {
+      setHtml(currentHtml);
       if (showToast) {
         toast.error("Erro ao corrigir imagem externa: " + errorMessage(err, "tente anexar a imagem pelo botão de upload"));
       }
