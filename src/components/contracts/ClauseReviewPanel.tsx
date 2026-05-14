@@ -64,43 +64,29 @@ export function ClauseReviewPanel({ revision, contract, canReview, onClose }: Pr
       // Salva todas as decisões
       for (const d of decisions) await saveDecision(d);
 
-      // Gera arquivo de devolutiva (markdown — abre no Word)
-      const md = `# Devolutiva — ${contract.title}\n\nData: ${new Date().toLocaleString("pt-BR")}\n\n` +
-        decisions.map((d, i) => {
-          const tag = d.decision === "accepted" ? "✅ ACEITA"
-            : d.decision === "rejected" ? "❌ REJEITADA"
-            : "🔄 CONTRAPROPOSTA";
-          return `## ${i + 1}. ${d.clause_reference}\n\n**Status:** ${tag}\n\n**Mudança proposta:** ${d.proposed_change}\n\n${d.admin_comment ? `**Parecer:** ${d.admin_comment}\n\n` : ""}${d.counter_text ? `**Contraproposta:** ${d.counter_text}\n\n` : ""}`;
-        }).join("\n---\n\n") +
-        (summary ? `\n---\n\n## Resumo geral\n\n${summary}\n` : "");
-
+      // Atualiza summary + status reviewed antes de gerar o docx (function lê do banco)
       const { data: { user } } = await supabase.auth.getUser();
-      const fileName = `devolutiva-${revision.id.slice(0, 8)}.md`;
-      const path = `${user!.id}/${contract.id}/${fileName}`;
-      const blob = new Blob([md], { type: "text/markdown" });
-      const { error: upErr } = await supabase.storage.from("contracts").upload(path, blob, { upsert: true });
-      if (upErr) throw upErr;
-      const { data: signed } = await supabase.storage.from("contracts").createSignedUrl(path, 60 * 60 * 24 * 30);
-
-      await supabase.from("contract_files").insert({
-        contract_id: contract.id,
-        revision_id: revision.id,
-        kind: "negotiation_docx",
-        file_url: signed?.signedUrl || path,
-        file_name: fileName,
-        mime_type: "text/markdown",
-        created_by: user!.id,
-      });
-
       await supabase.from("contract_clause_revisions").update({
         status: "reviewed",
         reviewed_at: new Date().toISOString(),
         reviewed_by: user!.id,
         admin_summary: summary || null,
-        negotiation_docx_url: signed?.signedUrl || null,
       }).eq("id", revision.id);
 
-      toast.success("Revisão concluída e devolutiva gerada");
+      // Gera DOCX real via edge function
+      const { error: docxErr } = await supabase.functions.invoke("generate-negotiation-docx", {
+        body: { revision_id: revision.id },
+      });
+      if (docxErr) {
+        toast.warning("Revisão concluída, mas houve erro ao gerar o Word. Tente reabrir.");
+      }
+
+      // Notifica vendedor por e-mail com resumo cláusula a cláusula
+      supabase.functions.invoke("notify-contract-revision", {
+        body: { revision_id: revision.id, event: "reviewed" },
+      }).catch(() => {});
+
+      toast.success("Revisão concluída, devolutiva gerada e vendedor notificado");
       onClose();
     } catch (e: any) {
       toast.error(e?.message || "Erro ao concluir revisão");
