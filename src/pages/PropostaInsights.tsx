@@ -141,7 +141,6 @@ export default function PropostaInsights() {
       const { data, error } = await supabase.functions.invoke("send-proposal-invite", {
         body: {
           recipientId: inviteRecipient.id,
-          appOrigin: window.location.origin,
           customMessage: inviteMessage.trim() || undefined,
         },
       });
