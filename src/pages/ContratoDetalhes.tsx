@@ -87,6 +87,23 @@ export default function ContratoDetalhes() {
   const isOwner = contract && userId === contract.created_by;
   const canRequest = isOwner || isAdmin || isPreVendas;
   const canReview = isAdmin || isPreVendas;
+  const canEdit = (isOwner || isAdmin) && contract?.status !== "final";
+
+  const startEdit = () => {
+    setEditBlocks((contract?.blocks || []) as ProposalBlock[]);
+    setEditing(true);
+  };
+  const cancelEdit = () => { setEditing(false); setEditBlocks([]); };
+  const saveEdit = async () => {
+    if (!contract) return;
+    setSavingEdit(true);
+    const { error } = await supabase.from("contracts").update({ blocks: editBlocks as any }).eq("id", contract.id);
+    setSavingEdit(false);
+    if (error) return toast.error(error.message);
+    toast.success("Conteúdo atualizado");
+    setEditing(false);
+    load();
+  };
 
   const updateStatus = async (status: string) => {
     const { error } = await supabase.from("contracts").update({ status, ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}) }).eq("id", id);
