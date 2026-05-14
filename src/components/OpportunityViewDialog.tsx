@@ -595,6 +595,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       </Dialog>
 
       <GenerateProposalDialog open={proposalOpen} onOpenChange={setProposalOpen} opportunity={opportunity} />
+      <GenerateContractDialog open={contractOpen} onOpenChange={setContractOpen} opportunity={opportunity} onCreated={fetchContracts} />
     </Dialog>
   );
 };
