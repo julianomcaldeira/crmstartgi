@@ -294,6 +294,58 @@ export default function PropostaInsights() {
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2"><History className="h-4 w-4" /> Histórico de versões ({versions.length})</CardTitle>
+          <Badge variant="outline">Versão atual: v{proposal.version || 1}</Badge>
+        </CardHeader>
+        <CardContent>
+          {versions.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Nenhuma versão anterior salva. Use "Salvar nova versão" para criar um snapshot do conteúdo atual antes de editar.</div>
+          ) : (
+            <Table>
+              <TableHeader><TableRow><TableHead>Versão</TableHead><TableHead>Salva em</TableHead><TableHead>Por</TableHead><TableHead>Motivo</TableHead><TableHead>Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {versions.map((v) => (
+                  <TableRow key={v.id}>
+                    <TableCell><Badge>v{v.version}</Badge></TableCell>
+                    <TableCell className="text-xs whitespace-nowrap">{format(parseISO(v.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                    <TableCell className="text-xs">{v.profiles?.full_name || "—"}</TableCell>
+                    <TableCell className="text-xs max-w-[280px] truncate">{v.snapshot_reason || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell className="text-xs">{Number(v.total_value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" onClick={() => restoreVersion(v)}><RotateCcw className="h-3 w-3 mr-1" /> Restaurar</Button>
+                      <Button size="sm" variant="ghost" className="text-destructive ml-1" onClick={() => deleteVersion(v)}><Trash2 className="h-3 w-3" /></Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salvar nova versão</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Será criado um snapshot do conteúdo atual como <strong>v{proposal.version || 1}</strong>. A proposta passará a ser editada como <strong>v{(proposal.version || 1) + 1}</strong>.
+            </p>
+            <div>
+              <Label className="text-xs">Motivo / nota da versão (opcional)</Label>
+              <Textarea value={snapshotReason} onChange={(e) => setSnapshotReason(e.target.value)} placeholder="Ex.: ajuste de preço após reunião" rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={saveNewVersion} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Save className="h-3 w-3 mr-1" />} Salvar versão</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
