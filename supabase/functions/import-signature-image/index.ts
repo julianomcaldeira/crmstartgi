@@ -104,9 +104,10 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ publicUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
-    const status = error?.message === "Unauthorized" ? 401 : 400;
-    return new Response(JSON.stringify({ error: error?.message || "Erro ao importar imagem" }), {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Erro ao importar imagem";
+    const status = message === "Unauthorized" ? 401 : 400;
+    return new Response(JSON.stringify({ error: message }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
