@@ -57,32 +57,73 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter]);
+
+  useEffect(() => {
+    if (hasAccess) loadAggregates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasAccess, statusFilter, sellerFilter]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [statusFilter, sellerFilter]);
 
-  // Persist tab/page/status filter into the URL so reload/back keeps state
+  // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     if (tab !== "templates") next.set("tab", tab); else next.delete("tab");
     if (proposalsPage > 1) next.set("page", String(proposalsPage)); else next.delete("page");
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
+    if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return setHasAccess(false);
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     const roles = (data || []).map((r) => r.role);
-    const ok = roles.includes("admin") || roles.includes("pre_vendas");
+    const ok = roles.includes("admin") || roles.includes("pre_vendas") || roles.includes("gestor");
     setHasAccess(ok);
     if (ok) loadAll();
+  };
+
+  const loadSellers = async () => {
+    // Distinct created_by from proposals + their full_name
+    const { data: props } = await supabase.from("proposals").select("created_by");
+    const ids = Array.from(new Set((props || []).map((p: any) => p.created_by).filter(Boolean))) as string[];
+    if (!ids.length) { setSellers([]); return; }
+    const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
+    setSellers(((profs || []) as any[])
+      .map((p) => ({ id: p.id, full_name: p.full_name || "(sem nome)" }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name)));
+  };
+
+  const loadAggregates = async () => {
+    let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
+    if (statusFilter !== "all") q = q.eq("status", statusFilter);
+    if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+    const { data } = await q;
+    const rows = (data || []) as any[];
+    const total = rows.length;
+    const totalValue = rows.reduce((s, r) => s + (Number(r.total_value) || 0), 0);
+    const uniqueVisitors = rows.reduce((s, r) => s + (Number(r.unique_visitors) || 0), 0);
+    const scored = rows.filter((r) => (r.unique_visitors || 0) > 0);
+    const avgScore = scored.length ? Math.round(scored.reduce((s, r) => s + (Number(r.engagement_score) || 0), 0) / scored.length) : 0;
+    const count = (s: string) => rows.filter((r) => r.status === s).length;
+    setAggregates({
+      total,
+      sent: count("sent") + count("viewed") + count("accepted") + count("rejected"),
+      viewed: rows.filter((r) => (r.view_count || 0) > 0).length,
+      accepted: count("accepted"),
+      rejected: count("rejected"),
+      totalValue,
+      avgScore,
+      uniqueVisitors,
+    });
   };
 
   const loadAll = async () => {
