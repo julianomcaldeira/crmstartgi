@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown } from "lucide-react";
+import { ArrowLeft, FileText, Send, MessageSquarePlus, CheckCircle2, FileDown, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
+import { SendContractEmailDialog } from "@/components/contracts/SendContractEmailDialog";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "bg-gray-500" },
