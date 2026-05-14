@@ -154,7 +154,7 @@ function cleanEmptyParagraphs(input: string): string {
     .replace(/<span[^>]*>\s*(?:&nbsp;|\u00a0|\s)*<\/span>/gi, "");
 }
 
-
+interface Props {
   value: string;
   onChange: (html: string) => void;
   placeholder?: string;
