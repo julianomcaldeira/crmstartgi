@@ -123,9 +123,9 @@ export function RequestClauseRevisionDialog({ open, onOpenChange, contractId, on
           </div>
           <div>
             <Label>Anexar arquivo (opcional)</Label>
-            <Input type="file" accept=".pdf,.docx,.doc,.txt,.md" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <Input type="file" accept=".pdf,.docx,.doc,.txt,.md,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
             <p className="text-xs text-muted-foreground mt-1">
-              Para PDF/DOCX, cole também o texto principal acima. Em breve a IA fará a extração direta do anexo.
+              PDF/imagem: extração via IA. DOCX: extração automática. TXT/MD: leitura direta.
             </p>
           </div>
         </div>
