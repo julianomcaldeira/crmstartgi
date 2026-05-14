@@ -181,22 +181,37 @@ export default function ContratoDetalhes() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {contract.status !== "final" && isOwner && (
+          {!editing && canEdit && (
+            <Button size="sm" variant="outline" onClick={startEdit} className="gap-1">
+              <Pencil size={14} /> Editar conteúdo
+            </Button>
+          )}
+          {editing && (
+            <>
+              <Button size="sm" variant="outline" onClick={cancelEdit} disabled={savingEdit} className="gap-1">
+                <X size={14} /> Cancelar
+              </Button>
+              <Button size="sm" onClick={saveEdit} disabled={savingEdit} className="gap-1">
+                <Save size={14} /> {savingEdit ? "Salvando..." : "Salvar"}
+              </Button>
+            </>
+          )}
+          {!editing && contract.status !== "final" && isOwner && (
             <Button size="sm" variant="default" onClick={() => setSendOpen(true)} className="gap-1">
               <Mail size={14} /> Enviar por e-mail
             </Button>
           )}
-          {contract.status === "draft" && isOwner && (
+          {!editing && contract.status === "draft" && isOwner && (
             <Button size="sm" variant="outline" onClick={() => updateStatus("sent")} className="gap-1">
               <Send size={14} /> Marcar como enviado
             </Button>
           )}
-          {canRequest && contract.status !== "final" && (
+          {!editing && canRequest && contract.status !== "final" && (
             <Button size="sm" onClick={() => setRevisionDialogOpen(true)} className="gap-1">
               <MessageSquarePlus size={14} /> Solicitar revisão
             </Button>
           )}
-          {canRequest && contract.status !== "final" && revisions.some(r => r.status === "reviewed") && (
+          {!editing && canRequest && contract.status !== "final" && revisions.some(r => r.status === "reviewed") && (
             <Button size="sm" variant="default" onClick={generateFinalContract} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
               <CheckCircle2 size={14} /> Gerar contrato final
             </Button>
@@ -215,7 +230,13 @@ export default function ContratoDetalhes() {
 
         <TabsContent value="content">
           <Card><CardContent className="p-4 md:p-6">
-            <ProposalRenderer blocks={contract.blocks || []} variables={contract.variables || {}} />
+            {editing ? (
+              <div className="h-[75vh]">
+                <ProposalBuilder blocks={editBlocks} onChange={setEditBlocks} />
+              </div>
+            ) : (
+              <ProposalRenderer blocks={contract.blocks || []} variables={contract.variables || {}} />
+            )}
           </CardContent></Card>
         </TabsContent>
 
