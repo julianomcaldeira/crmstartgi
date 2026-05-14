@@ -11,7 +11,7 @@ import { Loader2, Save, FileSignature, ImagePlus, RefreshCw } from "lucide-react
 
 const EXTERNAL_SIGNATURE_IMAGE_PATTERN = /https?:\/\/(?:i\.)?(?:postimg\.cc|postimages\.org|imgbb\.com|ibb\.co|i\.ibb\.co)\/[^\s"'<>]+/i;
 const STARTGI_SIGNATURE_LOGO_URL = "https://eifsbqqrimniclsssoru.supabase.co/storage/v1/object/public/email-signatures/shared%2Fstartgi-logo-page.jpg";
-const BLOCKED_STARTGI_POSTIMG_LOGO_PATTERN = /https?:\/\/i\.postimg\.cc\/(?:XN1ZPRW8|g2STGG1G)\/(?:Logo-Start-Gi-Verde|image)\.(?:jpe?g|png)/gi;
+const BLOCKED_STARTGI_POSTIMG_LOGO_PATTERN = /https?:\/\/i\.postimg\.cc\/(?:XN1ZPRW8|g2STGG1G|bY08qYp7)\/(?:Logo-Start-Gi-Verde|image|Assinatura-de-E-mail)\.(?:jpe?g|png)/gi;
 
 type SignatureImportResult = {
   publicUrl?: string;
