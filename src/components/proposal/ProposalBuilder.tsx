@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Plus, Trash2, ArrowUp, ArrowDown, Variable, GripVertical, Upload, Image as ImageIcon } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Variable, GripVertical, Upload, Image as ImageIcon, Settings2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface Props {
   blocks: ProposalBlock[];
   onChange: (blocks: ProposalBlock[]) => void;
+  pageSettings?: PageSettings;
+  onPageSettingsChange?: (ps: PageSettings) => void;
 }
 
 const BLOCK_OPTIONS: BlockType[] = ["richtext", "cover", "about", "text", "scope", "pricing", "timeline", "image", "gallery", "terms", "cta", "signature"];
