@@ -42,6 +42,8 @@ export default function ContratoDetalhes() {
   const [roles, setRoles] = useState<string[]>([]);
   const [revisionDialogOpen, setRevisionDialogOpen] = useState(false);
   const [activeRevision, setActiveRevision] = useState<any | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string>("");
 
   useEffect(() => { if (id) load(); }, [id]);
 
