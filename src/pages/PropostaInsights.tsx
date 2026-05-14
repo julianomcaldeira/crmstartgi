@@ -150,7 +150,9 @@ export default function PropostaInsights() {
     setProposal(pRes.data);
     setEvents(eRes.data || []);
     setViews(vRes.data || []);
-    if (pRes.data?.id) await loadVersions(pRes.data.id);
+    if (pRes.data?.id) {
+      await Promise.all([loadVersions(pRes.data.id), loadRecipients(pRes.data.id)]);
+    }
     setLoading(false);
   };
 
