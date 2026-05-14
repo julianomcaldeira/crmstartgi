@@ -142,8 +142,39 @@ function BlockEditor({ block, onChange }: { block: ProposalBlock; onChange: (p: 
         <div className="space-y-3">
           <Field label="Título"><Input value={block.title || ""} onChange={(e) => onChange({ title: e.target.value })} /></Field>
           <Field label="Conteúdo" right={<VarPicker onPick={(v) => append("content", v)} />}>
-            <Textarea rows={12} value={block.content} onChange={(e) => onChange({ content: e.target.value })} />
+            <Textarea rows={10} value={block.content} onChange={(e) => onChange({ content: e.target.value })} />
           </Field>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Cor de fundo"><Input type="color" value={(block as any).bgColor || "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} /></Field>
+            <Field label="Cor do título"><Input type="color" value={(block as any).titleColor || "#22c55e"} onChange={(e) => onChange({ titleColor: e.target.value })} /></Field>
+            <Field label="Cor do texto"><Input type="color" value={(block as any).textColor || "#111827"} onChange={(e) => onChange({ textColor: e.target.value })} /></Field>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Alinhamento">
+              <Select value={(block as any).align || "left"} onValueChange={(v) => onChange({ align: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">Esquerda</SelectItem>
+                  <SelectItem value="center">Centro</SelectItem>
+                  <SelectItem value="right">Direita</SelectItem>
+                  <SelectItem value="justify">Justificado</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Espaçamento">
+              <Select value={(block as any).padding || "normal"} onValueChange={(v) => onChange({ padding: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="compact">Compacto</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="spacious">Amplo</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label={`Tamanho fonte: ${(block as any).fontSize || 16}px`}>
+              <input type="range" min={12} max={28} step={1} value={(block as any).fontSize || 16} onChange={(e) => onChange({ fontSize: Number(e.target.value) })} className="w-full" />
+            </Field>
+          </div>
         </div>
       );
     case "scope": {
