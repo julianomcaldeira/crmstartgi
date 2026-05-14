@@ -1,126 +1,72 @@
-## Objetivo
+# Propostas Inteligentes — Plano de Implementação
 
-Criar um módulo completo de **Contratos StartGi** com:
-- Editor de modelos com variáveis (estilo Propostas) — acesso só super admin e pré-vendas.
-- Geração de contrato padrão por qualquer vendedor em qualquer fase da oportunidade.
-- Envio do contrato por e-mail pelo sistema (aba Emails).
-- Fluxo de **negociação de cláusulas** com aprovação do super admin, registro de tudo, notificações por e-mail e geração de Word com a devolutiva.
-- Geração e arquivamento da **versão final consolidada**.
+## O que já existe hoje
+- Tabela `proposals` com `share_token` UUID (não sequencial), `view_count`, `viewed_at`, `pdf_url`, `status`.
+- Página pública `/p/:token` chama `register_proposal_view` (incrementa contagem).
+- Builder + Renderer dinâmico (sem PDF obrigatório).
+- RLS por dono/admin/gestor.
 
----
+## Lacunas vs. especificação
+- Sem registro por evento (apenas contador agregado).
+- Sem identificação de visitante único.
+- Sem geo/IP/dispositivo, tempo de leitura por seção.
+- Sem versionamento, recipients, scoring, alertas, dashboard de analytics.
+- Página pública sem NOINDEX.
+- Token sem expiração opcional.
 
-## Papéis e permissões
+## Fase 1 — Núcleo de Tracking + Privacidade (ENTREGAR PRIMEIRO)
 
-- **Super admin** (`juliano@startgi.com.br`): cria/edita modelos, aprova/rejeita cláusulas, vê tudo.
-- **Pré-vendas**: cria/edita modelos, vê todos os contratos. (Nova role `pre_vendas` ou reaproveitar role já existente — verificar `user_roles`.)
-- **Vendedor**: gera contrato a partir de modelo, envia, abre solicitação de mudança de cláusulas, recebe devolutiva, gera versão final.
-- **Gestor**: visualiza tudo, sem editar modelos.
+### Banco
+- `proposal_events` — `id, proposal_id, visitor_id (uuid), event_type ('open'|'section_view'|'cta_click'|'download'|'share'|'pricing_view'), section_id?, metadata jsonb, ip inet, user_agent, country, city, device, browser, duration_ms, created_at`.
+- `proposal_views` — uma linha por (proposal_id, visitor_id) com `first_view_at, last_view_at, total_time_ms, view_count`.
+- `proposals`: novas colunas `expires_at timestamptz?`, `is_locked boolean default false`, `version int default 1`, `engagement_score int default 0`, `unique_visitors int default 0`, `total_time_ms bigint default 0`.
+- RLS: leitura de eventos só dono/admin; insert via Edge Function (anon).
 
-Menu lateral "Contratos" (modelos) → visível só para super admin + pré-vendas.
-Botão "Gerar contrato" na oportunidade → visível para qualquer vendedor dono.
+### Edge Function `proposal-track` (verify_jwt = false)
+- POST `{ token, visitor_id, event_type, section_id?, duration_ms?, metadata? }`.
+- Resolve `proposal_id` por token; valida `expires_at`; grava em `proposal_events`; faz upsert em `proposal_views`; recalcula `unique_visitors`, `total_time_ms`, `engagement_score` na proposta.
+- Captura IP via header `x-forwarded-for`, UA, geolocaliza via API gratuita (ipapi.co) com timeout/cache.
 
----
+### Frontend público (`PropostaPublica`)
+- Adiciona `<meta name="robots" content="noindex,nofollow">` via Helmet.
+- Gera/persistente `visitor_id` em `localStorage`.
+- Registra `open` no mount; `section_view` via IntersectionObserver por seção (`<section>` recebe `data-section-id`); `cta_click` em links/botões; heartbeat de tempo a cada 15s (acumula `duration_ms`).
+- Detecta visualização da seção `pricing` para enviar `pricing_view`.
 
-## Backend (Lovable Cloud)
+### Scoring (server-side)
+- abriu: +10; >3 acessos: +20; tempo>5min: +30; pricing_view: +40.
+- Classificação derivada: <30 frio, 30–60 morno, >60 quente.
 
-### Tabelas
+## Fase 2 — Dashboard da Proposta + Alertas
+- Nova rota `/propostas/:id/insights` (vendedor/admin) com:
+  - Status, score, classificação (badge frio/morno/quente).
+  - Aberturas, visitantes únicos, tempo total, última atividade.
+  - Tabela de eventos com filtro por tipo.
+  - Top seções visualizadas (gráfico de barras).
+- Trigger no `proposal_events INSERT`: cria `notifications` para o vendedor em eventos chave (`open` na 1ª vez, `pricing_view`, `share`, `>3 reaberturas`). Reaproveita `NotificationSystem` existente.
+- Toast em tempo real via canal Realtime na página de propostas.
 
-1. **`contract_templates`** — modelos de contrato editáveis
-   - `name`, `description`, `blocks` (jsonb — mesmo formato dos `proposals.blocks`), `variables` (jsonb), `is_active`, `created_by`, timestamps.
-   - RLS: SELECT para todos autenticados (vendedor precisa ler para gerar). INSERT/UPDATE/DELETE só admin + pré-vendas.
+## Fase 3 — Versionamento + Recipients + Trava
+- `proposal_versions` — snapshot completo (`blocks`, `variables`, `total_value`) cada vez que a proposta passa de `draft`→`sent` ou via botão "Publicar nova versão". Mostra timeline de versões na proposta.
+- `proposal_recipients` — `proposal_id, name, email, phone, role`. Permite múltiplos destinatários e marca em qual recipient a abertura aconteceu (via `?r=<id>` no link).
+- Trava: ao enviar, `is_locked=true` impede edição; "Nova versão" cria v(N+1) em rascunho.
 
-2. **`contracts`** — instâncias geradas a partir de um modelo
-   - `template_id`, `opportunity_id`, `client_id`, `created_by`, `title`, `blocks` (jsonb — snapshot já com variáveis substituídas), `variables` (jsonb), `status` (`draft` | `sent` | `under_negotiation` | `approved` | `final` | `cancelled`), `version` (int), `parent_contract_id` (para versão final referenciar a inicial), `share_token`, timestamps.
-   - RLS: vendedor vê os próprios; admin/pré-vendas/gestor veem todos.
-
-3. **`contract_clause_revisions`** — solicitação de mudança de cláusulas
-   - `contract_id`, `requested_by` (vendedor), `prospect_input` (text — texto bruto que o vendedor cola/anexa do prospect), `attachment_url` (opcional, storage), `extracted_changes` (jsonb — IA extrai cláusula → mudança proposta), `status` (`pending_admin_review` | `reviewed` | `final_consolidated`), `submitted_at`, `reviewed_at`, `reviewed_by`.
-
-4. **`contract_clause_decisions`** — decisão cláusula a cláusula do super admin
-   - `revision_id`, `clause_reference` (texto/identificador da cláusula), `original_text`, `proposed_change`, `decision` (`accepted` | `rejected` | `counter_proposal`), `admin_comment`, `counter_text` (opcional), timestamps.
-
-5. **`contract_files`** — arquivos gerados (Word de devolutiva, PDF do contrato, contrato final)
-   - `contract_id`, `revision_id` (nullable), `kind` (`generated_pdf` | `negotiation_docx` | `final_pdf` | `prospect_attachment`), `file_url`, `file_name`, `created_by`.
-
-6. **Storage bucket `contracts`** (privado) — anexos do prospect, Word de devolutiva, PDFs gerados, contrato final.
-
-### Edge Functions
-
-- **`analyze-contract-changes`** — recebe `revision_id`, lê `prospect_input` (+ texto extraído do anexo), usa Lovable AI (`google/gemini-2.5-pro`) para identificar **cláusula por cláusula** as mudanças solicitadas → grava em `extracted_changes` + cria registros `contract_clause_decisions` (status inicial vazio).
-- **`notify-contract-revision`** — dispara e-mails (Resend já em uso) ao submeter revisão (vendedor + super admin + pré-vendas) e ao concluir review (vendedor).
-- **`generate-negotiation-docx`** — gera arquivo `.docx` com todas as cláusulas, decisões do admin, comentários e contrapropostas. Faz upload no bucket `contracts`. (Usa biblioteca `docx` em Deno via npm specifier.)
-- **`generate-final-contract`** — quando todas as cláusulas estão `accepted` (ou prospect aceitou contrapropostas), aplica os ajustes nos `blocks` e cria novo `contracts` com `status='final'`, `version+1`, `parent_contract_id`. Gera PDF final.
-- **`send-contract-email`** — envia o contrato (PDF) ao prospect via Resend; registra envio no histórico de e-mails da oportunidade.
-
----
-
-## Frontend
-
-### Páginas novas
-
-1. **`/contratos/modelos`** (`ContratoModelos.tsx`) — só admin/pré-vendas.
-   - Lista de modelos + criar/editar.
-   - Editor reaproveitando `ProposalBuilder` (renomear/abstrair se necessário) com variáveis.
-
-2. **`/contratos`** (`Contratos.tsx`) — lista de contratos gerados.
-   - Filtros por status, oportunidade, vendedor.
-   - Indicador visual quando há revisão pendente.
-
-3. **`/contratos/:id`** (`ContratoDetalhes.tsx`) — visualização do contrato + abas:
-   - **Conteúdo**: visualizador (`ProposalRenderer`).
-   - **Revisões**: lista de `clause_revisions`, status, botão "Nova solicitação de revisão" (vendedor).
-   - **Aprovação** (admin): cláusula a cláusula, decisão + comentário + contraproposta. Botão "Concluir revisão" → gera Word + envia e-mail.
-   - **Versão final**: botão "Gerar contrato final" quando aplicável.
-   - **Arquivos**: lista de `contract_files`.
-
-### Componentes
-
-- **`GenerateContractDialog`** — botão "Gerar contrato" na página de Oportunidade (qualquer fase). Escolhe template, preenche variáveis automaticamente (cliente, valor, etc.), cria `contracts` com `status='draft'`.
-- **`SendContractEmailDialog`** — usa fluxo Zoho/Resend já existente, anexa PDF.
-- **`RequestClauseRevisionDialog`** — vendedor cola texto do prospect e/ou anexa arquivo (PDF/DOCX). Submete → chama `analyze-contract-changes` → mostra preview do que a IA extraiu antes de confirmar.
-- **`ClauseReviewPanel`** (admin) — para cada cláusula extraída: aceitar / rejeitar / contraproposta + comentário obrigatório quando rejeitar.
-- **`ContractNegotiationTimeline`** — histórico visual de revisões.
-
-### Integrações com Oportunidade
-
-- Em `OpportunityViewDialog` / página de oportunidade: nova aba "Contratos" listando contratos vinculados + botão gerar.
-- Em `EmailHistory` / aba Emails da oportunidade: ao enviar contrato, registra mensagem com anexo.
+## Fase 4 (futuro, fora deste plano) — Assinatura, comentários, IA, heatmap, follow-up automático.
 
 ---
 
-## Fluxo end-to-end (resumo)
+## Decisões técnicas
+- Geolocalização: ipapi.co (sem chave, ~1k req/dia grátis) + cache em memória por IP por 1h. Se exceder, grava só país via `cf-ipcountry` (Cloudflare/Supabase). Sem rate-limit no backend (política do projeto).
+- Visitor ID: UUID v4 em `localStorage` chave `evolua_pid`.
+- Heartbeat: usar `navigator.sendBeacon` para não perder o último intervalo.
+- NOINDEX via `react-helmet-async` (instalar — ainda não está no projeto).
+- Edge Function única `proposal-track` recebe lote (`events: []`) para reduzir chamadas.
 
-1. Admin/pré-vendas cria **modelo** com variáveis.
-2. Vendedor abre oportunidade → "Gerar contrato" → escolhe modelo → contrato `draft` criado.
-3. Vendedor envia contrato por e-mail (sistema registra no histórico).
-4. Prospect devolve com pedidos de mudança → vendedor abre **"Solicitar revisão de cláusulas"**, cola texto/anexa arquivo.
-5. IA extrai mudanças cláusula por cláusula → vendedor confirma → status `under_negotiation`. E-mail para vendedor + admin + pré-vendas.
-6. Super admin abre painel, decide cláusula a cláusula com comentários, conclui revisão.
-7. Sistema gera **Word de devolutiva** + envia e-mail ao vendedor com resumo ponto a ponto.
-8. Vendedor envia devolutiva ao prospect. Se prospect aceita tudo → vendedor clica **"Gerar contrato final"** → novo contrato `status='final'` consolidando todas as decisões aceitas + contrapropostas aceitas. PDF arquivado em `contract_files`.
+## Segurança / RLS
+- `proposal_events` e `proposal_views`: SELECT apenas dono da proposta + admin/gestor; INSERT bloqueado para anon (só Edge Function via service role).
+- Token mantém UUID v4. `expires_at` validado no `get_proposal_by_token` e na função de tracking.
 
----
-
-## Pontos a confirmar com o usuário
-
-1. **Role pré-vendas**: já existe na tabela `user_roles` ou devo criar `pre_vendas` no enum `app_role`?
-2. **Anexo do prospect**: aceitar PDF e DOCX? (extração de texto via Lovable AI multimodal ou parser dedicado?)
-3. **Contrato final**: deve gerar PDF (como Propostas) ou também Word editável?
-4. **Notificação**: usar o template de e-mail do Resend já configurado, ou desenhar visual específico StartGi?
-5. **Versionamento**: manter histórico de **todas** as versões intermediárias do contrato, ou só inicial + final?
-
----
-
-## Fora do escopo (sugestões para depois)
-
-- Assinatura eletrônica (DocuSign/ClickSign).
-- Fluxo de aprovação multi-nível (mais de um aprovador).
-- Comparação visual diff entre versões.
-
----
-
-## Arquivos a criar/editar
-
-**SQL**: 1 migração (5 tabelas + RLS + bucket).
-**Edge functions**: `analyze-contract-changes`, `notify-contract-revision`, `generate-negotiation-docx`, `generate-final-contract`, `send-contract-email`.
-**Frontend**: `src/pages/ContratoModelos.tsx`, `src/pages/Contratos.tsx`, `src/pages/ContratoDetalhes.tsx`, componentes listados acima, novos itens em `App.tsx` e na sidebar (`Layout.tsx`), botão na página de Oportunidades.
+## Perguntas antes de começar
+1. Quero começar pela **Fase 1** (tracking, NOINDEX, expiração) e ir validando, ou prefere prosseguir até a Fase 3 sem pausar?
+2. Notificação de abertura por **e-mail** (Resend) também, ou só sino interno?
+3. Versionamento agora ou pode ficar para uma segunda iteração?
