@@ -48,6 +48,7 @@ export default function ContratoDetalhes() {
   const [clientEmail, setClientEmail] = useState<string>("");
   const [editing, setEditing] = useState(false);
   const [editBlocks, setEditBlocks] = useState<ProposalBlock[]>([]);
+  const [editPage, setEditPage] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS);
   const [savingEdit, setSavingEdit] = useState(false);
   const [previewMode, setPreviewMode] = useState<"side" | "stacked" | "hidden">("side");
   const [splitPct, setSplitPct] = useState<number>(50);
