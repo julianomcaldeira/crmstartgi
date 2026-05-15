@@ -28,8 +28,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { eventId, sendInvite = true } = await req.json();
+    const { eventId, sendInvite = true, notifyAttendees } = await req.json();
     if (!eventId) throw new Error("eventId obrigatório");
+    // notifyAttendees (opcional): lista de e-mails para os quais enviar o convite.
+    // Se não enviado, notifica todos os attendees do evento.
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
