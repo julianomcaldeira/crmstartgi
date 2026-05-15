@@ -28,8 +28,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { eventId, sendInvite = true } = await req.json();
+    const { eventId, sendInvite = true, notifyAttendees } = await req.json();
     if (!eventId) throw new Error("eventId obrigatório");
+    // notifyAttendees (opcional): lista de e-mails para os quais enviar o convite.
+    // Se não enviado, notifica todos os attendees do evento.
 
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -138,7 +140,11 @@ Deno.serve(async (req) => {
 
     // Envio de convite por Zoho Mail
     let invitationLog: any = null;
-    if (sendInvite && attendees.length && tokens.zoho_email) {
+    // Filtra recipients caso notifyAttendees seja informado (notificação seletiva)
+    const recipients: string[] = Array.isArray(notifyAttendees) && notifyAttendees.length
+      ? attendees.filter((a) => notifyAttendees.includes(a))
+      : attendees;
+    if (sendInvite && recipients.length && tokens.zoho_email) {
       const ics = buildIcs({
         uid: zohoEventId || ev.id,
         title: ev.title,
@@ -234,24 +240,53 @@ Deno.serve(async (req) => {
         mailErr = "Não foi possível obter accountId do Zoho Mail";
       } else {
         try {
+          // 1) Upload do .ics como anexo (Zoho exige upload prévio antes de enviar com anexo)
+          let attachmentRef: { storeName: string; attachmentPath: string; attachmentName: string } | null = null;
+          try {
+            const icsBlob = new Blob([ics], { type: "text/calendar" });
+            const upRes = await fetch(
+              `${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages/attachments?fileName=invite.ics&uploadType=multipart`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
+                  "Content-Type": "text/calendar",
+                  "Content-Disposition": "attachment; filename=invite.ics",
+                },
+                body: await icsBlob.arrayBuffer(),
+              }
+            );
+            const upData = await upRes.json();
+            const att = upData?.data?.[0] || upData?.data;
+            if (att?.storeName && att?.attachmentPath) {
+              attachmentRef = {
+                storeName: att.storeName,
+                attachmentPath: att.attachmentPath,
+                attachmentName: att.attachmentName || "invite.ics",
+              };
+            } else {
+              console.warn("Falha ao subir anexo .ics, enviando sem anexo:", upData);
+            }
+          } catch (e) {
+            console.warn("Erro upload anexo Zoho:", e);
+          }
+
+          const sendBody: Record<string, unknown> = {
+            fromAddress: tokens.zoho_email,
+            toAddress: recipients.join(","),
+            subject,
+            content: htmlBody,
+            mailFormat: "html",
+          };
+          if (attachmentRef) sendBody.attachments = [attachmentRef];
+
           const sendRes = await fetch(`${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages`, {
             method: "POST",
             headers: {
               Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              fromAddress: tokens.zoho_email,
-              toAddress: attendees.join(","),
-              subject,
-              content: htmlBody,
-              mailFormat: "html",
-              attachments: [{
-                attachmentName: "invite.ics",
-                content: btoa(unescape(encodeURIComponent(ics))),
-                mimeType: "text/calendar; method=REQUEST",
-              }],
-            }),
+            body: JSON.stringify(sendBody),
           });
           const sendData = await sendRes.json();
           if (!sendRes.ok) { mailErr = JSON.stringify(sendData); }
@@ -263,7 +298,7 @@ Deno.serve(async (req) => {
         agenda_event_id: ev.id,
         opportunity_id: ev.opportunity_id,
         sent_by: user.id,
-        recipients: attendees,
+        recipients,
         subject,
         body: htmlBody,
         status: mailStatus,
@@ -278,7 +313,7 @@ Deno.serve(async (req) => {
           opportunity_id: ev.opportunity_id,
           created_by: user.id,
           activity_type: "email_invitation",
-          description: `Convite "${ev.title}" enviado para ${attendees.length} convidado(s) via Zoho Mail (${mailStatus})`,
+          description: `Convite "${ev.title}" enviado para ${recipients.length} convidado(s) via Zoho Mail (${mailStatus})`,
         });
       }
     }
