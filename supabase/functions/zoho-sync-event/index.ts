@@ -240,24 +240,53 @@ Deno.serve(async (req) => {
         mailErr = "Não foi possível obter accountId do Zoho Mail";
       } else {
         try {
+          // 1) Upload do .ics como anexo (Zoho exige upload prévio antes de enviar com anexo)
+          let attachmentRef: { storeName: string; attachmentPath: string; attachmentName: string } | null = null;
+          try {
+            const icsBlob = new Blob([ics], { type: "text/calendar" });
+            const upRes = await fetch(
+              `${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages/attachments?fileName=invite.ics&uploadType=multipart`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
+                  "Content-Type": "text/calendar",
+                  "Content-Disposition": "attachment; filename=invite.ics",
+                },
+                body: await icsBlob.arrayBuffer(),
+              }
+            );
+            const upData = await upRes.json();
+            const att = upData?.data?.[0] || upData?.data;
+            if (att?.storeName && att?.attachmentPath) {
+              attachmentRef = {
+                storeName: att.storeName,
+                attachmentPath: att.attachmentPath,
+                attachmentName: att.attachmentName || "invite.ics",
+              };
+            } else {
+              console.warn("Falha ao subir anexo .ics, enviando sem anexo:", upData);
+            }
+          } catch (e) {
+            console.warn("Erro upload anexo Zoho:", e);
+          }
+
+          const sendBody: Record<string, unknown> = {
+            fromAddress: tokens.zoho_email,
+            toAddress: recipients.join(","),
+            subject,
+            content: htmlBody,
+            mailFormat: "html",
+          };
+          if (attachmentRef) sendBody.attachments = [attachmentRef];
+
           const sendRes = await fetch(`${mailBase(tokens.data_center)}/api/accounts/${accountId}/messages`, {
             method: "POST",
             headers: {
               Authorization: `Zoho-oauthtoken ${tokens.access_token}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              fromAddress: tokens.zoho_email,
-              toAddress: attendees.join(","),
-              subject,
-              content: htmlBody,
-              mailFormat: "html",
-              attachments: [{
-                attachmentName: "invite.ics",
-                content: btoa(unescape(encodeURIComponent(ics))),
-                mimeType: "text/calendar; method=REQUEST",
-              }],
-            }),
+            body: JSON.stringify(sendBody),
           });
           const sendData = await sendRes.json();
           if (!sendRes.ok) { mailErr = JSON.stringify(sendData); }
