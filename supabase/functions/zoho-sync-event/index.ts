@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
         agenda_event_id: ev.id,
         opportunity_id: ev.opportunity_id,
         sent_by: user.id,
-        recipients: attendees,
+        recipients,
         subject,
         body: htmlBody,
         status: mailStatus,
