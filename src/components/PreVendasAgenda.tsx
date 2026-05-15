@@ -680,12 +680,19 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                 </div>
               )}
               {form.attendees.length > 0 && (
-                <div className="flex items-center justify-between pt-2">
-                  <Label className="text-xs text-muted-foreground">Enviar convite por e-mail (Zoho Mail) ao salvar</Label>
-                  <Switch
-                    checked={form.send_invite}
-                    onCheckedChange={(v) => setForm({ ...form, send_invite: v })}
-                  />
+                <div className="space-y-2 pt-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Enviar convite por e-mail (Zoho Mail) ao salvar</Label>
+                    <Switch
+                      checked={form.send_invite}
+                      onCheckedChange={(v) => setForm({ ...form, send_invite: v })}
+                    />
+                  </div>
+                  {editing && (
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      Ao editar: se você apenas adicionar novos convidados, somente eles serão notificados. Se alterar título, horário, local ou descrição, todos os convidados receberão a atualização.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
