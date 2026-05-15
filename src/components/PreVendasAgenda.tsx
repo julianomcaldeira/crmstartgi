@@ -163,6 +163,35 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       pre_vendas_user_id: form.pre_vendas_user_id || userId,
       attendees: form.attendees,
     };
+
+    // Determinar quem notificar quando estiver editando
+    let notifyAttendees: string[] | undefined = undefined;
+    let shouldSendInvite = form.send_invite && form.attendees.length > 0;
+
+    if (editing) {
+      const prevAttendees = editing.attendees || [];
+      const newAttendees = form.attendees.filter((a) => !prevAttendees.includes(a));
+      const materialChanged =
+        editing.title !== form.title ||
+        (editing.description || "") !== (form.description || "") ||
+        (editing.location || "") !== (form.location || "") ||
+        new Date(editing.start_datetime).toISOString() !== payload.start_datetime ||
+        new Date(editing.end_datetime).toISOString() !== payload.end_datetime;
+
+      if (materialChanged && form.attendees.length > 0) {
+        // Algo mudou: notificar todos os convidados atuais
+        shouldSendInvite = true;
+        notifyAttendees = form.attendees;
+      } else if (newAttendees.length > 0) {
+        // Apenas novos convidados foram adicionados: notificar somente eles
+        shouldSendInvite = true;
+        notifyAttendees = newAttendees;
+      } else {
+        // Nada relevante mudou e nenhum convidado novo: não enviar
+        shouldSendInvite = false;
+      }
+    }
+
     let savedId: string | null = null;
     if (editing) {
       const { error } = await supabase
@@ -181,20 +210,28 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
     }
 
     // Sincroniza com Zoho (cria/atualiza evento + envia convite se houver convidados)
-    if (savedId && form.send_invite && form.attendees.length > 0) {
+    if (savedId && shouldSendInvite) {
       setSending(true);
       try {
         const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
-          body: { eventId: savedId, sendInvite: true },
+          body: { eventId: savedId, sendInvite: true, notifyAttendees },
         });
         if (error) toast.error("Falha ao enviar convite: " + error.message);
-        else if (data?.invitation?.status === "sent") toast.success(`Convite enviado para ${form.attendees.length} convidado(s)`);
+        else if (data?.invitation?.status === "sent") {
+          const count = notifyAttendees?.length ?? form.attendees.length;
+          toast.success(`Convite enviado para ${count} convidado(s)`);
+        }
         else if (data?.invitation?.status === "failed") toast.error("Convite falhou: " + (data.invitation.error_message || "erro desconhecido"));
       } catch (e: any) {
         toast.error("Erro Zoho: " + e.message);
       } finally {
         setSending(false);
       }
+    } else if (savedId && editing) {
+      // Apenas atualiza o evento no Zoho sem enviar email
+      supabase.functions.invoke("zoho-sync-event", {
+        body: { eventId: savedId, sendInvite: false },
+      }).catch(() => {});
     }
 
     setOpen(false);
