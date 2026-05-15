@@ -127,7 +127,7 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
       is_private: ev.is_private,
       pre_vendas_user_id: ev.pre_vendas_user_id,
       attendees: ev.attendees || [],
-      send_invite: false,
+      send_invite: true,
     });
     setAttendeeInput("");
     setOpen(true);
