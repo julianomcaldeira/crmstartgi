@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
           opportunity_id: ev.opportunity_id,
           created_by: user.id,
           activity_type: "email_invitation",
-          description: `Convite "${ev.title}" enviado para ${attendees.length} convidado(s) via Zoho Mail (${mailStatus})`,
+          description: `Convite "${ev.title}" enviado para ${recipients.length} convidado(s) via Zoho Mail (${mailStatus})`,
         });
       }
     }
