@@ -140,7 +140,11 @@ Deno.serve(async (req) => {
 
     // Envio de convite por Zoho Mail
     let invitationLog: any = null;
-    if (sendInvite && attendees.length && tokens.zoho_email) {
+    // Filtra recipients caso notifyAttendees seja informado (notificação seletiva)
+    const recipients: string[] = Array.isArray(notifyAttendees) && notifyAttendees.length
+      ? attendees.filter((a) => notifyAttendees.includes(a))
+      : attendees;
+    if (sendInvite && recipients.length && tokens.zoho_email) {
       const ics = buildIcs({
         uid: zohoEventId || ev.id,
         title: ev.title,
