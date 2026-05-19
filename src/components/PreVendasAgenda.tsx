@@ -696,6 +696,9 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                   )}
                 </div>
               )}
+              {editing && (
+                <AgendaEventEmailHistory agendaEventId={editing.id} />
+              )}
             </div>
           </div>
           <DialogFooter>
