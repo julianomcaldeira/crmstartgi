@@ -46,10 +46,11 @@ function ListView() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from("proposals").select("id, title, status, created_at, share_token, client_id, created_by, total_value, monthly_value, implementation_value, template_key")
+    let q = supabase.from("proposals").select("id, title, status, created_at, share_token, client_id, created_by, total_value, monthly_value, implementation_value, template_key, opportunity_id, version")
       .like("template_key", "iganhei%").order("created_at", { ascending: false }).order("id", { ascending: false });
     if (statusFilter !== "all") q = q.eq("status", statusFilter);
     const { data, error } = await q;
@@ -59,31 +60,11 @@ function ListView() {
   };
   useEffect(() => { load(); }, [statusFilter]);
 
-  const create = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data: tpl } = await supabase.from("commercial_proposal_templates").select("*").eq("key", "iganhei_v1").maybeSingle();
-    if (!tpl) { toast.error("Template i-Ganhei não encontrado"); return; }
-    const { data, error } = await supabase.from("proposals").insert({
-      title: "Nova proposta i-Ganhei",
-      created_by: user.id,
-      status: "draft",
-      template_key: tpl.key,
-      sections: tpl.sections,
-      theme: tpl.theme,
-      tracking: {},
-      blocks: [],
-      validity_days: 30,
-    } as any).select("id").single();
-    if (error) { toast.error(error.message); return; }
-    navigate(`/propostas/comerciais/${data.id}`);
-  };
-
   const duplicate = async (row: any) => {
     const { data: full } = await supabase.from("proposals").select("*").eq("id", row.id).single();
     if (!full) return;
     const { id: _id, share_token: _st, view_count: _vc, sent_at: _sa, viewed_at: _va, accepted_at: _aa, rejected_at: _ra, created_at: _ca, updated_at: _ua, unique_visitors: _uv, total_time_ms: _tt, engagement_score: _es, ...rest } = full as any;
-    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft" } as any).select("id").single();
+    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft", version: (full.version || 1) + 1 } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     toast.success("Duplicada"); navigate(`/propostas/comerciais/${data.id}`);
   };
@@ -114,9 +95,12 @@ function ListView() {
               {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]?.label || s}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={create}><Plus className="h-4 w-4 mr-1" /> Nova proposta</Button>
+          <Button onClick={() => setPickerOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova proposta</Button>
         </div>
       </div>
+
+      <OpportunityPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onCreated={() => { setPickerOpen(false); load(); }} />
+
 
       {loading ? <div className="text-muted-foreground">Carregando…</div> :
         rows.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma proposta criada ainda.</CardContent></Card> :
