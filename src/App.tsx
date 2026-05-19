@@ -22,6 +22,7 @@ import RadarLeads from "./pages/RadarLeads";
 import InteligenciaMercado from "./pages/InteligenciaMercado";
 import PreVendas from "./pages/PreVendas";
 import Propostas from "./pages/Propostas";
+import PropostasComerciais from "./pages/PropostasComerciais";
 import PropostaPublica from "./pages/PropostaPublica";
 import PropostaInsights from "./pages/PropostaInsights";
 import Contratos from "./pages/Contratos";
@@ -56,6 +57,8 @@ const App = () => {
         <Route path="/inteligencia-mercado" element={<Layout><InteligenciaMercado /></Layout>} />
         <Route path="/pre-vendas" element={<Layout><PreVendas /></Layout>} />
         <Route path="/propostas" element={<Layout><Propostas /></Layout>} />
+        <Route path="/propostas/comerciais" element={<Layout><PropostasComerciais /></Layout>} />
+        <Route path="/propostas/comerciais/:id" element={<Layout><PropostasComerciais /></Layout>} />
         <Route path="/propostas/:id/insights" element={<Layout><PropostaInsights /></Layout>} />
         <Route path="/contratos" element={<Layout><Contratos /></Layout>} />
         <Route path="/contratos/:id" element={<Layout><ContratoDetalhes /></Layout>} />
