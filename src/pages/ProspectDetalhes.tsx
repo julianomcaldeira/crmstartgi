@@ -66,6 +66,8 @@ import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
 const ClienteDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const backPath = location.pathname.startsWith("/prospect") ? "/prospects" : "/clientes";
   const [client, setClient] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
