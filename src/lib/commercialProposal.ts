@@ -65,11 +65,11 @@ export async function resolveVariables(proposal: any): Promise<ProposalVars> {
   if (proposal.client_id) {
     const { data: c } = await supabase
       .from("clients")
-      .select("company_name, trade_name, logo_url")
+      .select("company_name, trade_name")
       .eq("id", proposal.client_id).maybeSingle();
     if (c) {
-      vars.empresa_cliente = c.company_name || c.trade_name || "";
-      vars.logo_cliente = (c as any).logo_url || "";
+      vars.empresa_cliente = (c as any).company_name || (c as any).trade_name || "";
+      vars.logo_cliente = "";
     }
   } else if (proposal.client_company) {
     vars.empresa_cliente = proposal.client_company;
