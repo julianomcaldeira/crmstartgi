@@ -82,7 +82,7 @@ function ListView() {
     const { data: full } = await supabase.from("proposals").select("*").eq("id", row.id).single();
     if (!full) return;
     const { id: _id, share_token: _st, view_count: _vc, sent_at: _sa, viewed_at: _va, accepted_at: _aa, rejected_at: _ra, created_at: _ca, updated_at: _ua, unique_visitors: _uv, total_time_ms: _tt, engagement_score: _es, ...rest } = full as any;
-    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft" }).select("id").single();
+    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft" } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     toast.success("Duplicada"); navigate(`/propostas/comerciais/${data.id}`);
   };
