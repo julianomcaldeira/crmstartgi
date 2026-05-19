@@ -157,6 +157,11 @@ export default function PropostaPublica() {
   );
   if (!data) return null;
 
+  // === New: Commercial template renderer (i-Ganhei) ===
+  if (data.template_key && String(data.template_key).startsWith("iganhei")) {
+    return <CommercialPublic data={data} docRef={docRef} enqueue={enqueue} />;
+  }
+
   const variables = buildVariableContext({
     client: { company_name: data.client_company },
     validity_days: data.validity_days,
@@ -165,9 +170,7 @@ export default function PropostaPublica() {
 
   const handleShare = async () => {
     const url = window.location.href;
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch { /* noop */ }
+    try { await navigator.clipboard.writeText(url); } catch { /* noop */ }
     enqueue({ event_type: "share", metadata: { url } });
   };
 
@@ -195,6 +198,54 @@ export default function PropostaPublica() {
           Validade: {data.validity_days || 30} dias · Visualização registrada
         </p>
       </main>
+    </div>
+  );
+}
+
+/* ---------------- Commercial public renderer ---------------- */
+function CommercialPublic({ data, docRef, enqueue }: {
+  data: any;
+  docRef: React.RefObject<HTMLDivElement>;
+  enqueue: (e: Omit<TrackEvent, "visitor_id">) => void;
+}) {
+  const [vars, setVars] = useState<Record<string, string> | null>(null);
+  const sections = (data.sections || []) as CommercialSection[];
+  const theme = (data.theme || {}) as Partial<CommercialTheme>;
+  const tracking = (data.tracking || {}) as { ga4_id?: string; clarity_id?: string };
+
+  useEffect(() => { resolveVariables(data).then(setVars); }, [data]);
+
+  const { emit } = useCommercialTracking({
+    ga4Id: tracking.ga4_id,
+    clarityId: tracking.clarity_id,
+    rootRef: docRef as any,
+    onEvent: (name) => {
+      if (name === "section_view") return; // already covered by parent observer
+      enqueue({ event_type: name === "cta_click" ? "cta_click" : "section_view", metadata: { name } });
+    },
+  });
+
+  if (!vars) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+
+  const phone = (vars.telefone_vendedor || "").replace(/\D/g, "");
+  const wa = phone ? `https://wa.me/55${phone}` : "";
+
+  const onPrint = () => { emit("proposal_print"); enqueue({ event_type: "download" }); window.print(); };
+  const onPdf = () => { emit("proposal_pdf_download"); enqueue({ event_type: "download" }); window.print(); };
+  const onWa = () => { emit("whatsapp_click"); };
+  const onMail = () => { emit("email_click"); };
+
+  return (
+    <div className="min-h-screen" style={{ background: "#F5F7FA" }}>
+      <div ref={docRef} className="bg-white" style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <CommercialProposalRenderer sections={sections} variables={vars} theme={theme} />
+      </div>
+      <div className="ig-floating-bar">
+        {wa && <a className="ig-cta-accent" href={wa} target="_blank" rel="noreferrer" onClick={onWa}><MessageCircle size={16} /> WhatsApp</a>}
+        {vars.email_vendedor && <a href={`mailto:${vars.email_vendedor}`} onClick={onMail}><Mail size={16} /> E-mail</a>}
+        <button onClick={onPrint}><Printer size={16} /> Imprimir</button>
+        <button className="ig-cta-primary" onClick={onPdf}><Download size={16} /> Baixar PDF</button>
+      </div>
     </div>
   );
 }
