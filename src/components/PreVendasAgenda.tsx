@@ -28,6 +28,7 @@ import { format, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWee
 import { ptBR } from "date-fns/locale";
 import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight, Send, Mail, X } from "lucide-react";
 import { Badge as BadgeUI } from "@/components/ui/badge";
+import AgendaEventEmailHistory from "@/components/AgendaEventEmailHistory";
 
 type AgendaEvent = {
   id: string;
@@ -694,6 +695,9 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                     </p>
                   )}
                 </div>
+              )}
+              {editing && (
+                <AgendaEventEmailHistory agendaEventId={editing.id} />
               )}
             </div>
           </div>
