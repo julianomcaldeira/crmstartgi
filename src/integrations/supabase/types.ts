@@ -457,6 +457,45 @@ export type Database = {
         }
         Relationships: []
       }
+      commercial_proposal_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          key: string
+          name: string
+          product: string
+          sections: Json
+          theme: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          name: string
+          product: string
+          sections?: Json
+          theme?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          name?: string
+          product?: string
+          sections?: Json
+          theme?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           client_id: string
@@ -2527,13 +2566,17 @@ export type Database = {
           opportunity_id: string
           pdf_url: string | null
           rejected_at: string | null
+          sections: Json | null
           sent_at: string | null
           share_token: string
           status: string
           template_id: string | null
+          template_key: string | null
+          theme: Json | null
           title: string
           total_time_ms: number
           total_value: number | null
+          tracking: Json | null
           unique_visitors: number
           updated_at: string
           validity_days: number | null
@@ -2557,13 +2600,17 @@ export type Database = {
           opportunity_id: string
           pdf_url?: string | null
           rejected_at?: string | null
+          sections?: Json | null
           sent_at?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
+          template_key?: string | null
+          theme?: Json | null
           title: string
           total_time_ms?: number
           total_value?: number | null
+          tracking?: Json | null
           unique_visitors?: number
           updated_at?: string
           validity_days?: number | null
@@ -2587,13 +2634,17 @@ export type Database = {
           opportunity_id?: string
           pdf_url?: string | null
           rejected_at?: string | null
+          sections?: Json | null
           sent_at?: string | null
           share_token?: string
           status?: string
           template_id?: string | null
+          template_key?: string | null
+          theme?: Json | null
           title?: string
           total_time_ms?: number
           total_value?: number | null
+          tracking?: Json | null
           unique_visitors?: number
           updated_at?: string
           validity_days?: number | null
@@ -3435,10 +3486,14 @@ export type Database = {
           id: string
           implementation_value: number
           monthly_value: number
+          sections: Json
           sent_at: string
           status: string
+          template_key: string
+          theme: Json
           title: string
           total_value: number
+          tracking: Json
           validity_days: number
           variables: Json
         }[]
