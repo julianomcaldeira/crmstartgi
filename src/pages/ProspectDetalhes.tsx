@@ -603,7 +603,7 @@ const ClienteDetalhes = () => {
       if (error) throw error;
 
       toast.success("Cliente e todo seu histórico foram excluídos com sucesso!");
-      navigate("/clientes");
+      navigate(backPath);
     } catch (error: any) {
       console.error("Error deleting client:", error);
       toast.error("Erro ao excluir cliente: " + (error.message || "Erro desconhecido"));
@@ -644,7 +644,7 @@ const ClienteDetalhes = () => {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Cliente não encontrado</p>
-        <Button onClick={() => navigate("/clientes")} className="mt-4">
+        <Button onClick={() => navigate(backPath)} className="mt-4">
           Voltar para Clientes
         </Button>
       </div>
@@ -659,7 +659,7 @@ const ClienteDetalhes = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/clientes")}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(backPath)}>
           <ArrowLeft />
         </Button>
         <div className="flex-1">
