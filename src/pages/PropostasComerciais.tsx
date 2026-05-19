@@ -73,7 +73,7 @@ function ListView() {
       tracking: {},
       blocks: [],
       validity_days: 30,
-    }).select("id").single();
+    } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     navigate(`/propostas/comerciais/${data.id}`);
   };
