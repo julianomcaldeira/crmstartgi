@@ -4,9 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProposalRenderer } from "@/components/proposal/ProposalRenderer";
 import { buildVariableContext } from "@/lib/proposalTypes";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, AlertCircle } from "lucide-react";
+import { Loader2, FileText, AlertCircle, MessageCircle, Mail, Printer, Download } from "lucide-react";
 import logo from "@/assets/logo-evolua-crm.png";
 import { flush, getVisitorId, type TrackEvent } from "@/lib/proposalTracker";
+import { CommercialProposalRenderer } from "@/components/proposal/commercial/CommercialProposalRenderer";
+import { resolveVariables, type CommercialSection, type CommercialTheme } from "@/lib/commercialProposal";
+import { useCommercialTracking } from "@/components/proposal/commercial/useCommercialTracking";
 
 const HEARTBEAT_MS = 15000;
 const FLUSH_MS = 5000;
