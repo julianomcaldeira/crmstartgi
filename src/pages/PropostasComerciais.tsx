@@ -360,12 +360,20 @@ function OpportunityPickerDialog({ open, onOpenChange, onCreated }: { open: bool
 
   useEffect(() => { if (!open) { setSelectedOpp(null); setExisting([]); setSearch(""); return; } (async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setLoading(false); return; }
+    const { data: rolesData } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+    const roles = (rolesData || []).map((r) => r.role);
+    const isPrivileged = roles.includes("admin") || roles.includes("gestor");
+
+    let q = supabase
       .from("opportunities")
-      .select("id, title, value, client_id, created_at, clients:client_id(company_name, trade_name)")
+      .select("id, title, value, client_id, created_by, assigned_to, created_at, clients:client_id(company_name, trade_name)")
       .eq("status", "proposal")
       .order("created_at", { ascending: false })
       .limit(500);
+    if (!isPrivileged) q = q.or(`created_by.eq.${user.id},assigned_to.eq.${user.id}`);
+    const { data, error } = await q;
     if (error) toast.error(error.message);
     setOpps(data || []);
     setLoading(false);
