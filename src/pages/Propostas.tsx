@@ -268,6 +268,9 @@ export default function Propostas() {
           <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6 text-primary" /> Propostas</h1>
           <p className="text-sm text-muted-foreground">Templates e propostas geradas. Use a oportunidade para gerar uma nova proposta.</p>
         </div>
+        <Button onClick={() => navigate("/propostas/comerciais")} className="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:opacity-90">
+          <Sparkles className="h-4 w-4 mr-1" /> Propostas Comerciais (Beta)
+        </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
