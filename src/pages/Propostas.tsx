@@ -69,18 +69,18 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter, sellerFilter]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
 
   useEffect(() => {
     if (hasAccess) loadAggregates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAccess, statusFilter, sellerFilter]);
+  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, sellerFilter]);
+  }, [statusFilter, sellerFilter, selectedProductId]);
 
   // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
@@ -89,9 +89,10 @@ export default function Propostas() {
     if (proposalsPage > 1) next.set("page", String(proposalsPage)); else next.delete("page");
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
     if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
+    if (selectedProductId) next.set("product", selectedProductId); else next.delete("product");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter, sellerFilter]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
