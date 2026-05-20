@@ -8,9 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Eye, Plus, Save, Trash2, ExternalLink, Link2, Printer, Download, FilePlus, GitBranch, Pencil } from "lucide-react";
+import { ArrowLeft, Copy, Eye, Plus, Save, Trash2, ExternalLink, Link2, Printer, Download } from "lucide-react";
 import { CommercialProposalRenderer } from "@/components/proposal/commercial/CommercialProposalRenderer";
 import { CommercialSection, CommercialTheme, DEFAULT_THEME, ProposalVars, STATUS_LABELS, resolveVariables } from "@/lib/commercialProposal";
 import { proposalPublicUrl } from "@/lib/publicUrls";
@@ -46,11 +45,10 @@ function ListView() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    let q = supabase.from("proposals").select("id, title, status, created_at, share_token, client_id, created_by, total_value, monthly_value, implementation_value, template_key, opportunity_id, version")
+    let q = supabase.from("proposals").select("id, title, status, created_at, share_token, client_id, created_by, total_value, monthly_value, implementation_value, template_key")
       .like("template_key", "iganhei%").order("created_at", { ascending: false }).order("id", { ascending: false });
     if (statusFilter !== "all") q = q.eq("status", statusFilter);
     const { data, error } = await q;
@@ -60,11 +58,31 @@ function ListView() {
   };
   useEffect(() => { load(); }, [statusFilter]);
 
+  const create = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: tpl } = await supabase.from("commercial_proposal_templates").select("*").eq("key", "iganhei_v1").maybeSingle();
+    if (!tpl) { toast.error("Template i-Ganhei não encontrado"); return; }
+    const { data, error } = await supabase.from("proposals").insert({
+      title: "Nova proposta i-Ganhei",
+      created_by: user.id,
+      status: "draft",
+      template_key: tpl.key,
+      sections: tpl.sections,
+      theme: tpl.theme,
+      tracking: {},
+      blocks: [],
+      validity_days: 30,
+    } as any).select("id").single();
+    if (error) { toast.error(error.message); return; }
+    navigate(`/propostas/comerciais/${data.id}`);
+  };
+
   const duplicate = async (row: any) => {
     const { data: full } = await supabase.from("proposals").select("*").eq("id", row.id).single();
     if (!full) return;
     const { id: _id, share_token: _st, view_count: _vc, sent_at: _sa, viewed_at: _va, accepted_at: _aa, rejected_at: _ra, created_at: _ca, updated_at: _ua, unique_visitors: _uv, total_time_ms: _tt, engagement_score: _es, ...rest } = full as any;
-    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft", version: (full.version || 1) + 1 } as any).select("id").single();
+    const { data, error } = await supabase.from("proposals").insert({ ...rest, title: full.title + " (cópia)", status: "draft" } as any).select("id").single();
     if (error) { toast.error(error.message); return; }
     toast.success("Duplicada"); navigate(`/propostas/comerciais/${data.id}`);
   };
@@ -95,12 +113,9 @@ function ListView() {
               {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{STATUS_LABELS[s]?.label || s}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button onClick={() => setPickerOpen(true)}><Plus className="h-4 w-4 mr-1" /> Nova proposta</Button>
+          <Button onClick={create}><Plus className="h-4 w-4 mr-1" /> Nova proposta</Button>
         </div>
       </div>
-
-      <OpportunityPickerDialog open={pickerOpen} onOpenChange={setPickerOpen} onCreated={() => { setPickerOpen(false); load(); }} />
-
 
       {loading ? <div className="text-muted-foreground">Carregando…</div> :
         rows.length === 0 ? <Card><CardContent className="p-8 text-center text-muted-foreground">Nenhuma proposta criada ainda.</CardContent></Card> :
@@ -345,168 +360,5 @@ function SectionEditor({ section, onTitle, onContent }: {
           <Textarea rows={4} value={(c.next_steps || []).join("\n")} onChange={(e) => onContent({ next_steps: e.target.value.split("\n").map((x) => x.trim()).filter(Boolean) })} /></div>
       )}
     </div>
-  );
-}
-
-/* ---------------- OPPORTUNITY PICKER ---------------- */
-function OpportunityPickerDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; onCreated: () => void }) {
-  const navigate = useNavigate();
-  const [opps, setOpps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedOpp, setSelectedOpp] = useState<any>(null);
-  const [existing, setExisting] = useState<any[]>([]);
-  const [search, setSearch] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => { if (!open) { setSelectedOpp(null); setExisting([]); setSearch(""); return; } (async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("opportunities")
-      .select("id, title, value, client_id, created_at, clients:client_id(company_name, trade_name)")
-      .eq("status", "proposal")
-      .order("created_at", { ascending: false })
-      .limit(500);
-    if (error) toast.error(error.message);
-    setOpps(data || []);
-    setLoading(false);
-  })(); }, [open]);
-
-  const selectOpp = async (opp: any) => {
-    setSelectedOpp(opp);
-    const { data } = await supabase.from("proposals")
-      .select("id, title, status, version, created_at, share_token")
-      .eq("opportunity_id", opp.id)
-      .like("template_key", "iganhei%")
-      .order("version", { ascending: false })
-      .order("created_at", { ascending: false });
-    setExisting(data || []);
-  };
-
-  const createNew = async (basedOn?: any) => {
-    if (!selectedOpp) return;
-    setBusy(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setBusy(false); return; }
-    let payload: any;
-    if (basedOn) {
-      const { data: full } = await supabase.from("proposals").select("*").eq("id", basedOn.id).single();
-      if (!full) { setBusy(false); return; }
-      const { id: _i, share_token: _s, view_count: _vc, sent_at: _sa, viewed_at: _va, accepted_at: _aa, rejected_at: _ra, created_at: _ca, updated_at: _ua, unique_visitors: _uv, total_time_ms: _tt, engagement_score: _es, ...rest } = full as any;
-      payload = { ...rest, title: `${full.title} v${(full.version || 1) + 1}`, status: "draft", version: (full.version || 1) + 1 };
-    } else {
-      const { data: tpl } = await supabase.from("commercial_proposal_templates").select("*").eq("key", "iganhei_v1").maybeSingle();
-      if (!tpl) { toast.error("Template i-Ganhei não encontrado"); setBusy(false); return; }
-      const clientName = selectedOpp.clients?.company_name || selectedOpp.clients?.trade_name || "Cliente";
-      payload = {
-        title: `Proposta i-Ganhei — ${clientName}`,
-        created_by: user.id,
-        status: "draft",
-        template_key: tpl.key,
-        sections: tpl.sections,
-        theme: tpl.theme,
-        tracking: {},
-        blocks: [],
-        validity_days: 30,
-        client_id: selectedOpp.client_id,
-        opportunity_id: selectedOpp.id,
-        implementation_value: selectedOpp.implementation_value || null,
-        monthly_value: selectedOpp.monthly_value || null,
-        total_value: selectedOpp.value || null,
-      };
-    }
-    payload.client_id = selectedOpp.client_id;
-    payload.opportunity_id = selectedOpp.id;
-    const { data, error } = await supabase.from("proposals").insert(payload).select("id").single();
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success(basedOn ? "Nova versão criada" : "Proposta criada");
-    onCreated();
-    navigate(`/propostas/comerciais/${data.id}`);
-  };
-
-  const filtered = opps.filter((o) => {
-    if (!search.trim()) return true;
-    const s = search.toLowerCase();
-    return (o.title || "").toLowerCase().includes(s)
-      || (o.clients?.company_name || "").toLowerCase().includes(s)
-      || (o.clients?.trade_name || "").toLowerCase().includes(s);
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Nova proposta a partir de oportunidade</DialogTitle>
-          <DialogDescription>
-            Selecione uma oportunidade em status <strong>Proposta</strong> para criar uma nova proposta ou uma nova versão de uma já existente.
-          </DialogDescription>
-        </DialogHeader>
-
-        {!selectedOpp ? (
-          <div className="space-y-3">
-            <Input placeholder="Buscar por prospect ou título…" value={search} onChange={(e) => setSearch(e.target.value)} />
-            <div className="max-h-[400px] overflow-y-auto border rounded">
-              {loading ? (
-                <div className="p-4 text-sm text-muted-foreground">Carregando oportunidades…</div>
-              ) : filtered.length === 0 ? (
-                <div className="p-4 text-sm text-muted-foreground">Nenhuma oportunidade em status Proposta encontrada.</div>
-              ) : filtered.map((o) => (
-                <button key={o.id} onClick={() => selectOpp(o)} className="w-full text-left p-3 hover:bg-muted border-b last:border-b-0">
-                  <div className="font-medium text-sm">{o.clients?.company_name || o.clients?.trade_name || "—"}</div>
-                  <div className="text-xs text-muted-foreground">{o.title} {o.value ? `· R$ ${Number(o.value).toLocaleString("pt-BR")}` : ""}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="border rounded p-3 bg-muted/40">
-              <div className="text-xs text-muted-foreground">Oportunidade selecionada</div>
-              <div className="font-semibold">{selectedOpp.clients?.company_name || selectedOpp.clients?.trade_name}</div>
-              <div className="text-sm text-muted-foreground">{selectedOpp.title}</div>
-            </div>
-
-            <div>
-              <div className="text-sm font-medium mb-2">Propostas existentes para esta oportunidade</div>
-              {existing.length === 0 ? (
-                <div className="text-sm text-muted-foreground p-3 border rounded">Nenhuma proposta criada ainda para esta oportunidade.</div>
-              ) : (
-                <div className="space-y-2 max-h-[260px] overflow-y-auto">
-                  {existing.map((p) => {
-                    const st = STATUS_LABELS[p.status] || { label: p.status, cls: "bg-slate-200" };
-                    return (
-                      <div key={p.id} className="border rounded p-2 flex items-center gap-2 flex-wrap">
-                        <div className="flex-1 min-w-[160px]">
-                          <div className="text-sm font-medium">{p.title} <span className="text-xs text-muted-foreground">· v{p.version || 1}</span></div>
-                          <div className="text-xs text-muted-foreground">{new Date(p.created_at).toLocaleString("pt-BR")}</div>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded text-xs ${st.cls}`}>{st.label}</span>
-                        <Button size="sm" variant="outline" onClick={() => { onOpenChange(false); navigate(`/propostas/comerciais/${p.id}`); }}>
-                          <Pencil className="h-3 w-3 mr-1" />Editar
-                        </Button>
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => createNew(p)}>
-                          <GitBranch className="h-3 w-3 mr-1" />Nova versão
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between gap-2 pt-2 border-t">
-              <Button variant="ghost" onClick={() => setSelectedOpp(null)}><ArrowLeft className="h-4 w-4 mr-1" />Trocar oportunidade</Button>
-              <Button onClick={() => createNew()} disabled={busy}>
-                <FilePlus className="h-4 w-4 mr-1" />Criar proposta nova (do template)
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
