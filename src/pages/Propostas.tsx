@@ -37,6 +37,7 @@ export default function Propostas() {
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
   const [proposalsTotal, setProposalsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
