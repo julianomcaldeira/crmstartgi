@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity, Package } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
