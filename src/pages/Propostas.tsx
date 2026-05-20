@@ -379,7 +379,7 @@ export default function Propostas() {
         <TabsContent value="templates" className="space-y-3 mt-4">
           <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {templates.map((t) => (
+            {productTemplates.map((t) => (
               <Card key={t.id}>
                 <div className="h-2 rounded-t" style={{ background: t.thumbnail_color || "#22c55e" }} />
                 <CardHeader className="pb-2">
@@ -395,7 +395,7 @@ export default function Propostas() {
                 </CardContent>
               </Card>
             ))}
-            {!loading && templates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template ainda.</div>}
+            {!loading && productTemplates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template para este produto ainda. Clique em "Novo template" acima.</div>}
           </div>
         </TabsContent>
 
