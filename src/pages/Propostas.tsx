@@ -350,7 +350,7 @@ export default function Propostas() {
         </CardHeader>
         <CardContent>
           {loading && products.length === 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <Skeleton key={i} className="h-28 w-full rounded-lg" />
               ))}
@@ -360,7 +360,7 @@ export default function Propostas() {
               Nenhum produto ativo cadastrado. Cadastre produtos em Configurações.
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {products.map((p) => {
                 const tplCount = templates.filter((t) => t.category === p.id).length;
                 const isSelected = selectedProductId === p.id;
