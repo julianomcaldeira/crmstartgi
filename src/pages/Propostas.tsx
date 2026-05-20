@@ -288,15 +288,60 @@ export default function Propostas() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6 text-primary" /> Propostas</h1>
-          <p className="text-sm text-muted-foreground">Templates e propostas geradas. Use a oportunidade para gerar uma nova proposta.</p>
-        </div>
-        <Button onClick={() => navigate("/propostas/comerciais")} className="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:opacity-90">
-          <Sparkles className="h-4 w-4 mr-1" /> Propostas Comerciais (Beta)
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6 text-primary" /> Propostas</h1>
+        <p className="text-sm text-muted-foreground">Selecione um produto para abrir seu template, ou gerencie templates e propostas geradas abaixo.</p>
       </div>
+
+      {/* Produtos — cards principais */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> Produtos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading && products.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6">
+              Nenhum produto ativo cadastrado. Cadastre produtos em Configurações.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {products.map((p) => {
+                const hasTemplate = templates.some((t) => t.category === p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => openProductTemplate(p)}
+                    className="group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <Badge variant={hasTemplate ? "default" : "outline"} className="text-[10px]">
+                        {hasTemplate ? "Template pronto" : "Sem template"}
+                      </Badge>
+                    </div>
+                    <div className="font-semibold text-sm leading-tight group-hover:text-primary line-clamp-2">{p.name}</div>
+                    {p.description && (
+                      <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>
+                    )}
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      {hasTemplate ? "Clique para editar o template" : "Clique para criar o template"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
