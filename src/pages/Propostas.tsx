@@ -405,14 +405,52 @@ export default function Propostas() {
       {selectedProductId && (
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="templates">Templates ({productTemplates.length})</TabsTrigger>
+          <TabsTrigger value="templates">Templates ({filteredProductTemplates.length}{filteredProductTemplates.length !== productTemplates.length ? `/${productTemplates.length}` : ""})</TabsTrigger>
           <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3 mt-4">
-          <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                placeholder="Buscar por nome ou descrição…"
+                className="h-9 pl-8 pr-8 text-sm"
+              />
+              {templateSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTemplateSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Vendedor:</span>
+              <Select value={templateSellerFilter} onValueChange={setTemplateSellerFilter}>
+                <SelectTrigger className="h-9 w-[200px] text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {sellers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(templateSearch || templateSellerFilter !== "all") && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setTemplateSearch(""); setTemplateSellerFilter("all"); }}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {productTemplates.map((t) => (
+            {filteredProductTemplates.map((t) => (
               <Card key={t.id}>
                 <div className="h-2 rounded-t" style={{ background: t.thumbnail_color || "#22c55e" }} />
                 <CardHeader className="pb-2">
@@ -428,7 +466,13 @@ export default function Propostas() {
                 </CardContent>
               </Card>
             ))}
-            {!loading && productTemplates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template para este produto ainda. Clique em "Novo template" acima.</div>}
+            {!loading && filteredProductTemplates.length === 0 && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                {productTemplates.length === 0
+                  ? 'Nenhum template para este produto ainda. Clique em "Novo template" acima.'
+                  : "Nenhum template encontrado para o filtro atual."}
+              </div>
+            )}
           </div>
         </TabsContent>
 
