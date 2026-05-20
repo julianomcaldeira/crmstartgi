@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity, Package } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
@@ -37,6 +37,7 @@ export default function Propostas() {
 
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [proposals, setProposals] = useState<any[]>([]);
   const [proposalsTotal, setProposalsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,7 @@ export default function Propostas() {
   const [color, setColor] = useState("#22c55e");
   const [blocks, setBlocks] = useState<ProposalBlock[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccess();
@@ -140,11 +142,32 @@ export default function Propostas() {
 
   const loadAll = async () => {
     setLoading(true);
-    const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
+    const [tplRes, prodRes] = await Promise.all([
+      supabase.from("proposal_templates").select("*").order("created_at", { ascending: false }),
+      supabase.from("products").select("*").eq("active", true).order("name"),
+    ]);
     setTemplates(tplRes.data || []);
+    setProducts(prodRes.data || []);
     await Promise.all([loadProposals(1), loadSellers(), loadAggregates()]);
     setProposalsPage(1);
     setLoading(false);
+  };
+
+  const openProductTemplate = (product: any) => {
+    const existing = templates.find((t) => t.category === product.id);
+    if (existing) {
+      openEditTemplate(existing);
+      setTab("templates");
+      return;
+    }
+    setEditing(null);
+    setName(`Template — ${product.name}`);
+    setDescription(product.description || "");
+    setColor("#22c55e");
+    setBlocks([newBlock("richtext")]);
+    setEditorOpen(true);
+    // Stash product id to use on save
+    setPendingProductId(product.id);
   };
 
   const loadProposals = async (page: number) => {
@@ -200,6 +223,7 @@ export default function Propostas() {
     setDescription("");
     setColor("#22c55e");
     setBlocks([newBlock("richtext")]);
+    setPendingProductId(null);
     setEditorOpen(true);
   };
   const openEditTemplate = (t: any) => {
@@ -208,6 +232,7 @@ export default function Propostas() {
     setDescription(t.description || "");
     setColor(t.thumbnail_color || "#22c55e");
     setBlocks(t.blocks || []);
+    setPendingProductId(t.category || null);
     setEditorOpen(true);
   };
   const saveTemplate = async () => {
@@ -215,7 +240,7 @@ export default function Propostas() {
       if (!name.trim()) { toast.error("Informe um nome"); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const payload: any = { name, description, thumbnail_color: color, blocks: blocks as any, is_active: true };
+      const payload: any = { name, description, thumbnail_color: color, blocks: blocks as any, is_active: true, category: pendingProductId };
       if (editing) {
         const r = await supabase.from("proposal_templates").update(payload).eq("id", editing.id);
         if (r.error) throw r.error;
@@ -263,15 +288,60 @@ export default function Propostas() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6 text-primary" /> Propostas</h1>
-          <p className="text-sm text-muted-foreground">Templates e propostas geradas. Use a oportunidade para gerar uma nova proposta.</p>
-        </div>
-        <Button onClick={() => navigate("/propostas/comerciais")} className="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:opacity-90">
-          <Sparkles className="h-4 w-4 mr-1" /> Propostas Comerciais (Beta)
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold flex items-center gap-2"><Sparkles className="h-6 w-6 text-primary" /> Propostas</h1>
+        <p className="text-sm text-muted-foreground">Selecione um produto para abrir seu template, ou gerencie templates e propostas geradas abaixo.</p>
       </div>
+
+      {/* Produtos — cards principais */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4 text-primary" /> Produtos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading && products.length === 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6">
+              Nenhum produto ativo cadastrado. Cadastre produtos em Configurações.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {products.map((p) => {
+                const hasTemplate = templates.some((t) => t.category === p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => openProductTemplate(p)}
+                    className="group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        <Package className="h-5 w-5" />
+                      </div>
+                      <Badge variant={hasTemplate ? "default" : "outline"} className="text-[10px]">
+                        {hasTemplate ? "Template pronto" : "Sem template"}
+                      </Badge>
+                    </div>
+                    <div className="font-semibold text-sm leading-tight group-hover:text-primary line-clamp-2">{p.name}</div>
+                    {p.description && (
+                      <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>
+                    )}
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      {hasTemplate ? "Clique para editar o template" : "Clique para criar o template"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
