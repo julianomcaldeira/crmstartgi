@@ -220,6 +220,7 @@ export default function Propostas() {
         }
         q = q.in("template_id", productTemplateIds);
       }
+      if (proposalSearch) q = q.ilike("title", `%${proposalSearch}%`);
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
