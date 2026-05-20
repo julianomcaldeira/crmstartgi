@@ -42,7 +42,13 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"editor" | "preview">("editor");
+  const [slide2Cards, setSlide2Cards] = useState<string[]>(IGANHEI_SLIDE2_DEFAULT_IDS);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  const hasSlide2Placeholder = useMemo(
+    () => blocks.some((b: any) => typeof b?.html === "string" && b.html.includes(IGANHEI_SLIDE2_PLACEHOLDER)),
+    [blocks]
+  );
 
   useEffect(() => {
     if (!open) return;
