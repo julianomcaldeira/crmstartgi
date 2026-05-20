@@ -77,13 +77,15 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const variables = useMemo(() => ({
     ...buildVariableContext({ client, opportunity, seller, validity_days: validityDays }),
     _page: pageSettings,
-  }), [client, opportunity, seller, validityDays, pageSettings]);
+    slide2_cards_html: buildSlide2CardsHtml(slide2Cards),
+  }), [client, opportunity, seller, validityDays, pageSettings, slide2Cards]);
 
   const pickTemplate = (tpl: any) => {
     setTemplateId(tpl.id);
     // Deep clone with new ids
     const cloned: ProposalBlock[] = (tpl.blocks || []).map((b: any) => ({ ...b, id: crypto.randomUUID() }));
     setBlocks(cloned);
+    setSlide2Cards(IGANHEI_SLIDE2_DEFAULT_IDS);
     setStep("edit");
   };
   const pickBlank = () => {
