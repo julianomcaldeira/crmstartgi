@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity, Package } from "lucide-react";
+import { Plus, FileText, Pencil, Trash2, Eye, Sparkles, AlertCircle, RefreshCw, Inbox, BarChart3, Flame, Thermometer, Snowflake, Users, DollarSign, Activity, Package, Search, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, newBlock } from "@/lib/proposalTypes";
@@ -31,6 +31,10 @@ export default function Propostas() {
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(() => searchParams.get("product") || null);
+  const [templateSearch, setTemplateSearch] = useState<string>(() => searchParams.get("tq") || "");
+  const [templateSellerFilter, setTemplateSellerFilter] = useState<string>(() => searchParams.get("tseller") || "all");
+  const [proposalSearch, setProposalSearch] = useState<string>(() => searchParams.get("pq") || "");
+  const [proposalSearchInput, setProposalSearchInput] = useState<string>(() => searchParams.get("pq") || "");
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
   const [aggregatesLoading, setAggregatesLoading] = useState(false);
@@ -52,6 +56,17 @@ export default function Propostas() {
   const productTemplateIds = productTemplates.map((t) => t.id);
   const selectedProduct = selectedProductId ? products.find((p) => p.id === selectedProductId) : null;
 
+  // Client-side filter for the Templates tab (search by name/descrição + vendedor)
+  const filteredProductTemplates = productTemplates.filter((t) => {
+    if (templateSellerFilter !== "all" && t.created_by !== templateSellerFilter) return false;
+    if (templateSearch.trim()) {
+      const q = templateSearch.trim().toLowerCase();
+      const hay = `${t.name || ""} ${t.description || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
@@ -69,18 +84,24 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length, proposalSearch]);
 
   useEffect(() => {
     if (hasAccess) loadAggregates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
+  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length, proposalSearch]);
+
+  // Debounce search input → committed proposalSearch (used by queries)
+  useEffect(() => {
+    const t = setTimeout(() => setProposalSearch(proposalSearchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [proposalSearchInput]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, sellerFilter, selectedProductId]);
+  }, [statusFilter, sellerFilter, selectedProductId, proposalSearch]);
 
   // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
@@ -90,9 +111,12 @@ export default function Propostas() {
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
     if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
     if (selectedProductId) next.set("product", selectedProductId); else next.delete("product");
+    if (templateSearch) next.set("tq", templateSearch); else next.delete("tq");
+    if (templateSellerFilter !== "all") next.set("tseller", templateSellerFilter); else next.delete("tseller");
+    if (proposalSearch) next.set("pq", proposalSearch); else next.delete("pq");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId, templateSearch, templateSellerFilter, proposalSearch]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -105,9 +129,15 @@ export default function Propostas() {
   };
 
   const loadSellers = async () => {
-    // Distinct created_by from proposals + their full_name
-    const { data: props } = await supabase.from("proposals").select("created_by");
-    const ids = Array.from(new Set((props || []).map((p: any) => p.created_by).filter(Boolean))) as string[];
+    // Distinct creators from proposals AND templates
+    const [propsRes, tplsRes] = await Promise.all([
+      supabase.from("proposals").select("created_by"),
+      supabase.from("proposal_templates").select("created_by"),
+    ]);
+    const ids = Array.from(new Set([
+      ...((propsRes.data || []).map((p: any) => p.created_by)),
+      ...((tplsRes.data || []).map((p: any) => p.created_by)),
+    ].filter(Boolean))) as string[];
     if (!ids.length) { setSellers([]); return; }
     const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
     setSellers(((profs || []) as any[])
@@ -130,6 +160,7 @@ export default function Propostas() {
         }
         q = q.in("template_id", productTemplateIds);
       }
+      if (proposalSearch) q = q.ilike("title", `%${proposalSearch}%`);
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data || []) as any[];
@@ -171,8 +202,9 @@ export default function Propostas() {
   };
 
   const selectProduct = (product: any) => {
+    // Toggle off if same product; otherwise select and KEEP the current tab so
+    // Templates/Propostas Geradas stay coerentes com o card escolhido.
     setSelectedProductId((cur) => (cur === product.id ? null : product.id));
-    setTab("templates");
   };
 
 
@@ -206,6 +238,7 @@ export default function Propostas() {
         }
         q = q.in("template_id", productTemplateIds);
       }
+      if (proposalSearch) q = q.ilike("title", `%${proposalSearch}%`);
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
@@ -372,14 +405,52 @@ export default function Propostas() {
       {selectedProductId && (
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="templates">Templates ({productTemplates.length})</TabsTrigger>
+          <TabsTrigger value="templates">Templates ({filteredProductTemplates.length}{filteredProductTemplates.length !== productTemplates.length ? `/${productTemplates.length}` : ""})</TabsTrigger>
           <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3 mt-4">
-          <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
+          <div className="flex flex-wrap gap-2 items-center">
+            <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+                placeholder="Buscar por nome ou descrição…"
+                className="h-9 pl-8 pr-8 text-sm"
+              />
+              {templateSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTemplateSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Vendedor:</span>
+              <Select value={templateSellerFilter} onValueChange={setTemplateSellerFilter}>
+                <SelectTrigger className="h-9 w-[200px] text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {sellers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {(templateSearch || templateSellerFilter !== "all") && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setTemplateSearch(""); setTemplateSellerFilter("all"); }}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {productTemplates.map((t) => (
+            {filteredProductTemplates.map((t) => (
               <Card key={t.id}>
                 <div className="h-2 rounded-t" style={{ background: t.thumbnail_color || "#22c55e" }} />
                 <CardHeader className="pb-2">
@@ -395,11 +466,49 @@ export default function Propostas() {
                 </CardContent>
               </Card>
             ))}
-            {!loading && productTemplates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template para este produto ainda. Clique em "Novo template" acima.</div>}
+            {!loading && filteredProductTemplates.length === 0 && (
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                {productTemplates.length === 0
+                  ? 'Nenhum template para este produto ainda. Clique em "Novo template" acima.'
+                  : "Nenhum template encontrado para o filtro atual."}
+              </div>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-3 mt-4">
+          {/* Busca */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[240px] max-w-md">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={proposalSearchInput}
+                onChange={(e) => setProposalSearchInput(e.target.value)}
+                placeholder="Buscar por título da proposta…"
+                className="h-9 pl-8 pr-8 text-sm"
+              />
+              {proposalSearchInput && (
+                <button
+                  type="button"
+                  onClick={() => setProposalSearchInput("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {(statusFilter !== "all" || sellerFilter !== "all" || proposalSearch) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-xs"
+                onClick={() => { setStatusFilter("all"); setSellerFilter("all"); setProposalSearchInput(""); setProposalSearch(""); }}
+              >
+                Limpar filtros
+              </Button>
+            )}
+          </div>
           {/* Filtros */}
           <div className="flex flex-wrap gap-2 items-center pb-1">
             <div className="flex flex-wrap gap-1.5 items-center">
