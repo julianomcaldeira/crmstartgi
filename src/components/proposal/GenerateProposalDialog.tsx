@@ -10,9 +10,17 @@ import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
-import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench } from "lucide-react";
+import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench, X } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { proposalPublicUrl } from "@/lib/publicUrls";
+import {
+  IGANHEI_SLIDE2_CARDS,
+  IGANHEI_SLIDE2_DEFAULT_IDS,
+  IGANHEI_SLIDE2_PLACEHOLDER,
+  buildSlide2CardsHtml,
+} from "@/lib/iganheiCards";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   open: boolean;
@@ -34,7 +42,13 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"editor" | "preview">("editor");
+  const [slide2Cards, setSlide2Cards] = useState<string[]>(IGANHEI_SLIDE2_DEFAULT_IDS);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  const hasSlide2Placeholder = useMemo(
+    () => blocks.some((b: any) => typeof b?.html === "string" && b.html.includes(IGANHEI_SLIDE2_PLACEHOLDER)),
+    [blocks]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -63,13 +77,15 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const variables = useMemo(() => ({
     ...buildVariableContext({ client, opportunity, seller, validity_days: validityDays }),
     _page: pageSettings,
-  }), [client, opportunity, seller, validityDays, pageSettings]);
+    slide2_cards_html: buildSlide2CardsHtml(slide2Cards),
+  }), [client, opportunity, seller, validityDays, pageSettings, slide2Cards]);
 
   const pickTemplate = (tpl: any) => {
     setTemplateId(tpl.id);
     // Deep clone with new ids
     const cloned: ProposalBlock[] = (tpl.blocks || []).map((b: any) => ({ ...b, id: crypto.randomUUID() }));
     setBlocks(cloned);
+    setSlide2Cards(IGANHEI_SLIDE2_DEFAULT_IDS);
     setStep("edit");
   };
   const pickBlank = () => {
@@ -266,8 +282,67 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                 <TabsTrigger value="editor"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
-              <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0">
-                <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
+              <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
+                {hasSlide2Placeholder && (
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div>
+                        <Label className="text-sm font-semibold">Slide 2 — Cenários e Desafios</Label>
+                        <p className="text-xs text-muted-foreground">Escolha 4 cards para personalizar a proposta com os desafios mais relevantes para o cliente.</p>
+                      </div>
+                      <Badge variant={slide2Cards.length === 4 ? "default" : "destructive"}>
+                        {slide2Cards.length}/4 selecionados
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {[0, 1, 2, 3].map((idx) => {
+                        const value = slide2Cards[idx] || "";
+                        const used = new Set(slide2Cards.filter((_, i) => i !== idx));
+                        return (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-12">Card {idx + 1}</span>
+                            <Select
+                              value={value}
+                              onValueChange={(v) => {
+                                const next = [...slide2Cards];
+                                next[idx] = v;
+                                setSlide2Cards(next);
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {IGANHEI_SLIDE2_CARDS.filter((c) => c.id === value || !used.has(c.id)).map((c) => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    {c.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {value && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => {
+                                  const next = slide2Cards.filter((_, i) => i !== idx);
+                                  setSlide2Cards(next);
+                                }}
+                                title="Remover"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1 overflow-hidden">
+                  <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
+                </div>
               </TabsContent>
               <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 mt-0 bg-gray-100">
                 <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
