@@ -31,6 +31,10 @@ export default function Propostas() {
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(() => searchParams.get("product") || null);
+  const [templateSearch, setTemplateSearch] = useState<string>(() => searchParams.get("tq") || "");
+  const [templateSellerFilter, setTemplateSellerFilter] = useState<string>(() => searchParams.get("tseller") || "all");
+  const [proposalSearch, setProposalSearch] = useState<string>(() => searchParams.get("pq") || "");
+  const [proposalSearchInput, setProposalSearchInput] = useState<string>(() => searchParams.get("pq") || "");
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
   const [aggregatesLoading, setAggregatesLoading] = useState(false);
