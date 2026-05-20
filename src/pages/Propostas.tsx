@@ -207,6 +207,16 @@ export default function Propostas() {
         .range(from, to);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      if (selectedProductId) {
+        if (!productTemplateIds.length) {
+          setProposals([]);
+          setProposalsTotal(0);
+          setProposalsLoading(false);
+          setLoading(false);
+          return;
+        }
+        q = q.in("template_id", productTemplateIds);
+      }
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
