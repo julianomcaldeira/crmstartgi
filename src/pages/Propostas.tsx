@@ -122,6 +122,14 @@ export default function Propostas() {
       let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      if (selectedProductId) {
+        if (!productTemplateIds.length) {
+          setAggregates({ total: 0, sent: 0, viewed: 0, accepted: 0, rejected: 0, totalValue: 0, avgScore: 0, uniqueVisitors: 0 });
+          setAggregatesLoading(false);
+          return;
+        }
+        q = q.in("template_id", productTemplateIds);
+      }
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data || []) as any[];
