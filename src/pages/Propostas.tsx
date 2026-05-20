@@ -56,6 +56,17 @@ export default function Propostas() {
   const productTemplateIds = productTemplates.map((t) => t.id);
   const selectedProduct = selectedProductId ? products.find((p) => p.id === selectedProductId) : null;
 
+  // Client-side filter for the Templates tab (search by name/descrição + vendedor)
+  const filteredProductTemplates = productTemplates.filter((t) => {
+    if (templateSellerFilter !== "all" && t.created_by !== templateSellerFilter) return false;
+    if (templateSearch.trim()) {
+      const q = templateSearch.trim().toLowerCase();
+      const hay = `${t.name || ""} ${t.description || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
