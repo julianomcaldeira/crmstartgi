@@ -141,11 +141,32 @@ export default function Propostas() {
 
   const loadAll = async () => {
     setLoading(true);
-    const tplRes = await supabase.from("proposal_templates").select("*").order("created_at", { ascending: false });
+    const [tplRes, prodRes] = await Promise.all([
+      supabase.from("proposal_templates").select("*").order("created_at", { ascending: false }),
+      supabase.from("products").select("*").eq("active", true).order("name"),
+    ]);
     setTemplates(tplRes.data || []);
+    setProducts(prodRes.data || []);
     await Promise.all([loadProposals(1), loadSellers(), loadAggregates()]);
     setProposalsPage(1);
     setLoading(false);
+  };
+
+  const openProductTemplate = (product: any) => {
+    const existing = templates.find((t) => t.category === product.id);
+    if (existing) {
+      openEditTemplate(existing);
+      setTab("templates");
+      return;
+    }
+    setEditing(null);
+    setName(`Template — ${product.name}`);
+    setDescription(product.description || "");
+    setColor("#22c55e");
+    setBlocks([newBlock("richtext")]);
+    setEditorOpen(true);
+    // Stash product id to use on save
+    setPendingProductId(product.id);
   };
 
   const loadProposals = async (page: number) => {
