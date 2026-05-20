@@ -567,6 +567,7 @@ export default function Propostas() {
           )}
         </TabsContent>
       </Tabs>
+      )}
 
       {/* Editor de Template */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
