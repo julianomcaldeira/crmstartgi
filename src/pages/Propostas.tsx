@@ -223,6 +223,7 @@ export default function Propostas() {
     setDescription("");
     setColor("#22c55e");
     setBlocks([newBlock("richtext")]);
+    setPendingProductId(null);
     setEditorOpen(true);
   };
   const openEditTemplate = (t: any) => {
@@ -231,6 +232,7 @@ export default function Propostas() {
     setDescription(t.description || "");
     setColor(t.thumbnail_color || "#22c55e");
     setBlocks(t.blocks || []);
+    setPendingProductId(t.category || null);
     setEditorOpen(true);
   };
   const saveTemplate = async () => {
@@ -238,7 +240,7 @@ export default function Propostas() {
       if (!name.trim()) { toast.error("Informe um nome"); return; }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
-      const payload: any = { name, description, thumbnail_color: color, blocks: blocks as any, is_active: true };
+      const payload: any = { name, description, thumbnail_color: color, blocks: blocks as any, is_active: true, category: pendingProductId };
       if (editing) {
         const r = await supabase.from("proposal_templates").update(payload).eq("id", editing.id);
         if (r.error) throw r.error;
