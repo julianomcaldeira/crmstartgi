@@ -73,18 +73,24 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length, proposalSearch]);
 
   useEffect(() => {
     if (hasAccess) loadAggregates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
+  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length, proposalSearch]);
+
+  // Debounce search input → committed proposalSearch (used by queries)
+  useEffect(() => {
+    const t = setTimeout(() => setProposalSearch(proposalSearchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [proposalSearchInput]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, sellerFilter, selectedProductId]);
+  }, [statusFilter, sellerFilter, selectedProductId, proposalSearch]);
 
   // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
@@ -94,9 +100,12 @@ export default function Propostas() {
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
     if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
     if (selectedProductId) next.set("product", selectedProductId); else next.delete("product");
+    if (templateSearch) next.set("tq", templateSearch); else next.delete("tq");
+    if (templateSellerFilter !== "all") next.set("tseller", templateSellerFilter); else next.delete("tseller");
+    if (proposalSearch) next.set("pq", proposalSearch); else next.delete("pq");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId, templateSearch, templateSellerFilter, proposalSearch]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
