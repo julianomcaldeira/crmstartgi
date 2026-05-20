@@ -30,6 +30,7 @@ export default function Propostas() {
   const [proposalsPage, setProposalsPage] = useState(() => Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(() => searchParams.get("product") || null);
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
   const [aggregatesLoading, setAggregatesLoading] = useState(false);
@@ -43,6 +44,13 @@ export default function Propostas() {
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState<string | null>(null);
+
+  // Templates and proposals scoped to the currently selected product
+  const productTemplates = selectedProductId
+    ? templates.filter((t) => t.category === selectedProductId)
+    : [];
+  const productTemplateIds = productTemplates.map((t) => t.id);
+  const selectedProduct = selectedProductId ? products.find((p) => p.id === selectedProductId) : null;
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
