@@ -170,22 +170,11 @@ export default function Propostas() {
     setLoading(false);
   };
 
-  const openProductTemplate = (product: any) => {
-    const existing = templates.find((t) => t.category === product.id);
-    if (existing) {
-      openEditTemplate(existing);
-      setTab("templates");
-      return;
-    }
-    setEditing(null);
-    setName(`Template — ${product.name}`);
-    setDescription(product.description || "");
-    setColor("#22c55e");
-    setBlocks([newBlock("richtext")]);
-    setEditorOpen(true);
-    // Stash product id to use on save
-    setPendingProductId(product.id);
+  const selectProduct = (product: any) => {
+    setSelectedProductId((cur) => (cur === product.id ? null : product.id));
+    setTab("templates");
   };
+
 
   const loadProposals = async (page: number) => {
     setProposalsLoading(true);
