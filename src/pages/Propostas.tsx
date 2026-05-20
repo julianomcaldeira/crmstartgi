@@ -246,11 +246,12 @@ export default function Propostas() {
 
   const openNewTemplate = () => {
     setEditing(null);
-    setName("");
-    setDescription("");
+    const productName = selectedProduct?.name;
+    setName(productName ? `Template — ${productName}` : "");
+    setDescription(selectedProduct?.description || "");
     setColor("#22c55e");
     setBlocks([newBlock("richtext")]);
-    setPendingProductId(null);
+    setPendingProductId(selectedProductId || null);
     setEditorOpen(true);
   };
   const openEditTemplate = (t: any) => {
