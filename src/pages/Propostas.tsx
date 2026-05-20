@@ -185,8 +185,9 @@ export default function Propostas() {
   };
 
   const selectProduct = (product: any) => {
+    // Toggle off if same product; otherwise select and KEEP the current tab so
+    // Templates/Propostas Geradas stay coerentes com o card escolhido.
     setSelectedProductId((cur) => (cur === product.id ? null : product.id));
-    setTab("templates");
   };
 
 
