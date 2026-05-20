@@ -10,9 +10,17 @@ import { toast } from "sonner";
 import { ProposalBlock, buildVariableContext, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
-import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench } from "lucide-react";
+import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench, X } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { proposalPublicUrl } from "@/lib/publicUrls";
+import {
+  IGANHEI_SLIDE2_CARDS,
+  IGANHEI_SLIDE2_DEFAULT_IDS,
+  IGANHEI_SLIDE2_PLACEHOLDER,
+  buildSlide2CardsHtml,
+} from "@/lib/iganheiCards";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   open: boolean;
