@@ -118,9 +118,15 @@ export default function Propostas() {
   };
 
   const loadSellers = async () => {
-    // Distinct created_by from proposals + their full_name
-    const { data: props } = await supabase.from("proposals").select("created_by");
-    const ids = Array.from(new Set((props || []).map((p: any) => p.created_by).filter(Boolean))) as string[];
+    // Distinct creators from proposals AND templates
+    const [propsRes, tplsRes] = await Promise.all([
+      supabase.from("proposals").select("created_by"),
+      supabase.from("proposal_templates").select("created_by"),
+    ]);
+    const ids = Array.from(new Set([
+      ...((propsRes.data || []).map((p: any) => p.created_by)),
+      ...((tplsRes.data || []).map((p: any) => p.created_by)),
+    ].filter(Boolean))) as string[];
     if (!ids.length) { setSellers([]); return; }
     const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", ids);
     setSellers(((profs || []) as any[])
