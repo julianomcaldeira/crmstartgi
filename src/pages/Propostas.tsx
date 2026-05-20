@@ -143,6 +143,7 @@ export default function Propostas() {
         }
         q = q.in("template_id", productTemplateIds);
       }
+      if (proposalSearch) q = q.ilike("title", `%${proposalSearch}%`);
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data || []) as any[];
