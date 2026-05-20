@@ -329,27 +329,31 @@ export default function Propostas() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {products.map((p) => {
-                const hasTemplate = templates.some((t) => t.category === p.id);
+                const tplCount = templates.filter((t) => t.category === p.id).length;
+                const isSelected = selectedProductId === p.id;
                 return (
                   <button
                     key={p.id}
-                    onClick={() => openProductTemplate(p)}
-                    className="group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2"
+                    onClick={() => selectProduct(p)}
+                    aria-pressed={isSelected}
+                    className={`group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2 ${
+                      isSelected ? "border-primary ring-2 ring-primary/30 shadow-md" : ""
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
                         <Package className="h-5 w-5" />
                       </div>
-                      <Badge variant={hasTemplate ? "default" : "outline"} className="text-[10px]">
-                        {hasTemplate ? "Template pronto" : "Sem template"}
+                      <Badge variant={tplCount > 0 ? "default" : "outline"} className="text-[10px]">
+                        {tplCount > 0 ? `${tplCount} template${tplCount > 1 ? "s" : ""}` : "Sem template"}
                       </Badge>
                     </div>
-                    <div className="font-semibold text-sm leading-tight group-hover:text-primary line-clamp-2">{p.name}</div>
+                    <div className={`font-semibold text-sm leading-tight line-clamp-2 ${isSelected ? "text-primary" : "group-hover:text-primary"}`}>{p.name}</div>
                     {p.description && (
                       <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>
                     )}
                     <div className="text-[11px] text-muted-foreground mt-1">
-                      {hasTemplate ? "Clique para editar o template" : "Clique para criar o template"}
+                      {isSelected ? "Selecionado — veja abaixo" : "Clique para ver templates e propostas"}
                     </div>
                   </button>
                 );
@@ -359,10 +363,16 @@ export default function Propostas() {
         </CardContent>
       </Card>
 
+      {!selectedProductId && products.length > 0 && (
+        <div className="text-center py-10 text-sm text-muted-foreground border rounded-lg bg-muted/20">
+          Selecione um produto acima para visualizar seus templates e propostas geradas.
+        </div>
+      )}
 
+      {selectedProductId && (
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
+          <TabsTrigger value="templates">Templates ({productTemplates.length})</TabsTrigger>
           <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
