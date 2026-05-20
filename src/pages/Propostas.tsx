@@ -52,6 +52,7 @@ export default function Propostas() {
   const [color, setColor] = useState("#22c55e");
   const [blocks, setBlocks] = useState<ProposalBlock[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [pendingProductId, setPendingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     checkAccess();
