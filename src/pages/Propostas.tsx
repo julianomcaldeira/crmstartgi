@@ -30,6 +30,7 @@ export default function Propostas() {
   const [proposalsPage, setProposalsPage] = useState(() => Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1));
   const [statusFilter, setStatusFilter] = useState<string>(() => searchParams.get("status") || "all");
   const [sellerFilter, setSellerFilter] = useState<string>(() => searchParams.get("seller") || "all");
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(() => searchParams.get("product") || null);
   const [sellers, setSellers] = useState<{ id: string; full_name: string }[]>([]);
   const [aggregates, setAggregates] = useState<{ total: number; sent: number; viewed: number; accepted: number; rejected: number; totalValue: number; avgScore: number; uniqueVisitors: number } | null>(null);
   const [aggregatesLoading, setAggregatesLoading] = useState(false);
@@ -43,6 +44,13 @@ export default function Propostas() {
   const [loading, setLoading] = useState(true);
   const [proposalsLoading, setProposalsLoading] = useState(false);
   const [proposalsError, setProposalsError] = useState<string | null>(null);
+
+  // Templates and proposals scoped to the currently selected product
+  const productTemplates = selectedProductId
+    ? templates.filter((t) => t.category === selectedProductId)
+    : [];
+  const productTemplateIds = productTemplates.map((t) => t.id);
+  const selectedProduct = selectedProductId ? products.find((p) => p.id === selectedProductId) : null;
 
   // Editor state
   const [editorOpen, setEditorOpen] = useState(false);
@@ -61,18 +69,18 @@ export default function Propostas() {
   useEffect(() => {
     if (hasAccess) loadProposals(proposalsPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [proposalsPage, hasAccess, statusFilter, sellerFilter]);
+  }, [proposalsPage, hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
 
   useEffect(() => {
     if (hasAccess) loadAggregates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasAccess, statusFilter, sellerFilter]);
+  }, [hasAccess, statusFilter, sellerFilter, selectedProductId, templates.length]);
 
   // Reset to page 1 when filter changes
   useEffect(() => {
     if (hasAccess && proposalsPage !== 1) setProposalsPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, sellerFilter]);
+  }, [statusFilter, sellerFilter, selectedProductId]);
 
   // Persist tab/page/status/seller filter into the URL so reload/back keeps state
   useEffect(() => {
@@ -81,9 +89,10 @@ export default function Propostas() {
     if (proposalsPage > 1) next.set("page", String(proposalsPage)); else next.delete("page");
     if (statusFilter !== "all") next.set("status", statusFilter); else next.delete("status");
     if (sellerFilter !== "all") next.set("seller", sellerFilter); else next.delete("seller");
+    if (selectedProductId) next.set("product", selectedProductId); else next.delete("product");
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, proposalsPage, statusFilter, sellerFilter]);
+  }, [tab, proposalsPage, statusFilter, sellerFilter, selectedProductId]);
 
   const checkAccess = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -113,6 +122,14 @@ export default function Propostas() {
       let q = supabase.from("proposals").select("status, total_value, engagement_score, unique_visitors, view_count");
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      if (selectedProductId) {
+        if (!productTemplateIds.length) {
+          setAggregates({ total: 0, sent: 0, viewed: 0, accepted: 0, rejected: 0, totalValue: 0, avgScore: 0, uniqueVisitors: 0 });
+          setAggregatesLoading(false);
+          return;
+        }
+        q = q.in("template_id", productTemplateIds);
+      }
       const { data, error } = await q;
       if (error) throw error;
       const rows = (data || []) as any[];
@@ -153,22 +170,11 @@ export default function Propostas() {
     setLoading(false);
   };
 
-  const openProductTemplate = (product: any) => {
-    const existing = templates.find((t) => t.category === product.id);
-    if (existing) {
-      openEditTemplate(existing);
-      setTab("templates");
-      return;
-    }
-    setEditing(null);
-    setName(`Template — ${product.name}`);
-    setDescription(product.description || "");
-    setColor("#22c55e");
-    setBlocks([newBlock("richtext")]);
-    setEditorOpen(true);
-    // Stash product id to use on save
-    setPendingProductId(product.id);
+  const selectProduct = (product: any) => {
+    setSelectedProductId((cur) => (cur === product.id ? null : product.id));
+    setTab("templates");
   };
+
 
   const loadProposals = async (page: number) => {
     setProposalsLoading(true);
@@ -190,6 +196,16 @@ export default function Propostas() {
         .range(from, to);
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       if (sellerFilter !== "all") q = q.eq("created_by", sellerFilter);
+      if (selectedProductId) {
+        if (!productTemplateIds.length) {
+          setProposals([]);
+          setProposalsTotal(0);
+          setProposalsLoading(false);
+          setLoading(false);
+          return;
+        }
+        q = q.in("template_id", productTemplateIds);
+      }
       const propRes: any = await Promise.race([q, timeout]);
       if (propRes.error) throw propRes.error;
       const props = propRes.data || [];
@@ -219,11 +235,12 @@ export default function Propostas() {
 
   const openNewTemplate = () => {
     setEditing(null);
-    setName("");
-    setDescription("");
+    const productName = selectedProduct?.name;
+    setName(productName ? `Template — ${productName}` : "");
+    setDescription(selectedProduct?.description || "");
     setColor("#22c55e");
     setBlocks([newBlock("richtext")]);
-    setPendingProductId(null);
+    setPendingProductId(selectedProductId || null);
     setEditorOpen(true);
   };
   const openEditTemplate = (t: any) => {
@@ -312,27 +329,31 @@ export default function Propostas() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
               {products.map((p) => {
-                const hasTemplate = templates.some((t) => t.category === p.id);
+                const tplCount = templates.filter((t) => t.category === p.id).length;
+                const isSelected = selectedProductId === p.id;
                 return (
                   <button
                     key={p.id}
-                    onClick={() => openProductTemplate(p)}
-                    className="group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2"
+                    onClick={() => selectProduct(p)}
+                    aria-pressed={isSelected}
+                    className={`group text-left rounded-lg border bg-card hover:border-primary hover:shadow-md transition-all p-4 flex flex-col gap-2 ${
+                      isSelected ? "border-primary ring-2 ring-primary/30 shadow-md" : ""
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
                         <Package className="h-5 w-5" />
                       </div>
-                      <Badge variant={hasTemplate ? "default" : "outline"} className="text-[10px]">
-                        {hasTemplate ? "Template pronto" : "Sem template"}
+                      <Badge variant={tplCount > 0 ? "default" : "outline"} className="text-[10px]">
+                        {tplCount > 0 ? `${tplCount} template${tplCount > 1 ? "s" : ""}` : "Sem template"}
                       </Badge>
                     </div>
-                    <div className="font-semibold text-sm leading-tight group-hover:text-primary line-clamp-2">{p.name}</div>
+                    <div className={`font-semibold text-sm leading-tight line-clamp-2 ${isSelected ? "text-primary" : "group-hover:text-primary"}`}>{p.name}</div>
                     {p.description && (
                       <div className="text-xs text-muted-foreground line-clamp-2">{p.description}</div>
                     )}
                     <div className="text-[11px] text-muted-foreground mt-1">
-                      {hasTemplate ? "Clique para editar o template" : "Clique para criar o template"}
+                      {isSelected ? "Selecionado — veja abaixo" : "Clique para ver templates e propostas"}
                     </div>
                   </button>
                 );
@@ -342,17 +363,23 @@ export default function Propostas() {
         </CardContent>
       </Card>
 
+      {!selectedProductId && products.length > 0 && (
+        <div className="text-center py-10 text-sm text-muted-foreground border rounded-lg bg-muted/20">
+          Selecione um produto acima para visualizar seus templates e propostas geradas.
+        </div>
+      )}
 
+      {selectedProductId && (
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="templates">Templates ({templates.length})</TabsTrigger>
+          <TabsTrigger value="templates">Templates ({productTemplates.length})</TabsTrigger>
           <TabsTrigger value="proposals">Propostas Geradas ({proposalsTotal})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates" className="space-y-3 mt-4">
           <Button onClick={openNewTemplate}><Plus className="h-4 w-4 mr-1" /> Novo template</Button>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {templates.map((t) => (
+            {productTemplates.map((t) => (
               <Card key={t.id}>
                 <div className="h-2 rounded-t" style={{ background: t.thumbnail_color || "#22c55e" }} />
                 <CardHeader className="pb-2">
@@ -368,7 +395,7 @@ export default function Propostas() {
                 </CardContent>
               </Card>
             ))}
-            {!loading && templates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template ainda.</div>}
+            {!loading && productTemplates.length === 0 && <div className="col-span-full text-center text-muted-foreground py-8">Nenhum template para este produto ainda. Clique em "Novo template" acima.</div>}
           </div>
         </TabsContent>
 
@@ -540,6 +567,7 @@ export default function Propostas() {
           )}
         </TabsContent>
       </Tabs>
+      )}
 
       {/* Editor de Template */}
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
