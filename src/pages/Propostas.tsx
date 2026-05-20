@@ -477,6 +477,38 @@ export default function Propostas() {
         </TabsContent>
 
         <TabsContent value="proposals" className="space-y-3 mt-4">
+          {/* Busca */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[240px] max-w-md">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={proposalSearchInput}
+                onChange={(e) => setProposalSearchInput(e.target.value)}
+                placeholder="Buscar por título da proposta…"
+                className="h-9 pl-8 pr-8 text-sm"
+              />
+              {proposalSearchInput && (
+                <button
+                  type="button"
+                  onClick={() => setProposalSearchInput("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {(statusFilter !== "all" || sellerFilter !== "all" || proposalSearch) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 text-xs"
+                onClick={() => { setStatusFilter("all"); setSellerFilter("all"); setProposalSearchInput(""); setProposalSearch(""); }}
+              >
+                Limpar filtros
+              </Button>
+            )}
+          </div>
           {/* Filtros */}
           <div className="flex flex-wrap gap-2 items-center pb-1">
             <div className="flex flex-wrap gap-1.5 items-center">
