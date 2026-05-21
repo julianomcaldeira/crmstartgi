@@ -322,27 +322,18 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
               </Card>
 
               <Card className="p-4">
-                <div className="font-semibold mb-1">2. Os dados do cliente estão corretos?</div>
-                {client ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-2">
-                    <div><span className="text-muted-foreground">Razão Social:</span> <strong>{client.company_name || "—"}</strong></div>
-                    <div><span className="text-muted-foreground">CNPJ:</span> {client.cnpj || "—"}</div>
-                    <div><span className="text-muted-foreground">E-mail:</span> {client.email || "—"}</div>
-                    <div><span className="text-muted-foreground">Telefone:</span> {client.phone || "—"}</div>
-                    <div className="md:col-span-2"><span className="text-muted-foreground">Cidade/UF:</span> {[client.city, client.state].filter(Boolean).join("/") || "—"}</div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-destructive">Nenhum cliente vinculado à oportunidade.</div>
-                )}
-              </Card>
-
-              <Card className="p-4">
-                <div className="font-semibold mb-1">3. O responsável pela proposta está correto?</div>
+                <div className="font-semibold mb-2">2. Responsável pela proposta</div>
                 {seller ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-2">
-                    <div><span className="text-muted-foreground">Nome:</span> <strong>{seller.full_name || "—"}</strong></div>
-                    <div><span className="text-muted-foreground">E-mail:</span> {seller.email || "—"}</div>
-                    <div><span className="text-muted-foreground">Telefone:</span> {seller.phone || "—"}</div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={seller.avatar_url || undefined} alt={seller.full_name || ""} />
+                      <AvatarFallback>{(seller.full_name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="text-sm space-y-0.5">
+                      <div className="font-semibold">{seller.full_name || "—"}</div>
+                      <div className="text-muted-foreground">{seller.email || "—"}</div>
+                      <div className="text-muted-foreground">{seller.phone || "—"}</div>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">Responsável não definido — será usado o usuário atual.</div>
@@ -352,19 +343,20 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
               {confirmHasSlide2 && (
                 <Card className="p-4">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="font-semibold">4. Escolha os 4 cards de Cenários e Desafios</div>
+                    <div className="font-semibold">3. Escolha os 4 cards de Cenários e Desafios</div>
                     <Badge variant={slide2Cards.filter(Boolean).length === 4 ? "default" : "destructive"}>
                       {slide2Cards.filter(Boolean).length}/4
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Selecione os desafios mais relevantes para esse cliente.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <p className="text-xs text-muted-foreground mb-3">Selecione os desafios mais relevantes para esse cliente.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {[0, 1, 2, 3].map((idx) => {
                       const value = slide2Cards[idx] || "";
                       const used = new Set(slide2Cards.filter((_, i) => i !== idx));
+                      const selected = IGANHEI_SLIDE2_CARDS.find((c) => c.id === value);
                       return (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground w-12">Card {idx + 1}</span>
+                        <div key={idx} className="space-y-1">
+                          <Label className="text-xs">Card {idx + 1}</Label>
                           <Select
                             value={value}
                             onValueChange={(v) => {
@@ -373,15 +365,23 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                               setSlide2Cards(next);
                             }}
                           >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Selecione..." />
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder="Selecione uma opção..." />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="max-h-72">
                               {IGANHEI_SLIDE2_CARDS.filter((c) => c.id === value || !used.has(c.id)).map((c) => (
-                                <SelectItem key={c.id} value={c.id} className="text-xs">{c.title}</SelectItem>
+                                <SelectItem key={c.id} value={c.id} className="text-xs">
+                                  <div className="flex flex-col py-0.5">
+                                    <span className="font-semibold">{c.title}</span>
+                                    <span className="text-[11px] text-muted-foreground">{c.description}</span>
+                                  </div>
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          {selected && (
+                            <p className="text-[11px] text-muted-foreground leading-snug">{selected.description}</p>
+                          )}
                         </div>
                       );
                     })}
