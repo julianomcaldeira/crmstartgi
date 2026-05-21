@@ -29,8 +29,9 @@ interface Props {
 }
 
 export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Props) {
-  const [step, setStep] = useState<"choose" | "edit">("choose");
+  const [step, setStep] = useState<"choose" | "confirm" | "edit">("choose");
   const [templates, setTemplates] = useState<any[]>([]);
+  const [product, setProduct] = useState<any>(null);
   const [client, setClient] = useState<any>(null);
   const [seller, setSeller] = useState<any>(null);
   const [title, setTitle] = useState("Proposta Comercial");
@@ -38,6 +39,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [blocks, setBlocks] = useState<ProposalBlock[]>([]);
   const [pageSettings, setPageSettings] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS);
   const [templateId, setTemplateId] = useState<string | null>(null);
+  const [autoTemplate, setAutoTemplate] = useState<any>(null);
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -50,16 +52,22 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     [blocks]
   );
 
+  const confirmHasSlide2 = useMemo(
+    () => (autoTemplate?.blocks || []).some((b: any) => typeof b?.html === "string" && b.html.includes(IGANHEI_SLIDE2_PLACEHOLDER)),
+    [autoTemplate]
+  );
+
   useEffect(() => {
     if (!open) return;
     setStep("choose");
     setProposalId(null);
     setShareToken(null);
+    setAutoTemplate(null);
     loadInitial();
   }, [open]);
 
   const loadInitial = async () => {
-    const [tplRes, clientRes, sellerRes] = await Promise.all([
+    const [tplRes, clientRes, sellerRes, productRes] = await Promise.all([
       supabase.from("proposal_templates").select("*").eq("is_active", true).order("created_at", { ascending: false }),
       opportunity?.client_id ? supabase.from("clients").select("*").eq("id", opportunity.client_id).maybeSingle() : Promise.resolve({ data: null } as any),
       opportunity?.assigned_to
@@ -67,11 +75,26 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         : supabase.auth.getUser().then(({ data }) => data.user
             ? supabase.from("profiles").select("full_name,email,phone").eq("id", data.user.id).maybeSingle()
             : ({ data: null } as any)),
+      opportunity?.product_id
+        ? supabase.from("products").select("id,name").eq("id", opportunity.product_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
     ]);
-    setTemplates(tplRes.data || []);
+    const tpls = tplRes.data || [];
+    setTemplates(tpls);
     setClient(clientRes.data);
     setSeller(sellerRes.data);
+    setProduct(productRes.data);
     setTitle(`Proposta Comercial - ${(clientRes.data as any)?.company_name || opportunity?.title || ""}`.slice(0, 100));
+
+    // Auto-pick template by product (proposal_templates.category stores product_id uuid)
+    if (opportunity?.product_id) {
+      const match = tpls.find((t: any) => t.category === opportunity.product_id);
+      if (match) {
+        setAutoTemplate(match);
+        setSlide2Cards(IGANHEI_SLIDE2_DEFAULT_IDS);
+        setStep("confirm");
+      }
+    }
   };
 
   const variables = useMemo(() => ({
@@ -82,7 +105,6 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
   const pickTemplate = (tpl: any) => {
     setTemplateId(tpl.id);
-    // Deep clone with new ids
     const cloned: ProposalBlock[] = (tpl.blocks || []).map((b: any) => ({ ...b, id: crypto.randomUUID() }));
     setBlocks(cloned);
     setSlide2Cards(IGANHEI_SLIDE2_DEFAULT_IDS);
@@ -92,6 +114,19 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     setTemplateId(null);
     setBlocks([]);
     setStep("edit");
+  };
+
+  const confirmAndGenerate = async () => {
+    if (!autoTemplate) return;
+    if (confirmHasSlide2 && slide2Cards.filter(Boolean).length !== 4) {
+      toast.error("Selecione 4 cards para o slide Cenários e Desafios");
+      return;
+    }
+    setTemplateId(autoTemplate.id);
+    const cloned: ProposalBlock[] = (autoTemplate.blocks || []).map((b: any) => ({ ...b, id: crypto.randomUUID() }));
+    setBlocks(cloned);
+    setStep("edit");
+    toast.success("Proposta criada com o template de " + (product?.name || "produto"));
   };
 
   const saveProposal = async (status: "draft" | "sent" = "draft") => {
