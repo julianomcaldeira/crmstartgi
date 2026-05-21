@@ -72,9 +72,9 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
       supabase.from("proposal_templates").select("*").eq("is_active", true).order("created_at", { ascending: false }),
       opportunity?.client_id ? supabase.from("clients").select("*").eq("id", opportunity.client_id).maybeSingle() : Promise.resolve({ data: null } as any),
       opportunity?.assigned_to
-        ? supabase.from("profiles").select("full_name,email,phone").eq("id", opportunity.assigned_to).maybeSingle()
+        ? supabase.from("profiles").select("full_name,email,phone,avatar_url").eq("id", opportunity.assigned_to).maybeSingle()
         : supabase.auth.getUser().then(({ data }) => data.user
-            ? supabase.from("profiles").select("full_name,email,phone").eq("id", data.user.id).maybeSingle()
+            ? supabase.from("profiles").select("full_name,email,phone,avatar_url").eq("id", data.user.id).maybeSingle()
             : ({ data: null } as any)),
       opportunity?.product_id
         ? supabase.from("products").select("id,name").eq("id", opportunity.product_id).maybeSingle()
