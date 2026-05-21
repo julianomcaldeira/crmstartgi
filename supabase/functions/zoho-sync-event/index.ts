@@ -108,11 +108,24 @@ Deno.serve(async (req) => {
     let zohoRes: Response;
 
     if (zohoEventId) {
-      // Update
+      // Zoho exige etag no update — busca evento atual para obter etag
+      let etag: string | null = null;
+      try {
+        const getRes = await fetch(`${calUrl}?eventid=${encodeURIComponent(zohoEventId)}`, {
+          headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
+        });
+        const getData = await getRes.json();
+        const evObj = getData?.events?.[0] || getData?.data?.[0] || getData;
+        etag = evObj?.etag || evObj?.ETAG || null;
+      } catch (e) {
+        console.warn("Falha ao buscar etag do evento Zoho", e);
+      }
+
+      const updatePayload = etag ? { ...eventData, etag } : eventData;
       zohoRes = await fetch(`${calUrl}/${zohoEventId}`, {
         method: "PUT",
         headers: headersZoho,
-        body: new URLSearchParams({ eventdata: JSON.stringify(eventData) }),
+        body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
       });
     } else {
       // Create
@@ -122,6 +135,7 @@ Deno.serve(async (req) => {
         body: new URLSearchParams({ eventdata: JSON.stringify(eventData) }),
       });
     }
+
     const zohoBody = await zohoRes.json();
     if (!zohoRes.ok) {
       console.error("Zoho calendar error", zohoBody);
