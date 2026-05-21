@@ -700,8 +700,8 @@ export default function Propostas() {
       </Dialog>
 
       <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-[900px] w-[95vw] h-[92vh] overflow-y-auto p-0 bg-gray-100">
-          <div className="mx-auto shadow-lg my-4" style={{ width: 794 }}>
+        <DialogContent className="max-w-[1400px] w-[98vw] h-[96vh] overflow-y-auto p-0 bg-gray-100">
+          <div className="mx-auto shadow-lg my-4" style={{ width: 1100 }}>
             <ProposalRenderer blocks={blocks} variables={previewVars} brandColor={color} />
           </div>
         </DialogContent>
