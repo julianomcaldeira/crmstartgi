@@ -206,6 +206,9 @@ export function buildVariableContext(opts: {
       monthly_value: opts.opportunity?.monthly_value
         ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(opts.opportunity.monthly_value)
         : "",
+      implementation_value: opts.opportunity?.implementation_value
+        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(opts.opportunity.implementation_value)
+        : "",
     },
     seller: {
       name: opts.seller?.full_name || "",
