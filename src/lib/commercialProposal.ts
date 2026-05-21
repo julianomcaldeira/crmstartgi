@@ -1,5 +1,6 @@
 // Types and helpers for the Commercial Proposal (i-Ganhei) module.
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhone } from "@/components/ui/masked-input";
 
 export type CommercialSectionType =
   | "capa" | "termo" | "cards" | "list" | "benefits"
