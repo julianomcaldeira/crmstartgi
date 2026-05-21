@@ -331,29 +331,10 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                 </div>
               </Card>
 
-              <Card className="p-4">
-                <div className="font-semibold mb-2">2. Responsável pela proposta</div>
-                {seller ? (
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-14 w-14">
-                      <AvatarImage src={seller.avatar_url || undefined} alt={seller.full_name || ""} />
-                      <AvatarFallback>{(seller.full_name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div className="text-sm space-y-0.5">
-                      <div className="font-semibold">{seller.full_name || "—"}</div>
-                      <div className="text-muted-foreground">{seller.email || "—"}</div>
-                      <div className="text-muted-foreground">{seller.phone || "—"}</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground">Responsável não definido — será usado o usuário atual.</div>
-                )}
-              </Card>
-
               {confirmHasSlide2 && (
                 <Card className="p-4">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="font-semibold">3. Escolha os 4 cards de Cenários e Desafios</div>
+                    <div className="font-semibold">2. Escolha os 4 cards de Cenários e Desafios</div>
                     <Badge variant={slide2Cards.filter(Boolean).length === 4 ? "default" : "destructive"}>
                       {slide2Cards.filter(Boolean).length}/4
                     </Badge>
@@ -398,6 +379,26 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                   </div>
                 </Card>
               )}
+
+              <Card className="p-4">
+                <div className="font-semibold mb-2">3. Responsável pela proposta</div>
+                {seller ? (
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-14 w-14">
+                      <AvatarImage src={seller.avatar_url || undefined} alt={seller.full_name || ""} />
+                      <AvatarFallback>{(seller.full_name || "?").slice(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="text-sm space-y-0.5">
+                      <div className="font-semibold">{seller.full_name || "—"}</div>
+                      <div className="text-muted-foreground">{seller.email || "—"}</div>
+                      <div className="text-muted-foreground">{seller.phone || "—"}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Responsável não definido — será usado o usuário atual.</div>
+                )}
+              </Card>
+
 
               <div className="flex flex-wrap justify-between gap-2 pt-2">
                 <Button variant="outline" onClick={() => setStep("choose")}>Escolher outro template</Button>
