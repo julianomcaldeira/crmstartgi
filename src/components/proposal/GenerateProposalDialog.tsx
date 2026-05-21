@@ -294,6 +294,110 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
           </div>
         )}
 
+        {step === "confirm" && autoTemplate && (
+          <div className="p-6 overflow-y-auto flex-1">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div className="rounded-lg border bg-primary/5 p-4">
+                <div className="text-xs uppercase tracking-wide text-primary font-semibold mb-1">Template selecionado automaticamente</div>
+                <div className="font-semibold">{autoTemplate.name}</div>
+                <div className="text-xs text-muted-foreground">Produto: {product?.name || "—"} • {(autoTemplate.blocks || []).length} blocos</div>
+              </div>
+
+              <Card className="p-4">
+                <div className="font-semibold mb-1">1. Os dados da oportunidade estão corretos?</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                  <div>
+                    <Label className="text-xs">Título da proposta</Label>
+                    <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Validade (dias)</Label>
+                    <Input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} />
+                  </div>
+                  <div className="md:col-span-2 text-xs text-muted-foreground">
+                    Oportunidade: <strong className="text-foreground">{opportunity?.title}</strong>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <div className="font-semibold mb-1">2. Os dados do cliente estão corretos?</div>
+                {client ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-2">
+                    <div><span className="text-muted-foreground">Razão Social:</span> <strong>{client.company_name || "—"}</strong></div>
+                    <div><span className="text-muted-foreground">CNPJ:</span> {client.cnpj || "—"}</div>
+                    <div><span className="text-muted-foreground">E-mail:</span> {client.email || "—"}</div>
+                    <div><span className="text-muted-foreground">Telefone:</span> {client.phone || "—"}</div>
+                    <div className="md:col-span-2"><span className="text-muted-foreground">Cidade/UF:</span> {[client.city, client.state].filter(Boolean).join("/") || "—"}</div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-destructive">Nenhum cliente vinculado à oportunidade.</div>
+                )}
+              </Card>
+
+              <Card className="p-4">
+                <div className="font-semibold mb-1">3. O responsável pela proposta está correto?</div>
+                {seller ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-sm mt-2">
+                    <div><span className="text-muted-foreground">Nome:</span> <strong>{seller.full_name || "—"}</strong></div>
+                    <div><span className="text-muted-foreground">E-mail:</span> {seller.email || "—"}</div>
+                    <div><span className="text-muted-foreground">Telefone:</span> {seller.phone || "—"}</div>
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">Responsável não definido — será usado o usuário atual.</div>
+                )}
+              </Card>
+
+              {confirmHasSlide2 && (
+                <Card className="p-4">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="font-semibold">4. Escolha os 4 cards de Cenários e Desafios</div>
+                    <Badge variant={slide2Cards.filter(Boolean).length === 4 ? "default" : "destructive"}>
+                      {slide2Cards.filter(Boolean).length}/4
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Selecione os desafios mais relevantes para esse cliente.</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {[0, 1, 2, 3].map((idx) => {
+                      const value = slide2Cards[idx] || "";
+                      const used = new Set(slide2Cards.filter((_, i) => i !== idx));
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-12">Card {idx + 1}</span>
+                          <Select
+                            value={value}
+                            onValueChange={(v) => {
+                              const next = [...slide2Cards];
+                              next[idx] = v;
+                              setSlide2Cards(next);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {IGANHEI_SLIDE2_CARDS.filter((c) => c.id === value || !used.has(c.id)).map((c) => (
+                                <SelectItem key={c.id} value={c.id} className="text-xs">{c.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              <div className="flex flex-wrap justify-between gap-2 pt-2">
+                <Button variant="outline" onClick={() => setStep("choose")}>Escolher outro template</Button>
+                <Button onClick={confirmAndGenerate} disabled={!client}>
+                  <Sparkles className="h-4 w-4 mr-1" /> Confirmar e gerar proposta
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {step === "edit" && (
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="p-3 border-b flex flex-wrap gap-2 items-end bg-muted/30">
