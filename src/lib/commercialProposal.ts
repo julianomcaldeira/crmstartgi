@@ -1,5 +1,6 @@
 // Types and helpers for the Commercial Proposal (i-Ganhei) module.
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhone } from "@/components/ui/masked-input";
 
 export type CommercialSectionType =
   | "capa" | "termo" | "cards" | "list" | "benefits"
@@ -84,7 +85,7 @@ export async function resolveVariables(proposal: any): Promise<ProposalVars> {
     if (p) {
       vars.nome_vendedor = p.full_name || "";
       vars.email_vendedor = p.email || "";
-      vars.telefone_vendedor = (p as any).phone || "";
+      vars.telefone_vendedor = formatPhone((p as any).phone || "");
       vars.foto_vendedor = (p as any).avatar_url || "";
     }
   }
