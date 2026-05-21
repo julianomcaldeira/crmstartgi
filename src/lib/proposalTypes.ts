@@ -229,6 +229,7 @@ export const AVAILABLE_VARIABLES: { key: string; label: string }[] = [
   { key: "{{opportunity.title}}", label: "Oportunidade: Título" },
   { key: "{{opportunity.value}}", label: "Oportunidade: Valor total" },
   { key: "{{opportunity.monthly_value}}", label: "Oportunidade: Mensalidade" },
+  { key: "{{opportunity.implementation_value}}", label: "Oportunidade: Implantação" },
   { key: "{{seller.name}}", label: "Vendedor: Nome" },
   { key: "{{seller.email}}", label: "Vendedor: E-mail" },
   { key: "{{seller.phone}}", label: "Vendedor: Telefone" },
