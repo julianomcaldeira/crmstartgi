@@ -108,25 +108,72 @@ Deno.serve(async (req) => {
     let zohoRes: Response;
 
     if (zohoEventId) {
-      // Zoho exige etag no update — busca evento atual para obter etag
+      // Zoho exige etag no update — tenta várias rotas para descobrir o etag atual
       let etag: string | null = null;
-      try {
-        const getRes = await fetch(`${calUrl}?eventid=${encodeURIComponent(zohoEventId)}`, {
-          headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
-        });
-        const getData = await getRes.json();
-        const evObj = getData?.events?.[0] || getData?.data?.[0] || getData;
-        etag = evObj?.etag || evObj?.ETAG || null;
-      } catch (e) {
-        console.warn("Falha ao buscar etag do evento Zoho", e);
+      const tryExtractEtag = (obj: any): string | null => {
+        if (!obj || typeof obj !== "object") return null;
+        return obj.etag || obj.ETAG || obj.Etag || null;
+      };
+      const findInPayload = (data: any): string | null => {
+        if (!data) return null;
+        const candidates = [
+          data,
+          ...(Array.isArray(data?.events) ? data.events : []),
+          ...(Array.isArray(data?.data) ? data.data : []),
+        ];
+        for (const c of candidates) {
+          const e = tryExtractEtag(c);
+          if (e) return e;
+          // Procurar pelo uid correspondente
+          if (Array.isArray(c?.events)) {
+            for (const ev of c.events) {
+              if (ev?.uid === zohoEventId || ev?.eventid === zohoEventId) {
+                const e2 = tryExtractEtag(ev);
+                if (e2) return e2;
+              }
+            }
+          }
+        }
+        return null;
+      };
+
+      const endpoints = [
+        `${calUrl}/${encodeURIComponent(zohoEventId)}`,
+        `${calUrl}?eventid=${encodeURIComponent(zohoEventId)}`,
+        `${calUrl}?uid=${encodeURIComponent(zohoEventId)}`,
+      ];
+      for (const url of endpoints) {
+        try {
+          const getRes = await fetch(url, {
+            headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
+          });
+          const text = await getRes.text();
+          let getData: any;
+          try { getData = JSON.parse(text); } catch { getData = text; }
+          console.log(`[etag-fetch] ${url} -> ${getRes.status}`, typeof getData === "string" ? getData.slice(0, 300) : JSON.stringify(getData).slice(0, 500));
+          etag = findInPayload(getData);
+          if (etag) break;
+        } catch (e) {
+          console.warn("Falha ao buscar etag", url, e);
+        }
       }
 
-      const updatePayload = etag ? { ...eventData, etag } : eventData;
-      zohoRes = await fetch(`${calUrl}/${zohoEventId}`, {
-        method: "PUT",
-        headers: headersZoho,
-        body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
-      });
+      if (!etag) {
+        console.warn("[etag-fetch] etag não encontrado — recriando evento no Zoho");
+        // Fallback: recria o evento (cria novo e descarta o antigo id)
+        zohoRes = await fetch(calUrl, {
+          method: "POST",
+          headers: headersZoho,
+          body: new URLSearchParams({ eventdata: JSON.stringify(eventData) }),
+        });
+      } else {
+        const updatePayload = { ...eventData, etag };
+        zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
+          method: "PUT",
+          headers: headersZoho,
+          body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
+        });
+      }
     } else {
       // Create
       zohoRes = await fetch(calUrl, {
