@@ -105,11 +105,12 @@ Deno.serve(async (req) => {
     };
 
     let zohoEventId = ev.zoho_event_id as string | null;
+    let zohoEtag = (ev as any).zoho_etag as string | null;
     let zohoRes: Response;
 
     if (zohoEventId) {
-      // Zoho exige etag no update — tenta várias rotas para descobrir o etag atual
-      let etag: string | null = null;
+      // Tenta usar o etag salvo; se não houver, busca via GET (sem fallback de criação para evitar duplicatas)
+      let etag: string | null = zohoEtag || null;
       const tryExtractEtag = (obj: any): string | null => {
         if (!obj || typeof obj !== "object") return null;
         return obj.etag || obj.ETAG || obj.Etag || null;
@@ -124,56 +125,47 @@ Deno.serve(async (req) => {
         for (const c of candidates) {
           const e = tryExtractEtag(c);
           if (e) return e;
-          // Procurar pelo uid correspondente
           if (Array.isArray(c?.events)) {
-            for (const ev of c.events) {
-              if (ev?.uid === zohoEventId || ev?.eventid === zohoEventId) {
-                const e2 = tryExtractEtag(ev);
-                if (e2) return e2;
-              }
+            for (const evi of c.events) {
+              const e2 = tryExtractEtag(evi);
+              if (e2) return e2;
             }
           }
         }
         return null;
       };
 
-      const endpoints = [
-        `${calUrl}/${encodeURIComponent(zohoEventId)}`,
-        `${calUrl}?eventid=${encodeURIComponent(zohoEventId)}`,
-        `${calUrl}?uid=${encodeURIComponent(zohoEventId)}`,
-      ];
-      for (const url of endpoints) {
+      if (!etag) {
         try {
-          const getRes = await fetch(url, {
+          const getRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
             headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
           });
           const text = await getRes.text();
           let getData: any;
           try { getData = JSON.parse(text); } catch { getData = text; }
-          console.log(`[etag-fetch] ${url} -> ${getRes.status}`, typeof getData === "string" ? getData.slice(0, 300) : JSON.stringify(getData).slice(0, 500));
+          console.log(`[etag-fetch] ${getRes.status}`, typeof getData === "string" ? getData.slice(0, 200) : JSON.stringify(getData).slice(0, 300));
           etag = findInPayload(getData);
-          if (etag) break;
         } catch (e) {
-          console.warn("Falha ao buscar etag", url, e);
+          console.warn("Falha ao buscar etag", e);
         }
       }
 
       if (!etag) {
-        console.warn("[etag-fetch] etag não encontrado — recriando evento no Zoho");
-        // Fallback: recria o evento (cria novo e descarta o antigo id)
-        zohoRes = await fetch(calUrl, {
-          method: "POST",
-          headers: headersZoho,
-          body: new URLSearchParams({ eventdata: JSON.stringify(eventData) }),
-        });
-      } else {
-        const updatePayload = { ...eventData, etag };
-        zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
-          method: "PUT",
-          headers: headersZoho,
-          body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
-        });
+        // Sem etag não dá para atualizar com segurança. Para evitar duplicar eventos no Zoho,
+        // NÃO recriamos. Marcamos o status e instruímos o usuário.
+        await admin.from("pre_vendas_agenda").update({
+          sync_status: "etag_missing",
+          last_synced_at: new Date().toISOString(),
+        }).eq("id", ev.id);
+        throw new Error("Não foi possível atualizar o evento no Zoho (etag não encontrado). O evento original pode ter sido removido. Exclua este compromisso e crie-o novamente.");
       }
+
+      const updatePayload = { ...eventData, etag };
+      zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
+        method: "PUT",
+        headers: headersZoho,
+        body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
+      });
     } else {
       // Create
       zohoRes = await fetch(calUrl, {
@@ -192,9 +184,13 @@ Deno.serve(async (req) => {
     if (!zohoEventId) {
       zohoEventId = created?.uid || created?.eventid || null;
     }
+    // Captura o etag retornado para usar em futuras atualizações
+    const newEtag = created?.etag || created?.ETAG || created?.Etag || null;
+    if (newEtag) zohoEtag = newEtag;
 
     await admin.from("pre_vendas_agenda").update({
       zoho_event_id: zohoEventId,
+      zoho_etag: zohoEtag,
       last_synced_at: new Date().toISOString(),
       sync_status: "synced",
     }).eq("id", ev.id);
