@@ -206,6 +206,9 @@ export function buildVariableContext(opts: {
       monthly_value: opts.opportunity?.monthly_value
         ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(opts.opportunity.monthly_value)
         : "",
+      implementation_value: opts.opportunity?.implementation_value
+        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(opts.opportunity.implementation_value)
+        : "",
     },
     seller: {
       name: opts.seller?.full_name || "",
@@ -226,6 +229,7 @@ export const AVAILABLE_VARIABLES: { key: string; label: string }[] = [
   { key: "{{opportunity.title}}", label: "Oportunidade: Título" },
   { key: "{{opportunity.value}}", label: "Oportunidade: Valor total" },
   { key: "{{opportunity.monthly_value}}", label: "Oportunidade: Mensalidade" },
+  { key: "{{opportunity.implementation_value}}", label: "Oportunidade: Implantação" },
   { key: "{{seller.name}}", label: "Vendedor: Nome" },
   { key: "{{seller.email}}", label: "Vendedor: E-mail" },
   { key: "{{seller.phone}}", label: "Vendedor: Telefone" },
