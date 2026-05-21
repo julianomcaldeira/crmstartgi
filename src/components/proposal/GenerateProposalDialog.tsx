@@ -44,9 +44,19 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [proposalId, setProposalId] = useState<string | null>(null);
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState<"editor" | "preview">("editor");
+  const [tab, setTab] = useState<"editor" | "preview">("preview");
   const [slide2Cards, setSlide2Cards] = useState<string[]>(IGANHEI_SLIDE2_DEFAULT_IDS);
+  const [isPreVendas, setIsPreVendas] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return;
+      const { data: r } = await supabase.from("user_roles").select("role").eq("user_id", u.user.id);
+      setIsPreVendas((r || []).some((x: any) => x.role === "pre_vendas"));
+    })();
+  }, []);
 
   const hasSlide2Placeholder = useMemo(
     () => blocks.some((b: any) => typeof b?.html === "string" && b.html.includes(IGANHEI_SLIDE2_PLACEHOLDER)),
@@ -419,15 +429,18 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
               <TabsList className="mx-3 mt-2 self-start">
-                <TabsTrigger value="editor"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
+                {isPreVendas && (
+                  <TabsTrigger value="editor"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
+                )}
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
-              <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
-                <div className="flex-1 overflow-hidden">
-                  <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
-                </div>
-
-              </TabsContent>
+              {isPreVendas && (
+                <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
+                  <div className="flex-1 overflow-hidden">
+                    <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
+                  </div>
+                </TabsContent>
+              )}
               <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 mt-0 bg-gray-100">
                 <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
                   <ProposalRenderer blocks={blocks} variables={variables} />
