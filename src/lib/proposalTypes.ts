@@ -1,4 +1,5 @@
 // Tipos e utilitários para o construtor de propostas
+import { formatPhone } from "@/components/ui/masked-input";
 
 export type BlockType =
   | "richtext"
