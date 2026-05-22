@@ -1,4 +1,5 @@
 // Tipos e utilitários para o construtor de propostas
+import { formatPhone } from "@/components/ui/masked-input";
 
 export type BlockType =
   | "richtext"
@@ -213,7 +214,7 @@ export function buildVariableContext(opts: {
     seller: {
       name: opts.seller?.full_name || "",
       email: opts.seller?.email || "",
-      phone: opts.seller?.phone || "",
+      phone: formatPhone(opts.seller?.phone || ""),
     },
     date: { today: fmtDate, year: today.getFullYear() },
     validity_days: opts.validity_days ?? 30,
