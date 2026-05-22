@@ -215,6 +215,7 @@ export function buildVariableContext(opts: {
       name: opts.seller?.full_name || "",
       email: opts.seller?.email || "",
       phone: formatPhone(opts.seller?.phone || ""),
+      avatar_url: opts.seller?.avatar_url || "",
       initials: (opts.seller?.full_name || "")
         .trim()
         .split(/\s+/)
