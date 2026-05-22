@@ -215,6 +215,13 @@ export function buildVariableContext(opts: {
       name: opts.seller?.full_name || "",
       email: opts.seller?.email || "",
       phone: formatPhone(opts.seller?.phone || ""),
+      initials: (opts.seller?.full_name || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((p) => p[0]?.toUpperCase() || "")
+        .join("") || "•",
     },
     date: { today: fmtDate, year: today.getFullYear() },
     validity_days: opts.validity_days ?? 30,
