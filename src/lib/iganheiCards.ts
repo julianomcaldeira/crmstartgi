@@ -42,7 +42,7 @@ export function buildSlide2CardsHtml(ids: string[]): string {
   return cards
     .map(
       (c) =>
-        `<div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:10px 14px;border-radius:8px;"><div style="font-weight:700;margin-bottom:2px;font-size:13px;">${c.title}</div><div style="font-size:12px;color:#475569;">${c.description}</div></div>`
+        `<div style="position:relative;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);border:1px solid #bbf7d0;border-radius:12px;padding:14px 16px 14px 20px;box-shadow:0 2px 6px -2px rgba(16,185,129,.18),0 1px 2px rgba(15,23,42,.04);overflow:hidden;"><span style="position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(180deg,#22c55e,#16a34a);"></span><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#22c55e;color:#fff;font-size:12px;font-weight:800;box-shadow:0 2px 4px rgba(34,197,94,.35);">✓</span><div style="font-weight:700;font-size:13px;color:#064e3b;letter-spacing:-.01em;">${c.title}</div></div><div style="font-size:12px;line-height:1.5;color:#475569;">${c.description}</div></div>`
     )
     .join("");
 }
