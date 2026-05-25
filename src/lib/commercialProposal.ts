@@ -58,6 +58,8 @@ export async function resolveVariables(proposal: any): Promise<ProposalVars> {
   vars.data_proposta = v.data_proposta || new Date().toLocaleDateString("pt-BR");
   vars.valor_implantacao = formatBRL(v.valor_implantacao ?? proposal.implementation_value);
   vars.valor_mensalidade = formatBRL(v.valor_mensalidade ?? proposal.monthly_value);
+  vars.oportunidade_implantacao = vars.valor_implantacao;
+  vars.oportunidade_mensalidade = vars.valor_mensalidade;
   vars.validade_proposta = String(v.validade_proposta ?? proposal.validity_days ?? 30);
   vars.vigencia_inicial = v.vigencia_inicial || "12 meses";
   vars.forma_pagamento = v.forma_pagamento || "Boleto bancário";
