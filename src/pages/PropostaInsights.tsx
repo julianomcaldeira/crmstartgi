@@ -377,7 +377,7 @@ export default function PropostaInsights() {
                   const pct = Math.round((s.count / max) * 100);
                   return (
                     <div key={s.id}>
-                      <div className="flex justify-between text-xs mb-1"><span className="font-mono truncate max-w-[60%]">{s.id}</span><span className="text-muted-foreground">{s.count} views</span></div>
+                      <div className="flex justify-between text-xs mb-1"><span className="truncate max-w-[70%]" title={s.id}>{s.label}</span><span className="text-muted-foreground">{s.count} views</span></div>
                       <div className="h-2 bg-muted rounded"><div className="h-2 bg-primary rounded" style={{ width: `${pct}%` }} /></div>
                     </div>
                   );
