@@ -10,7 +10,7 @@ interface Props {
 export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }: Props) {
   const ps: PageSettings = { ...DEFAULT_PAGE_SETTINGS, ...((variables as any)?._page || {}), ...(pageSettings || {}) };
   const brand = brandColor || ps.brandColor || "#22c55e";
-  const padMap = { compact: "32px 40px", normal: "48px 56px", spacious: "72px 80px" } as const;
+  const padMap = { compact: "32px 48px", normal: "56px 72px", spacious: "72px 88px" } as const;
   const pgPad = padMap[ps.pagePadding || "normal"];
   return (
     <div
@@ -29,14 +29,29 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
         </div>
       ))}
       <style>{`
-        .proposal-doc { line-height: 1.6; }
-        .proposal-doc .pg { padding: ${pgPad}; page-break-after: always; }
+        .proposal-doc { line-height: 1.5; }
+        /* Each block = one 270x180mm slide (3:2). Width follows the
+           container; height locks via aspect-ratio so HTML and PDF match. */
+        .proposal-doc .pg {
+          padding: ${pgPad};
+          page-break-after: always;
+          aspect-ratio: 3 / 2;
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          overflow: hidden;
+          background: #ffffff;
+        }
+        .proposal-doc [data-block-id] + [data-block-id] .pg { border-top: 1px solid #eef0f4; }
         .proposal-doc .pg:last-child { page-break-after: auto; }
         .proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-weight: 700; }
         .proposal-doc .pre-line { white-space: pre-line; }
-        .proposal-doc .richtext-block h1 { font-size: 32px; margin: 16px 0 12px; }
-        .proposal-doc .richtext-block h2 { font-size: 26px; margin: 16px 0 10px; }
-        .proposal-doc .richtext-block h3 { font-size: 20px; margin: 14px 0 8px; }
+        .proposal-doc .richtext-block { display: block; }
+        .proposal-doc .richtext-block h1 { font-size: 34px; margin: 12px 0 12px; }
+        .proposal-doc .richtext-block h2 { font-size: 28px; margin: 12px 0 10px; }
+        .proposal-doc .richtext-block h3 { font-size: 22px; margin: 10px 0 8px; }
         .proposal-doc .richtext-block p { margin: 8px 0; }
         .proposal-doc .richtext-block ul, .proposal-doc .richtext-block ol { padding-left: 24px; margin: 8px 0; }
         .proposal-doc .richtext-block ul { list-style: disc; }
