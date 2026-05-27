@@ -69,25 +69,31 @@
   box-shadow: 0 8px 20px -8px rgba(79,91,255,.5);
   flex-shrink: 0;
 }
-.ig-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.ig-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-.ig-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.ig-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; width: 100%; }
+.ig-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; width: 100%; }
+.ig-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; width: 100%; }
 
 .ig-cover {
   background: linear-gradient(135deg, var(--ig-primary) 0%, var(--ig-primary-dark) 100%);
   color: #fff;
   border-radius: 28px;
-  padding: 80px 64px;
+  padding: 88px 80px;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .ig-cover::after {
   content: ''; position: absolute; right: -120px; top: -120px;
-  width: 380px; height: 380px; border-radius: 50%;
+  width: 420px; height: 420px; border-radius: 50%;
   background: radial-gradient(circle, rgba(0,230,138,.35), transparent 70%);
 }
-.ig-cover h1 { color: #fff; font-size: 56px; }
-.ig-cover p  { color: rgba(255,255,255,.85); font-size: 19px; }
+.ig-cover h1 { color: #fff; font-size: 64px; }
+.ig-cover p  { color: rgba(255,255,255,.85); font-size: 20px; }
 .ig-cover .ig-eyebrow { background: rgba(255,255,255,.15); color: #fff; }
 
 .ig-pricing-card {
