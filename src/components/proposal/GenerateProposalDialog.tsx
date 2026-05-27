@@ -22,6 +22,7 @@ import {
 } from "@/lib/iganheiCards";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   open: boolean;
