@@ -12,7 +12,7 @@ import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
 import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import html2pdf from "html2pdf.js";
+
 import { proposalPublicUrl } from "@/lib/publicUrls";
 import {
   IGANHEI_SLIDE2_CARDS,
