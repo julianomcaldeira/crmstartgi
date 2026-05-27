@@ -228,19 +228,47 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     toast.success("Link copiado!");
   };
 
+  const openEmailDialog = async () => {
+    // Load contacts of opportunity's client
+    let contacts: Array<{ name: string; email: string }> = [];
+    if (opportunity?.client_id) {
+      const { data } = await supabase
+        .from("contacts")
+        .select("name,email")
+        .eq("client_id", opportunity.client_id)
+        .not("email", "is", null);
+      contacts = (data || [])
+        .filter((c: any) => c.email && c.email.trim())
+        .map((c: any) => ({ name: c.name, email: c.email.trim() }));
+    }
+    // Include client primary email if present and not already in contacts
+    if (client?.email && !contacts.some((c) => c.email.toLowerCase() === client.email.toLowerCase())) {
+      contacts.unshift({ name: client.company_name || "Cliente", email: client.email });
+    }
+    setContactEmails(contacts);
+    setSelectedEmails(contacts.map((c) => c.email));
+    setExtraEmail("");
+    setEmailDialogOpen(true);
+  };
+
   const sendByEmail = async () => {
-    let prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
-    if (!prop) return;
-    if (!client?.email) {
-      toast.error("Cliente sem e-mail cadastrado");
+    const extras = extraEmail
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    const recipients = Array.from(new Set([...selectedEmails, ...extras]));
+    if (recipients.length === 0) {
+      toast.error("Selecione ao menos um destinatário");
       return;
     }
-    setTab("preview");
-    await new Promise((r) => setTimeout(r, 300));
+    setSendingEmail(true);
     try {
+      let prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
+      if (!prop) return;
+      setTab("preview");
+      await new Promise((r) => setTimeout(r, 300));
       const blob = await generatePdfBlob();
       if (!blob) throw new Error("Falha ao gerar PDF");
-      // Upload to storage
       const { data: { user } } = await supabase.auth.getUser();
       const path = `${user!.id}/${prop.id}.pdf`;
       const { error: upErr } = await supabase.storage.from("proposals").upload(path, blob, { contentType: "application/pdf", upsert: true });
@@ -250,7 +278,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
       const shareUrl = proposalPublicUrl(prop.share_token || shareToken);
       const html = `
-        <p>Olá ${client.company_name || ""},</p>
+        <p>Olá ${client?.company_name || ""},</p>
         <p>Segue a proposta comercial conforme conversamos.</p>
         <p><strong>Acesse online:</strong> <a href="${shareUrl}">${shareUrl}</a></p>
         <p>Você também pode <a href="${pub.publicUrl}">baixar o PDF</a>.</p>
@@ -260,7 +288,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
       const { error: mailErr } = await supabase.functions.invoke("zoho-send-email", {
         body: {
-          to: [client.email],
+          to: recipients,
           subject: title,
           content: html,
           mailFormat: "html",
@@ -269,10 +297,13 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         },
       });
       if (mailErr) throw mailErr;
-      toast.success("Proposta enviada por e-mail!");
+      toast.success(`Proposta enviada para ${recipients.length} destinatário(s)!`);
+      setEmailDialogOpen(false);
     } catch (e: any) {
       console.error(e);
       toast.error("Erro ao enviar: " + (e.message || ""));
+    } finally {
+      setSendingEmail(false);
     }
   };
 
