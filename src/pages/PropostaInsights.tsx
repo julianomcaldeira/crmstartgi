@@ -294,14 +294,27 @@ export default function PropostaInsights() {
 
   const sectionTitleMap = useMemo(() => {
     const map = new Map<string, string>();
-    const secs = Array.isArray(proposal?.sections) ? proposal.sections : [];
+    const extractTitle = (item: any): string => {
+      const direct = item?.title || item?.name || item?.heading;
+      if (direct) return String(direct);
+      const html: string = item?.html || item?.content?.html || item?.content || "";
+      if (typeof html === "string" && html) {
+        const h = html.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
+        const raw = (h?.[1] || html).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        if (raw) return raw.slice(0, 60);
+      }
+      return "";
+    };
+    const secs = Array.isArray(proposal?.sections) && proposal.sections.length
+      ? proposal.sections
+      : (Array.isArray(proposal?.blocks) ? proposal.blocks : []);
     secs.forEach((s: any, idx: number) => {
       if (!s?.id) return;
-      const title = s.title || s.id;
-      map.set(s.id, `Slide ${idx + 1} · ${title}`);
+      const title = extractTitle(s);
+      map.set(s.id, title ? `Slide ${idx + 1} · ${title}` : `Slide ${idx + 1}`);
     });
     return map;
-  }, [proposal?.sections]);
+  }, [proposal?.sections, proposal?.blocks]);
 
   const sectionLabel = (sid?: string | null) =>
     sid ? (sectionTitleMap.get(sid) || sid) : "";
