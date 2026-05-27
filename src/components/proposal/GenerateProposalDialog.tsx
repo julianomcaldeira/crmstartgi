@@ -491,6 +491,67 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
           </div>
         )}
       </DialogContent>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              Enviar proposta por e-mail
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs font-semibold">Contatos da oportunidade</Label>
+              {contactEmails.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-2">Nenhum contato com e-mail cadastrado.</p>
+              ) : (
+                <div className="mt-2 space-y-2 max-h-56 overflow-y-auto border rounded-md p-2">
+                  {contactEmails.map((c) => {
+                    const checked = selectedEmails.includes(c.email);
+                    return (
+                      <label key={c.email} className="flex items-start gap-2 cursor-pointer text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setSelectedEmails((prev) =>
+                              v ? Array.from(new Set([...prev, c.email])) : prev.filter((e) => e !== c.email)
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{c.email}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Adicionar outros e-mails</Label>
+              <Input
+                value={extraEmail}
+                onChange={(e) => setExtraEmail(e.target.value)}
+                placeholder="email@exemplo.com, outro@exemplo.com"
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Separe múltiplos e-mails por vírgula.</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={sendingEmail}>
+              Cancelar
+            </Button>
+            <Button onClick={sendByEmail} disabled={sendingEmail}>
+              <Mail className="h-4 w-4 mr-1" />
+              {sendingEmail ? "Enviando..." : "Enviar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
