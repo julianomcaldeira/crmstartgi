@@ -237,7 +237,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
       for (let i = 0; i < targets.length; i++) {
         stage.innerHTML = "";
         const frame = document.createElement("div");
-        frame.className = "iganhei-proposal";
+        frame.className = "proposal-doc iganhei-proposal";
         frame.style.cssText = [
           `width:${SLIDE_W}px`,
           `height:${SLIDE_H}px`,
@@ -260,8 +260,9 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         clone.querySelectorAll<HTMLElement>(".pg").forEach((pg) => {
           pg.style.pageBreakAfter = "auto";
           pg.style.minHeight = "0";
-          pg.style.height = "auto";
+          pg.style.height = "100%";
           pg.style.maxHeight = "100%";
+          pg.style.aspectRatio = "auto";
         });
         frame.appendChild(clone);
         stage.appendChild(frame);
