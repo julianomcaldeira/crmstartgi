@@ -191,39 +191,107 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     }
   };
 
-  // Builds a multi-page A4 landscape PDF where each slide (block) is a single
-  // page, centered and fit to the page preserving aspect ratio so nothing is
-  // cropped. Returns the jsPDF instance.
+  // Builds a multi-page A4 landscape PDF where every slide has identical fixed
+  // dimensions matching the page. Each block is cloned into an off-screen frame
+  // sized exactly to A4 landscape, with the content centered both axes and
+  // overflow hidden so nothing overflows or distorts the page.
   const buildSlidesPdf = async () => {
     const html2canvas = (await import("html2canvas")).default;
     const { default: JsPDF } = await import("jspdf");
     const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "landscape", compress: true });
-    const pageW = pdf.internal.pageSize.getWidth();   // 297
-    const pageH = pdf.internal.pageSize.getHeight();  // 210
-    const PX_TO_MM = 25.4 / 96;
+    const pageW = pdf.internal.pageSize.getWidth();   // 297mm
+    const pageH = pdf.internal.pageSize.getHeight();  // 210mm
+
+    // Fixed A4 landscape canvas size in px (≈ 150dpi -> crisp PDF).
+    const SLIDE_W = 1754;
+    const SLIDE_H = 1240;
 
     const root = previewRef.current!;
     const slides = Array.from(root.querySelectorAll<HTMLElement>("[data-block-id]"));
     const targets = slides.length ? slides : [root];
 
-    for (let i = 0; i < targets.length; i++) {
-      const el = targets[i];
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        windowWidth: el.scrollWidth,
-        windowHeight: el.scrollHeight,
-      });
-      const wMm = (canvas.width / 2) * PX_TO_MM;
-      const hMm = (canvas.height / 2) * PX_TO_MM;
-      const ratio = Math.min(pageW / wMm, pageH / hMm);
-      const drawW = wMm * ratio;
-      const drawH = hMm * ratio;
-      const x = (pageW - drawW) / 2;
-      const y = (pageH - drawH) / 2;
-      if (i > 0) pdf.addPage("a4", "landscape");
-      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", x, y, drawW, drawH, undefined, "FAST");
+    // Off-screen stage container — kept rendered (not display:none) so
+    // html2canvas can measure it, but moved far off the visible viewport.
+    const stage = document.createElement("div");
+    stage.style.cssText = [
+      "position:fixed",
+      "left:-100000px",
+      "top:0",
+      `width:${SLIDE_W}px`,
+      `height:${SLIDE_H}px`,
+      "background:#ffffff",
+      "overflow:hidden",
+      "z-index:-1",
+      "pointer-events:none",
+    ].join(";");
+    document.body.appendChild(stage);
+
+    try {
+      for (let i = 0; i < targets.length; i++) {
+        // Build a fresh fixed-size frame for each slide.
+        stage.innerHTML = "";
+        const frame = document.createElement("div");
+        frame.style.cssText = [
+          `width:${SLIDE_W}px`,
+          `height:${SLIDE_H}px`,
+          "display:flex",
+          "align-items:center",
+          "justify-content:center",
+          "overflow:hidden",
+          "background:#ffffff",
+          "box-sizing:border-box",
+          "padding:48px 64px",
+        ].join(";");
+
+        const clone = targets[i].cloneNode(true) as HTMLElement;
+        // Neutralize per-block paddings / min-heights that fight the fixed frame.
+        clone.style.width = "100%";
+        clone.style.maxWidth = "100%";
+        clone.style.maxHeight = "100%";
+        clone.style.margin = "0";
+        clone.style.boxSizing = "border-box";
+        // Drop forced page-breaks / huge min-heights coming from .pg sections.
+        clone.querySelectorAll<HTMLElement>(".pg").forEach((pg) => {
+          pg.style.pageBreakAfter = "auto";
+          pg.style.minHeight = "0";
+          pg.style.height = "auto";
+          pg.style.maxHeight = "100%";
+        });
+        frame.appendChild(clone);
+        stage.appendChild(frame);
+
+        // Auto-fit: if content overflows the frame, scale it down uniformly so
+        // nothing is cropped while still filling the page.
+        const contentH = clone.scrollHeight;
+        const contentW = clone.scrollWidth;
+        const availH = SLIDE_H - 96; // padding 48*2
+        const availW = SLIDE_W - 128; // padding 64*2
+        const scale = Math.min(1, availH / contentH, availW / contentW);
+        if (scale < 1) {
+          clone.style.transform = `scale(${scale})`;
+          clone.style.transformOrigin = "center center";
+        }
+
+        const canvas = await html2canvas(frame, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          width: SLIDE_W,
+          height: SLIDE_H,
+          windowWidth: SLIDE_W,
+          windowHeight: SLIDE_H,
+        });
+
+        if (i > 0) pdf.addPage("a4", "landscape");
+        pdf.addImage(
+          canvas.toDataURL("image/jpeg", 0.95),
+          "JPEG",
+          0, 0, pageW, pageH,
+          undefined, "FAST",
+        );
+      }
+    } finally {
+      stage.remove();
     }
     return pdf;
   };
