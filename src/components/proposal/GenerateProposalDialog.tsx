@@ -436,18 +436,20 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                 <TabsTrigger value="preview" className="h-6 text-xs px-2"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
 
-              {isPreVendas && (
+              {isPreVendas && tab === "editor" && (
                 <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
                   <div className="flex-1 overflow-hidden">
                     <ProposalBuilder blocks={blocks} onChange={setBlocks} pageSettings={pageSettings} onPageSettingsChange={setPageSettings} />
                   </div>
                 </TabsContent>
               )}
-              <TabsContent value="preview" className="flex-1 overflow-y-auto px-4 pt-1 pb-4 mt-0 bg-gray-100">
-                <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
-                  <ProposalRenderer blocks={blocks} variables={variables} />
-                </div>
-              </TabsContent>
+              {tab === "preview" && (
+                <TabsContent value="preview" className="flex-1 overflow-y-auto px-4 pt-1 pb-4 mt-0 bg-gray-100">
+                  <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
+                    <ProposalRenderer blocks={blocks} variables={variables} />
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         )}
