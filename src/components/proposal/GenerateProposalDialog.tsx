@@ -49,6 +49,11 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [slide2Cards, setSlide2Cards] = useState<string[]>(IGANHEI_SLIDE2_DEFAULT_IDS);
   const [isPreVendas, setIsPreVendas] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [contactEmails, setContactEmails] = useState<Array<{ name: string; email: string }>>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [extraEmail, setExtraEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     (async () => {
