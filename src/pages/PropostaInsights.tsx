@@ -292,16 +292,30 @@ export default function PropostaInsights() {
     return () => { supabase.removeChannel(ch); };
   }, [id]);
 
+  const sectionTitleMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const secs = Array.isArray(proposal?.sections) ? proposal.sections : [];
+    secs.forEach((s: any, idx: number) => {
+      if (!s?.id) return;
+      const title = s.title || s.id;
+      map.set(s.id, `Slide ${idx + 1} · ${title}`);
+    });
+    return map;
+  }, [proposal?.sections]);
+
+  const sectionLabel = (sid?: string | null) =>
+    sid ? (sectionTitleMap.get(sid) || sid) : "";
+
   const sectionStats = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of events) {
       if (e.event_type !== "section_view" || !e.section_id) continue;
       map.set(e.section_id, (map.get(e.section_id) || 0) + 1);
     }
-    const arr = Array.from(map.entries()).map(([id, count]) => ({ id, count }));
+    const arr = Array.from(map.entries()).map(([id, count]) => ({ id, count, label: sectionLabel(id) || id }));
     arr.sort((a, b) => b.count - a.count);
     return arr.slice(0, 8);
-  }, [events]);
+  }, [events, sectionTitleMap]);
 
   const lastEvent = events[0];
   const score = proposal?.engagement_score || 0;
@@ -363,7 +377,7 @@ export default function PropostaInsights() {
                   const pct = Math.round((s.count / max) * 100);
                   return (
                     <div key={s.id}>
-                      <div className="flex justify-between text-xs mb-1"><span className="font-mono truncate max-w-[60%]">{s.id}</span><span className="text-muted-foreground">{s.count} views</span></div>
+                      <div className="flex justify-between text-xs mb-1"><span className="truncate max-w-[70%]" title={s.id}>{s.label}</span><span className="text-muted-foreground">{s.count} views</span></div>
                       <div className="h-2 bg-muted rounded"><div className="h-2 bg-primary rounded" style={{ width: `${pct}%` }} /></div>
                     </div>
                   );
@@ -411,7 +425,7 @@ export default function PropostaInsights() {
                   <TableRow key={e.id}>
                     <TableCell className="text-xs whitespace-nowrap">{format(parseISO(e.created_at), "dd/MM HH:mm:ss")}</TableCell>
                     <TableCell><Badge variant="outline">{EVENT_LABELS[e.event_type] || e.event_type}</Badge></TableCell>
-                    <TableCell className="text-xs max-w-[280px] truncate">{e.section_id || (e.metadata?.href ?? "")}</TableCell>
+                    <TableCell className="text-xs max-w-[280px] truncate" title={e.section_id || ""}>{sectionLabel(e.section_id) || (e.metadata?.href ?? "")}</TableCell>
                     <TableCell className="font-mono text-xs">{e.visitor_id?.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{[e.city, e.country].filter(Boolean).join(", ")} {e.device ? `· ${e.device}` : ""} {e.browser ? `· ${e.browser}` : ""}</TableCell>
                   </TableRow>
