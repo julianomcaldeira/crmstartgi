@@ -274,17 +274,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
-            <div className="flex gap-2 shrink-0">
-              <Button size="sm" variant="outline" onClick={() => setContractOpen(true)}>
-                <ScrollText className="h-4 w-4 mr-1" /> Gerar Contrato
-              </Button>
-              <Button size="sm" onClick={() => setProposalOpen(true)}>
-                <Sparkles className="h-4 w-4 mr-1" /> Gerar Proposta
-              </Button>
-            </div>
-          </div>
+          <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
