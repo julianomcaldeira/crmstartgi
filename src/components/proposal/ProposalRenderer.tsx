@@ -78,11 +78,11 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
       const bg = block.backgroundColor || brandColor;
       const fg = block.textColor || "#ffffff";
       return (
-        <section className="pg" style={{ background: `linear-gradient(135deg, ${bg} 0%, ${shade(bg, -20)} 100%)`, color: fg, minHeight: 700, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ opacity: 0.85, fontSize: 14, letterSpacing: 4, textTransform: "uppercase", marginBottom: 24 }}>Proposta Comercial</div>
-          <h1 style={{ fontSize: 56, lineHeight: 1.1, marginBottom: 16 }}>{interpolate(block.title, variables)}</h1>
+        <section className="pg" style={{ background: `linear-gradient(135deg, ${bg} 0%, ${shade(bg, -20)} 100%)`, color: fg, justifyContent: "center" }}>
+          <div style={{ opacity: 0.85, fontSize: 14, letterSpacing: 4, textTransform: "uppercase", marginBottom: 20 }}>Proposta Comercial</div>
+          <h1 style={{ fontSize: 60, lineHeight: 1.05, marginBottom: 16 }}>{interpolate(block.title, variables)}</h1>
           {block.subtitle && <p style={{ fontSize: 22, opacity: 0.9 }}>{interpolate(block.subtitle, variables)}</p>}
-          <div style={{ marginTop: 48, fontSize: 14, opacity: 0.8 }}>
+          <div style={{ marginTop: 40, fontSize: 14, opacity: 0.85 }}>
             {variables.date?.today} · Apresentado por {variables.seller?.name}
           </div>
         </section>
