@@ -31,12 +31,14 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [proposalOpen, setProposalOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [proposals, setProposals] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (open && opportunity?.id) {
       fetchAttachments();
       fetchContracts();
+      fetchProposals();
     }
   }, [open, opportunity?.id]);
 
@@ -48,6 +50,31 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       .order("created_at", { ascending: false });
     setContracts(data || []);
   };
+
+  const fetchProposals = async () => {
+    const { data: props } = await supabase
+      .from("proposals")
+      .select("id, title, status, version, total_value, monthly_value, implementation_value, created_at, updated_at")
+      .eq("opportunity_id", opportunity.id)
+      .order("created_at", { ascending: false });
+    const list = props || [];
+    const ids = list.map((p: any) => p.id);
+    let versions: any[] = [];
+    if (ids.length) {
+      const { data: vs } = await supabase
+        .from("proposal_versions")
+        .select("id, proposal_id, version, title, total_value, monthly_value, implementation_value, created_at")
+        .in("proposal_id", ids)
+        .order("version", { ascending: false });
+      versions = vs || [];
+    }
+    const grouped = list.map((p: any) => ({
+      ...p,
+      history: versions.filter((v) => v.proposal_id === p.id),
+    }));
+    setProposals(grouped);
+  };
+
 
   if (!opportunity) return null;
 
@@ -261,10 +288,14 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="attachments">
               Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="proposals">
+              <FileText className="h-4 w-4 mr-1" />
+              Propostas {proposals.length > 0 && `(${proposals.length})`}
             </TabsTrigger>
             <TabsTrigger value="contracts">
               <ScrollText className="h-4 w-4 mr-1" />
@@ -514,7 +545,60 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
             </div>
           </TabsContent>
 
+          <TabsContent value="proposals" className="mt-4 space-y-3">
+            <div className="flex justify-end">
+              <Button size="sm" onClick={() => setProposalOpen(true)}>
+                <Sparkles className="h-4 w-4 mr-2" /> Gerar proposta
+              </Button>
+            </div>
+            {proposals.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border rounded-lg">
+                <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhuma proposta gerada para esta oportunidade.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {proposals.map((p) => (
+                  <div key={p.id} className="rounded-lg border bg-muted/30">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/propostas/comerciais/${p.id}`)}
+                      className="w-full text-left flex items-center justify-between p-3 hover:bg-muted transition-colors rounded-t-lg"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{p.title}_v{p.version}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {p.status} • {format(parseISO(p.updated_at || p.created_at), "dd/MM/yyyy HH:mm")}
+                            {(p.total_value || p.monthly_value || p.implementation_value) ? (
+                              <> • R$ {Number(p.total_value || ((p.monthly_value||0)*12 + (p.implementation_value||0))).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    {p.history.length > 0 && (
+                      <div className="border-t px-3 py-2 space-y-1">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">Versões anteriores</div>
+                        {p.history.map((v: any) => (
+                          <div key={v.id} className="flex items-center justify-between text-xs text-muted-foreground pl-6">
+                            <span className="truncate">{v.title}_v{v.version}</span>
+                            <span className="shrink-0 ml-2">
+                              R$ {Number((v.total_value) || ((v.monthly_value||0)*12 + (v.implementation_value||0))).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} • {format(parseISO(v.created_at), "dd/MM/yyyy HH:mm")}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="contracts" className="mt-4 space-y-3">
+
             <div className="flex justify-end">
               <Button size="sm" onClick={() => setContractOpen(true)}>
                 <ScrollText className="h-4 w-4 mr-2" /> Gerar contrato
