@@ -462,7 +462,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => saveProposal("draft")} disabled={saving}><Save className="h-3 w-3 mr-1" /> Salvar</Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={downloadPdf}><Download className="h-3 w-3 mr-1" /> PDF</Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={copyShareLink}><Link2 className="h-3 w-3 mr-1" /> Copiar link</Button>
-              <Button size="sm" className="h-7 text-xs" onClick={sendByEmail} disabled={saving}><Mail className="h-3 w-3 mr-1" /> Enviar por e-mail</Button>
+              <Button size="sm" className="h-7 text-xs" onClick={openEmailDialog} disabled={saving}><Mail className="h-3 w-3 mr-1" /> Enviar por e-mail</Button>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
