@@ -425,7 +425,7 @@ export default function PropostaInsights() {
                   <TableRow key={e.id}>
                     <TableCell className="text-xs whitespace-nowrap">{format(parseISO(e.created_at), "dd/MM HH:mm:ss")}</TableCell>
                     <TableCell><Badge variant="outline">{EVENT_LABELS[e.event_type] || e.event_type}</Badge></TableCell>
-                    <TableCell className="text-xs max-w-[280px] truncate">{e.section_id || (e.metadata?.href ?? "")}</TableCell>
+                    <TableCell className="text-xs max-w-[280px] truncate" title={e.section_id || ""}>{sectionLabel(e.section_id) || (e.metadata?.href ?? "")}</TableCell>
                     <TableCell className="font-mono text-xs">{e.visitor_id?.slice(0, 8)}…</TableCell>
                     <TableCell className="text-xs">{[e.city, e.country].filter(Boolean).join(", ")} {e.device ? `· ${e.device}` : ""} {e.browser ? `· ${e.browser}` : ""}</TableCell>
                   </TableRow>
