@@ -179,7 +179,7 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
       );
     case "signature":
       return (
-        <section className="pg" style={{ minHeight: 400, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <section className="pg" style={{ justifyContent: "flex-end" }}>
           <div style={{ display: "grid", gridTemplateColumns: block.showClientLine ? "1fr 1fr" : "1fr", gap: 48 }}>
             <div>
               <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>
