@@ -29,14 +29,20 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
         </div>
       ))}
       <style>{`
-        .proposal-doc { line-height: 1.5; }
+        .proposal-doc { line-height: 1.5; width: 100%; }
+        .proposal-doc [data-block-id] {
+          width: 100%;
+          aspect-ratio: 3 / 2;
+          margin: 0 0 24px;
+          box-sizing: border-box;
+        }
         /* Each block = one 270x180mm slide (3:2). Width follows the
            container; height locks via aspect-ratio so HTML and PDF match. */
         .proposal-doc .pg {
           padding: ${pgPad};
           page-break-after: always;
-          aspect-ratio: 3 / 2;
           width: 100%;
+          height: 100%;
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
@@ -44,11 +50,30 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
           overflow: hidden;
           background: #ffffff;
         }
-        .proposal-doc [data-block-id] + [data-block-id] .pg { border-top: 1px solid #eef0f4; }
+        .proposal-doc.iganhei-proposal [data-block-id] {
+          height: 100%;
+          aspect-ratio: auto;
+          margin: 0 !important;
+        }
         .proposal-doc .pg:last-child { page-break-after: auto; }
         .proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-weight: 700; }
         .proposal-doc .pre-line { white-space: pre-line; }
-        .proposal-doc .richtext-block { display: block; }
+        .proposal-doc .richtext-block {
+          padding: 0 !important;
+          display: flex;
+          align-items: stretch;
+          justify-content: stretch;
+        }
+        .proposal-doc .richtext-block, .proposal-doc .richtext-block * { box-sizing: border-box; }
+        .proposal-doc .richtext-block > :first-child {
+          width: 100% !important;
+          max-width: 100% !important;
+          min-height: 0 !important;
+          height: 100% !important;
+          max-height: 100% !important;
+          margin: 0 !important;
+          overflow: hidden !important;
+        }
         .proposal-doc .richtext-block h1 { font-size: 34px; margin: 12px 0 12px; }
         .proposal-doc .richtext-block h2 { font-size: 28px; margin: 12px 0 10px; }
         .proposal-doc .richtext-block h3 { font-size: 22px; margin: 10px 0 8px; }
@@ -57,7 +82,8 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
         .proposal-doc .richtext-block ul { list-style: disc; }
         .proposal-doc .richtext-block ol { list-style: decimal; }
         .proposal-doc .richtext-block blockquote { border-left: 4px solid #e5e7eb; padding-left: 16px; color: #4b5563; font-style: italic; margin: 12px 0; }
-        .proposal-doc .richtext-block img { max-width: 100%; height: auto; display: block; }
+        .proposal-doc .richtext-block img, .proposal-doc .richtext-block svg { max-width: 100%; }
+        .proposal-doc .richtext-block img { height: auto; display: block; }
         .proposal-doc .richtext-block p:has(> img) { margin: 0; line-height: 0; }
         .proposal-doc .richtext-block a { color: var(--brand); text-decoration: underline; }
         .proposal-doc .richtext-block strong { font-weight: 700; }
