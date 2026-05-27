@@ -429,11 +429,11 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="mx-3 mt-2 self-start">
+              <TabsList className="mx-3 mt-1 self-start h-8">
                 {isPreVendas && (
-                  <TabsTrigger value="editor"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
+                  <TabsTrigger value="editor" className="h-6 text-xs"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
                 )}
-                <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
+                <TabsTrigger value="preview" className="h-6 text-xs"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
               {isPreVendas && (
                 <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
@@ -442,7 +442,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                   </div>
                 </TabsContent>
               )}
-              <TabsContent value="preview" className="flex-1 overflow-y-auto p-4 mt-0 bg-gray-100">
+              <TabsContent value="preview" className="flex-1 overflow-y-auto px-4 pt-1 pb-4 mt-0 bg-gray-100">
                 <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
                   <ProposalRenderer blocks={blocks} variables={variables} />
                 </div>
