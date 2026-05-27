@@ -10,7 +10,7 @@ interface Props {
 export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }: Props) {
   const ps: PageSettings = { ...DEFAULT_PAGE_SETTINGS, ...((variables as any)?._page || {}), ...(pageSettings || {}) };
   const brand = brandColor || ps.brandColor || "#22c55e";
-  const padMap = { compact: "32px 40px", normal: "48px 56px", spacious: "72px 80px" } as const;
+  const padMap = { compact: "32px 48px", normal: "56px 72px", spacious: "72px 88px" } as const;
   const pgPad = padMap[ps.pagePadding || "normal"];
   return (
     <div
@@ -29,14 +29,29 @@ export function ProposalRenderer({ blocks, variables, brandColor, pageSettings }
         </div>
       ))}
       <style>{`
-        .proposal-doc { line-height: 1.6; }
-        .proposal-doc .pg { padding: ${pgPad}; page-break-after: always; }
+        .proposal-doc { line-height: 1.5; }
+        /* Each block = one 270x180mm slide (3:2). Width follows the
+           container; height locks via aspect-ratio so HTML and PDF match. */
+        .proposal-doc .pg {
+          padding: ${pgPad};
+          page-break-after: always;
+          aspect-ratio: 3 / 2;
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          overflow: hidden;
+          background: #ffffff;
+        }
+        .proposal-doc [data-block-id] + [data-block-id] .pg { border-top: 1px solid #eef0f4; }
         .proposal-doc .pg:last-child { page-break-after: auto; }
         .proposal-doc h1, .proposal-doc h2, .proposal-doc h3 { font-weight: 700; }
         .proposal-doc .pre-line { white-space: pre-line; }
-        .proposal-doc .richtext-block h1 { font-size: 32px; margin: 16px 0 12px; }
-        .proposal-doc .richtext-block h2 { font-size: 26px; margin: 16px 0 10px; }
-        .proposal-doc .richtext-block h3 { font-size: 20px; margin: 14px 0 8px; }
+        .proposal-doc .richtext-block { display: block; }
+        .proposal-doc .richtext-block h1 { font-size: 34px; margin: 12px 0 12px; }
+        .proposal-doc .richtext-block h2 { font-size: 28px; margin: 12px 0 10px; }
+        .proposal-doc .richtext-block h3 { font-size: 22px; margin: 10px 0 8px; }
         .proposal-doc .richtext-block p { margin: 8px 0; }
         .proposal-doc .richtext-block ul, .proposal-doc .richtext-block ol { padding-left: 24px; margin: 8px 0; }
         .proposal-doc .richtext-block ul { list-style: disc; }
@@ -63,11 +78,11 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
       const bg = block.backgroundColor || brandColor;
       const fg = block.textColor || "#ffffff";
       return (
-        <section className="pg" style={{ background: `linear-gradient(135deg, ${bg} 0%, ${shade(bg, -20)} 100%)`, color: fg, minHeight: 700, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <div style={{ opacity: 0.85, fontSize: 14, letterSpacing: 4, textTransform: "uppercase", marginBottom: 24 }}>Proposta Comercial</div>
-          <h1 style={{ fontSize: 56, lineHeight: 1.1, marginBottom: 16 }}>{interpolate(block.title, variables)}</h1>
+        <section className="pg" style={{ background: `linear-gradient(135deg, ${bg} 0%, ${shade(bg, -20)} 100%)`, color: fg, justifyContent: "center" }}>
+          <div style={{ opacity: 0.85, fontSize: 14, letterSpacing: 4, textTransform: "uppercase", marginBottom: 20 }}>Proposta Comercial</div>
+          <h1 style={{ fontSize: 60, lineHeight: 1.05, marginBottom: 16 }}>{interpolate(block.title, variables)}</h1>
           {block.subtitle && <p style={{ fontSize: 22, opacity: 0.9 }}>{interpolate(block.subtitle, variables)}</p>}
-          <div style={{ marginTop: 48, fontSize: 14, opacity: 0.8 }}>
+          <div style={{ marginTop: 40, fontSize: 14, opacity: 0.85 }}>
             {variables.date?.today} · Apresentado por {variables.seller?.name}
           </div>
         </section>
@@ -164,7 +179,7 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
       );
     case "signature":
       return (
-        <section className="pg" style={{ minHeight: 400, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        <section className="pg" style={{ justifyContent: "flex-end" }}>
           <div style={{ display: "grid", gridTemplateColumns: block.showClientLine ? "1fr 1fr" : "1fr", gap: 48 }}>
             <div>
               <div style={{ borderTop: "1px solid #111", paddingTop: 8 }}>

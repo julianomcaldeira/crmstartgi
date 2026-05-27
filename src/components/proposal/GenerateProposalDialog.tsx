@@ -581,7 +581,8 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
               )}
               {tab === "preview" && (
                 <TabsContent value="preview" className="flex-1 overflow-y-auto px-4 pt-1 pb-4 mt-0 bg-gray-100">
-                  <div ref={previewRef} className="mx-auto shadow-lg" style={{ width: 794 /* A4 width @ 96dpi */ }}>
+                  {/* Slide 270mm x 180mm @ ~96dpi -> 1020 x 680 px (3:2 landscape) */}
+                  <div ref={previewRef} className="mx-auto shadow-lg proposal-slide-stage" style={{ width: 1020 }}>
                     <ProposalRenderer blocks={blocks} variables={variables} />
                   </div>
                 </TabsContent>
