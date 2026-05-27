@@ -31,6 +31,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
   const [proposalOpen, setProposalOpen] = useState(false);
   const [contractOpen, setContractOpen] = useState(false);
   const [contracts, setContracts] = useState<any[]>([]);
+  const [proposals, setProposals] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
