@@ -412,29 +412,30 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
         {step === "edit" && (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="p-3 border-b flex flex-wrap gap-2 items-end bg-muted/30">
+            <div className="px-3 py-1.5 border-b flex flex-wrap gap-2 items-end bg-muted/30">
               <div className="flex-1 min-w-[280px]">
-                <Label className="text-xs">Título</Label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+                <Label className="text-[10px]">Título</Label>
+                <Input className="h-7 text-xs" value={title} onChange={(e) => setTitle(e.target.value)} />
               </div>
-              <div className="w-32">
-                <Label className="text-xs">Validade (dias)</Label>
-                <Input type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} />
+              <div className="w-24">
+                <Label className="text-[10px]">Validade (dias)</Label>
+                <Input className="h-7 text-xs" type="number" value={validityDays} onChange={(e) => setValidityDays(Number(e.target.value))} />
               </div>
-              <Button variant="outline" size="sm" onClick={() => setStep("choose")}>Trocar template</Button>
-              <Button variant="outline" size="sm" onClick={() => saveProposal("draft")} disabled={saving}><Save className="h-4 w-4 mr-1" /> Salvar</Button>
-              <Button variant="outline" size="sm" onClick={downloadPdf}><Download className="h-4 w-4 mr-1" /> PDF</Button>
-              <Button variant="outline" size="sm" onClick={copyShareLink}><Link2 className="h-4 w-4 mr-1" /> Copiar link</Button>
-              <Button size="sm" onClick={sendByEmail} disabled={saving}><Mail className="h-4 w-4 mr-1" /> Enviar por e-mail</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setStep("choose")}>Trocar template</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => saveProposal("draft")} disabled={saving}><Save className="h-3 w-3 mr-1" /> Salvar</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={downloadPdf}><Download className="h-3 w-3 mr-1" /> PDF</Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={copyShareLink}><Link2 className="h-3 w-3 mr-1" /> Copiar link</Button>
+              <Button size="sm" className="h-7 text-xs" onClick={sendByEmail} disabled={saving}><Mail className="h-3 w-3 mr-1" /> Enviar por e-mail</Button>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="mx-3 mt-1 self-start h-8">
+              <TabsList className="mx-3 mt-1 self-start h-7 p-0.5">
                 {isPreVendas && (
-                  <TabsTrigger value="editor" className="h-6 text-xs"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
+                  <TabsTrigger value="editor" className="h-6 text-xs px-2"><Wrench className="h-3 w-3 mr-1" /> Editor</TabsTrigger>
                 )}
-                <TabsTrigger value="preview" className="h-6 text-xs"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
+                <TabsTrigger value="preview" className="h-6 text-xs px-2"><Eye className="h-3 w-3 mr-1" /> Pré-visualização</TabsTrigger>
               </TabsList>
+
               {isPreVendas && (
                 <TabsContent value="editor" className="flex-1 overflow-hidden p-3 mt-0 flex flex-col gap-3">
                   <div className="flex-1 overflow-hidden">
