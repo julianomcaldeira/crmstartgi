@@ -288,10 +288,14 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
             <TabsTrigger value="attachments">
               Anexos ({attachments.length})
+            </TabsTrigger>
+            <TabsTrigger value="proposals">
+              <FileText className="h-4 w-4 mr-1" />
+              Propostas {proposals.length > 0 && `(${proposals.length})`}
             </TabsTrigger>
             <TabsTrigger value="contracts">
               <ScrollText className="h-4 w-4 mr-1" />
