@@ -141,12 +141,12 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "pricing":
       return (
-        <div>
+        <div style={{ width: "100%" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <span className="ig-eyebrow">Investimento</span>
             <h2>{s.title}</h2>
           </div>
-          <div className="ig-grid-2" style={{ maxWidth: 820, margin: "0 auto" }}>
+          <div className="ig-grid-2" style={{ maxWidth: 1080, margin: "0 auto" }}>
             {(c.cards || []).map((card: any, i: number) => {
               const v = vars[card.value_key] || "—";
               return (
@@ -156,7 +156,7 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
                     {v}
                     {card.monthly && <small> /mês</small>}
                   </div>
-                  {card.note && <p style={{ marginTop: 14, color: "var(--ig-muted)", fontSize: 14 }}>{txt(card.note)}</p>}
+                  {card.note && <p style={{ marginTop: 16, color: "var(--ig-muted)", fontSize: 15 }}>{txt(card.note)}</p>}
                 </div>
               );
             })}
@@ -166,10 +166,10 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "validade":
       return (
-        <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", textAlign: "center" }}>
           <span className="ig-eyebrow">Vigência</span>
           <h2>{s.title}</h2>
-          <p style={{ marginTop: 20, fontSize: 18 }}>{txt(c.body || "")}</p>
+          <p style={{ marginTop: 24, fontSize: 19 }}>{txt(c.body || "")}</p>
         </div>
       );
 
