@@ -38,6 +38,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     if (open && opportunity?.id) {
       fetchAttachments();
       fetchContracts();
+      fetchProposals();
     }
   }, [open, opportunity?.id]);
 
@@ -49,6 +50,31 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
       .order("created_at", { ascending: false });
     setContracts(data || []);
   };
+
+  const fetchProposals = async () => {
+    const { data: props } = await supabase
+      .from("proposals")
+      .select("id, title, status, version, total_value, monthly_value, implementation_value, created_at, updated_at")
+      .eq("opportunity_id", opportunity.id)
+      .order("created_at", { ascending: false });
+    const list = props || [];
+    const ids = list.map((p: any) => p.id);
+    let versions: any[] = [];
+    if (ids.length) {
+      const { data: vs } = await supabase
+        .from("proposal_versions")
+        .select("id, proposal_id, version, title, total_value, monthly_value, implementation_value, created_at")
+        .in("proposal_id", ids)
+        .order("version", { ascending: false });
+      versions = vs || [];
+    }
+    const grouped = list.map((p: any) => ({
+      ...p,
+      history: versions.filter((v) => v.proposal_id === p.id),
+    }));
+    setProposals(grouped);
+  };
+
 
   if (!opportunity) return null;
 
