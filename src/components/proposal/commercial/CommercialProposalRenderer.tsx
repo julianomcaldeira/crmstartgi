@@ -55,26 +55,26 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "termo":
       return (
-        <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", textAlign: "center" }}>
           <span className="ig-eyebrow">Confidencialidade</span>
           <h2>{s.title}</h2>
-          <p style={{ marginTop: 20, fontSize: 18 }}>{txt(c.body || "")}</p>
+          <p style={{ marginTop: 24, fontSize: 19 }}>{txt(c.body || "")}</p>
         </div>
       );
 
     case "cards":
       return (
-        <div>
-          <div style={{ textAlign: "center", maxWidth: 720, margin: "0 auto 40px" }}>
+        <div style={{ width: "100%" }}>
+          <div style={{ textAlign: "center", maxWidth: 960, margin: "0 auto 44px" }}>
             <h2>{s.title}</h2>
-            {c.intro && <p style={{ marginTop: 12 }}>{txt(c.intro)}</p>}
+            {c.intro && <p style={{ marginTop: 14 }}>{txt(c.intro)}</p>}
           </div>
           <div className={`ig-grid-${Math.min(3, (c.cards || []).length) || 3}`}>
             {(c.cards || []).map((card: any, i: number) => (
               <div key={i} className="ig-card ig-card-icon-top">
-                <span className="ig-icon-bubble"><Icon name={card.icon} size={28} /></span>
+                <span className="ig-icon-bubble"><Icon name={card.icon} size={30} /></span>
                 <h3>{txt(card.title || "")}</h3>
-                <p style={{ fontSize: 15 }}>{txt(card.text || "")}</p>
+                <p style={{ fontSize: 16 }}>{txt(card.text || "")}</p>
               </div>
             ))}
           </div>
@@ -83,18 +83,18 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "list":
       return (
-        <div>
-          <div style={{ maxWidth: 720, marginBottom: 32 }}>
+        <div style={{ width: "100%" }}>
+          <div style={{ maxWidth: 960, marginBottom: 36 }}>
             <span className="ig-eyebrow">{s.title}</span>
             <h2>{txt(c.intro || s.title)}</h2>
           </div>
           <div className="ig-grid-2">
             {(c.items || []).map((it: any, i: number) => (
               <div key={i} className="ig-card ig-card-row">
-                <span className="ig-icon-bubble"><Icon name={it.icon} size={26} /></span>
+                <span className="ig-icon-bubble"><Icon name={it.icon} size={28} /></span>
                 <div>
                   <h3>{txt(it.title || "")}</h3>
-                  <p style={{ marginTop: 6, fontSize: 15 }}>{txt(it.text || "")}</p>
+                  <p style={{ marginTop: 8, fontSize: 16 }}>{txt(it.text || "")}</p>
                 </div>
               </div>
             ))}
@@ -141,12 +141,12 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "pricing":
       return (
-        <div>
+        <div style={{ width: "100%" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}>
             <span className="ig-eyebrow">Investimento</span>
             <h2>{s.title}</h2>
           </div>
-          <div className="ig-grid-2" style={{ maxWidth: 820, margin: "0 auto" }}>
+          <div className="ig-grid-2" style={{ maxWidth: 1080, margin: "0 auto" }}>
             {(c.cards || []).map((card: any, i: number) => {
               const v = vars[card.value_key] || "—";
               return (
@@ -156,7 +156,7 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
                     {v}
                     {card.monthly && <small> /mês</small>}
                   </div>
-                  {card.note && <p style={{ marginTop: 14, color: "var(--ig-muted)", fontSize: 14 }}>{txt(card.note)}</p>}
+                  {card.note && <p style={{ marginTop: 16, color: "var(--ig-muted)", fontSize: 15 }}>{txt(card.note)}</p>}
                 </div>
               );
             })}
@@ -166,10 +166,10 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
 
     case "validade":
       return (
-        <div style={{ maxWidth: 820, margin: "0 auto", textAlign: "center" }}>
+        <div style={{ maxWidth: 1080, margin: "0 auto", textAlign: "center" }}>
           <span className="ig-eyebrow">Vigência</span>
           <h2>{s.title}</h2>
-          <p style={{ marginTop: 20, fontSize: 18 }}>{txt(c.body || "")}</p>
+          <p style={{ marginTop: 24, fontSize: 19 }}>{txt(c.body || "")}</p>
         </div>
       );
 

@@ -198,20 +198,27 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const buildSlidesPdf = async () => {
     const html2canvas = (await import("html2canvas")).default;
     const { default: JsPDF } = await import("jspdf");
-    const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "landscape", compress: true });
-    const pageW = pdf.internal.pageSize.getWidth();   // 297mm
-    const pageH = pdf.internal.pageSize.getHeight();  // 210mm
+    // Custom slide page: 270mm x 180mm (3:2) — premium widescreen feel,
+    // no excess margin around the slide content.
+    const PAGE_W_MM = 270;
+    const PAGE_H_MM = 180;
+    const pdf = new JsPDF({
+      unit: "mm",
+      format: [PAGE_W_MM, PAGE_H_MM],
+      orientation: "landscape",
+      compress: true,
+    });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
 
-    // Fixed A4 landscape canvas size in px (≈ 150dpi -> crisp PDF).
-    const SLIDE_W = 1754;
-    const SLIDE_H = 1240;
+    // Fixed slide canvas size in px (≈ 150dpi -> crisp PDF), 3:2 ratio.
+    const SLIDE_W = 1620;
+    const SLIDE_H = 1080;
 
     const root = previewRef.current!;
     const slides = Array.from(root.querySelectorAll<HTMLElement>("[data-block-id]"));
     const targets = slides.length ? slides : [root];
 
-    // Off-screen stage container — kept rendered (not display:none) so
-    // html2canvas can measure it, but moved far off the visible viewport.
     const stage = document.createElement("div");
     stage.style.cssText = [
       "position:fixed",
@@ -228,29 +235,28 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
     try {
       for (let i = 0; i < targets.length; i++) {
-        // Build a fresh fixed-size frame for each slide.
         stage.innerHTML = "";
         const frame = document.createElement("div");
+        frame.className = "iganhei-proposal";
         frame.style.cssText = [
           `width:${SLIDE_W}px`,
           `height:${SLIDE_H}px`,
           "display:flex",
-          "align-items:center",
-          "justify-content:center",
+          "align-items:stretch",
+          "justify-content:stretch",
           "overflow:hidden",
           "background:#ffffff",
           "box-sizing:border-box",
-          "padding:48px 64px",
         ].join(";");
 
         const clone = targets[i].cloneNode(true) as HTMLElement;
-        // Neutralize per-block paddings / min-heights that fight the fixed frame.
+        clone.classList.add("ig-slide", "ig-slide--pdf");
         clone.style.width = "100%";
-        clone.style.maxWidth = "100%";
-        clone.style.maxHeight = "100%";
+        clone.style.height = "100%";
+        clone.style.maxWidth = "none";
+        clone.style.maxHeight = "none";
         clone.style.margin = "0";
         clone.style.boxSizing = "border-box";
-        // Drop forced page-breaks / huge min-heights coming from .pg sections.
         clone.querySelectorAll<HTMLElement>(".pg").forEach((pg) => {
           pg.style.pageBreakAfter = "auto";
           pg.style.minHeight = "0";
@@ -260,13 +266,10 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         frame.appendChild(clone);
         stage.appendChild(frame);
 
-        // Auto-fit: if content overflows the frame, scale it down uniformly so
-        // nothing is cropped while still filling the page.
+        // Auto-fit: scale down only if content overflows the fixed frame.
         const contentH = clone.scrollHeight;
         const contentW = clone.scrollWidth;
-        const availH = SLIDE_H - 96; // padding 48*2
-        const availW = SLIDE_W - 128; // padding 64*2
-        const scale = Math.min(1, availH / contentH, availW / contentW);
+        const scale = Math.min(1, SLIDE_H / contentH, SLIDE_W / contentW);
         if (scale < 1) {
           clone.style.transform = `scale(${scale})`;
           clone.style.transformOrigin = "center center";
@@ -282,7 +285,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
           windowHeight: SLIDE_H,
         });
 
-        if (i > 0) pdf.addPage("a4", "landscape");
+        if (i > 0) pdf.addPage([PAGE_W_MM, PAGE_H_MM], "landscape");
         pdf.addImage(
           canvas.toDataURL("image/jpeg", 0.95),
           "JPEG",
