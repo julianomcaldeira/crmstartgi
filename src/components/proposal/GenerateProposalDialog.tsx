@@ -12,7 +12,7 @@ import { ProposalBuilder } from "./ProposalBuilder";
 import { ProposalRenderer } from "./ProposalRenderer";
 import { Download, Link2, Mail, FileText, Save, Sparkles, Eye, Wrench, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import html2pdf from "html2pdf.js";
+
 import { proposalPublicUrl } from "@/lib/publicUrls";
 import {
   IGANHEI_SLIDE2_CARDS,
@@ -191,33 +191,61 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     }
   };
 
+  // Builds a multi-page A4 landscape PDF where each slide (block) is a single
+  // page, centered and fit to the page preserving aspect ratio so nothing is
+  // cropped. Returns the jsPDF instance.
+  const buildSlidesPdf = async () => {
+    const html2canvas = (await import("html2canvas")).default;
+    const { default: JsPDF } = await import("jspdf");
+    const pdf = new JsPDF({ unit: "mm", format: "a4", orientation: "landscape", compress: true });
+    const pageW = pdf.internal.pageSize.getWidth();   // 297
+    const pageH = pdf.internal.pageSize.getHeight();  // 210
+    const PX_TO_MM = 25.4 / 96;
+
+    const root = previewRef.current!;
+    const slides = Array.from(root.querySelectorAll<HTMLElement>("[data-block-id]"));
+    const targets = slides.length ? slides : [root];
+
+    for (let i = 0; i < targets.length; i++) {
+      const el = targets[i];
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        windowWidth: el.scrollWidth,
+        windowHeight: el.scrollHeight,
+      });
+      const wMm = (canvas.width / 2) * PX_TO_MM;
+      const hMm = (canvas.height / 2) * PX_TO_MM;
+      const ratio = Math.min(pageW / wMm, pageH / hMm);
+      const drawW = wMm * ratio;
+      const drawH = hMm * ratio;
+      const x = (pageW - drawW) / 2;
+      const y = (pageH - drawH) / 2;
+      if (i > 0) pdf.addPage("a4", "landscape");
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", x, y, drawW, drawH, undefined, "FAST");
+    }
+    return pdf;
+  };
+
   const generatePdfBlob = async (): Promise<Blob | null> => {
     if (!previewRef.current) return null;
-    const opt = {
-      margin: 0,
-      filename: `${title}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-    };
-    // @ts-ignore
-    return await html2pdf().set(opt).from(previewRef.current).outputPdf("blob");
+    const pdf = await buildSlidesPdf();
+    return pdf.output("blob");
   };
 
   const downloadPdf = async () => {
     setTab("preview");
-    await new Promise((r) => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 250));
     if (!previewRef.current) return;
-    const opt = {
-      margin: 0,
-      filename: `${title}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-    };
-    // @ts-ignore
-    await html2pdf().set(opt).from(previewRef.current).save();
-    toast.success("PDF baixado!");
+    try {
+      const pdf = await buildSlidesPdf();
+      pdf.save(`${title}.pdf`);
+      toast.success("PDF baixado!");
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Erro ao gerar PDF");
+    }
   };
 
   const copyShareLink = async () => {
