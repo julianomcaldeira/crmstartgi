@@ -292,16 +292,30 @@ export default function PropostaInsights() {
     return () => { supabase.removeChannel(ch); };
   }, [id]);
 
+  const sectionTitleMap = useMemo(() => {
+    const map = new Map<string, string>();
+    const secs = Array.isArray(proposal?.sections) ? proposal.sections : [];
+    secs.forEach((s: any, idx: number) => {
+      if (!s?.id) return;
+      const title = s.title || s.id;
+      map.set(s.id, `Slide ${idx + 1} · ${title}`);
+    });
+    return map;
+  }, [proposal?.sections]);
+
+  const sectionLabel = (sid?: string | null) =>
+    sid ? (sectionTitleMap.get(sid) || sid) : "";
+
   const sectionStats = useMemo(() => {
     const map = new Map<string, number>();
     for (const e of events) {
       if (e.event_type !== "section_view" || !e.section_id) continue;
       map.set(e.section_id, (map.get(e.section_id) || 0) + 1);
     }
-    const arr = Array.from(map.entries()).map(([id, count]) => ({ id, count }));
+    const arr = Array.from(map.entries()).map(([id, count]) => ({ id, count, label: sectionLabel(id) || id }));
     arr.sort((a, b) => b.count - a.count);
     return arr.slice(0, 8);
-  }, [events]);
+  }, [events, sectionTitleMap]);
 
   const lastEvent = events[0];
   const score = proposal?.engagement_score || 0;
