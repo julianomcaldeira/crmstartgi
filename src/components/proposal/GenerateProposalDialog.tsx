@@ -22,6 +22,7 @@ import {
 } from "@/lib/iganheiCards";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   open: boolean;
@@ -48,6 +49,11 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   const [slide2Cards, setSlide2Cards] = useState<string[]>(IGANHEI_SLIDE2_DEFAULT_IDS);
   const [isPreVendas, setIsPreVendas] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [contactEmails, setContactEmails] = useState<Array<{ name: string; email: string }>>([]);
+  const [selectedEmails, setSelectedEmails] = useState<string[]>([]);
+  const [extraEmail, setExtraEmail] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -222,19 +228,47 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     toast.success("Link copiado!");
   };
 
+  const openEmailDialog = async () => {
+    // Load contacts of opportunity's client
+    let contacts: Array<{ name: string; email: string }> = [];
+    if (opportunity?.client_id) {
+      const { data } = await supabase
+        .from("contacts")
+        .select("name,email")
+        .eq("client_id", opportunity.client_id)
+        .not("email", "is", null);
+      contacts = (data || [])
+        .filter((c: any) => c.email && c.email.trim())
+        .map((c: any) => ({ name: c.name, email: c.email.trim() }));
+    }
+    // Include client primary email if present and not already in contacts
+    if (client?.email && !contacts.some((c) => c.email.toLowerCase() === client.email.toLowerCase())) {
+      contacts.unshift({ name: client.company_name || "Cliente", email: client.email });
+    }
+    setContactEmails(contacts);
+    setSelectedEmails(contacts.map((c) => c.email));
+    setExtraEmail("");
+    setEmailDialogOpen(true);
+  };
+
   const sendByEmail = async () => {
-    let prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
-    if (!prop) return;
-    if (!client?.email) {
-      toast.error("Cliente sem e-mail cadastrado");
+    const extras = extraEmail
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    const recipients = Array.from(new Set([...selectedEmails, ...extras]));
+    if (recipients.length === 0) {
+      toast.error("Selecione ao menos um destinatário");
       return;
     }
-    setTab("preview");
-    await new Promise((r) => setTimeout(r, 300));
+    setSendingEmail(true);
     try {
+      let prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
+      if (!prop) return;
+      setTab("preview");
+      await new Promise((r) => setTimeout(r, 300));
       const blob = await generatePdfBlob();
       if (!blob) throw new Error("Falha ao gerar PDF");
-      // Upload to storage
       const { data: { user } } = await supabase.auth.getUser();
       const path = `${user!.id}/${prop.id}.pdf`;
       const { error: upErr } = await supabase.storage.from("proposals").upload(path, blob, { contentType: "application/pdf", upsert: true });
@@ -244,7 +278,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
       const shareUrl = proposalPublicUrl(prop.share_token || shareToken);
       const html = `
-        <p>Olá ${client.company_name || ""},</p>
+        <p>Olá ${client?.company_name || ""},</p>
         <p>Segue a proposta comercial conforme conversamos.</p>
         <p><strong>Acesse online:</strong> <a href="${shareUrl}">${shareUrl}</a></p>
         <p>Você também pode <a href="${pub.publicUrl}">baixar o PDF</a>.</p>
@@ -254,7 +288,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
 
       const { error: mailErr } = await supabase.functions.invoke("zoho-send-email", {
         body: {
-          to: [client.email],
+          to: recipients,
           subject: title,
           content: html,
           mailFormat: "html",
@@ -263,10 +297,13 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
         },
       });
       if (mailErr) throw mailErr;
-      toast.success("Proposta enviada por e-mail!");
+      toast.success(`Proposta enviada para ${recipients.length} destinatário(s)!`);
+      setEmailDialogOpen(false);
     } catch (e: any) {
       console.error(e);
       toast.error("Erro ao enviar: " + (e.message || ""));
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -425,7 +462,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => saveProposal("draft")} disabled={saving}><Save className="h-3 w-3 mr-1" /> Salvar</Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={downloadPdf}><Download className="h-3 w-3 mr-1" /> PDF</Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={copyShareLink}><Link2 className="h-3 w-3 mr-1" /> Copiar link</Button>
-              <Button size="sm" className="h-7 text-xs" onClick={sendByEmail} disabled={saving}><Mail className="h-3 w-3 mr-1" /> Enviar por e-mail</Button>
+              <Button size="sm" className="h-7 text-xs" onClick={openEmailDialog} disabled={saving}><Mail className="h-3 w-3 mr-1" /> Enviar por e-mail</Button>
             </div>
 
             <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
@@ -454,6 +491,67 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
           </div>
         )}
       </DialogContent>
+
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-primary" />
+              Enviar proposta por e-mail
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-xs font-semibold">Contatos da oportunidade</Label>
+              {contactEmails.length === 0 ? (
+                <p className="text-xs text-muted-foreground mt-2">Nenhum contato com e-mail cadastrado.</p>
+              ) : (
+                <div className="mt-2 space-y-2 max-h-56 overflow-y-auto border rounded-md p-2">
+                  {contactEmails.map((c) => {
+                    const checked = selectedEmails.includes(c.email);
+                    return (
+                      <label key={c.email} className="flex items-start gap-2 cursor-pointer text-sm">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(v) => {
+                            setSelectedEmails((prev) =>
+                              v ? Array.from(new Set([...prev, c.email])) : prev.filter((e) => e !== c.email)
+                            );
+                          }}
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium truncate">{c.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{c.email}</div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Adicionar outros e-mails</Label>
+              <Input
+                value={extraEmail}
+                onChange={(e) => setExtraEmail(e.target.value)}
+                placeholder="email@exemplo.com, outro@exemplo.com"
+                className="mt-1"
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">Separe múltiplos e-mails por vírgula.</p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setEmailDialogOpen(false)} disabled={sendingEmail}>
+              Cancelar
+            </Button>
+            <Button onClick={sendByEmail} disabled={sendingEmail}>
+              <Mail className="h-4 w-4 mr-1" />
+              {sendingEmail ? "Enviando..." : "Enviar"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
