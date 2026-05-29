@@ -7,30 +7,28 @@ export interface IGanheiCard {
 }
 
 export const IGANHEI_SLIDE2_CARDS: IGanheiCard[] = [
-  { id: "excesso_operacional", title: "Excesso Operacional", description: "Grande volume de atividades manuais e repetitivas." },
-  { id: "retrabalho", title: "Retrabalho", description: "Informações descentralizadas gerando duplicidade de tarefas." },
-  { id: "descentralizacao", title: "Descentralização", description: "Dados e processos distribuídos em múltiplos locais." },
-  { id: "baixa_produtividade", title: "Baixa Produtividade", description: "Tempo excessivo dedicado a tarefas operacionais." },
-  { id: "dif_acompanhamento", title: "Dificuldade de Acompanhamento", description: "Baixa visibilidade sobre andamento e prioridades." },
-  { id: "perda_oportunidades", title: "Perda de Oportunidades", description: "Oportunidades relevantes sem acompanhamento adequado." },
-  { id: "baixa_previsibilidade", title: "Baixa Previsibilidade", description: "Dificuldade para acompanhar evolução da operação." },
-  { id: "dif_priorizacao", title: "Dificuldade de Priorização", description: "Baixa clareza sobre oportunidades mais estratégicas." },
-  { id: "baixa_inteligencia", title: "Baixa Inteligência Comercial", description: "Decisões comerciais pouco orientadas por dados." },
-  { id: "falta_indicadores", title: "Falta de Indicadores", description: "Ausência de métricas consolidadas da operação." },
-  { id: "baixa_visibilidade", title: "Baixa Visibilidade Operacional", description: "Dificuldade para visualizar cenários e resultados." },
-  { id: "dif_gestao", title: "Dificuldade de Gestão", description: "Controle limitado sobre processos e responsáveis." },
-  { id: "crescimento_desestruturado", title: "Crescimento Desestruturado", description: "Expansão operacional sem padronização e organização." },
-  { id: "volume_editais", title: "Volume de editais", description: "Milhares de oportunidades diárias dispersas em múltiplos portais." },
-  { id: "analise_manual_lenta", title: "Análise manual lenta", description: "Equipe consome horas filtrando, lendo e qualificando editais." },
-  { id: "perda_prazos", title: "Perda de prazos", description: "Oportunidades estratégicas escapam por falhas de monitoramento." },
-  { id: "baixa_conversao", title: "Baixa taxa de conversão", description: "Falta de critério aumenta participações sem aderência real." },
+  { id: "equipe_sobrecarregada", title: "Equipe Sobrecarregada", description: "Grande parte do tempo da equipe é consumida por atividades operacionais, reduzindo a capacidade de análise, planejamento e aproveitamento das melhores oportunidades." },
+  { id: "baixa_produtividade", title: "Baixa Produtividade", description: "A operação exige esforço excessivo para executar tarefas rotineiras, comprometendo a eficiência da equipe e a capacidade de gerar mais resultados." },
+  { id: "retrabalho_frequente", title: "Retrabalho Frequente", description: "Informações precisam ser revisadas, atualizadas ou preenchidas diversas vezes ao longo dos processos, consumindo tempo e aumentando riscos operacionais." },
+  { id: "falta_controle", title: "Falta de Controle", description: "A ausência de acompanhamento estruturado dificulta a gestão das atividades, dos responsáveis e das prioridades da operação." },
+  { id: "pouca_visibilidade", title: "Pouca Visibilidade", description: "A liderança encontra dificuldades para acompanhar oportunidades, indicadores, gargalos e a evolução da operação em tempo real." },
+  { id: "decisoes_sem_dados", title: "Decisões sem Dados", description: "A falta de informações consolidadas reduz a capacidade de tomar decisões rápidas, seguras e alinhadas aos objetivos do negócio." },
+  { id: "analise_demorada", title: "Análise Demorada", description: "A avaliação de oportunidades e requisitos consome tempo excessivo da equipe, reduzindo a velocidade de resposta da operação." },
+  { id: "aprovacoes_lentas", title: "Aprovações Lentas", description: "Processos dependentes de e-mails e validações informais aumentam o tempo necessário para avançar etapas importantes." },
+  { id: "tempo_mal_aproveitado", title: "Tempo Mal Aproveitado", description: "Profissionais qualificados acabam dedicando horas a atividades operacionais que poderiam ser executadas de forma mais eficiente." },
+  { id: "operacao_reativa", title: "Operação Reativa", description: "A equipe passa mais tempo resolvendo urgências do que atuando de forma estratégica para ampliar resultados." },
+  { id: "dependencia_pessoas", title: "Dependência de Pessoas", description: "Conhecimentos e informações ficam concentrados em poucos colaboradores, aumentando riscos e dificultando a continuidade da operação." },
+  { id: "crescimento_limitado", title: "Crescimento Limitado", description: "O aumento do volume de oportunidades exige mais esforço operacional, dificultando a escalabilidade do negócio." },
+  { id: "falta_priorizacao", title: "Falta de Priorização", description: "Sem critérios claros de classificação, a equipe investe tempo em processos com baixo potencial e perde oportunidades estratégicas." },
+  { id: "processos_despadronizados", title: "Processos Despadronizados", description: "Cada colaborador executa atividades de maneira diferente, dificultando a gestão, o treinamento e a escalabilidade da operação." },
+  { id: "pouca_previsibilidade", title: "Pouca Previsibilidade", description: "A ausência de indicadores e acompanhamento estruturado dificulta o planejamento e a projeção de resultados futuros." },
 ];
 
 export const IGANHEI_SLIDE2_DEFAULT_IDS = [
-  "volume_editais",
-  "analise_manual_lenta",
-  "perda_prazos",
-  "baixa_conversao",
+  "equipe_sobrecarregada",
+  "baixa_produtividade",
+  "retrabalho_frequente",
+  "falta_controle",
 ];
 
 export const IGANHEI_SLIDE2_PLACEHOLDER = "{{slide2_cards_html}}";
