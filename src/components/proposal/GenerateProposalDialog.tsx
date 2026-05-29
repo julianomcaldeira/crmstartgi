@@ -483,7 +483,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                       const used = new Set(slide2Cards.filter((_, i) => i !== idx));
                       const selected = IGANHEI_SLIDE2_CARDS.find((c) => c.id === value);
                       return (
-                        <div key={idx} className="space-y-1">
+                        <div key={idx} className="space-y-1.5">
                           <Label className="text-xs">Card {idx + 1}</Label>
                           <Select
                             value={value}
@@ -494,14 +494,16 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
                             }}
                           >
                             <SelectTrigger className="h-9 text-xs">
-                              <SelectValue placeholder="Selecione uma opção..." />
+                              <SelectValue placeholder="Selecione uma opção...">
+                                {selected ? <span className="font-semibold truncate">{selected.title}</span> : null}
+                              </SelectValue>
                             </SelectTrigger>
-                            <SelectContent className="max-h-72">
+                            <SelectContent className="max-h-80 max-w-[min(90vw,520px)]">
                               {IGANHEI_SLIDE2_CARDS.filter((c) => c.id === value || !used.has(c.id)).map((c) => (
-                                <SelectItem key={c.id} value={c.id} className="text-xs">
-                                  <div className="flex flex-col py-0.5">
-                                    <span className="font-semibold">{c.title}</span>
-                                    <span className="text-[11px] text-muted-foreground">{c.description}</span>
+                                <SelectItem key={c.id} value={c.id} className="text-xs items-start py-2 pr-2">
+                                  <div className="flex flex-col gap-0.5 whitespace-normal">
+                                    <span className="font-semibold text-foreground leading-tight">{c.title}</span>
+                                    <span className="text-[11px] text-muted-foreground leading-snug">{c.description}</span>
                                   </div>
                                 </SelectItem>
                               ))}
