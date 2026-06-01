@@ -423,10 +423,10 @@ export default function PreVendas() {
                   <SearchableCombobox
                     value={clientFilter || "__all__"}
                     onValueChange={(v) => setClientFilter(v === "__all__" ? "" : v)}
-                    options={clientOptions}
+                    items={clientOptions}
                     placeholder="Filtrar por cliente"
                     searchPlaceholder="Buscar cliente..."
-                    emptyMessage="Nenhum cliente encontrado"
+                    emptyText="Nenhum cliente encontrado"
                   />
                 </div>
           <Card>
