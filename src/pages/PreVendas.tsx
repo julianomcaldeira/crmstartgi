@@ -72,6 +72,7 @@ export default function PreVendas() {
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Request | null>(null);
+  const [clientFilter, setClientFilter] = useState<string>("");
 
   // form
   const [form, setForm] = useState({
