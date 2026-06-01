@@ -414,7 +414,7 @@ export default function PreVendas() {
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreate}>Criar</Button>
+              <Button onClick={handleCreate}>{editingId ? "Salvar" : "Criar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
