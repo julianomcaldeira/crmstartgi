@@ -71,6 +71,7 @@ export default function PreVendas() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Request | null>(null);
   const [clientFilter, setClientFilter] = useState<string>("");
 
