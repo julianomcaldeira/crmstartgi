@@ -124,7 +124,7 @@ export default function PreVendas() {
           .order("created_at", { ascending: false }),
         supabase
           .from("opportunities")
-          .select("id, title, value, monthly_value, status, probability, assigned_to, client_id, clients(company_name)")
+          .select("id, title, value, monthly_value, status, probability, assigned_to, client_id, product_id, clients(company_name)")
           .order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email").or("is_deleted.is.null,is_deleted.eq.false"),
         supabase.from("user_roles").select("user_id, role").in("role", ["pre_vendas", "admin"]),
