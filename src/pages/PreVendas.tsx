@@ -86,6 +86,15 @@ export default function PreVendas() {
     expectations: "",
   });
 
+  // Auto-carrega o produto vinculado à oportunidade selecionada
+  useEffect(() => {
+    if (!form.opportunity_id) return;
+    const opp = opportunities.find((o) => o.id === form.opportunity_id);
+    if (opp?.product_id && opp.product_id !== form.product_id) {
+      setForm((f) => ({ ...f, product_id: opp.product_id }));
+    }
+  }, [form.opportunity_id, opportunities]);
+
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canSeeDashboard = isPreVendas || isAdmin;
