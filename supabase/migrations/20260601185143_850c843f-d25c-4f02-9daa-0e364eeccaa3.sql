@@ -1,0 +1,1 @@
+ALTER TABLE public.pre_vendas_agenda ADD COLUMN IF NOT EXISTS sync_error TEXT;
