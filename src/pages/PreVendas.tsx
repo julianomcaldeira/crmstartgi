@@ -71,6 +71,7 @@ export default function PreVendas() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Request | null>(null);
   const [clientFilter, setClientFilter] = useState<string>("");
 
@@ -139,6 +140,39 @@ export default function PreVendas() {
     setPreVendasUsers((profs || []).filter((p: any) => pvIds.has(p.id)));
   }
 
+  function resetForm() {
+    setForm({
+      title: "",
+      description: "",
+      opportunity_id: "",
+      desired_datetime: "",
+      meeting_link: "",
+      assigned_pre_vendas: "",
+      product_id: "",
+      attendees_roles: "",
+      expectations: "",
+    });
+    setEditingId(null);
+  }
+
+  function openEditRequest(r: Request) {
+    setEditingId(r.id);
+    setForm({
+      title: r.title || "",
+      description: r.description || "",
+      opportunity_id: r.opportunity_id || "",
+      desired_datetime: r.desired_datetime
+        ? format(new Date(r.desired_datetime), "yyyy-MM-dd'T'HH:mm")
+        : "",
+      meeting_link: r.meeting_link || "",
+      assigned_pre_vendas: r.assigned_pre_vendas || "",
+      product_id: r.product_id || "",
+      attendees_roles: r.attendees_roles || "",
+      expectations: r.expectations || "",
+    });
+    setCreateOpen(true);
+  }
+
   async function handleCreate() {
     if (!form.title || !userId) {
       toast.error("Título é obrigatório");
@@ -159,27 +193,29 @@ export default function PreVendas() {
       product_id: form.product_id || null,
       attendees_roles: form.attendees_roles || null,
       expectations: form.expectations || null,
-      requested_by: userId,
-      status: "solicitada",
     };
-    const { error } = await supabase.from("pre_vendas_requests").insert(payload);
-    if (error) {
-      toast.error("Erro ao criar solicitação: " + error.message);
-      return;
+    if (editingId) {
+      const { error } = await supabase
+        .from("pre_vendas_requests")
+        .update(payload)
+        .eq("id", editingId);
+      if (error) {
+        toast.error("Erro ao atualizar: " + error.message);
+        return;
+      }
+      toast.success("Solicitação atualizada!");
+    } else {
+      const { error } = await supabase
+        .from("pre_vendas_requests")
+        .insert({ ...payload, requested_by: userId, status: "solicitada" });
+      if (error) {
+        toast.error("Erro ao criar solicitação: " + error.message);
+        return;
+      }
+      toast.success("Solicitação criada!");
     }
-    toast.success("Solicitação criada!");
     setCreateOpen(false);
-    setForm({
-      title: "",
-      description: "",
-      opportunity_id: "",
-      desired_datetime: "",
-      meeting_link: "",
-      assigned_pre_vendas: "",
-      product_id: "",
-      attendees_roles: "",
-      expectations: "",
-    });
+    resetForm();
     await loadAll();
   }
 
@@ -271,15 +307,23 @@ export default function PreVendas() {
             Solicitações de agenda e acompanhamento de projetos
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <Dialog
+          open={createOpen}
+          onOpenChange={(o) => {
+            setCreateOpen(o);
+            if (!o) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => resetForm()}>
               <Plus className="h-4 w-4" /> Nova solicitação
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Solicitar agenda com Pré-Vendas</DialogTitle>
+              <DialogTitle>
+                {editingId ? "Editar solicitação" : "Solicitar agenda com Pré-Vendas"}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 overflow-y-auto flex-1 pr-1">
               <div>
@@ -370,7 +414,7 @@ export default function PreVendas() {
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreate}>Criar</Button>
+              <Button onClick={handleCreate}>{editingId ? "Salvar" : "Criar"}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -497,9 +541,16 @@ export default function PreVendas() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
-                            Detalhes
-                          </Button>
+                          <div className="flex gap-2">
+                            {canEdit && (
+                              <Button size="sm" variant="outline" onClick={() => openEditRequest(r)}>
+                                Editar
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
+                              Detalhes
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
