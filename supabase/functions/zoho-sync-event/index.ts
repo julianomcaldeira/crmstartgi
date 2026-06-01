@@ -151,21 +151,23 @@ Deno.serve(async (req) => {
       }
 
       if (!etag) {
-        // Sem etag não dá para atualizar com segurança. Para evitar duplicar eventos no Zoho,
-        // NÃO recriamos. Marcamos o status e instruímos o usuário.
-        await admin.from("pre_vendas_agenda").update({
-          sync_status: "etag_missing",
-          last_synced_at: new Date().toISOString(),
-        }).eq("id", ev.id);
-        throw new Error("Não foi possível atualizar o evento no Zoho (etag não encontrado). O evento original pode ter sido removido. Exclua este compromisso e crie-o novamente.");
+        // Sem etag (evento provavelmente removido do Zoho): recria para manter a agenda em sincronia.
+        console.warn("Etag ausente; recriando evento no Zoho para manter sincronia.");
+        zohoEventId = null;
+        zohoEtag = null;
+        zohoRes = await fetch(calUrl, {
+          method: "POST",
+          headers: headersZoho,
+          body: new URLSearchParams({ eventdata: JSON.stringify(eventData) }),
+        });
+      } else {
+        const updatePayload = { ...eventData, etag };
+        zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
+          method: "PUT",
+          headers: headersZoho,
+          body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
+        });
       }
-
-      const updatePayload = { ...eventData, etag };
-      zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
-        method: "PUT",
-        headers: headersZoho,
-        body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
-      });
     } else {
       // Create
       zohoRes = await fetch(calUrl, {
@@ -175,10 +177,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const zohoBody = await zohoRes.json();
+    const zohoText = await zohoRes.text();
+    let zohoBody: any;
+    try { zohoBody = JSON.parse(zohoText); } catch { zohoBody = { raw: zohoText.slice(0, 500) }; }
     if (!zohoRes.ok) {
-      console.error("Zoho calendar error", zohoBody);
-      throw new Error(`Zoho Calendar: ${JSON.stringify(zohoBody)}`);
+      console.error("Zoho calendar error", zohoRes.status, zohoBody);
+      throw new Error(`Zoho Calendar (${zohoRes.status}): ${typeof zohoBody === "string" ? zohoBody : JSON.stringify(zohoBody)}`);
     }
     const created = zohoBody?.events?.[0] || zohoBody;
     if (!zohoEventId) {

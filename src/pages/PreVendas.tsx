@@ -86,6 +86,15 @@ export default function PreVendas() {
     expectations: "",
   });
 
+  // Auto-carrega o produto vinculado à oportunidade selecionada
+  useEffect(() => {
+    if (!form.opportunity_id) return;
+    const opp = opportunities.find((o) => o.id === form.opportunity_id);
+    if (opp?.product_id && opp.product_id !== form.product_id) {
+      setForm((f) => ({ ...f, product_id: opp.product_id }));
+    }
+  }, [form.opportunity_id, opportunities]);
+
   const isPreVendas = role === "pre_vendas";
   const isAdmin = role === "admin";
   const canSeeDashboard = isPreVendas || isAdmin;
@@ -115,7 +124,7 @@ export default function PreVendas() {
           .order("created_at", { ascending: false }),
         supabase
           .from("opportunities")
-          .select("id, title, value, monthly_value, status, probability, assigned_to, client_id, clients(company_name)")
+          .select("id, title, value, monthly_value, status, probability, assigned_to, client_id, product_id, clients(company_name)")
           .order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email").or("is_deleted.is.null,is_deleted.eq.false"),
         supabase.from("user_roles").select("user_id, role").in("role", ["pre_vendas", "admin"]),
@@ -319,35 +328,20 @@ export default function PreVendas() {
                 </Select>
               </div>
               <div>
-                <Label>Data/hora desejada</Label>
-                <Input
-                  type="datetime-local"
-                  value={form.desired_datetime}
-                  onChange={(e) =>
-                    setForm({ ...form, desired_datetime: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <Label>Link da reunião</Label>
-                <Input
-                  value={form.meeting_link}
-                  onChange={(e) =>
-                    setForm({ ...form, meeting_link: e.target.value })
-                  }
-                  placeholder="https://meet..."
-                />
-              </div>
-              <div>
                 <Label>Produto StartGi para apresentação</Label>
                 <SearchableCombobox
                   items={products.map((p) => ({ value: p.id, label: p.name }))}
                   value={form.product_id}
                   onValueChange={(v) => setForm({ ...form, product_id: v })}
-                  placeholder="Selecione o produto"
+                  placeholder={form.opportunity_id ? "Carregado automaticamente da oportunidade" : "Selecione o produto"}
                   searchPlaceholder="Buscar produto..."
                   emptyText="Nenhum produto encontrado."
                 />
+                {form.opportunity_id && form.product_id && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Carregado automaticamente da oportunidade selecionada.
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Cargos dos participantes da reunião</Label>
@@ -358,17 +352,6 @@ export default function PreVendas() {
                   }
                   rows={2}
                   placeholder="Ex: Diretor Financeiro, Gerente de TI, Sócio..."
-                />
-              </div>
-              <div>
-                <Label>Expectativa do vendedor para a reunião</Label>
-                <Textarea
-                  value={form.expectations}
-                  onChange={(e) =>
-                    setForm({ ...form, expectations: e.target.value })
-                  }
-                  rows={3}
-                  placeholder="O que você espera alcançar com esta reunião?"
                 />
               </div>
               <div>
