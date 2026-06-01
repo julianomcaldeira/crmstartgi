@@ -135,9 +135,14 @@ Deno.serve(async (req) => {
         return null;
       };
 
+      // Zoho event UIDs contêm caracteres como '@' que NÃO devem ser percent-encoded,
+      // caso contrário o roteador da API responde com 404 (página HTML de erro).
+      const encodeZohoUid = (uid: string) => uid.replace(/ /g, "%20").replace(/#/g, "%23");
+      const eventPath = `${calUrl}/${encodeZohoUid(zohoEventId)}`;
+
       if (!etag) {
         try {
-          const getRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
+          const getRes = await fetch(eventPath, {
             headers: { Authorization: `Zoho-oauthtoken ${tokens.access_token}` },
           });
           const text = await getRes.text();
@@ -162,7 +167,7 @@ Deno.serve(async (req) => {
         });
       } else {
         const updatePayload = { ...eventData, etag };
-        zohoRes = await fetch(`${calUrl}/${encodeURIComponent(zohoEventId)}`, {
+        zohoRes = await fetch(eventPath, {
           method: "PUT",
           headers: headersZoho,
           body: new URLSearchParams({ eventdata: JSON.stringify(updatePayload) }),
