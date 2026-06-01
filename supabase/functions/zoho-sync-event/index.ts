@@ -197,6 +197,7 @@ Deno.serve(async (req) => {
       zoho_etag: zohoEtag,
       last_synced_at: new Date().toISOString(),
       sync_status: "synced",
+      sync_error: null,
     }).eq("id", ev.id);
 
     // Envio de convite por Zoho Mail
