@@ -396,6 +396,39 @@ export default function PreVendas() {
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4">
+          {(() => {
+            const clientMap = new Map<string, string>();
+            requests.forEach((r) => {
+              const opp = opportunities.find((o) => o.id === r.opportunity_id);
+              const cid = r.client_id || opp?.client_id;
+              const name = opp?.clients?.company_name;
+              if (cid && name && !clientMap.has(cid)) clientMap.set(cid, name);
+            });
+            const clientOptions = [
+              { value: "__all__", label: "Todos os clientes" },
+              ...Array.from(clientMap.entries())
+                .map(([value, label]) => ({ value, label }))
+                .sort((a, b) => a.label.localeCompare(b.label)),
+            ];
+            const filteredRequests = clientFilter
+              ? requests.filter((r) => {
+                  const opp = opportunities.find((o) => o.id === r.opportunity_id);
+                  return (r.client_id || opp?.client_id) === clientFilter;
+                })
+              : requests;
+            return (
+              <>
+                <div className="flex items-center gap-2 max-w-md">
+                  <Label className="whitespace-nowrap">Cliente:</Label>
+                  <SearchableCombobox
+                    value={clientFilter || "__all__"}
+                    onValueChange={(v) => setClientFilter(v === "__all__" ? "" : v)}
+                    options={clientOptions}
+                    placeholder="Filtrar por cliente"
+                    searchPlaceholder="Buscar cliente..."
+                    emptyMessage="Nenhum cliente encontrado"
+                  />
+                </div>
           <Card>
             <CardContent className="p-0">
               <Table>
@@ -403,6 +436,7 @@ export default function PreVendas() {
                   <TableRow>
                     <TableHead>Título</TableHead>
                     <TableHead>Oportunidade</TableHead>
+                    <TableHead>Cliente</TableHead>
                     <TableHead>Solicitante</TableHead>
                     <TableHead>Pré-Vendas</TableHead>
                     <TableHead>Data desejada</TableHead>
@@ -411,14 +445,14 @@ export default function PreVendas() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.length === 0 && (
+                  {filteredRequests.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Nenhuma solicitação ainda.
                       </TableCell>
                     </TableRow>
                   )}
-                  {requests.map((r) => {
+                  {filteredRequests.map((r) => {
                     const opp = opportunities.find((o) => o.id === r.opportunity_id);
                     const requester = profiles.find((p) => p.id === r.requested_by);
                     const pv = profiles.find((p) => p.id === r.assigned_pre_vendas);
