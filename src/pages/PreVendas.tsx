@@ -541,9 +541,16 @@ export default function PreVendas() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
-                            Detalhes
-                          </Button>
+                          <div className="flex gap-2">
+                            {canEdit && (
+                              <Button size="sm" variant="outline" onClick={() => openEditRequest(r)}>
+                                Editar
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline" onClick={() => setEditing(r)}>
+                              Detalhes
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
