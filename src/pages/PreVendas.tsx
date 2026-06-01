@@ -307,15 +307,23 @@ export default function PreVendas() {
             Solicitações de agenda e acompanhamento de projetos
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <Dialog
+          open={createOpen}
+          onOpenChange={(o) => {
+            setCreateOpen(o);
+            if (!o) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => resetForm()}>
               <Plus className="h-4 w-4" /> Nova solicitação
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
             <DialogHeader>
-              <DialogTitle>Solicitar agenda com Pré-Vendas</DialogTitle>
+              <DialogTitle>
+                {editingId ? "Editar solicitação" : "Solicitar agenda com Pré-Vendas"}
+              </DialogTitle>
             </DialogHeader>
             <div className="space-y-3 overflow-y-auto flex-1 pr-1">
               <div>
