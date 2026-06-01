@@ -567,14 +567,28 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                           variant="ghost"
                           className="h-7 w-7"
                           onClick={() => openEdit(ev)}
+                          title="Editar"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {(ev.sync_status === "failed" || ev.sync_status === "etag_missing" || !ev.sync_status) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-primary"
+                            onClick={() => handleResync(ev)}
+                            disabled={sending}
+                            title="Reenviar para Zoho"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${sending ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-destructive"
                           onClick={() => handleDelete(ev.id)}
+                          title="Excluir"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
