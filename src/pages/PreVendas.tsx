@@ -140,6 +140,39 @@ export default function PreVendas() {
     setPreVendasUsers((profs || []).filter((p: any) => pvIds.has(p.id)));
   }
 
+  function resetForm() {
+    setForm({
+      title: "",
+      description: "",
+      opportunity_id: "",
+      desired_datetime: "",
+      meeting_link: "",
+      assigned_pre_vendas: "",
+      product_id: "",
+      attendees_roles: "",
+      expectations: "",
+    });
+    setEditingId(null);
+  }
+
+  function openEditRequest(r: Request) {
+    setEditingId(r.id);
+    setForm({
+      title: r.title || "",
+      description: r.description || "",
+      opportunity_id: r.opportunity_id || "",
+      desired_datetime: r.desired_datetime
+        ? format(new Date(r.desired_datetime), "yyyy-MM-dd'T'HH:mm")
+        : "",
+      meeting_link: r.meeting_link || "",
+      assigned_pre_vendas: r.assigned_pre_vendas || "",
+      product_id: r.product_id || "",
+      attendees_roles: r.attendees_roles || "",
+      expectations: r.expectations || "",
+    });
+    setCreateOpen(true);
+  }
+
   async function handleCreate() {
     if (!form.title || !userId) {
       toast.error("Título é obrigatório");
@@ -160,27 +193,29 @@ export default function PreVendas() {
       product_id: form.product_id || null,
       attendees_roles: form.attendees_roles || null,
       expectations: form.expectations || null,
-      requested_by: userId,
-      status: "solicitada",
     };
-    const { error } = await supabase.from("pre_vendas_requests").insert(payload);
-    if (error) {
-      toast.error("Erro ao criar solicitação: " + error.message);
-      return;
+    if (editingId) {
+      const { error } = await supabase
+        .from("pre_vendas_requests")
+        .update(payload)
+        .eq("id", editingId);
+      if (error) {
+        toast.error("Erro ao atualizar: " + error.message);
+        return;
+      }
+      toast.success("Solicitação atualizada!");
+    } else {
+      const { error } = await supabase
+        .from("pre_vendas_requests")
+        .insert({ ...payload, requested_by: userId, status: "solicitada" });
+      if (error) {
+        toast.error("Erro ao criar solicitação: " + error.message);
+        return;
+      }
+      toast.success("Solicitação criada!");
     }
-    toast.success("Solicitação criada!");
     setCreateOpen(false);
-    setForm({
-      title: "",
-      description: "",
-      opportunity_id: "",
-      desired_datetime: "",
-      meeting_link: "",
-      assigned_pre_vendas: "",
-      product_id: "",
-      attendees_roles: "",
-      expectations: "",
-    });
+    resetForm();
     await loadAll();
   }
 
