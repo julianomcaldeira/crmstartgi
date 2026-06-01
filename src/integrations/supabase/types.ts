@@ -2060,6 +2060,7 @@ export type Database = {
           pre_vendas_user_id: string
           related_request_id: string | null
           start_datetime: string
+          sync_error: string | null
           sync_status: string | null
           title: string
           updated_at: string
@@ -2081,6 +2082,7 @@ export type Database = {
           pre_vendas_user_id: string
           related_request_id?: string | null
           start_datetime: string
+          sync_error?: string | null
           sync_status?: string | null
           title: string
           updated_at?: string
@@ -2102,6 +2104,7 @@ export type Database = {
           pre_vendas_user_id?: string
           related_request_id?: string | null
           start_datetime?: string
+          sync_error?: string | null
           sync_status?: string | null
           title?: string
           updated_at?: string

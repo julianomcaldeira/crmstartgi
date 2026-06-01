@@ -26,7 +26,7 @@ import {
 import { toast } from "sonner";
 import { format, isSameDay, startOfDay, endOfDay, addDays, startOfWeek, endOfWeek, addWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight, Send, Mail, X } from "lucide-react";
+import { Plus, Lock, Globe, MapPin, Link as LinkIcon, Trash2, Pencil, ChevronLeft, ChevronRight, Send, Mail, X, RefreshCw } from "lucide-react";
 import { Badge as BadgeUI } from "@/components/ui/badge";
 import AgendaEventEmailHistory from "@/components/AgendaEventEmailHistory";
 
@@ -45,8 +45,19 @@ type AgendaEvent = {
   opportunity_id?: string | null;
   zoho_event_id?: string | null;
   sync_status?: string | null;
+  sync_error?: string | null;
   last_synced_at?: string | null;
 };
+
+function SyncStatusBadge({ status }: { status?: string | null }) {
+  if (status === "synced") {
+    return <BadgeUI variant="outline" className="gap-1 text-xs border-green-500/40 text-green-700 bg-green-500/10">Enviado</BadgeUI>;
+  }
+  if (status === "failed" || status === "etag_missing") {
+    return <BadgeUI variant="outline" className="gap-1 text-xs border-red-500/40 text-red-700 bg-red-500/10">Erro</BadgeUI>;
+  }
+  return <BadgeUI variant="outline" className="gap-1 text-xs border-yellow-500/40 text-yellow-700 bg-yellow-500/10">Pendente</BadgeUI>;
+}
 
 interface Props {
   userId: string;
@@ -259,6 +270,24 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
     if (error) return toast.error("Erro: " + error.message);
     toast.success("Excluído");
     load();
+  }
+
+  async function handleResync(ev: AgendaEvent) {
+    setSending(true);
+    try {
+      const hasAttendees = (ev.attendees || []).length > 0;
+      const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
+        body: { eventId: ev.id, sendInvite: hasAttendees },
+      });
+      if (error) toast.error("Falha ao reenviar: " + error.message);
+      else if (data?.error) toast.error("Falha ao reenviar: " + data.error);
+      else toast.success("Sincronizado com o Zoho");
+    } catch (e: any) {
+      toast.error("Erro Zoho: " + e.message);
+    } finally {
+      setSending(false);
+      load();
+    }
   }
 
   // Filter events
@@ -497,7 +526,13 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                         <Badge variant="outline" className="text-xs">
                           {pvName(ev.pre_vendas_user_id)}
                         </Badge>
+                        <SyncStatusBadge status={ev.sync_status} />
                       </div>
+                      {ev.sync_status === "failed" && ev.sync_error && (
+                        <p className="text-xs text-red-600 mt-1 line-clamp-2" title={ev.sync_error}>
+                          Falha Zoho: {ev.sync_error}
+                        </p>
+                      )}
                       {ev.description && (
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                           {ev.description}
@@ -532,14 +567,28 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                           variant="ghost"
                           className="h-7 w-7"
                           onClick={() => openEdit(ev)}
+                          title="Editar"
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
+                        {(ev.sync_status === "failed" || ev.sync_status === "etag_missing" || !ev.sync_status) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-primary"
+                            onClick={() => handleResync(ev)}
+                            disabled={sending}
+                            title="Reenviar para Zoho"
+                          >
+                            <RefreshCw className={`h-3.5 w-3.5 ${sending ? "animate-spin" : ""}`} />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="ghost"
                           className="h-7 w-7 text-destructive"
                           onClick={() => handleDelete(ev.id)}
+                          title="Excluir"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
