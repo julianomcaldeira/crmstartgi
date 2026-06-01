@@ -229,10 +229,24 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
         setSending(false);
       }
     } else if (savedId && editing) {
-      // Apenas atualiza o evento no Zoho sem enviar email
-      supabase.functions.invoke("zoho-sync-event", {
-        body: { eventId: savedId, sendInvite: false },
-      }).catch(() => {});
+      // Sincroniza alterações no Zoho mesmo sem enviar e-mail aos convidados
+      setSending(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
+          body: { eventId: savedId, sendInvite: false },
+        });
+        if (error) {
+          toast.error("Falha ao atualizar no Zoho: " + error.message);
+        } else if (data?.error) {
+          toast.error("Falha ao atualizar no Zoho: " + data.error);
+        } else {
+          toast.success("Agenda do Zoho atualizada");
+        }
+      } catch (e: any) {
+        toast.error("Erro Zoho: " + e.message);
+      } finally {
+        setSending(false);
+      }
     }
 
     setOpen(false);
