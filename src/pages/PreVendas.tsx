@@ -388,6 +388,28 @@ export default function PreVendas() {
                   </p>
                 )}
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Data/hora desejada</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.desired_datetime}
+                    onChange={(e) =>
+                      setForm({ ...form, desired_datetime: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Link da reunião</Label>
+                  <Input
+                    value={form.meeting_link}
+                    onChange={(e) =>
+                      setForm({ ...form, meeting_link: e.target.value })
+                    }
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
               <div>
                 <Label>Cargos dos participantes da reunião</Label>
                 <Textarea
@@ -397,6 +419,17 @@ export default function PreVendas() {
                   }
                   rows={2}
                   placeholder="Ex: Diretor Financeiro, Gerente de TI, Sócio..."
+                />
+              </div>
+              <div>
+                <Label>Expectativas</Label>
+                <Textarea
+                  value={form.expectations}
+                  onChange={(e) =>
+                    setForm({ ...form, expectations: e.target.value })
+                  }
+                  rows={3}
+                  placeholder="O que o cliente espera desta reunião?"
                 />
               </div>
               <div>
