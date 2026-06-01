@@ -508,6 +508,9 @@ export default function PreVendas() {
               </Table>
             </CardContent>
           </Card>
+              </>
+            );
+          })()}
         </TabsContent>
 
         {canSeeDashboard && (
