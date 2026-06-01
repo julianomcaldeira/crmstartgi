@@ -45,8 +45,19 @@ type AgendaEvent = {
   opportunity_id?: string | null;
   zoho_event_id?: string | null;
   sync_status?: string | null;
+  sync_error?: string | null;
   last_synced_at?: string | null;
 };
+
+function SyncStatusBadge({ status }: { status?: string | null }) {
+  if (status === "synced") {
+    return <BadgeUI variant="outline" className="gap-1 text-xs border-green-500/40 text-green-700 bg-green-500/10">Enviado</BadgeUI>;
+  }
+  if (status === "failed" || status === "etag_missing") {
+    return <BadgeUI variant="outline" className="gap-1 text-xs border-red-500/40 text-red-700 bg-red-500/10">Erro</BadgeUI>;
+  }
+  return <BadgeUI variant="outline" className="gap-1 text-xs border-yellow-500/40 text-yellow-700 bg-yellow-500/10">Pendente</BadgeUI>;
+}
 
 interface Props {
   userId: string;
