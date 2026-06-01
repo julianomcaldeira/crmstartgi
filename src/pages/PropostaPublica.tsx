@@ -187,9 +187,27 @@ export default function PropostaPublica() {
     }
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     enqueue({ event_type: "download" });
-    window.print();
+    if (!docRef.current) { window.print(); return; }
+    const printWindow = window.open("", "_blank");
+    try {
+      const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
+      const pdf = await buildProposalSlidesPdf(docRef.current);
+      if (typeof (pdf as any).autoPrint === "function") (pdf as any).autoPrint();
+      const url = URL.createObjectURL(pdf.output("blob"));
+      if (printWindow) {
+        printWindow.location.href = url;
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      } else {
+        window.open(url, "_blank");
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+    } catch (e) {
+      console.error(e);
+      printWindow?.close();
+      window.print();
+    }
   };
 
   return (
