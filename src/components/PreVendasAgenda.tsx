@@ -526,7 +526,13 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
                         <Badge variant="outline" className="text-xs">
                           {pvName(ev.pre_vendas_user_id)}
                         </Badge>
+                        <SyncStatusBadge status={ev.sync_status} />
                       </div>
+                      {ev.sync_status === "failed" && ev.sync_error && (
+                        <p className="text-xs text-red-600 mt-1 line-clamp-2" title={ev.sync_error}>
+                          Falha Zoho: {ev.sync_error}
+                        </p>
+                      )}
                       {ev.description && (
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                           {ev.description}
