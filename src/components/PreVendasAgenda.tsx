@@ -332,10 +332,12 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
 
   const upcoming = useMemo(() => {
     const now = new Date();
+    const isVendedor = role === "vendedor";
     return filteredEvents
       .filter((e) => new Date(e.end_datetime) >= now)
+      .filter((e) => !isVendedor || e.created_by === userId)
       .slice(0, 8);
-  }, [filteredEvents]);
+  }, [filteredEvents, role, userId]);
 
   function pvName(id: string) {
     return preVendasUsers.find((p) => p.id === id)?.full_name || "—";
