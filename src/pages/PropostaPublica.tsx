@@ -174,7 +174,20 @@ export default function PropostaPublica() {
     enqueue({ event_type: "share", metadata: { url } });
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
+    enqueue({ event_type: "download" });
+    if (!docRef.current) { window.print(); return; }
+    try {
+      const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
+      const pdf = await buildProposalSlidesPdf(docRef.current);
+      pdf.save(`${data.title || "proposta"}.pdf`);
+    } catch (e) {
+      console.error(e);
+      window.print();
+    }
+  };
+
+  const handlePrint = () => {
     enqueue({ event_type: "download" });
     window.print();
   };
@@ -182,22 +195,30 @@ export default function PropostaPublica() {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white border-b sticky top-0 z-10 print:hidden">
-        <div className="max-w-4xl mx-auto p-3 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto p-3 flex items-center justify-between">
           <img src={logo} alt="Evolua CRM" className="h-10" />
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleShare}>Compartilhar link</Button>
-            <Button variant="outline" size="sm" onClick={handleDownload}><FileText className="h-4 w-4 mr-1" /> Imprimir / PDF</Button>
+            <Button variant="outline" size="sm" onClick={handlePrint}><Printer className="h-4 w-4 mr-1" /> Imprimir</Button>
+            <Button variant="outline" size="sm" onClick={handleDownload}><Download className="h-4 w-4 mr-1" /> Baixar PDF</Button>
           </div>
         </div>
       </header>
       <main className="py-6">
-        <div ref={docRef} className="mx-auto bg-white shadow-lg" style={{ width: 794 }}>
+        <div ref={docRef} className="mx-auto bg-white shadow-lg proposal-slide-stage" style={{ width: 1020 }}>
           <ProposalRenderer blocks={data.blocks || []} variables={finalVars} />
         </div>
         <p className="text-center text-xs text-muted-foreground mt-4 print:hidden">
           Validade: {data.validity_days || 30} dias · Visualização registrada
         </p>
       </main>
+      <style>{`
+        @page { size: 270mm 180mm; margin: 0; }
+        @media print {
+          body { background: #ffffff !important; }
+          .proposal-slide-stage { width: 270mm !important; box-shadow: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
