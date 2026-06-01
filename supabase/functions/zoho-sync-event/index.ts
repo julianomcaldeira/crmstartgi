@@ -386,6 +386,19 @@ Deno.serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("zoho-sync-event error", e);
+    // Marca o evento como falho para que o usuário possa reenviar pela UI
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      const failedId = (body as any)?.eventId;
+      if (failedId) {
+        const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        await admin.from("pre_vendas_agenda").update({
+          sync_status: "failed",
+          sync_error: String(e?.message || e).slice(0, 1000),
+          last_synced_at: new Date().toISOString(),
+        }).eq("id", failedId);
+      }
+    } catch (_) { /* ignore */ }
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
