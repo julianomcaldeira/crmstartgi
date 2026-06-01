@@ -272,6 +272,24 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
     load();
   }
 
+  async function handleResync(ev: AgendaEvent) {
+    setSending(true);
+    try {
+      const hasAttendees = (ev.attendees || []).length > 0;
+      const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
+        body: { eventId: ev.id, sendInvite: hasAttendees },
+      });
+      if (error) toast.error("Falha ao reenviar: " + error.message);
+      else if (data?.error) toast.error("Falha ao reenviar: " + data.error);
+      else toast.success("Sincronizado com o Zoho");
+    } catch (e: any) {
+      toast.error("Erro Zoho: " + e.message);
+    } finally {
+      setSending(false);
+      load();
+    }
+  }
+
   // Filter events
   const filteredEvents = useMemo(() => {
     return events.filter((e) =>
