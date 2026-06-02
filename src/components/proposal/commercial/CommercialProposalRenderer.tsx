@@ -62,24 +62,28 @@ function renderSection(s: CommercialSection, txt: (v: string) => string, vars: P
         </div>
       );
 
-    case "cards":
+    case "cards": {
+      const cards = c.cards || [];
+      const cols = Math.min(3, cards.length) || 3;
       return (
-        <div style={{ width: "100%" }}>
-          <div style={{ textAlign: "center", maxWidth: 960, margin: "0 auto 44px" }}>
-            <h2>{s.title}</h2>
-            {c.intro && <p style={{ marginTop: 14 }}>{txt(c.intro)}</p>}
+        <div style={{ width: "100%", display: "flex", flexDirection: "column", height: "100%" }}>
+          <div style={{ maxWidth: 1080, marginBottom: 40 }}>
+            <span className="ig-eyebrow">{s.title}</span>
+            <h2 style={{ marginTop: 12 }}>{txt(c.headline || s.title)}</h2>
+            {c.intro && <p style={{ marginTop: 14, fontSize: 18, color: "var(--ig-muted)", maxWidth: 880 }}>{txt(c.intro)}</p>}
           </div>
-          <div className={`ig-grid-${Math.min(3, (c.cards || []).length) || 3}`}>
-            {(c.cards || []).map((card: any, i: number) => (
-              <div key={i} className="ig-card ig-card-icon-top">
-                <span className="ig-icon-bubble"><Icon name={card.icon} size={30} /></span>
-                <h3>{txt(card.title || "")}</h3>
-                <p style={{ fontSize: 16 }}>{txt(card.text || "")}</p>
+          <div className={`ig-grid-${cols}`} style={{ alignItems: "stretch", flex: 1 }}>
+            {cards.map((card: any, i: number) => (
+              <div key={i} className="ig-card" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", textAlign: "left", gap: 16, height: "100%" }}>
+                <span className="ig-icon-bubble" style={{ width: 56, height: 56 }}><Icon name={card.icon} size={28} /></span>
+                <h3 style={{ fontSize: 20 }}>{txt(card.title || "")}</h3>
+                <p style={{ fontSize: 16, lineHeight: 1.5 }}>{txt(card.text || "")}</p>
               </div>
             ))}
           </div>
         </div>
       );
+    }
 
     case "list":
       return (
