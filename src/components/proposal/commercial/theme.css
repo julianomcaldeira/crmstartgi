@@ -69,9 +69,34 @@
   box-shadow: 0 8px 20px -8px rgba(79,91,255,.5);
   flex-shrink: 0;
 }
+.ig-grid-1 { display: grid; grid-template-columns: 1fr; gap: 28px; width: 100%; }
 .ig-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; width: 100%; }
 .ig-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; width: 100%; }
 .ig-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; width: 100%; }
+
+/* Cards slide — clean header + grid that respects the 3:2 frame */
+.ig-cards-slide {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+.ig-cards-head { max-width: 1080px; display: flex; flex-direction: column; gap: 14px; }
+.ig-cards-head .ig-eyebrow { margin-bottom: 0; align-self: flex-start; }
+.ig-cards-intro { font-size: 18px; color: var(--ig-muted); max-width: 880px; margin: 0; }
+.ig-cards-grid { align-items: stretch; }
+.ig-card-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 14px;
+  height: 100%;
+  padding: 28px;
+}
+.ig-card-stack h3 { font-size: 19px; line-height: 1.25; margin: 0; }
+.ig-card-stack p { font-size: 15px; line-height: 1.55; margin: 0; color: #4b5563; }
+.ig-card-stack .ig-icon-bubble { width: 48px; height: 48px; border-radius: 14px; }
 
 .ig-cover {
   background: linear-gradient(135deg, var(--ig-primary) 0%, var(--ig-primary-dark) 100%);
