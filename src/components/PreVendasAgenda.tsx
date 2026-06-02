@@ -228,7 +228,8 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
         const { data, error } = await supabase.functions.invoke("zoho-sync-event", {
           body: { eventId: savedId, sendInvite: true, notifyAttendees },
         });
-        if (error) toast.error("Falha ao enviar convite: " + error.message);
+        if (error) toast.warning("Compromisso salvo, mas não sincronizou com o Zoho: " + error.message);
+        else if (data?.sync_status === "skipped") toast.warning("Compromisso salvo no CRM. Zoho não sincronizado: " + (data.warning || "conexão indisponível"));
         else if (data?.invitation?.status === "sent") {
           const count = notifyAttendees?.length ?? form.attendees.length;
           toast.success(`Convite enviado para ${count} convidado(s)`);
@@ -247,9 +248,11 @@ export default function PreVendasAgenda({ userId, role, preVendasUsers }: Props)
           body: { eventId: savedId, sendInvite: false },
         });
         if (error) {
-          toast.error("Falha ao atualizar no Zoho: " + error.message);
+          toast.warning("Compromisso atualizado no CRM. Zoho não sincronizado: " + error.message);
+        } else if (data?.sync_status === "skipped") {
+          toast.warning("Compromisso atualizado no CRM. Zoho não sincronizado: " + (data.warning || "conexão indisponível"));
         } else if (data?.error) {
-          toast.error("Falha ao atualizar no Zoho: " + data.error);
+          toast.warning("Compromisso atualizado no CRM. Zoho não sincronizado: " + data.error);
         } else {
           toast.success("Agenda do Zoho atualizada");
         }
