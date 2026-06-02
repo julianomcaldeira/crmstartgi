@@ -40,9 +40,42 @@ Deno.serve(async (req) => {
       .from("pre_vendas_agenda").select("*").eq("id", eventId).maybeSingle();
     if (evErr || !ev) throw new Error("Evento não encontrado");
 
-    // Usa tokens do dono do evento (pre_vendas_user_id)
-    const tokens = await getValidTokens(admin, ev.pre_vendas_user_id);
-    if (!tokens.primary_calendar_id) throw new Error("Calendário primário do Zoho não definido");
+    // Usa tokens do dono do evento (pre_vendas_user_id). Se a conta não estiver conectada,
+    // a edição no CRM não deve falhar: apenas marca a sincronização como pendente.
+    let tokens;
+    try {
+      tokens = await getValidTokens(admin, ev.pre_vendas_user_id);
+    } catch (tokenError: any) {
+      const message = tokenError?.message || "Zoho não conectado para este usuário";
+      await admin.from("pre_vendas_agenda").update({
+        sync_status: "failed",
+        sync_error: message.slice(0, 1000),
+        last_synced_at: new Date().toISOString(),
+      }).eq("id", ev.id);
+
+      return new Response(JSON.stringify({
+        ok: true,
+        sync_status: "skipped",
+        warning: message,
+        invitation: null,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (!tokens.primary_calendar_id) {
+      const message = "Calendário primário do Zoho não definido";
+      await admin.from("pre_vendas_agenda").update({
+        sync_status: "failed",
+        sync_error: message,
+        last_synced_at: new Date().toISOString(),
+      }).eq("id", ev.id);
+
+      return new Response(JSON.stringify({
+        ok: true,
+        sync_status: "skipped",
+        warning: message,
+        invitation: null,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     const attendees: string[] = (ev.attendees || []).filter((a: string) => a && a.includes("@"));
 
