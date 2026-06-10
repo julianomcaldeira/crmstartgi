@@ -108,11 +108,37 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     
     if (RESEND_API_KEY) {
-      // NOTA: Enquanto o domínio não estiver verificado no Resend, só é possível enviar para o email da conta.
-      // Após verificar o domínio startgi.com.br no Resend, altere os destinatários abaixo:
-      // const recipients = ["financeiro@ganheilicitacao.com.br", "juliano@startgi.com.br"];
-      const recipients = ["juliano.montesino.caldeira@gmail.com"];
-      const ccRecipients: string[] = [];
+      // Regra de ouro: destinatários fixos + vendedor que fechou o contrato
+      const fixedRecipients = [
+        "andre@startgi.com.br",
+        "juliano@startgi.com.br",
+        "vanessa@startgi.com.br",
+      ];
+      const recipients = Array.from(
+        new Set(
+          [sellerEmail, ...fixedRecipients]
+            .filter((e: string | undefined): e is string => !!e && /\S+@\S+\.\S+/.test(e))
+            .map((e: string) => e.trim().toLowerCase())
+        )
+      );
+
+      // Baixa cada anexo e converte para base64 (anexo real no email)
+      const resendAttachments: { filename: string; content: string }[] = [];
+      for (const att of (attachments || []) as { name: string; url: string }[]) {
+        try {
+          const resp = await fetch(att.url);
+          if (!resp.ok) {
+            console.error(`Falha ao baixar anexo ${att.name}: ${resp.status}`);
+            continue;
+          }
+          const buf = new Uint8Array(await resp.arrayBuffer());
+          let binary = "";
+          for (let i = 0; i < buf.length; i++) binary += String.fromCharCode(buf[i]);
+          resendAttachments.push({ filename: att.name, content: btoa(binary) });
+        } catch (e) {
+          console.error(`Erro ao processar anexo ${att.name}:`, e);
+        }
+      }
 
       const emailResponse = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -123,9 +149,9 @@ serve(async (req) => {
         body: JSON.stringify({
           from: "CRM StartGI <onboarding@resend.dev>",
           to: recipients,
-          cc: ccRecipients,
           subject: `🎉 Nova Venda - ${clientName} | ${productName}`,
           html: htmlBody,
+          attachments: resendAttachments,
         }),
       });
 
@@ -136,17 +162,13 @@ serve(async (req) => {
       }
 
       const emailResult = await emailResponse.json();
-      console.log("Email sent successfully:", emailResult);
+      console.log("Email enviado para:", recipients, "id:", emailResult?.id);
     } else {
-      console.log("RESEND_API_KEY not configured. Email notification logged:");
-      console.log("To: financeiro@ganheilicitacao.com.br, juliano@startgi.com.br");
-      console.log("CC:", sellerEmail);
-      console.log("Subject:", `Nova Venda - ${clientName} | ${productName}`);
-      // Return success but warn about missing email config
+      console.log("RESEND_API_KEY não configurado — email não enviado.");
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          warning: "Email não enviado - chave de API do serviço de email não configurada" 
+        JSON.stringify({
+          success: true,
+          warning: "Email não enviado - chave de API do serviço de email não configurada",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
