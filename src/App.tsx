@@ -29,6 +29,7 @@ import Contratos from "./pages/Contratos";
 import ContratoDetalhes from "./pages/ContratoDetalhes";
 import Layout from "./components/Layout";
 import NotFound from "./pages/NotFound";
+import Unsubscribe from "./pages/Unsubscribe";
 
 const App = () => {
   return (
