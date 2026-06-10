@@ -110,6 +110,7 @@ serve(async (req) => {
     if (RESEND_API_KEY) {
       // Regra de ouro: destinatários fixos + vendedor que fechou o contrato
       const fixedRecipients = [
+        "financeiro@ganheilicitacao.com.br",
         "andre@startgi.com.br",
         "juliano@startgi.com.br",
         "vanessa@startgi.com.br",
