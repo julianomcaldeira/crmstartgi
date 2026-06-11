@@ -274,7 +274,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
+          <DialogTitle className="text-xl pr-8 truncate">{opportunity.title}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
