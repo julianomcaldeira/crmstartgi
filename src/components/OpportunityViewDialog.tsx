@@ -272,7 +272,7 @@ const OpportunityViewDialog = ({ opportunity, open, onOpenChange }: OpportunityV
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">{opportunity.title}</DialogTitle>
         </DialogHeader>
