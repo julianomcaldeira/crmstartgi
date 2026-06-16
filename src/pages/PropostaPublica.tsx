@@ -13,6 +13,7 @@ import { useCommercialTracking } from "@/components/proposal/commercial/useComme
 
 const HEARTBEAT_MS = 15000;
 const FLUSH_MS = 5000;
+type PrintablePdf = { autoPrint?: () => void };
 
 export default function PropostaPublica() {
   const { token } = useParams<{ token: string }>();
@@ -194,7 +195,7 @@ export default function PropostaPublica() {
     try {
       const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
       const pdf = await buildProposalSlidesPdf(docRef.current);
-      if (typeof (pdf as any).autoPrint === "function") (pdf as any).autoPrint();
+      if (typeof (pdf as PrintablePdf).autoPrint === "function") (pdf as PrintablePdf).autoPrint?.();
       const url = URL.createObjectURL(pdf.output("blob"));
       if (printWindow) {
         printWindow.location.href = url;
@@ -277,7 +278,7 @@ function CommercialPublic({ data, docRef, enqueue }: {
     try {
       const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
       const pdf = await buildProposalSlidesPdf(docRef.current);
-      if (typeof (pdf as any).autoPrint === "function") (pdf as any).autoPrint();
+      if (typeof (pdf as PrintablePdf).autoPrint === "function") (pdf as PrintablePdf).autoPrint?.();
       const url = URL.createObjectURL(pdf.output("blob"));
       if (printWindow) printWindow.location.href = url;
       else window.open(url, "_blank");
