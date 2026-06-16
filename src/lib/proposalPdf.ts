@@ -41,6 +41,7 @@ export async function buildProposalSlidesPdf(rootEl: HTMLElement) {
       const slideH = Math.max(1, Math.round(rect.height || slideW * 2 / 3));
 
       const stage = document.createElement("div");
+      stage.dataset.proposalPdfStage = "true";
       stage.style.cssText = [
         "position:fixed",
         "left:-100000px",
