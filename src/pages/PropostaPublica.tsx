@@ -269,8 +269,38 @@ function CommercialPublic({ data, docRef, enqueue }: {
   const phone = (vars.telefone_vendedor || "").replace(/\D/g, "");
   const wa = phone ? `https://wa.me/55${phone}` : "";
 
-  const onPrint = () => { emit("proposal_print"); enqueue({ event_type: "download" }); window.print(); };
-  const onPdf = () => { emit("proposal_pdf_download"); enqueue({ event_type: "download" }); window.print(); };
+  const onPrint = async () => {
+    emit("proposal_print");
+    enqueue({ event_type: "download" });
+    if (!docRef.current) { window.print(); return; }
+    const printWindow = window.open("", "_blank");
+    try {
+      const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
+      const pdf = await buildProposalSlidesPdf(docRef.current);
+      if (typeof (pdf as any).autoPrint === "function") (pdf as any).autoPrint();
+      const url = URL.createObjectURL(pdf.output("blob"));
+      if (printWindow) printWindow.location.href = url;
+      else window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      console.error(e);
+      printWindow?.close();
+      window.print();
+    }
+  };
+  const onPdf = async () => {
+    emit("proposal_pdf_download");
+    enqueue({ event_type: "download" });
+    if (!docRef.current) { window.print(); return; }
+    try {
+      const { buildProposalSlidesPdf } = await import("@/lib/proposalPdf");
+      const pdf = await buildProposalSlidesPdf(docRef.current);
+      pdf.save(`${data.title || "proposta"}.pdf`);
+    } catch (e) {
+      console.error(e);
+      window.print();
+    }
+  };
   const onWa = () => { emit("whatsapp_click"); };
   const onMail = () => { emit("email_click"); };
 
