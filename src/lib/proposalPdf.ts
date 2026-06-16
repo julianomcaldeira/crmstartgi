@@ -17,34 +17,50 @@ export async function buildProposalSlidesPdf(rootEl: HTMLElement) {
   const pageW = pdf.internal.pageSize.getWidth();
   const pageH = pdf.internal.pageSize.getHeight();
 
-  const SLIDE_W = 1620;
-  const SLIDE_H = 1080;
+  await document.fonts?.ready?.catch(() => undefined);
 
-  const slides = Array.from(rootEl.querySelectorAll<HTMLElement>("[data-block-id]"));
+  const slides = Array.from(rootEl.querySelectorAll<HTMLElement>("[data-section-id], [data-block-id]"));
   const targets = slides.length ? slides : [rootEl];
 
-  const stage = document.createElement("div");
-  stage.style.cssText = [
-    "position:fixed",
-    "left:-100000px",
-    "top:0",
-    `width:${SLIDE_W}px`,
-    `height:${SLIDE_H}px`,
-    "background:#ffffff",
-    "overflow:hidden",
-    "z-index:-1",
-    "pointer-events:none",
-  ].join(";");
-  document.body.appendChild(stage);
+  const waitForAssets = async (scope: HTMLElement) => {
+    const images = Array.from(scope.querySelectorAll<HTMLImageElement>("img"));
+    await Promise.all(images.map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    }));
+  };
 
   try {
     for (let i = 0; i < targets.length; i++) {
+      const rect = targets[i].getBoundingClientRect();
+      const fallbackW = rootEl.getBoundingClientRect().width || 1200;
+      const slideW = Math.max(1, Math.round(rect.width || fallbackW));
+      const slideH = Math.max(1, Math.round(rect.height || slideW * 2 / 3));
+
+      const stage = document.createElement("div");
+      stage.dataset.proposalPdfStage = "true";
+      stage.style.cssText = [
+        "position:fixed",
+        "left:-100000px",
+        "top:0",
+        `width:${slideW}px`,
+        `height:${slideH}px`,
+        "background:#ffffff",
+        "overflow:hidden",
+        "z-index:-1",
+        "pointer-events:none",
+      ].join(";");
+      document.body.appendChild(stage);
+
       stage.innerHTML = "";
       const frame = document.createElement("div");
       frame.className = "proposal-doc iganhei-proposal";
       frame.style.cssText = [
-        `width:${SLIDE_W}px`,
-        `height:${SLIDE_H}px`,
+        `width:${slideW}px`,
+        `height:${slideH}px`,
         "display:flex",
         "align-items:stretch",
         "justify-content:stretch",
@@ -54,7 +70,6 @@ export async function buildProposalSlidesPdf(rootEl: HTMLElement) {
       ].join(";");
 
       const clone = targets[i].cloneNode(true) as HTMLElement;
-      clone.classList.add("ig-slide", "ig-slide--pdf");
       clone.style.width = "100%";
       clone.style.height = "100%";
       clone.style.maxWidth = "none";
@@ -70,35 +85,30 @@ export async function buildProposalSlidesPdf(rootEl: HTMLElement) {
       });
       frame.appendChild(clone);
       stage.appendChild(frame);
-
-      const contentH = clone.scrollHeight;
-      const contentW = clone.scrollWidth;
-      const scale = Math.min(1, SLIDE_H / contentH, SLIDE_W / contentW);
-      if (scale < 1) {
-        clone.style.transform = `scale(${scale})`;
-        clone.style.transformOrigin = "center center";
-      }
+      await waitForAssets(frame);
 
       const canvas = await html2canvas(frame, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
-        width: SLIDE_W,
-        height: SLIDE_H,
-        windowWidth: SLIDE_W,
-        windowHeight: SLIDE_H,
+        width: slideW,
+        height: slideH,
+        windowWidth: slideW,
+        windowHeight: slideH,
       });
 
       if (i > 0) pdf.addPage([PAGE_W_MM, PAGE_H_MM], "landscape");
       pdf.addImage(
-        canvas.toDataURL("image/jpeg", 0.95),
-        "JPEG",
+        canvas.toDataURL("image/png"),
+        "PNG",
         0, 0, pageW, pageH,
-        undefined, "FAST",
+        undefined, "SLOW",
       );
+
+      stage.remove();
     }
   } finally {
-    stage.remove();
+    document.querySelectorAll<HTMLElement>("[data-proposal-pdf-stage='true']").forEach((el) => el.remove());
   }
   return pdf;
 }
