@@ -68,7 +68,7 @@ export const AudioRecorder = ({ onTranscription, disabled }: AudioRecorderProps)
           
           try {
             const { data, error } = await supabase.functions.invoke("transcribe-audio", {
-              body: { audio: base64Audio },
+              body: { audio: base64Audio, mimeType: audioBlob.type || "audio/webm" },
             });
 
             if (error) throw error;
