@@ -27,15 +27,27 @@ Deno.serve(async (req) => {
 
   try {
     // Optional shared-secret validation
+    // Shared-secret is REQUIRED. Missing or mismatched → 401.
     const expectedSecret = Deno.env.get("ZOHO_WEBHOOK_SECRET");
-    if (expectedSecret) {
-      const got = req.headers.get("x-webhook-secret") || new URL(req.url).searchParams.get("secret");
-      if (got !== expectedSecret) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (!expectedSecret) {
+      console.error("ZOHO_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Server misconfigured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const got = req.headers.get("x-webhook-secret") || new URL(req.url).searchParams.get("secret") || "";
+    // Constant-time compare
+    const a = new TextEncoder().encode(got);
+    const b = new TextEncoder().encode(expectedSecret);
+    let ok = a.length === b.length;
+    const len = Math.max(a.length, b.length);
+    for (let i = 0; i < len; i++) ok = ok && ((a[i] ?? 0) === (b[i] ?? 0));
+    if (!ok) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     const raw = await req.text();
     let body: any = {};
