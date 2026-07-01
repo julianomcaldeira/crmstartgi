@@ -469,7 +469,7 @@ export default function EmailDashboard() {
                                     {it.body && (
                                       <div
                                         className="text-sm border rounded p-3 bg-background prose prose-sm max-w-none dark:prose-invert"
-                                        dangerouslySetInnerHTML={{ __html: it.body }}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(it.body, { USE_PROFILES: { html: true } }) }}
                                       />
                                     )}
                                   </div>
