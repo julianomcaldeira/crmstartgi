@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DOMPurify from "dompurify";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,8 +110,9 @@ export default function EmailHistory({ clientId, opportunityId }: EmailHistoryPr
                     {it.body && (
                       <div
                         className="text-sm border-t pt-2 mt-2 prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ __html: it.body }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(it.body, { USE_PROFILES: { html: true } }) }}
                       />
+
                     )}
                   </div>
                 )}

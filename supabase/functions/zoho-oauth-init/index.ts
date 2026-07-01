@@ -55,8 +55,19 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const redirectUri = `${supabaseUrl}/functions/v1/zoho-oauth-callback`;
 
-    // state contém userId, dc e returnUrl (codificados)
-    const state = btoa(JSON.stringify({ uid: user.id, dc, ret: returnUrl || "" }));
+    // state contém userId, dc e returnUrl, assinado com HMAC-SHA256
+    const signingKey = Deno.env.get("OAUTH_STATE_SIGNING_KEY");
+    if (!signingKey) throw new Error("OAUTH_STATE_SIGNING_KEY not configured");
+    const payload = { uid: user.id, dc, ret: returnUrl || "", nonce: crypto.randomUUID(), iat: Date.now() };
+    const payloadB64 = btoa(JSON.stringify(payload));
+    const key = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(signingKey),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payloadB64));
+    const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)));
+    const state = `${payloadB64}.${sigB64}`;
+
 
     const url = new URL(`${accountsBase(dc)}/oauth/v2/auth`);
     url.searchParams.set("scope", SCOPES);

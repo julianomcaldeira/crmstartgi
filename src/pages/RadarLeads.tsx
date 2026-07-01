@@ -60,7 +60,7 @@ export default function RadarLeads() {
     if (cnpjs.length === 0) return;
     
     supabase
-      .from("cnpj_cache")
+      .from("cnpj_cache_public" as any)
       .select("cnpj, share_capital, city, state")
       .in("cnpj", cnpjs)
       .then(({ data }) => {

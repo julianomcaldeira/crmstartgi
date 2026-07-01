@@ -201,8 +201,14 @@ async function pullForUser(admin: any, userId: string, debug: boolean) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    if (!cronSecret || req.headers.get("x-cron-secret") !== cronSecret) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const url = new URL(req.url);
-    const debug = url.searchParams.get("debug") === "1";
+    const debug = false; // debug output disabled to avoid leaking internals
     const onlyUser = url.searchParams.get("user_id");
 
     const admin = createClient(
@@ -212,6 +218,7 @@ Deno.serve(async (req) => {
     let q = admin.from("zoho_user_tokens").select("user_id");
     if (onlyUser) q = q.eq("user_id", onlyUser);
     const { data: users } = await q;
+
 
     const results: any[] = [];
     for (const u of users || []) {

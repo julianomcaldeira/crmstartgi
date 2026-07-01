@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { ProposalBlock, interpolate, VariableContext, formatBRL, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 
 interface Props {
@@ -97,7 +98,7 @@ function BlockView({ block, variables, brandColor }: { block: ProposalBlock; var
     case "richtext": {
       const html = interpolate(block.html, variables);
       return (
-        <section className="pg richtext-block" dangerouslySetInnerHTML={{ __html: html }} />
+        <section className="pg richtext-block" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, { USE_PROFILES: { html: true } }) }} />
       );
     }
     case "cover": {

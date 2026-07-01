@@ -3545,6 +3545,30 @@ export type Database = {
       }
     }
     Views: {
+      cnpj_cache_public: {
+        Row: {
+          city: string | null
+          cnpj: string | null
+          created_at: string | null
+          share_capital: number | null
+          state: string | null
+        }
+        Insert: {
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          share_capital?: number | null
+          state?: string | null
+        }
+        Update: {
+          city?: string | null
+          cnpj?: string | null
+          created_at?: string | null
+          share_capital?: number | null
+          state?: string | null
+        }
+        Relationships: []
+      }
       profiles_public: {
         Row: {
           avatar_url: string | null
@@ -3569,6 +3593,7 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      email_queue_dispatch: { Args: never; Returns: undefined }
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number

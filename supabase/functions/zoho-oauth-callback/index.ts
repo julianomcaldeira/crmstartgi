@@ -39,9 +39,32 @@ Deno.serve(async (req) => {
     if (errorParam) return html(`Zoho retornou: ${errorParam}`);
     if (!code || !stateRaw) return html("Parâmetros ausentes.");
 
-    const state = JSON.parse(atob(stateRaw));
+    // Verifica assinatura HMAC do state
+    const signingKey = Deno.env.get("OAUTH_STATE_SIGNING_KEY");
+    if (!signingKey) return html("OAUTH_STATE_SIGNING_KEY not configured");
+    const dot = stateRaw.indexOf(".");
+    if (dot < 0) return html("State inválido.");
+    const payloadB64 = stateRaw.slice(0, dot);
+    const sigB64 = stateRaw.slice(dot + 1);
+    try {
+      const key = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(signingKey),
+        { name: "HMAC", hash: "SHA-256" }, false, ["verify"]
+      );
+      const sigBytes = Uint8Array.from(atob(sigB64), (c) => c.charCodeAt(0));
+      const valid = await crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(payloadB64));
+      if (!valid) return html("Assinatura inválida.");
+    } catch {
+      return html("Falha ao validar state.");
+    }
+    const state = JSON.parse(atob(payloadB64));
+    // Reject stale state (>10 minutes old)
+    if (!state.iat || Date.now() - Number(state.iat) > 10 * 60 * 1000) {
+      return html("State expirado. Tente novamente.");
+    }
     const userId = state.uid as string;
     const dc = (state.dc as string) || "com";
+
 
     const clientId = Deno.env.get("ZOHO_CLIENT_ID_NEW");
     const clientSecret = Deno.env.get("ZOHO_CLIENT_SECRET_NEW");
