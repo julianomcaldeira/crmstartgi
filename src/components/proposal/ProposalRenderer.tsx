@@ -1,3 +1,4 @@
+import DOMPurify from "dompurify";
 import { ProposalBlock, interpolate, VariableContext, formatBRL, calcPricingTotals, PageSettings, DEFAULT_PAGE_SETTINGS } from "@/lib/proposalTypes";
 
 interface Props {
