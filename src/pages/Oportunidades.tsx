@@ -864,30 +864,36 @@ const Oportunidades = () => {
     // Check if this is from drag-and-drop
     if (pendingOpportunityId) {
       try {
+        console.log("[LOST] iniciando update para", pendingOpportunityId, "reason:", reasonId);
         const { data: { user } } = await supabase.auth.getUser();
+        console.log("[LOST] auth.getUser ok:", user?.id);
         if (!user) throw new Error("Usuário não autenticado");
 
         // Get current status
-        const { data: currentOpp } = await supabase
+        const { data: currentOpp, error: selErr } = await supabase
           .from("opportunities")
           .select("status")
           .eq("id", pendingOpportunityId)
           .single();
+        console.log("[LOST] select current:", { currentOpp, selErr });
 
-        const { error } = await supabase
+        console.log("[LOST] enviando UPDATE...");
+        const { error, data: updData } = await supabase
           .from("opportunities")
           .update({ 
             status: "lost" as any,
             loss_reason_id: reasonId 
           })
-          .eq("id", pendingOpportunityId);
+          .eq("id", pendingOpportunityId)
+          .select();
+        console.log("[LOST] resposta UPDATE:", { updData, error });
 
         if (error) throw error;
 
         // Log activity (best-effort — não deve derrubar o fluxo)
         if (currentOpp) {
           try {
-            await supabase.from("opportunity_activities").insert({
+            const { error: actErr } = await supabase.from("opportunity_activities").insert({
               opportunity_id: pendingOpportunityId,
               activity_type: "status_change",
               description: "Estágio da oportunidade alterado",
@@ -895,15 +901,21 @@ const Oportunidades = () => {
               new_value: "Perdido",
               created_by: user.id,
             });
+            console.log("[LOST] insert activity:", { actErr });
           } catch (logErr) {
-            console.warn("Falha ao registrar atividade (não crítico):", logErr);
+            console.warn("[LOST] Falha ao registrar atividade (não crítico):", logErr);
           }
         }
 
         toast.success("Fase atualizada com sucesso!");
-        fetchData();
+        try {
+          await fetchData();
+          console.log("[LOST] fetchData ok");
+        } catch (fdErr) {
+          console.error("[LOST] fetchData falhou:", fdErr);
+        }
       } catch (error: any) {
-        console.error("Error updating opportunity:", error);
+        console.error("[LOST] ERRO capturado:", error, "stack:", error?.stack);
         const msg = error?.message === "Failed to fetch"
           ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
           : (error?.message || "Erro ao atualizar fase");
@@ -914,6 +926,7 @@ const Oportunidades = () => {
         setSelectedLossReason("");
       }
     } else {
+
       // From edit form - submit passando o reasonId direto para evitar race de state
       const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
       handleUpdateOpportunity(fakeEvent, reasonId);
