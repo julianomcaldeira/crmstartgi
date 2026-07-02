@@ -728,8 +728,10 @@ const Oportunidades = () => {
     }
   };
 
-  const handleUpdateOpportunity = async (e: React.FormEvent) => {
+  const handleUpdateOpportunity = async (e: React.FormEvent, lossReasonOverride?: string) => {
     e.preventDefault();
+
+    const effectiveLossReason = lossReasonOverride ?? selectedLossReason;
 
     // Check if status is being changed to "won" via edit dialog
     if (status === "won" && editingOpportunity.status !== "won") {
@@ -740,7 +742,7 @@ const Oportunidades = () => {
     }
 
     // Check if status is being changed to "lost"
-    if (status === "lost" && editingOpportunity.status !== "lost" && !selectedLossReason) {
+    if (status === "lost" && editingOpportunity.status !== "lost" && !effectiveLossReason) {
       setPendingStatus("lost");
       setLossReasonDialogOpen(true);
       return;
@@ -791,8 +793,9 @@ const Oportunidades = () => {
 
       // Add loss_reason_id if status is "lost"
       if (status === "lost") {
-        updateData.loss_reason_id = selectedLossReason || null;
+        updateData.loss_reason_id = effectiveLossReason || null;
       }
+
 
       const { error } = await supabase
         .from("opportunities")
@@ -846,8 +849,12 @@ const Oportunidades = () => {
       fetchData();
     } catch (error: any) {
       console.error("Error updating opportunity:", error);
-      toast.error(error.message || "Erro ao atualizar oportunidade");
+      const msg = error?.message === "Failed to fetch"
+        ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+        : (error?.message || "Erro ao atualizar oportunidade");
+      toast.error(msg);
     }
+
   };
 
   const handleLossReasonSelected = async (reasonId: string) => {
@@ -877,34 +884,42 @@ const Oportunidades = () => {
 
         if (error) throw error;
 
-        // Log activity
+        // Log activity (best-effort — não deve derrubar o fluxo)
         if (currentOpp) {
-          await supabase.from("opportunity_activities").insert({
-            opportunity_id: pendingOpportunityId,
-            activity_type: "status_change",
-            description: "Estágio da oportunidade alterado",
-            old_value: stages.find(s => s.key === currentOpp.status)?.label,
-            new_value: "Perdido",
-            created_by: user.id,
-          });
+          try {
+            await supabase.from("opportunity_activities").insert({
+              opportunity_id: pendingOpportunityId,
+              activity_type: "status_change",
+              description: "Estágio da oportunidade alterado",
+              old_value: stages.find(s => s.key === currentOpp.status)?.label,
+              new_value: "Perdido",
+              created_by: user.id,
+            });
+          } catch (logErr) {
+            console.warn("Falha ao registrar atividade (não crítico):", logErr);
+          }
         }
 
         toast.success("Fase atualizada com sucesso!");
         fetchData();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error updating opportunity:", error);
-        toast.error("Erro ao atualizar fase");
+        const msg = error?.message === "Failed to fetch"
+          ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+          : (error?.message || "Erro ao atualizar fase");
+        toast.error(msg);
       } finally {
         setPendingOpportunityId(null);
         setPendingStatus("");
         setSelectedLossReason("");
       }
     } else {
-      // From edit form - submit the form with the loss reason
+      // From edit form - submit passando o reasonId direto para evitar race de state
       const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-      handleUpdateOpportunity(fakeEvent);
+      handleUpdateOpportunity(fakeEvent, reasonId);
     }
   };
+
 
   const handleDeleteOpportunity = async () => {
     if (!opportunityToDelete) return;
