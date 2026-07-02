@@ -880,34 +880,42 @@ const Oportunidades = () => {
 
         if (error) throw error;
 
-        // Log activity
+        // Log activity (best-effort — não deve derrubar o fluxo)
         if (currentOpp) {
-          await supabase.from("opportunity_activities").insert({
-            opportunity_id: pendingOpportunityId,
-            activity_type: "status_change",
-            description: "Estágio da oportunidade alterado",
-            old_value: stages.find(s => s.key === currentOpp.status)?.label,
-            new_value: "Perdido",
-            created_by: user.id,
-          });
+          try {
+            await supabase.from("opportunity_activities").insert({
+              opportunity_id: pendingOpportunityId,
+              activity_type: "status_change",
+              description: "Estágio da oportunidade alterado",
+              old_value: stages.find(s => s.key === currentOpp.status)?.label,
+              new_value: "Perdido",
+              created_by: user.id,
+            });
+          } catch (logErr) {
+            console.warn("Falha ao registrar atividade (não crítico):", logErr);
+          }
         }
 
         toast.success("Fase atualizada com sucesso!");
         fetchData();
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error updating opportunity:", error);
-        toast.error("Erro ao atualizar fase");
+        const msg = error?.message === "Failed to fetch"
+          ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+          : (error?.message || "Erro ao atualizar fase");
+        toast.error(msg);
       } finally {
         setPendingOpportunityId(null);
         setPendingStatus("");
         setSelectedLossReason("");
       }
     } else {
-      // From edit form - submit the form with the loss reason
+      // From edit form - submit passando o reasonId direto para evitar race de state
       const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
-      handleUpdateOpportunity(fakeEvent);
+      handleUpdateOpportunity(fakeEvent, reasonId);
     }
   };
+
 
   const handleDeleteOpportunity = async () => {
     if (!opportunityToDelete) return;
