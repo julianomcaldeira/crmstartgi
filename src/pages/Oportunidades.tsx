@@ -849,8 +849,12 @@ const Oportunidades = () => {
       fetchData();
     } catch (error: any) {
       console.error("Error updating opportunity:", error);
-      toast.error(error.message || "Erro ao atualizar oportunidade");
+      const msg = error?.message === "Failed to fetch"
+        ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
+        : (error?.message || "Erro ao atualizar oportunidade");
+      toast.error(msg);
     }
+
   };
 
   const handleLossReasonSelected = async (reasonId: string) => {
