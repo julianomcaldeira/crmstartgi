@@ -728,8 +728,10 @@ const Oportunidades = () => {
     }
   };
 
-  const handleUpdateOpportunity = async (e: React.FormEvent) => {
+  const handleUpdateOpportunity = async (e: React.FormEvent, lossReasonOverride?: string) => {
     e.preventDefault();
+
+    const effectiveLossReason = lossReasonOverride ?? selectedLossReason;
 
     // Check if status is being changed to "won" via edit dialog
     if (status === "won" && editingOpportunity.status !== "won") {
@@ -740,7 +742,7 @@ const Oportunidades = () => {
     }
 
     // Check if status is being changed to "lost"
-    if (status === "lost" && editingOpportunity.status !== "lost" && !selectedLossReason) {
+    if (status === "lost" && editingOpportunity.status !== "lost" && !effectiveLossReason) {
       setPendingStatus("lost");
       setLossReasonDialogOpen(true);
       return;
@@ -791,8 +793,9 @@ const Oportunidades = () => {
 
       // Add loss_reason_id if status is "lost"
       if (status === "lost") {
-        updateData.loss_reason_id = selectedLossReason || null;
+        updateData.loss_reason_id = effectiveLossReason || null;
       }
+
 
       const { error } = await supabase
         .from("opportunities")
