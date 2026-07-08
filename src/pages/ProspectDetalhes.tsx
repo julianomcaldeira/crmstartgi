@@ -69,6 +69,7 @@ const ClienteDetalhes = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.pathname.startsWith("/prospect") ? "/prospects" : "/clientes";
+  const { canEdit } = useCanEdit();
   const [client, setClient] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
