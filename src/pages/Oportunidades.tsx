@@ -42,6 +42,7 @@ import { useCanEdit } from "@/hooks/useCanEdit";
 
 const Oportunidades = () => {
   const navigate = useNavigate();
+  const { canEdit } = useCanEdit();
   const [opportunities, setOpportunities] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
