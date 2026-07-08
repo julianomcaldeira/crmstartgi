@@ -550,7 +550,7 @@ const Oportunidades = () => {
   const handleEditOpportunity = async (opp: any) => {
     // Regra de ouro: se não é dono/responsável, abre em modo somente-leitura.
     if (!canEdit(opp)) {
-      setViewingOpportunity(opp);
+      setSelectedOpportunity(opp);
       setViewDialogOpen(true);
       toast.info("Somente leitura: você não é o responsável por esta oportunidade.");
       return;
