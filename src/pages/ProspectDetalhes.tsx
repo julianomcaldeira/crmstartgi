@@ -62,12 +62,14 @@ import EmailHistory from "@/components/EmailHistory";
 import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.pathname.startsWith("/prospect") ? "/prospects" : "/clientes";
+  const { canEdit } = useCanEdit();
   const [client, setClient] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -394,10 +396,17 @@ const ClienteDetalhes = () => {
     });
   };
 
+  const canEditClient = canEdit(client);
+
   const handleEditTask = (task: any) => {
+    if (!canEdit(task)) {
+      toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+      return;
+    }
     setEditingTask(task);
     setEditTaskDialogOpen(true);
   };
+
 
   const handleCompleteTask = async (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -496,6 +505,10 @@ const ClienteDetalhes = () => {
   };
 
   const handleEditContact = (contact: any) => {
+    if (!canEditClient) {
+      toast.info("Somente leitura: este prospect/cliente não é seu.");
+      return;
+    }
     setEditingContact(contact);
     setContactFormData({
       name: contact.name,
@@ -697,13 +710,15 @@ const ClienteDetalhes = () => {
             Análise IA
           </Button>
         )}
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={() => setEditClientDialogOpen(true)}
+          disabled={!canEditClient}
+          title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
         >
           <Edit className="mr-2 h-4 w-4" />
-          Editar Cliente
+          {canEditClient ? "Editar Cliente" : "Somente leitura"}
         </Button>
         {isAdmin && (
           <Button 

@@ -30,9 +30,11 @@ import TaskAttachments, { uploadTaskAttachments } from "@/components/TaskAttachm
 import { parseDateOnly } from "@/lib/dateUtils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
 import SalesAgenda from "@/components/SalesAgenda";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 const Tarefas = () => {
   const navigate = useNavigate();
+  const { canEdit } = useCanEdit();
   const [tasks, setTasks] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
   const [opportunities, setOpportunities] = useState<any[]>([]);
@@ -1601,6 +1603,10 @@ const Tarefas = () => {
             }}
             onDelete={canDeleteTask(selectedTask) ? handleDeleteTask : undefined}
             onEdit={() => {
+              if (!canEdit(selectedTask)) {
+                toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+                return;
+              }
               setViewDialogOpen(false);
               setEditDialogOpen(true);
             }}
