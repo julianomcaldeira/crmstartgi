@@ -38,6 +38,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 const Oportunidades = () => {
   const navigate = useNavigate();
