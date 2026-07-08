@@ -505,6 +505,10 @@ const ClienteDetalhes = () => {
   };
 
   const handleEditContact = (contact: any) => {
+    if (!canEditClient) {
+      toast.info("Somente leitura: este prospect/cliente não é seu.");
+      return;
+    }
     setEditingContact(contact);
     setContactFormData({
       name: contact.name,
