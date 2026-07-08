@@ -33,12 +33,12 @@ const Clientes = () => {
   }, []);
 
   // Apply initial filter for vendedor role
+  // Regra de ouro: vendedores agora enxergam clientes de todos por padrão.
   useEffect(() => {
-    if (currentUserId && userRole === "vendedor" && !initialFilterApplied) {
-      setFilterSeller(currentUserId);
+    if (currentUserId && !initialFilterApplied) {
       setInitialFilterApplied(true);
     }
-  }, [currentUserId, userRole, initialFilterApplied]);
+  }, [currentUserId, initialFilterApplied]);
 
   const checkUserRoleAndFetch = async () => {
     try {

@@ -187,14 +187,12 @@ const Oportunidades = () => {
     checkUserRoleAndFetch();
   }, []);
 
-  // Apply initial filter for vendedor role
+  // Regra de ouro: vendedores enxergam oportunidades de todos por padrão.
   useEffect(() => {
-    if (currentUserId && userRole === "vendedor" && !initialFilterApplied) {
-      setQuickFilterSeller(currentUserId);
-      setFilterAssignedTo(currentUserId);
+    if (currentUserId && !initialFilterApplied) {
       setInitialFilterApplied(true);
     }
-  }, [currentUserId, userRole, initialFilterApplied]);
+  }, [currentUserId, initialFilterApplied]);
 
   const checkUserRoleAndFetch = async () => {
     try {
