@@ -62,6 +62,7 @@ import EmailHistory from "@/components/EmailHistory";
 import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
+import { useCanEdit } from "@/hooks/useCanEdit";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
