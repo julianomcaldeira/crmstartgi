@@ -396,10 +396,17 @@ const ClienteDetalhes = () => {
     });
   };
 
+  const canEditClient = canEdit(client);
+
   const handleEditTask = (task: any) => {
+    if (!canEdit(task)) {
+      toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+      return;
+    }
     setEditingTask(task);
     setEditTaskDialogOpen(true);
   };
+
 
   const handleCompleteTask = async (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
