@@ -547,6 +547,13 @@ const Oportunidades = () => {
   };
 
   const handleEditOpportunity = async (opp: any) => {
+    // Regra de ouro: se não é dono/responsável, abre em modo somente-leitura.
+    if (!canEdit(opp)) {
+      setViewingOpportunity(opp);
+      setViewDialogOpen(true);
+      toast.info("Somente leitura: você não é o responsável por esta oportunidade.");
+      return;
+    }
     setEditingOpportunity(opp);
     setClientId(opp.client_id);
     setProductId(opp.product_id || "");
