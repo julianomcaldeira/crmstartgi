@@ -85,10 +85,7 @@ export const useOpportunities = (userId: string | null, userRole: string | null)
         `)
         .order("created_at", { ascending: false });
 
-      if (userRole === "vendedor" && userId) {
-        query = query.or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
-      }
-
+      // Regra de ouro: qualquer vendedor pode visualizar oportunidades dos demais.
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
