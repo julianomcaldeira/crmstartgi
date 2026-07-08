@@ -710,13 +710,15 @@ const ClienteDetalhes = () => {
             Análise IA
           </Button>
         )}
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={() => setEditClientDialogOpen(true)}
+          disabled={!canEditClient}
+          title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
         >
           <Edit className="mr-2 h-4 w-4" />
-          Editar Cliente
+          {canEditClient ? "Editar Cliente" : "Somente leitura"}
         </Button>
         {isAdmin && (
           <Button 
