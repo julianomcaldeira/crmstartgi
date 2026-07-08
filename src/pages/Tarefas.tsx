@@ -1603,6 +1603,10 @@ const Tarefas = () => {
             }}
             onDelete={canDeleteTask(selectedTask) ? handleDeleteTask : undefined}
             onEdit={() => {
+              if (!canEdit(selectedTask)) {
+                toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+                return;
+              }
               setViewDialogOpen(false);
               setEditDialogOpen(true);
             }}
