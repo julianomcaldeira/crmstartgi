@@ -223,7 +223,7 @@ const Prospects = () => {
 
   const fetchSellers = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .rpc("get_active_transfer_users");
       
       if (error) throw error;
