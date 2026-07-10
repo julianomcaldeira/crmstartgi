@@ -12,6 +12,7 @@ import { formatDateLocaleBR } from "@/lib/dateUtils";
 interface ProspectCampaignsTabProps {
   clientId: string;
   clientName: string;
+  canEdit?: boolean;
 }
 
 const TASK_TYPE_LABELS: Record<string, string> = {
