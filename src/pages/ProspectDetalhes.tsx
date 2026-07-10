@@ -1995,7 +1995,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Diagnósticos</h3>
-              <Button size="sm" onClick={() => setDiagnosticDialogOpen(true)}>
+              <Button size="sm" onClick={() => setDiagnosticDialogOpen(true)} disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Diagnóstico
               </Button>
