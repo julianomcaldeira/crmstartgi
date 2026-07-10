@@ -27,7 +27,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   pesquisa_inicial: "Pesquisa Inicial",
 };
 
-export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaignsTabProps) => {
+export const ProspectCampaignsTab = ({ clientId, clientName, canEdit = true }: ProspectCampaignsTabProps) => {
   const [availableCampaigns, setAvailableCampaigns] = useState<any[]>([]);
   const [linkedCampaigns, setLinkedCampaigns] = useState<any[]>([]);
   const [campaignTasks, setCampaignTasks] = useState<Record<string, any[]>>({});
