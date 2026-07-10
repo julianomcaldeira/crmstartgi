@@ -694,6 +694,8 @@ const ClienteDetalhes = () => {
           variant="default" 
           size="sm"
           onClick={() => setDiagnosticDialogOpen(true)}
+          disabled={!canEditClient}
+          title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
           className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
         >
           <ClipboardList className="mr-2 h-4 w-4" />
@@ -704,6 +706,8 @@ const ClienteDetalhes = () => {
             variant="default" 
             size="sm"
             onClick={() => setAiAnalysisDialogOpen(true)}
+            disabled={!canEditClient}
+            title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
             className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
           >
             <Sparkles className="mr-2 h-4 w-4" />
