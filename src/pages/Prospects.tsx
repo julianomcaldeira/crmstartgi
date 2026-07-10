@@ -1987,7 +1987,7 @@ const Prospects = () => {
                           >
                             <Edit size={18} />
                           </Button>
-                          {client.created_by === currentUserId && (
+                          {canTransferClient(client) && (
                             <Button
                               variant="outline"
                               size="icon"
@@ -2113,7 +2113,7 @@ const Prospects = () => {
                         >
                           <Edit size={16} />
                         </Button>
-                        {client.created_by === currentUserId && (
+                        {canTransferClient(client) && (
                           <Button
                             variant="outline"
                             size="icon"
