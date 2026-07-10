@@ -1640,7 +1640,7 @@ const ClienteDetalhes = () => {
                                       <Edit className="h-3.5 w-3.5" />
                                     </Button>
 
-                                    {canDeleteTask(task) && (
+                                    {canEditClient && canDeleteTask(task) && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -1657,7 +1657,7 @@ const ClienteDetalhes = () => {
                                       </Button>
                                     )}
 
-                                    {task.status !== "completed" && (
+                                    {canEditClient && task.status !== "completed" && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
