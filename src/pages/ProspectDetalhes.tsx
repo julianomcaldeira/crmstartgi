@@ -1974,6 +1974,7 @@ const ClienteDetalhes = () => {
             <ProspectCampaignsTab
               clientId={id || ""}
               clientName={client?.company_name || client?.trade_name || ""}
+              canEdit={canEditClient}
             />
           </Card>
         </TabsContent>
