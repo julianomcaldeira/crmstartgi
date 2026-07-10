@@ -2091,15 +2091,17 @@ const Prospects = () => {
                         >
                           <Edit size={16} />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={(e) => handleTransferClick(e, client)}
-                          className="h-8 w-8"
-                          title="Transferir prospect"
-                        >
-                          <UserCog size={16} />
-                        </Button>
+                        {client.created_by === currentUserId && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={(e) => handleTransferClick(e, client)}
+                            className="h-8 w-8"
+                            title="Transferir prospect"
+                          >
+                            <UserCog size={16} />
+                          </Button>
+                        )}
                       </>
                     )}
                     {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
