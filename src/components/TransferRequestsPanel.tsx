@@ -16,6 +16,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUserId: string;
+  canManageAll?: boolean;
   onChanged?: () => void;
 }
 
@@ -45,7 +46,7 @@ const statusBadge = (s: Req["status"]) => {
   return <Badge className={m.cls}>{m.label}</Badge>;
 };
 
-export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onChanged }: Props) => {
+export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, canManageAll = false, onChanged }: Props) => {
   const [loading, setLoading] = useState(false);
   const [received, setReceived] = useState<Req[]>([]);
   const [sent, setSent] = useState<Req[]>([]);
@@ -88,7 +89,7 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
         owner: profileMap.get(r.owner_id),
       }));
 
-      setReceived(enriched.filter((r) => r.owner_id === currentUserId));
+      setReceived(enriched.filter((r) => r.owner_id === currentUserId || (canManageAll && r.status === "pending")));
       setSent(enriched.filter((r) => r.requester_id === currentUserId));
     } catch (e: any) {
       console.error(e);
@@ -96,7 +97,7 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
     } finally {
       setLoading(false);
     }
-  }, [currentUserId]);
+  }, [currentUserId, canManageAll]);
 
   useEffect(() => {
     if (open) fetchAll();

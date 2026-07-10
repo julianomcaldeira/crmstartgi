@@ -688,11 +688,12 @@ const Prospects = () => {
     return isOwner || isAdminOrGestor;
   };
 
+  const canManageTransfers = userRoles.includes('admin') || userRoles.includes('gestor');
+
   const canTransferClient = (client: any) => {
     if (!currentUserId || !client?.created_by) return false;
     const isOwner = client.created_by === currentUserId;
-    const isAdminOrGestor = userRoles.includes('admin') || userRoles.includes('gestor');
-    return isOwner || isAdminOrGestor;
+    return isOwner || canManageTransfers;
   };
 
   const handleDeleteClick = (e: React.MouseEvent, client: any) => {
@@ -2352,7 +2353,7 @@ const Prospects = () => {
               >
                 <option value="">Selecione um vendedor</option>
                 {sellers
-                  .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
+                  .filter(seller => seller.id !== prospectToTransfer?.created_by)
                   .map((seller) => (
                     <option key={seller.id} value={seller.id}>
                       {seller.full_name}
@@ -2399,6 +2400,7 @@ const Prospects = () => {
         open={requestsPanelOpen}
         onOpenChange={setRequestsPanelOpen}
         currentUserId={currentUserId || ""}
+        canManageAll={canManageTransfers}
         onChanged={() => {
           fetchMyTransferRequests();
           fetchClients();
