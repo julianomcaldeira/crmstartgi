@@ -16,6 +16,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUserId: string;
+  canManageAll?: boolean;
   onChanged?: () => void;
 }
 
@@ -45,7 +46,7 @@ const statusBadge = (s: Req["status"]) => {
   return <Badge className={m.cls}>{m.label}</Badge>;
 };
 
-export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onChanged }: Props) => {
+export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, canManageAll = false, onChanged }: Props) => {
   const [loading, setLoading] = useState(false);
   const [received, setReceived] = useState<Req[]>([]);
   const [sent, setSent] = useState<Req[]>([]);
@@ -64,19 +65,13 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
       const all = (data || []) as any[];
 
       const clientIds = Array.from(new Set(all.map((r) => r.client_id)));
-      const userIds = Array.from(new Set([
-        ...all.map((r) => r.requester_id),
-        ...all.map((r) => r.owner_id),
-      ]));
-
-      const [{ data: clients }, { data: profiles }] = await Promise.all([
+      const [{ data: clients }, { data: profiles, error: profilesError }] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, company_name, trade_name").in("id", clientIds)
           : Promise.resolve({ data: [] as any[] }),
-        userIds.length
-          ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-          : Promise.resolve({ data: [] as any[] }),
+        (supabase as any).rpc("get_active_transfer_users"),
       ]);
+      if (profilesError) throw profilesError;
 
       const clientMap = new Map((clients || []).map((c: any) => [c.id, c]));
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
@@ -88,7 +83,7 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
         owner: profileMap.get(r.owner_id),
       }));
 
-      setReceived(enriched.filter((r) => r.owner_id === currentUserId));
+      setReceived(enriched.filter((r) => r.owner_id === currentUserId || (canManageAll && r.status === "pending")));
       setSent(enriched.filter((r) => r.requester_id === currentUserId));
     } catch (e: any) {
       console.error(e);
@@ -96,7 +91,7 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, onCha
     } finally {
       setLoading(false);
     }
-  }, [currentUserId]);
+  }, [currentUserId, canManageAll]);
 
   useEffect(() => {
     if (open) fetchAll();

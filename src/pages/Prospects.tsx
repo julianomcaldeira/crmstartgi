@@ -223,11 +223,8 @@ const Prospects = () => {
 
   const fetchSellers = async () => {
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .or("is_deleted.is.null,is_deleted.eq.false")
-        .order("full_name");
+      const { data, error } = await (supabase as any)
+        .rpc("get_active_transfer_users");
       
       if (error) throw error;
       setSellers(data || []);
@@ -688,6 +685,14 @@ const Prospects = () => {
     return isOwner || isAdminOrGestor;
   };
 
+  const canManageTransfers = userRoles.includes('admin') || userRoles.includes('gestor');
+
+  const canTransferClient = (client: any) => {
+    if (!currentUserId || !client?.created_by) return false;
+    const isOwner = client.created_by === currentUserId;
+    return isOwner || canManageTransfers;
+  };
+
   const handleDeleteClick = (e: React.MouseEvent, client: any) => {
     e.stopPropagation();
     setProspectToDelete(client);
@@ -756,22 +761,37 @@ const Prospects = () => {
       return;
     }
 
+    if (!canTransferClient(prospectToTransfer)) {
+      toast.error("Você não tem permissão para transferir este prospect");
+      return;
+    }
+
+    if (selectedNewSeller === prospectToTransfer.created_by) {
+      toast.error("Selecione um usuário diferente do responsável atual");
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("clients")
         .update({ created_by: selectedNewSeller })
-        .eq("id", prospectToTransfer.id);
+        .eq("id", prospectToTransfer.id)
+        .select("id, created_by")
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error("Nenhum prospect foi atualizado");
 
       toast.success("Prospect transferido com sucesso!");
       setTransferDialogOpen(false);
       setProspectToTransfer(null);
       setSelectedNewSeller("");
       fetchClients();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao transferir prospect:", error);
-      toast.error("Erro ao transferir prospect");
+      toast.error("Erro ao transferir prospect", {
+        description: error?.message || "Verifique se o usuário de destino está ativo e tente novamente.",
+      });
     }
   };
 
@@ -1965,7 +1985,7 @@ const Prospects = () => {
                           >
                             <Edit size={18} />
                           </Button>
-                          {client.created_by === currentUserId && (
+                          {canTransferClient(client) && (
                             <Button
                               variant="outline"
                               size="icon"
@@ -2091,7 +2111,7 @@ const Prospects = () => {
                         >
                           <Edit size={16} />
                         </Button>
-                        {client.created_by === currentUserId && (
+                        {canTransferClient(client) && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -2377,6 +2397,7 @@ const Prospects = () => {
         open={requestsPanelOpen}
         onOpenChange={setRequestsPanelOpen}
         currentUserId={currentUserId || ""}
+        canManageAll={canManageTransfers}
         onChanged={() => {
           fetchMyTransferRequests();
           fetchClients();
