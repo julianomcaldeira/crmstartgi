@@ -189,12 +189,16 @@ const Oportunidades = () => {
     checkUserRoleAndFetch();
   }, []);
 
-  // Regra de ouro: vendedores enxergam oportunidades de todos por padrão.
+  // Vendedor abre com a própria carteira filtrada por padrão (pode limpar o filtro para ver os demais).
   useEffect(() => {
-    if (currentUserId && !initialFilterApplied) {
+    if (currentUserId && userRole && !initialFilterApplied) {
+      if (userRole === "vendedor") {
+        setQuickFilterSeller(currentUserId);
+        setFilterAssignedTo(currentUserId);
+      }
       setInitialFilterApplied(true);
     }
-  }, [currentUserId, initialFilterApplied]);
+  }, [currentUserId, userRole, initialFilterApplied]);
 
   const checkUserRoleAndFetch = async () => {
     try {
