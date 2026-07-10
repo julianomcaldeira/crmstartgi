@@ -2326,7 +2326,7 @@ const Prospects = () => {
               >
                 <option value="">Selecione um vendedor</option>
                 {sellers
-                  .filter(seller => seller.id !== prospectToTransfer?.created_by)
+                  .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
                   .map((seller) => (
                     <option key={seller.id} value={seller.id}>
                       {seller.full_name}
