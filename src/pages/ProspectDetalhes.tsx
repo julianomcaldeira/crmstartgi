@@ -1306,9 +1306,9 @@ const ClienteDetalhes = () => {
           <Card className="p-6 overflow-x-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Tarefas</h3>
-              <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+              <Dialog open={taskDialogOpen} onOpenChange={(open) => { if (open && !canEditClient) { toast.info("Somente leitura: você não é o responsável por este prospect."); return; } setTaskDialogOpen(open); }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Tarefa
                   </Button>
