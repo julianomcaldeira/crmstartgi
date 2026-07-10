@@ -65,12 +65,13 @@ export const TransferRequestsPanel = ({ open, onOpenChange, currentUserId, canMa
       const all = (data || []) as any[];
 
       const clientIds = Array.from(new Set(all.map((r) => r.client_id)));
-      const [{ data: clients }, { data: profiles }] = await Promise.all([
+      const [{ data: clients }, { data: profiles, error: profilesError }] = await Promise.all([
         clientIds.length
           ? supabase.from("clients").select("id, company_name, trade_name").in("id", clientIds)
           : Promise.resolve({ data: [] as any[] }),
         (supabase as any).rpc("get_active_transfer_users"),
       ]);
+      if (profilesError) throw profilesError;
 
       const clientMap = new Map((clients || []).map((c: any) => [c.id, c]));
       const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
