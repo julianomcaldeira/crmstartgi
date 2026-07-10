@@ -12,6 +12,7 @@ import { formatDateLocaleBR } from "@/lib/dateUtils";
 interface ProspectCampaignsTabProps {
   clientId: string;
   clientName: string;
+  canEdit?: boolean;
 }
 
 const TASK_TYPE_LABELS: Record<string, string> = {
@@ -26,7 +27,7 @@ const TASK_TYPE_LABELS: Record<string, string> = {
   pesquisa_inicial: "Pesquisa Inicial",
 };
 
-export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaignsTabProps) => {
+export const ProspectCampaignsTab = ({ clientId, clientName, canEdit = true }: ProspectCampaignsTabProps) => {
   const [availableCampaigns, setAvailableCampaigns] = useState<any[]>([]);
   const [linkedCampaigns, setLinkedCampaigns] = useState<any[]>([]);
   const [campaignTasks, setCampaignTasks] = useState<Record<string, any[]>>({});
@@ -216,14 +217,16 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
                         <p className="text-sm text-muted-foreground mt-1">{campaign.description}</p>
                       )}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setUnlinkDialog(link)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canEdit && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setUnlinkDialog(link)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3">
@@ -288,7 +291,8 @@ export const ProspectCampaignsTab = ({ clientId, clientName }: ProspectCampaigns
                 <Button
                   size="sm"
                   onClick={() => handleLinkCampaign(campaign)}
-                  disabled={linking === campaign.id}
+                  disabled={linking === campaign.id || !canEdit}
+                  title={!canEdit ? "Somente leitura: você não é o responsável" : undefined}
                   className="gap-1 ml-3"
                 >
                   {linking === campaign.id ? (

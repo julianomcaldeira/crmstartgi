@@ -399,8 +399,8 @@ const ClienteDetalhes = () => {
   const canEditClient = canEdit(client);
 
   const handleEditTask = (task: any) => {
-    if (!canEdit(task)) {
-      toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+    if (!canEdit(client)) {
+      toast.info("Somente leitura: você não é o responsável por este prospect.");
       return;
     }
     setEditingTask(task);
@@ -694,6 +694,8 @@ const ClienteDetalhes = () => {
           variant="default" 
           size="sm"
           onClick={() => setDiagnosticDialogOpen(true)}
+          disabled={!canEditClient}
+          title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
           className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700"
         >
           <ClipboardList className="mr-2 h-4 w-4" />
@@ -704,6 +706,8 @@ const ClienteDetalhes = () => {
             variant="default" 
             size="sm"
             onClick={() => setAiAnalysisDialogOpen(true)}
+            disabled={!canEditClient}
+            title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}
             className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
           >
             <Sparkles className="mr-2 h-4 w-4" />
@@ -1050,9 +1054,9 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Oportunidades</h3>
-              <Dialog open={oppDialogOpen} onOpenChange={setOppDialogOpen}>
+              <Dialog open={oppDialogOpen} onOpenChange={(open) => { if (open && !canEditClient) { toast.info("Somente leitura: você não é o responsável por este prospect."); return; } setOppDialogOpen(open); }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Oportunidade
                   </Button>
@@ -1302,9 +1306,9 @@ const ClienteDetalhes = () => {
           <Card className="p-6 overflow-x-hidden">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Tarefas</h3>
-              <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
+              <Dialog open={taskDialogOpen} onOpenChange={(open) => { if (open && !canEditClient) { toast.info("Somente leitura: você não é o responsável por este prospect."); return; } setTaskDialogOpen(open); }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                     <Plus className="mr-2 h-4 w-4" />
                     Nova Tarefa
                   </Button>
@@ -1636,7 +1640,7 @@ const ClienteDetalhes = () => {
                                       <Edit className="h-3.5 w-3.5" />
                                     </Button>
 
-                                    {canDeleteTask(task) && (
+                                    {canEditClient && canDeleteTask(task) && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -1653,7 +1657,7 @@ const ClienteDetalhes = () => {
                                       </Button>
                                     )}
 
-                                    {task.status !== "completed" && (
+                                    {canEditClient && task.status !== "completed" && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
@@ -1715,6 +1719,7 @@ const ClienteDetalhes = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Contatos</h3>
               <Dialog open={contactDialogOpen} onOpenChange={(open) => {
+                if (open && !canEditClient) { toast.info("Somente leitura: você não é o responsável por este prospect."); return; }
                 setContactDialogOpen(open);
                 if (!open) {
                   setEditingContact(null);
@@ -1722,7 +1727,7 @@ const ClienteDetalhes = () => {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                     <Plus className="mr-2 h-4 w-4" />
                     Novo Contato
                   </Button>
@@ -1969,6 +1974,7 @@ const ClienteDetalhes = () => {
             <ProspectCampaignsTab
               clientId={id || ""}
               clientName={client?.company_name || client?.trade_name || ""}
+              canEdit={canEditClient}
             />
           </Card>
         </TabsContent>
@@ -1977,7 +1983,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Análises de IA</h3>
-              <Button size="sm" onClick={() => setAiAnalysisDialogOpen(true)}>
+              <Button size="sm" onClick={() => setAiAnalysisDialogOpen(true)} disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 Nova Análise
               </Button>
@@ -1990,7 +1996,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Histórico de Diagnósticos</h3>
-              <Button size="sm" onClick={() => setDiagnosticDialogOpen(true)}>
+              <Button size="sm" onClick={() => setDiagnosticDialogOpen(true)} disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                 <Plus className="mr-2 h-4 w-4" />
                 Novo Diagnóstico
               </Button>
@@ -2006,7 +2012,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">E-mails enviados ao cliente</h3>
-              <Button size="sm" onClick={() => setEmailComposerOpen(true)}>
+              <Button size="sm" onClick={() => setEmailComposerOpen(true)} disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                 <Send className="mr-2 h-4 w-4" />
                 Novo e-mail
               </Button>
