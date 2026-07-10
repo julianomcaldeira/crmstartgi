@@ -1965,15 +1965,17 @@ const Prospects = () => {
                           >
                             <Edit size={18} />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={(e) => handleTransferClick(e, client)}
-                            className="h-10 w-10"
-                            title="Transferir prospect"
-                          >
-                            <UserCog size={18} />
-                          </Button>
+                          {client.created_by === currentUserId && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={(e) => handleTransferClick(e, client)}
+                              className="h-10 w-10"
+                              title="Transferir prospect"
+                            >
+                              <UserCog size={18} />
+                            </Button>
+                          )}
                         </>
                       )}
 
