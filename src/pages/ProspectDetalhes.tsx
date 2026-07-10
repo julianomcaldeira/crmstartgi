@@ -1719,6 +1719,7 @@ const ClienteDetalhes = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">Contatos</h3>
               <Dialog open={contactDialogOpen} onOpenChange={(open) => {
+                if (open && !canEditClient) { toast.info("Somente leitura: você não é o responsável por este prospect."); return; }
                 setContactDialogOpen(open);
                 if (!open) {
                   setEditingContact(null);
@@ -1726,7 +1727,7 @@ const ClienteDetalhes = () => {
                 }
               }}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                     <Plus className="mr-2 h-4 w-4" />
                     Novo Contato
                   </Button>
