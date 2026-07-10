@@ -2011,7 +2011,7 @@ const ClienteDetalhes = () => {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">E-mails enviados ao cliente</h3>
-              <Button size="sm" onClick={() => setEmailComposerOpen(true)}>
+              <Button size="sm" onClick={() => setEmailComposerOpen(true)} disabled={!canEditClient} title={!canEditClient ? "Somente leitura: você não é o responsável" : undefined}>
                 <Send className="mr-2 h-4 w-4" />
                 Novo e-mail
               </Button>
