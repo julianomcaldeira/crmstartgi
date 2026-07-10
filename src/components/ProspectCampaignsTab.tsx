@@ -291,7 +291,8 @@ export const ProspectCampaignsTab = ({ clientId, clientName, canEdit = true }: P
                 <Button
                   size="sm"
                   onClick={() => handleLinkCampaign(campaign)}
-                  disabled={linking === campaign.id}
+                  disabled={linking === campaign.id || !canEdit}
+                  title={!canEdit ? "Somente leitura: você não é o responsável" : undefined}
                   className="gap-1 ml-3"
                 >
                   {linking === campaign.id ? (
