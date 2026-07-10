@@ -399,8 +399,8 @@ const ClienteDetalhes = () => {
   const canEditClient = canEdit(client);
 
   const handleEditTask = (task: any) => {
-    if (!canEdit(task)) {
-      toast.info("Somente leitura: você não é o responsável por esta tarefa.");
+    if (!canEdit(client)) {
+      toast.info("Somente leitura: você não é o responsável por este prospect.");
       return;
     }
     setEditingTask(task);
