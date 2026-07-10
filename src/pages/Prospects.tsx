@@ -224,10 +224,7 @@ const Prospects = () => {
   const fetchSellers = async () => {
     try {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .or("is_deleted.is.null,is_deleted.eq.false")
-        .order("full_name");
+        .rpc("get_active_transfer_users");
       
       if (error) throw error;
       setSellers(data || []);
