@@ -59,6 +59,9 @@ const Feiras = () => {
   const [editingFeira, setEditingFeira] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [periodFrom, setPeriodFrom] = useState<string>("");
+  const [periodTo, setPeriodTo] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"date_asc" | "date_desc" | "name_asc" | "name_desc">("date_asc");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
