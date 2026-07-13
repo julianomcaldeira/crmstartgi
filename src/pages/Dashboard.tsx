@@ -191,7 +191,8 @@ const Dashboard = () => {
       .lte("expected_close_date", format(endDate, "yyyy-MM-dd"))
       .order("probability", { ascending: false });
 
-    if (userRole === "vendedor") {
+    // Only admin and pre_vendas see all forecasts; everyone else sees only their own
+    if (userRole !== "admin" && userRole !== "pre_vendas") {
       query = query.eq("assigned_to", userId);
     }
 
