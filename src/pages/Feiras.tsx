@@ -59,6 +59,9 @@ const Feiras = () => {
   const [editingFeira, setEditingFeira] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [periodFrom, setPeriodFrom] = useState<string>("");
+  const [periodTo, setPeriodTo] = useState<string>("");
+  const [sortBy, setSortBy] = useState<"date_asc" | "date_desc" | "name_asc" | "name_desc">("date_asc");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRoles, setUserRoles] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -357,16 +360,43 @@ const Feiras = () => {
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
-  const filteredFeiras = feiras.filter((feira) => {
-    const matchesSearch =
-      feira.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (feira.city && feira.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (feira.location && feira.location.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredFeiras = feiras
+    .filter((feira) => {
+      const matchesSearch =
+        feira.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (feira.city && feira.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (feira.location && feira.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = filterStatus === "all" || feira.status === filterStatus;
+      const matchesStatus = filterStatus === "all" || feira.status === filterStatus;
 
-    return matchesSearch && matchesStatus;
-  });
+      // Filtro de período: feira deve INTERSECTAR com o intervalo escolhido
+      let matchesPeriod = true;
+      if (periodFrom || periodTo) {
+        const fStart = feira.start_date ? feira.start_date : null;
+        const fEnd = feira.end_date || feira.start_date || null;
+        if (!fStart) {
+          matchesPeriod = false;
+        } else {
+          if (periodFrom && fEnd && fEnd < periodFrom) matchesPeriod = false;
+          if (periodTo && fStart > periodTo) matchesPeriod = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesPeriod;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "name_asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "name_desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "date_desc":
+          return (b.start_date || "").localeCompare(a.start_date || "");
+        case "date_asc":
+        default:
+          return (a.start_date || "").localeCompare(b.start_date || "");
+      }
+    });
 
   if (loading) {
     return (
@@ -584,8 +614,8 @@ const Feiras = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+            <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, cidade ou local..."
@@ -608,7 +638,56 @@ const Feiras = () => {
                 <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Período de</Label>
+                <Input
+                  type="date"
+                  value={periodFrom}
+                  onChange={(e) => setPeriodFrom(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">até</Label>
+                <Input
+                  type="date"
+                  value={periodTo}
+                  onChange={(e) => setPeriodTo(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_asc">Data (mais próxima)</SelectItem>
+                <SelectItem value="date_desc">Data (mais distante)</SelectItem>
+                <SelectItem value="name_asc">Nome (A–Z)</SelectItem>
+                <SelectItem value="name_desc">Nome (Z–A)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          {(periodFrom || periodTo || searchTerm || filterStatus !== "all") && (
+            <div className="flex justify-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm("");
+                  setFilterStatus("all");
+                  setPeriodFrom("");
+                  setPeriodTo("");
+                }}
+              >
+                Limpar filtros
+              </Button>
+            </div>
+          )}
+
 
           {filteredFeiras.length > 0 && (
             <div className="flex items-center justify-between gap-4 pt-2 border-t flex-wrap">
