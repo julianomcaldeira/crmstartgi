@@ -191,7 +191,8 @@ const Dashboard = () => {
       .lte("expected_close_date", format(endDate, "yyyy-MM-dd"))
       .order("probability", { ascending: false });
 
-    if (userRole === "vendedor") {
+    // Only admin and pre_vendas see all forecasts; everyone else sees only their own
+    if (userRole !== "admin" && userRole !== "pre_vendas") {
       query = query.eq("assigned_to", userId);
     }
 
@@ -791,7 +792,7 @@ const Dashboard = () => {
       </div>
 
       {/* Forecast do Mês - Compacto */}
-      <Card>
+      <Card className="max-w-3xl">
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-purple-500" />
@@ -807,52 +808,68 @@ const Dashboard = () => {
               Sem oportunidades no forecast
             </p>
           ) : (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {forecastAccounts.slice(0, 5).map((opp) => (
-                <div
-                  key={opp.id}
-                  className="flex items-center justify-between p-2 border rounded hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-xs truncate">
-                      {opp.clients?.company_name || opp.clients?.trade_name}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant="outline" className="text-xs px-1 py-0">
-                        {opp.status === "qualified" && "Qual."}
-                        {opp.status === "proposal" && "Prop."}
-                        {opp.status === "negotiation" && "Negoc."}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {opp.probability}%
-                      </span>
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+              {forecastAccounts.map((opp) => {
+                const fmt = (n: number) =>
+                  new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                    maximumFractionDigits: 0,
+                  }).format(n || 0);
+                const monthly = Number(opp.monthly_value) || 0;
+                const impl = Number(opp.implementation_value) || 0;
+                const pontual = opp.billing_type === "pontual";
+                return (
+                  <div
+                    key={opp.id}
+                    className="flex items-center justify-between gap-3 p-2 border rounded hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs truncate">
+                        {opp.clients?.company_name || opp.clients?.trade_name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <Badge variant="outline" className="text-xs px-1 py-0">
+                          {opp.status === "qualified" && "Qual."}
+                          {opp.status === "proposal" && "Prop."}
+                          {opp.status === "negotiation" && "Negoc."}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{opp.probability}%</span>
+                        {opp.assigned_user?.full_name && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            • {opp.assigned_user.full_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {pontual ? (
+                        <p className="font-bold text-sm">{fmt(Number(opp.value) || impl)}</p>
+                      ) : (
+                        <div className="text-xs leading-tight">
+                          <p>
+                            <span className="text-muted-foreground">Mensal:</span>{" "}
+                            <span className="font-semibold">{fmt(monthly)}</span>
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">Implant.:</span>{" "}
+                            <span className="font-semibold">{fmt(impl)}</span>
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {opp.expected_close_date &&
+                          format(new Date(opp.expected_close_date), "dd/MM/yyyy")}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right ml-2">
-                    <p className="font-bold text-sm">
-                      {new Intl.NumberFormat("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                        notation: "compact",
-                      }).format(Number(opp.value) || 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {opp.expected_close_date && 
-                        format(new Date(opp.expected_close_date), "dd/MM")
-                      }
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {forecastAccounts.length > 5 && (
-                <p className="text-xs text-muted-foreground text-center pt-1">
-                  +{forecastAccounts.length - 5} mais
-                </p>
-              )}
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
       </TabsContent>
 
       {/* Tab Forecast */}
