@@ -772,7 +772,7 @@ const Dashboard = () => {
       </div>
 
       {/* Forecast do Mês - Compacto */}
-      <Card className="max-w-3xl">
+      <Card>
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-purple-500" />
