@@ -184,6 +184,7 @@ const Dashboard = () => {
       .select(`
         *,
         clients(company_name, trade_name),
+        products(name),
         assigned_user:profiles!opportunities_assigned_to_fkey(full_name)
       `)
       .in("status", ["qualified", "proposal", "negotiation"])
@@ -815,6 +816,11 @@ const Dashboard = () => {
                           {opp.status === "negotiation" && "Negoc."}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{opp.probability}%</span>
+                        {opp.products?.name && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            • {opp.products.name}
+                          </span>
+                        )}
                         {opp.assigned_user?.full_name && (
                           <span className="text-xs text-muted-foreground truncate">
                             • {opp.assigned_user.full_name}
