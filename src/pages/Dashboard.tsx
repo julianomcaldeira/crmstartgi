@@ -539,106 +539,86 @@ const Dashboard = () => {
 
         <TabsContent value="resumo" className="space-y-4">
 
-      {/* Grid Principal Compacto */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Resumo Rápido Cards */}
-        <Card className="border-l-4 border-l-blue-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Tarefas Pendentes</p>
-                <p className="text-2xl font-bold text-blue-600">{todayTasks.length}</p>
-              </div>
-              <CheckSquare className="h-8 w-8 text-blue-500/30" />
+      {/* KPIs — grid único, todos os cards com a mesma altura e alinhamento */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 auto-rows-fr">
+        <Card className="border-l-4 border-l-blue-500 h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Tarefas Pendentes</p>
+              <p className="text-2xl font-bold text-blue-600">{todayTasks.length}</p>
             </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-l-4 border-l-purple-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">No Forecast</p>
-                <p className="text-2xl font-bold text-purple-600">{forecastAccounts.length}</p>
-              </div>
-              <Target className="h-8 w-8 text-purple-500/30" />
-            </div>
+            <CheckSquare className="h-8 w-8 text-blue-500/30 shrink-0" />
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Meta Atingida</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500/30" />
+        <Card className="border-l-4 border-l-purple-500 h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">No Forecast</p>
+              <p className="text-2xl font-bold text-purple-600">{forecastAccounts.length}</p>
             </div>
+            <Target className="h-8 w-8 text-purple-500/30 shrink-0" />
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Meta Total</p>
-                <p className="text-lg font-bold text-primary">
-                  {goalData ? new Intl.NumberFormat("pt-BR", {
-                    style: "currency",
-                    currency: "BRL",
-                    notation: "compact",
-                  }).format(goalData.target) : "R$ 0"}
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-primary/30" />
+        <Card className="border-l-4 border-l-green-500 h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Meta Atingida</p>
+              <p className="text-2xl font-bold text-green-600">
+                {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
+              </p>
             </div>
+            <TrendingUp className="h-8 w-8 text-green-500/30 shrink-0" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-primary h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Meta Total</p>
+              <p className="text-2xl font-bold text-primary">
+                {goalData ? new Intl.NumberFormat("pt-BR", {
+                  style: "currency",
+                  currency: "BRL",
+                  notation: "compact",
+                }).format(goalData.target) : "R$ 0"}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-primary/30 shrink-0" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500 h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Ciclo Médio</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {avgCloseCycle}
+                <span className="text-sm font-medium ml-1">{avgCloseCycle === 1 ? 'dia' : 'dias'}</span>
+              </p>
+            </div>
+            <Clock className="h-8 w-8 text-orange-500/30 shrink-0" />
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-cyan-500 h-full">
+          <CardContent className="p-4 h-full flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Feiras no Mês</p>
+              <p className="text-2xl font-bold text-cyan-600">{upcomingFeiras.length}</p>
+              {upcomingFeiras.length > 0 && (
+                <p className="text-[10px] text-muted-foreground truncate">
+                  {formatDateBR(upcomingFeiras[0].start_date, "dd/MM")}
+                  {upcomingFeiras[0].end_date && ` – ${formatDateBR(upcomingFeiras[0].end_date, "dd/MM")}`}
+                </p>
+              )}
+            </div>
+            <Calendar className="h-8 w-8 text-cyan-500/30 shrink-0" />
           </CardContent>
         </Card>
       </div>
 
-      {/* Ciclo Médio de Fechamento e Feiras */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-orange-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Ciclo Médio</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {avgCloseCycle} {avgCloseCycle === 1 ? 'dia' : 'dias'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">Para fechar oportunidades</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-500/30" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-cyan-500">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar className="h-4 w-4 text-cyan-500" />
-                  <p className="text-xs text-muted-foreground">Feiras no Mês</p>
-                </div>
-                <p className="text-2xl font-bold text-cyan-600">{upcomingFeiras.length}</p>
-                {upcomingFeiras.length > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs font-medium truncate">{upcomingFeiras[0].name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {formatDateBR(upcomingFeiras[0].start_date, "dd/MM")}
-                      {upcomingFeiras[0].end_date && ` até ${formatDateBR(upcomingFeiras[0].end_date, "dd/MM")}`}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Tarefas Pendentes - Compacto */}
