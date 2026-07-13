@@ -816,6 +816,11 @@ const Dashboard = () => {
                           {opp.status === "negotiation" && "Negoc."}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{opp.probability}%</span>
+                        {opp.products?.name && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            • {opp.products.name}
+                          </span>
+                        )}
                         {opp.assigned_user?.full_name && (
                           <span className="text-xs text-muted-foreground truncate">
                             • {opp.assigned_user.full_name}
