@@ -614,7 +614,7 @@ const Feiras = () => {
             </div>
           )}
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-center">
             <div className="relative xl:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -639,24 +639,20 @@ const Feiras = () => {
               </SelectContent>
             </Select>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Período de</Label>
-                <Input
-                  type="date"
-                  value={periodFrom}
-                  onChange={(e) => setPeriodFrom(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">até</Label>
-                <Input
-                  type="date"
-                  value={periodTo}
-                  onChange={(e) => setPeriodTo(e.target.value)}
-                />
-              </div>
-            </div>
+            <Input
+              type="date"
+              value={periodFrom}
+              onChange={(e) => setPeriodFrom(e.target.value)}
+              aria-label="Período de"
+              title="Período de"
+            />
+            <Input
+              type="date"
+              value={periodTo}
+              onChange={(e) => setPeriodTo(e.target.value)}
+              aria-label="Período até"
+              title="Período até"
+            />
 
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger>
