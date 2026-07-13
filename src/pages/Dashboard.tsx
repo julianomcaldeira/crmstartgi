@@ -184,6 +184,7 @@ const Dashboard = () => {
       .select(`
         *,
         clients(company_name, trade_name),
+        products(name),
         assigned_user:profiles!opportunities_assigned_to_fkey(full_name)
       `)
       .in("status", ["qualified", "proposal", "negotiation"])
