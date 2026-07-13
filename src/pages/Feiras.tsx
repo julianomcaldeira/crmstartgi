@@ -360,16 +360,43 @@ const Feiras = () => {
     return <Badge variant={config.variant as any}>{config.label}</Badge>;
   };
 
-  const filteredFeiras = feiras.filter((feira) => {
-    const matchesSearch =
-      feira.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (feira.city && feira.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (feira.location && feira.location.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredFeiras = feiras
+    .filter((feira) => {
+      const matchesSearch =
+        feira.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (feira.city && feira.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (feira.location && feira.location.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = filterStatus === "all" || feira.status === filterStatus;
+      const matchesStatus = filterStatus === "all" || feira.status === filterStatus;
 
-    return matchesSearch && matchesStatus;
-  });
+      // Filtro de período: feira deve INTERSECTAR com o intervalo escolhido
+      let matchesPeriod = true;
+      if (periodFrom || periodTo) {
+        const fStart = feira.start_date ? feira.start_date : null;
+        const fEnd = feira.end_date || feira.start_date || null;
+        if (!fStart) {
+          matchesPeriod = false;
+        } else {
+          if (periodFrom && fEnd && fEnd < periodFrom) matchesPeriod = false;
+          if (periodTo && fStart > periodTo) matchesPeriod = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesPeriod;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "name_asc":
+          return a.name.localeCompare(b.name, "pt-BR");
+        case "name_desc":
+          return b.name.localeCompare(a.name, "pt-BR");
+        case "date_desc":
+          return (b.start_date || "").localeCompare(a.start_date || "");
+        case "date_asc":
+        default:
+          return (a.start_date || "").localeCompare(b.start_date || "");
+      }
+    });
 
   if (loading) {
     return (
