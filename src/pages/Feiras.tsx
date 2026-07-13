@@ -639,24 +639,20 @@ const Feiras = () => {
               </SelectContent>
             </Select>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">Período de</Label>
-                <Input
-                  type="date"
-                  value={periodFrom}
-                  onChange={(e) => setPeriodFrom(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-[10px] uppercase text-muted-foreground">até</Label>
-                <Input
-                  type="date"
-                  value={periodTo}
-                  onChange={(e) => setPeriodTo(e.target.value)}
-                />
-              </div>
-            </div>
+            <Input
+              type="date"
+              value={periodFrom}
+              onChange={(e) => setPeriodFrom(e.target.value)}
+              aria-label="Período de"
+              title="Período de"
+            />
+            <Input
+              type="date"
+              value={periodTo}
+              onChange={(e) => setPeriodTo(e.target.value)}
+              aria-label="Período até"
+              title="Período até"
+            />
 
             <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <SelectTrigger>
