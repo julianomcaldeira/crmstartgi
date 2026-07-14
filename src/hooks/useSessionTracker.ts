@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-const HEARTBEAT_MS = 60_000; // 1 min
+const HEARTBEAT_MS = 3 * 60_000; // 3 min (reduzido para economia de Cloud usage)
 const IDLE_THRESHOLD_MS = 5 * 60_000; // 5 min idle => new session
 
 /**

@@ -5,7 +5,7 @@ import { AlertCircle, Target, CheckCircle, Trophy } from "lucide-react";
 import { checkGoalAchievements } from "@/hooks/useGoalProgress";
 
 const NOTIFICATION_STORAGE_KEY = "crm_notified_items";
-const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes (reduzido para economia de Cloud usage)
 
 interface NotifiedItems {
   tasks: string[];
