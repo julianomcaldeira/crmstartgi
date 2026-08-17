@@ -3696,6 +3696,10 @@ export type Database = {
         Returns: Json
       }
       register_proposal_view: { Args: { _token: string }; Returns: undefined }
+      transfer_client_owner: {
+        Args: { _client_id: string; _new_owner_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "vendedor" | "gestor" | "pre_vendas"
