@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { canAccessContract, canAccessContractStoragePath, forbidden } from "../_shared/contract-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,10 +21,17 @@ Deno.serve(async (req) => {
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { storage_path, file_name, mime_type } = await req.json();
+    const { storage_path, file_name, mime_type, contract_id } = await req.json();
     if (!storage_path) return new Response(JSON.stringify({ error: "storage_path obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    // Autorização: o chamador precisa ser dono do contrato/arquivo ou ter papel privilegiado
+    const authorized = contract_id
+      ? await canAccessContract(admin, user.id, contract_id)
+      : await canAccessContractStoragePath(admin, user.id, storage_path);
+    if (!authorized) return forbidden(corsHeaders);
+
     const { data: file, error: dlErr } = await admin.storage.from("contracts").download(storage_path);
     if (dlErr || !file) throw new Error("Não foi possível ler o anexo");
 

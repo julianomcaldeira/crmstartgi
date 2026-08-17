@@ -38,8 +38,9 @@ Deno.serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id);
-    const allowed = (roles || []).some((r: any) => r.role === "admin" || r.role === "gestor");
-    if (!allowed) {
+    const isAdmin = (roles || []).some((r: any) => r.role === "admin");
+    const isGestor = (roles || []).some((r: any) => r.role === "gestor");
+    if (!isAdmin && !isGestor) {
       return new Response(JSON.stringify({ error: "Apenas administradores podem criar usuários" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -56,6 +57,13 @@ Deno.serve(async (req) => {
     if (!fullName) throw new Error("Nome é obrigatório");
     if (!["admin", "gestor", "vendedor", "pre_vendas"].includes(role)) {
       throw new Error("Função inválida");
+    }
+
+    // Privilege escalation guard: only admins may create privileged accounts
+    if (!isAdmin && (role === "admin" || role === "gestor")) {
+      return new Response(JSON.stringify({ error: "Apenas administradores podem criar usuários com função admin ou gestor" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Create user already confirmed (no email sent → no rate limit)

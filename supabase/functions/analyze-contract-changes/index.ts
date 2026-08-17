@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { canAccessRevision, forbidden } from "../_shared/contract-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,8 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    if (!(await canAccessRevision(admin, user.id, revision_id))) return forbidden(corsHeaders);
 
     const { data: revision, error: revErr } = await admin
       .from("contract_clause_revisions")

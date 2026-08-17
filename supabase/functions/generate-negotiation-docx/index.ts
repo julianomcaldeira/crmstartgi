@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { canAccessRevision, forbidden } from "../_shared/contract-access.ts";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } from "https://esm.sh/docx@8.5.0";
 
 const corsHeaders = {
@@ -26,6 +27,8 @@ Deno.serve(async (req) => {
     if (!revision_id) return new Response(JSON.stringify({ error: "revision_id obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    if (!(await canAccessRevision(admin, user.id, revision_id))) return forbidden(corsHeaders);
 
     const { data: rev } = await admin
       .from("contract_clause_revisions")

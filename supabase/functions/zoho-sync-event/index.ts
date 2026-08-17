@@ -40,6 +40,19 @@ Deno.serve(async (req) => {
       .from("pre_vendas_agenda").select("*").eq("id", eventId).maybeSingle();
     if (evErr || !ev) throw new Error("Evento não encontrado");
 
+    // Autorização: apenas dono (pré-vendas), criador ou papéis privilegiados
+    if (ev.pre_vendas_user_id !== user.id && ev.created_by !== user.id) {
+      const { data: callerRoles } = await admin
+        .from("user_roles").select("role").eq("user_id", user.id);
+      const privileged = (callerRoles || []).some((r: any) =>
+        ["admin", "gestor", "pre_vendas"].includes(r.role));
+      if (!privileged) {
+        return new Response(JSON.stringify({ error: "Acesso negado a este evento" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Usa tokens do dono do evento (pre_vendas_user_id). Se a conta não estiver conectada,
     // a edição no CRM não deve falhar: apenas marca a sincronização como pendente.
     let tokens;

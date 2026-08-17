@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { canAccessContract, forbidden } from "../_shared/contract-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,8 @@ Deno.serve(async (req) => {
     }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+    if (!(await canAccessContract(admin, user.id, contract_id))) return forbidden(corsHeaders);
 
     const { data: contract } = await admin
       .from("contracts")
