@@ -685,7 +685,7 @@ const Prospects = () => {
     return isOwner || isAdminOrGestor;
   };
 
-  const canManageTransfers = userRoles.includes('admin') || userRoles.includes('gestor');
+  const canManageTransfers = userRoles.includes('admin') || userRoles.includes('gestor') || userRoles.includes('pre_vendas');
 
   const canTransferClient = (client: any) => {
     if (!currentUserId || !client?.created_by) return false;
