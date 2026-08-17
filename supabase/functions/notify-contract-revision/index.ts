@@ -34,6 +34,8 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    if (!(await canAccessRevision(admin, user.id, revision_id))) return forbidden(corsHeaders);
+
     const { data: rev } = await admin
       .from("contract_clause_revisions")
       .select("*, contracts(id, title, created_by, opportunity_id, clients(company_name))")
