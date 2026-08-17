@@ -772,24 +772,22 @@ const Prospects = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("clients")
-        .update({ created_by: selectedNewSeller })
-        .eq("id", prospectToTransfer.id)
-        .select("id, created_by")
-        .single();
+      const { data, error } = await supabase.rpc("transfer_client_owner", {
+        _client_id: prospectToTransfer.id,
+        _new_owner_id: selectedNewSeller,
+      });
 
       if (error) throw error;
-      if (!data) throw new Error("Nenhum prospect foi atualizado");
+      if (!data) throw new Error("Nenhuma empresa foi atualizada");
 
-      toast.success("Prospect transferido com sucesso!");
+      toast.success("Empresa transferida com sucesso!");
       setTransferDialogOpen(false);
       setProspectToTransfer(null);
       setSelectedNewSeller("");
       fetchClients();
     } catch (error: any) {
-      console.error("Erro ao transferir prospect:", error);
-      toast.error("Erro ao transferir prospect", {
+      console.error("Erro ao transferir empresa:", error);
+      toast.error("Erro ao transferir empresa", {
         description: error?.message || "Verifique se o usuário de destino está ativo e tente novamente.",
       });
     }
@@ -2330,11 +2328,11 @@ const Prospects = () => {
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Transferir Prospect</DialogTitle>
+            <DialogTitle>Transferir Empresa</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Prospect</Label>
+              <Label>Empresa</Label>
               <p className="text-sm font-medium">
                 {prospectToTransfer?.company_name || prospectToTransfer?.trade_name}
               </p>
@@ -2361,8 +2359,7 @@ const Prospects = () => {
 
             <div className="bg-muted/50 p-3 rounded-md">
               <p className="text-sm text-muted-foreground">
-                <strong>Atenção:</strong> Ao transferir este prospect, você perderá o acesso para editá-lo. 
-                O novo vendedor será o responsável por todas as informações e histórico deste prospect.
+                <strong>Atenção:</strong> O vendedor selecionado passará a ser o responsável por todas as informações e pelo histórico desta empresa.
               </p>
             </div>
           </div>
@@ -2378,7 +2375,7 @@ const Prospects = () => {
               onClick={handleTransferProspect}
               disabled={!selectedNewSeller}
             >
-              Transferir Prospect
+              Transferir Empresa
             </Button>
           </div>
         </DialogContent>
