@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { getValidTokens, mailBase } from "../_shared/zoho.ts";
+import { canAccessRevision, forbidden } from "../_shared/contract-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

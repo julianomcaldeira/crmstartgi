@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { canAccessRevision, forbidden } from "../_shared/contract-access.ts";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } from "https://esm.sh/docx@8.5.0";
 
 const corsHeaders = {
