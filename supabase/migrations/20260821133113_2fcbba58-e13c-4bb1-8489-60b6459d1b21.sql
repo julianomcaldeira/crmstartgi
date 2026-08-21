@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.owns_client(uuid, uuid) FROM PUBLIC, anon;
