@@ -35,12 +35,22 @@ export function useCanEdit() {
   const isPrivileged = isAdmin || isGestor;
 
   /** Retorna true se o usuário pode editar o registro. */
-  const canEdit = (record?: { created_by?: string | null; assigned_to?: string | null } | null) => {
+  const canEdit = (
+    record?: {
+      created_by?: string | null;
+      assigned_to?: string | null;
+      clients?: { created_by?: string | null } | null;
+    } | null
+  ) => {
     if (loading) return false;
     if (isPrivileged) return true;
     if (!record || !userId) return false;
+    // O responsável atual da conta pode dar seguimento em tudo que pertence a ela,
+    // mesmo que o registro tenha sido criado pelo responsável anterior.
+    if (record.clients?.created_by === userId) return true;
     return record.created_by === userId || record.assigned_to === userId;
   };
+
 
   return { userId, role, isAdmin, isGestor, isPreVendas, isPrivileged, canEdit, loading };
 }

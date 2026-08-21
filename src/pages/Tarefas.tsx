@@ -199,7 +199,7 @@ const Tarefas = () => {
             .from("tasks")
             .select(`
               *,
-              clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+              clients(id, company_name, trade_name, cnpj, created_by, email, phone, city, state, website, address, segment),
               opportunities(title),
               contacts(id, name, email, phone, mobile, role),
               profiles:assigned_to(full_name)
@@ -219,7 +219,7 @@ const Tarefas = () => {
           .from("tasks")
           .select(`
             *,
-            clients(id, company_name, trade_name, cnpj, email, phone, city, state, website, address, segment),
+            clients(id, company_name, trade_name, cnpj, created_by, email, phone, city, state, website, address, segment),
             opportunities(title),
             contacts(id, name, email, phone, mobile, role),
             profiles:assigned_to(full_name)
