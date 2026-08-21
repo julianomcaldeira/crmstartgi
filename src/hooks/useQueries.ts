@@ -26,7 +26,7 @@ export const useTasks = (userId: string | null, userRole: string | null) => {
         .from("tasks")
         .select(`
           *,
-          clients(company_name, trade_name),
+          clients(company_name, trade_name, created_by),
           contacts(name, email, phone),
           opportunities(title)
         `)
@@ -51,7 +51,7 @@ export const useTodayTasks = (userId: string | null, userRole: string | null) =>
         .from("tasks")
         .select(`
           *,
-          clients(company_name),
+          clients(company_name, created_by),
           contacts(name)
         `)
         .eq("status", "pending")
@@ -79,7 +79,7 @@ export const useOpportunities = (userId: string | null, userRole: string | null)
         .from("opportunities")
         .select(`
           *,
-          clients(id, company_name, trade_name, cnpj),
+          clients(id, company_name, trade_name, cnpj, created_by),
           products(name, description),
           assigned_user:profiles!opportunities_assigned_to_fkey(full_name)
         `)
