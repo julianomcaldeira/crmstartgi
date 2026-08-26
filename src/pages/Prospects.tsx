@@ -1568,7 +1568,7 @@ const Prospects = () => {
             <div className="relative w-full sm:w-64">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
               <Select value={selectedSeller} onValueChange={setSelectedSeller}>
-                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por vendedor">
+                <SelectTrigger className="h-10 w-full pl-10" aria-label="Filtrar por vendedor">
                   <SelectValue placeholder="Todos os vendedores" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1586,7 +1586,7 @@ const Prospects = () => {
             <div className="relative w-full sm:w-64">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
               <Select value={selectedFeiraFilter} onValueChange={setSelectedFeiraFilter}>
-                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por feira">
+                <SelectTrigger className="h-10 w-full pl-10" aria-label="Filtrar por feira">
                   <SelectValue placeholder="Todas as feiras" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1602,7 +1602,7 @@ const Prospects = () => {
             <div className="relative w-full sm:w-64">
               <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="h-10 w-full" aria-label="Ordenar prospects">
+                <SelectTrigger className="h-10 w-full pl-10" aria-label="Ordenar prospects">
                   <SelectValue placeholder="Nome (A-Z)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1620,7 +1620,7 @@ const Prospects = () => {
             <div className="relative w-full sm:w-64">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
               <Select value={selectedCompanySize} onValueChange={setSelectedCompanySize}>
-                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por porte da empresa">
+                <SelectTrigger className="h-10 w-full pl-10" aria-label="Filtrar por porte da empresa">
                   <SelectValue placeholder="Todos os portes" />
                 </SelectTrigger>
                 <SelectContent>
