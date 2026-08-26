@@ -137,7 +137,7 @@ const Oportunidades = () => {
     { 
       key: "contacted", 
       label: "Contatado", 
-      color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+      color: "badge-blue",
       borderColor: "border-l-blue-500",
       bgGradient: "from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-950"
     },
@@ -151,35 +151,35 @@ const Oportunidades = () => {
     { 
       key: "apresentacao", 
       label: "Apresentação", 
-      color: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+      color: "badge-purple",
       borderColor: "border-l-purple-500",
       bgGradient: "from-purple-50 to-purple-100 dark:from-purple-900 dark:to-purple-950"
     },
     { 
       key: "proposal", 
       label: "Proposta", 
-      color: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+      color: "badge-yellow",
       borderColor: "border-l-amber-500",
       bgGradient: "from-amber-50 to-amber-100 dark:from-amber-900 dark:to-amber-950"
     },
     { 
       key: "negotiation", 
       label: "Negociação", 
-      color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
+      color: "badge-orange",
       borderColor: "border-l-orange-500",
       bgGradient: "from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-950"
     },
     { 
       key: "won", 
       label: "Ganho", 
-      color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+      color: "badge-green",
       borderColor: "border-l-green-500",
       bgGradient: "from-green-50 to-green-100 dark:from-green-900 dark:to-green-950"
     },
     { 
       key: "lost", 
       label: "Perdido", 
-      color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+      color: "badge-red",
       borderColor: "border-l-red-500",
       bgGradient: "from-red-50 to-red-100 dark:from-red-900 dark:to-red-950"
     },
@@ -999,37 +999,40 @@ const Oportunidades = () => {
           <div className="flex border rounded-lg overflow-hidden">
             {viewModeKanban === "list" && (
               <div className="flex items-center gap-2 mr-2 animate-fade-in">
-                <select 
-                  value={quickStatusFilter} 
-                  onChange={(e) => setQuickStatusFilter(e.target.value)}
-                  className="h-9 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="all">Todos Status</option>
-                  {stages.map((stage) => (
-                    <option key={stage.key} value={stage.key}>{stage.label}</option>
-                  ))}
-                </select>
-                <select 
-                  value={quickProbabilityFilter} 
-                  onChange={(e) => setQuickProbabilityFilter(e.target.value)}
-                  className="h-9 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="all">Todas Probabilidades</option>
-                  <option value="10">10%</option>
-                  <option value="25">25%</option>
-                  <option value="50">50%</option>
-                  <option value="80">80%</option>
-                  <option value="90">90%</option>
-                </select>
-                <select 
-                  value={quickBusinessTypeFilter} 
-                  onChange={(e) => setQuickBusinessTypeFilter(e.target.value)}
-                  className="h-9 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="all">Todos Tipos</option>
-                  <option value="cliente_novo">Cliente Novo</option>
-                  <option value="venda_na_base">Venda na Base</option>
-                </select>
+                <Select value={quickStatusFilter} onValueChange={setQuickStatusFilter}>
+                  <SelectTrigger className="h-9 w-full" aria-label="Filtrar por status">
+                    <SelectValue placeholder="Todos Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Status</SelectItem>
+                    {stages.map((stage) => (
+                      <SelectItem key={stage.key} value={stage.key}>{stage.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={quickProbabilityFilter} onValueChange={setQuickProbabilityFilter}>
+                  <SelectTrigger className="h-9 w-full" aria-label="Filtrar por probabilidade">
+                    <SelectValue placeholder="Todas Probabilidades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Probabilidades</SelectItem>
+                    <SelectItem value="10">10%</SelectItem>
+                    <SelectItem value="25">25%</SelectItem>
+                    <SelectItem value="50">50%</SelectItem>
+                    <SelectItem value="80">80%</SelectItem>
+                    <SelectItem value="90">90%</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={quickBusinessTypeFilter} onValueChange={setQuickBusinessTypeFilter}>
+                  <SelectTrigger className="h-9 w-full" aria-label="Filtrar por tipo de negócio">
+                    <SelectValue placeholder="Todos Tipos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Tipos</SelectItem>
+                    <SelectItem value="cliente_novo">Cliente Novo</SelectItem>
+                    <SelectItem value="venda_na_base">Venda na Base</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <Button
@@ -1234,6 +1237,7 @@ const Oportunidades = () => {
                 value={searchClient}
                 onChange={(e) => setSearchClient(e.target.value)}
                 className="pl-9"
+                aria-label="Buscar oportunidades"
               />
             </div>
             <div className="relative">
@@ -1244,6 +1248,7 @@ const Oportunidades = () => {
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="pl-9"
+                aria-label="Data inicial"
               />
             </div>
             <div className="relative">
@@ -1254,13 +1259,14 @@ const Oportunidades = () => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="pl-9"
+                aria-label="Data final"
               />
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select value={filterAssignedTo} onValueChange={setFilterAssignedTo}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrar por vendedor">
                 <SelectValue placeholder="Vendedor" />
               </SelectTrigger>
               <SelectContent>
@@ -1274,7 +1280,7 @@ const Oportunidades = () => {
             </Select>
 
             <Select value={filterProduct} onValueChange={setFilterProduct}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrar por produto">
                 <SelectValue placeholder="Produto" />
               </SelectTrigger>
               <SelectContent>
@@ -1288,7 +1294,7 @@ const Oportunidades = () => {
             </Select>
 
             <Select value={filterProbability} onValueChange={setFilterProbability}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrar por probabilidade">
                 <SelectValue placeholder="Probabilidade" />
               </SelectTrigger>
               <SelectContent>
@@ -1302,7 +1308,7 @@ const Oportunidades = () => {
             </Select>
 
             <Select value={filterBusinessType} onValueChange={setFilterBusinessType}>
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrar por tipo de negócio">
                 <SelectValue placeholder="Tipo de Negócio" />
               </SelectTrigger>
               <SelectContent>
@@ -1586,6 +1592,9 @@ const Oportunidades = () => {
                                 setSelectedOpportunity(opp);
                                 setViewDialogOpen(true);
                               }}
+                              tabIndex={0}
+                              role="button"
+                              onKeyDown={(e) => e.key === 'Enter' && (() => { setSelectedOpportunity(opp); setViewDialogOpen(true); })()}
                             >
                         {compactView === "compact" ? (
                           // Modo Ultra-Compacto
@@ -1822,6 +1831,9 @@ const Oportunidades = () => {
                   setSelectedOpportunity(opp);
                   setViewDialogOpen(true);
                 }}
+                tabIndex={0}
+                role="button"
+                onKeyDown={(e) => e.key === 'Enter' && (() => { setSelectedOpportunity(opp); setViewDialogOpen(true); })()}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">

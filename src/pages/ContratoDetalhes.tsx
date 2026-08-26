@@ -15,6 +15,7 @@ import { format, parseISO } from "date-fns";
 import { RequestClauseRevisionDialog } from "@/components/contracts/RequestClauseRevisionDialog";
 import { ClauseReviewPanel } from "@/components/contracts/ClauseReviewPanel";
 import { SendContractEmailDialog } from "@/components/contracts/SendContractEmailDialog";
+import { Breadcrumb } from "@/components/Breadcrumb";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Rascunho", color: "bg-gray-500" },
@@ -170,6 +171,8 @@ export default function ContratoDetalhes() {
 
   return (
     <div className="space-y-4">
+      <Breadcrumb items={[{ label: "Contratos", path: "/contratos" }, { label: "Detalhes" }]} />
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-start gap-3">
           <Button size="icon" variant="ghost" onClick={() => navigate("/contratos")}><ArrowLeft size={18} /></Button>

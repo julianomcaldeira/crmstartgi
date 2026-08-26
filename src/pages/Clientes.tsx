@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 import { formatPhone } from "@/components/ui/masked-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 
 const Clientes = () => {
@@ -151,30 +152,32 @@ const Clientes = () => {
           <div className="flex flex-wrap items-center gap-3">
             {viewMode === 'compact' && (
               <div className="flex items-center gap-2 animate-fade-in">
-                <select 
-                  value={quickRatingFilter?.toString() || "all"} 
-                  onChange={(e) => setQuickRatingFilter(e.target.value === "all" ? null : parseInt(e.target.value))}
-                  className="h-8 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="all">Todos Ratings</option>
-                  <option value="5">⭐⭐⭐⭐⭐</option>
-                  <option value="4">⭐⭐⭐⭐</option>
-                  <option value="3">⭐⭐⭐</option>
-                  <option value="2">⭐⭐</option>
-                  <option value="1">⭐</option>
-                </select>
-                <select 
-                  value={quickRegionFilter} 
-                  onChange={(e) => setQuickRegionFilter(e.target.value)}
-                  className="h-8 px-3 text-sm border rounded-md bg-background"
-                >
-                  <option value="all">Todas Regiões</option>
-                  <option value="Norte">Norte</option>
-                  <option value="Nordeste">Nordeste</option>
-                  <option value="Centro-Oeste">Centro-Oeste</option>
-                  <option value="Sudeste">Sudeste</option>
-                  <option value="Sul">Sul</option>
-                </select>
+                <Select value={quickRatingFilter?.toString() || "all"} onValueChange={(v) => setQuickRatingFilter(v === "all" ? null : parseInt(v))}>
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue placeholder="Todos Ratings" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Ratings</SelectItem>
+                    <SelectItem value="5">⭐⭐⭐⭐⭐</SelectItem>
+                    <SelectItem value="4">⭐⭐⭐⭐</SelectItem>
+                    <SelectItem value="3">⭐⭐⭐</SelectItem>
+                    <SelectItem value="2">⭐⭐</SelectItem>
+                    <SelectItem value="1">⭐</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={quickRegionFilter} onValueChange={setQuickRegionFilter}>
+                  <SelectTrigger className="h-9 w-full">
+                    <SelectValue placeholder="Todas Regiões" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas Regiões</SelectItem>
+                    <SelectItem value="Norte">Norte</SelectItem>
+                    <SelectItem value="Nordeste">Nordeste</SelectItem>
+                    <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+                    <SelectItem value="Sudeste">Sudeste</SelectItem>
+                    <SelectItem value="Sul">Sul</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
             

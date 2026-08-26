@@ -1046,34 +1046,36 @@ const Tarefas = () => {
               
               {cardViewMode === 'compact' && (
                 <div className="flex items-center gap-2 ml-auto animate-fade-in">
-                  <select 
-                    value={quickTaskTypeFilter} 
-                    onChange={(e) => setQuickTaskTypeFilter(e.target.value)}
-                    className="h-9 px-3 text-sm border rounded-md bg-background"
-                  >
-                    <option value="all">Todos Tipos</option>
-                    <option value="ligacao">Ligação</option>
-                    <option value="email">E-mail</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="linkedin">LinkedIn</option>
-                    <option value="visita_presencial">Visita Presencial</option>
-                    <option value="reuniao_online">Reunião Online</option>
-                    <option value="visita_feira">Visita a Feira</option>
-                    <option value="visita_evento">Visita a Evento</option>
-                    <option value="apresentacao">Apresentação</option>
-                    <option value="proposta">Proposta</option>
-                    <option value="pesquisa_inicial">Pesquisa Inicial</option>
-                  </select>
-                  <select 
-                    value={quickPriorityFilter} 
-                    onChange={(e) => setQuickPriorityFilter(e.target.value)}
-                    className="h-9 px-3 text-sm border rounded-md bg-background"
-                  >
-                    <option value="all">Todas Prioridades</option>
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                  </select>
+                  <Select value={quickTaskTypeFilter} onValueChange={setQuickTaskTypeFilter}>
+                    <SelectTrigger className="h-9 w-full" aria-label="Filtrar por tipo de tarefa">
+                      <SelectValue placeholder="Todos Tipos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Tipos</SelectItem>
+                      <SelectItem value="ligacao">Ligação</SelectItem>
+                      <SelectItem value="email">E-mail</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="linkedin">LinkedIn</SelectItem>
+                      <SelectItem value="visita_presencial">Visita Presencial</SelectItem>
+                      <SelectItem value="reuniao_online">Reunião Online</SelectItem>
+                      <SelectItem value="visita_feira">Visita a Feira</SelectItem>
+                      <SelectItem value="visita_evento">Visita a Evento</SelectItem>
+                      <SelectItem value="apresentacao">Apresentação</SelectItem>
+                      <SelectItem value="proposta">Proposta</SelectItem>
+                      <SelectItem value="pesquisa_inicial">Pesquisa Inicial</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={quickPriorityFilter} onValueChange={setQuickPriorityFilter}>
+                    <SelectTrigger className="h-9 w-full" aria-label="Filtrar por prioridade">
+                      <SelectValue placeholder="Todas Prioridades" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas Prioridades</SelectItem>
+                      <SelectItem value="low">Baixa</SelectItem>
+                      <SelectItem value="medium">Média</SelectItem>
+                      <SelectItem value="high">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               
@@ -1101,7 +1103,7 @@ const Tarefas = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <Select value={selectedClient} onValueChange={setSelectedClient}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filtrar por cliente">
                   <SelectValue placeholder="Filtrar por cliente" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1115,7 +1117,7 @@ const Tarefas = () => {
               </Select>
 
               <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filtrar por campanha">
                   <SelectValue placeholder="Filtrar por campanha" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1130,7 +1132,7 @@ const Tarefas = () => {
 
               {(userRole === "admin" || userRole === "gestor") && (
                 <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Filtrar por vendedor">
                     <SelectValue placeholder="Filtrar por vendedor" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1145,7 +1147,7 @@ const Tarefas = () => {
               )}
 
               <Select value={quickTaskTypeFilter} onValueChange={setQuickTaskTypeFilter}>
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filtrar por tipo de tarefa">
                   <SelectValue placeholder="Filtrar por tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1169,6 +1171,7 @@ const Tarefas = () => {
                 placeholder="Data início"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
+                aria-label="Data início"
               />
               
               <Input
@@ -1176,6 +1179,7 @@ const Tarefas = () => {
                 placeholder="Data fim"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
+                aria-label="Data fim"
               />
             </div>
 
@@ -1190,6 +1194,7 @@ const Tarefas = () => {
                     onChange={(e) => setAiSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleAiSearch()}
                     className="pl-10 pr-10"
+                    aria-label="Buscar tarefas com inteligência artificial"
                   />
                   {aiSearchQuery && (
                     <button
@@ -1258,6 +1263,9 @@ const Tarefas = () => {
                         setSelectedTask(task);
                         setEditDialogOpen(true);
                       }}
+                      tabIndex={0}
+                      role="button"
+                      onKeyDown={(e) => e.key === 'Enter' && (() => { setSelectedTask(task); setEditDialogOpen(true); })()}
                     >
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-4">
@@ -1467,6 +1475,7 @@ const Tarefas = () => {
               value={calendarCompanySearch}
               onChange={(e) => setCalendarCompanySearch(e.target.value)}
               className="pl-9"
+              aria-label="Buscar tarefas por empresa no calendário"
             />
           </div>
 
@@ -1538,6 +1547,9 @@ const Tarefas = () => {
                                     setSelectedTask(task);
                                     setViewDialogOpen(true);
                                   }}
+                                  tabIndex={0}
+                                  role="button"
+                                  onKeyDown={(e) => e.key === 'Enter' && (() => { setSelectedTask(task); setViewDialogOpen(true); })()}
                                 >
                                   <div className="flex items-center gap-1 mb-1">
                                     {getTaskTypeIcon(task.task_type)}

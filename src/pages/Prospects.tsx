@@ -38,6 +38,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SwipeableCard } from "@/components/SwipeableCard";
 import { useViewMode } from "@/hooks/useViewMode";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Helper function to convert date from DD/MM/YYYY to YYYY-MM-DD format
 const convertDateToISO = (dateStr: string | null | undefined): string => {
@@ -1239,19 +1240,18 @@ const Prospects = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="companySize">Porte da Empresa</Label>
-                        <select
-                          id="companySize"
-                          value={companySize}
-                          onChange={(e) => setCompanySize(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <option value="">Selecione...</option>
-                          <option value="MEI">MEI - Microempreendedor Individual</option>
-                          <option value="ME">ME - Microempresa</option>
-                          <option value="EPP">EPP - Empresa de Pequeno Porte</option>
-                          <option value="Medio">Médio Porte</option>
-                          <option value="Grande">Grande Porte</option>
-                        </select>
+                        <Select value={companySize} onValueChange={setCompanySize}>
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="MEI">MEI - Microempreendedor Individual</SelectItem>
+                            <SelectItem value="ME">ME - Microempresa</SelectItem>
+                            <SelectItem value="EPP">EPP - Empresa de Pequeno Porte</SelectItem>
+                            <SelectItem value="Medio">Médio Porte</SelectItem>
+                            <SelectItem value="Grande">Grande Porte</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-2">
@@ -1288,19 +1288,18 @@ const Prospects = () => {
 
                       <div className="space-y-2">
                         <Label htmlFor="services">Serviços</Label>
-                        <select
-                          id="services"
-                          value={services}
-                          onChange={(e) => setServices(e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          <option value="">Selecione um produto/serviço...</option>
-                          {products.map((product) => (
-                            <option key={product.id} value={product.name}>
-                              {product.name}
-                            </option>
-                          ))}
-                        </select>
+                        <Select value={services} onValueChange={setServices}>
+                          <SelectTrigger className="h-10 w-full">
+                            <SelectValue placeholder="Selecione um produto/serviço..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.name}>
+                                {product.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
 
@@ -1563,71 +1562,76 @@ const Prospects = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                aria-label="Buscar prospects"
               />
             </div>
             <div className="relative w-full sm:w-64">
               <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedSeller}
-                onChange={(e) => setSelectedSeller(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todos os vendedores</option>
-                <option value="my_portfolio">Minha Carteira</option>
-                <option value="no_seller">Sem Vendedor</option>
-                {sellers.map((seller) => (
-                  <option key={seller.id} value={seller.id}>
-                    {seller.full_name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedSeller} onValueChange={setSelectedSeller}>
+                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por vendedor">
+                  <SelectValue placeholder="Todos os vendedores" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os vendedores</SelectItem>
+                  <SelectItem value="my_portfolio">Minha Carteira</SelectItem>
+                  <SelectItem value="no_seller">Sem Vendedor</SelectItem>
+                  {sellers.map((seller) => (
+                    <SelectItem key={seller.id} value={seller.id}>
+                      {seller.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="relative w-full sm:w-64">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedFeiraFilter}
-                onChange={(e) => setSelectedFeiraFilter(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todas as feiras</option>
-                {feiras.map((feira) => (
-                  <option key={feira.id} value={feira.id}>
-                    {feira.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedFeiraFilter} onValueChange={setSelectedFeiraFilter}>
+                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por feira">
+                  <SelectValue placeholder="Todas as feiras" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as feiras</SelectItem>
+                  {feiras.map((feira) => (
+                    <SelectItem key={feira.id} value={feira.id}>
+                      {feira.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="relative w-full sm:w-64">
               <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="name-asc">Nome (A-Z)</option>
-                <option value="name-desc">Nome (Z-A)</option>
-                <option value="cnpj-asc">CNPJ (Crescente)</option>
-                <option value="cnpj-desc">CNPJ (Decrescente)</option>
-                <option value="date-newest">Mais Recentes</option>
-                <option value="date-oldest">Mais Antigos</option>
-              </select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="h-10 w-full" aria-label="Ordenar prospects">
+                  <SelectValue placeholder="Nome (A-Z)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Nome (A-Z)</SelectItem>
+                  <SelectItem value="name-desc">Nome (Z-A)</SelectItem>
+                  <SelectItem value="cnpj-asc">CNPJ (Crescente)</SelectItem>
+                  <SelectItem value="cnpj-desc">CNPJ (Decrescente)</SelectItem>
+                  <SelectItem value="date-newest">Mais Recentes</SelectItem>
+                  <SelectItem value="date-oldest">Mais Antigos</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 mt-4 items-end">
             <div className="relative w-full sm:w-64">
               <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground z-10" size={16} />
-              <select
-                value={selectedCompanySize}
-                onChange={(e) => setSelectedCompanySize(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="all">Todos os portes</option>
-                <option value="MEI">MEI</option>
-                <option value="ME">Microempresa (ME)</option>
-                <option value="EPP">Pequeno Porte (EPP)</option>
-                <option value="medio">Médio Porte</option>
-                <option value="grande">Grande Porte</option>
-              </select>
+              <Select value={selectedCompanySize} onValueChange={setSelectedCompanySize}>
+                <SelectTrigger className="h-10 w-full" aria-label="Filtrar por porte da empresa">
+                  <SelectValue placeholder="Todos os portes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os portes</SelectItem>
+                  <SelectItem value="MEI">MEI</SelectItem>
+                  <SelectItem value="ME">Microempresa (ME)</SelectItem>
+                  <SelectItem value="EPP">Pequeno Porte (EPP)</SelectItem>
+                  <SelectItem value="medio">Médio Porte</SelectItem>
+                  <SelectItem value="grande">Grande Porte</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1 w-full sm:w-auto">
               <span className="text-xs text-muted-foreground font-medium">Cadastrado em</span>
@@ -1641,6 +1645,7 @@ const Prospects = () => {
                     onChange={(e) => setDateFilterStart(e.target.value)}
                     className="pl-10"
                     title="Data de cadastro - início"
+                    aria-label="Data de cadastro - início"
                   />
                 </div>
                 <div className="relative w-full sm:w-40">
@@ -1652,6 +1657,7 @@ const Prospects = () => {
                     onChange={(e) => setDateFilterEnd(e.target.value)}
                     className="pl-10"
                     title="Data de cadastro - fim"
+                    aria-label="Data de cadastro - fim"
                   />
                 </div>
               </div>
@@ -1680,7 +1686,7 @@ const Prospects = () => {
           {/* Active filter badges */}
           <div className="flex flex-wrap gap-2">
             {searchTerm && (
-              <Badge variant="secondary" className="gap-1 bg-blue-500/10 text-blue-700 border border-blue-500/30">
+              <Badge variant="secondary" className="gap-1 badge-blue">
                 <Search size={12} />
                 Busca: "{searchTerm.length > 15 ? searchTerm.substring(0, 15) + '...' : searchTerm}"
                 <button onClick={() => setSearchTerm("")} className="ml-1 hover:text-blue-900">
@@ -1689,7 +1695,7 @@ const Prospects = () => {
               </Badge>
             )}
             {selectedSeller !== "all" && (
-              <Badge variant="secondary" className="gap-1 bg-purple-500/10 text-purple-700 border border-purple-500/30">
+              <Badge variant="secondary" className="gap-1 badge-purple">
                 <User size={12} />
                 {selectedSeller === "my_portfolio" ? "Minha Carteira" : 
                  selectedSeller === "no_seller" ? "Sem Vendedor" :
@@ -1700,7 +1706,7 @@ const Prospects = () => {
               </Badge>
             )}
             {selectedFeiraFilter !== "all" && (
-              <Badge variant="secondary" className="gap-1 bg-green-500/10 text-green-700 border border-green-500/30">
+              <Badge variant="secondary" className="gap-1 badge-green">
                 <Building2 size={12} />
                 {feiras.find(f => f.id === selectedFeiraFilter)?.name || "Feira"}
                 <button onClick={() => setSelectedFeiraFilter("all")} className="ml-1 hover:text-green-900">
@@ -1759,40 +1765,43 @@ const Prospects = () => {
         <div className="flex flex-wrap items-center gap-3">
           {viewMode === 'compact' && (
             <div className="flex items-center gap-2 animate-fade-in">
-              <select 
-                value={quickRatingFilter?.toString() || "all"} 
-                onChange={(e) => setQuickRatingFilter(e.target.value === "all" ? null : parseInt(e.target.value))}
-                className="h-8 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="all">Todos Ratings</option>
-                <option value="5">⭐⭐⭐⭐⭐</option>
-                <option value="4">⭐⭐⭐⭐</option>
-                <option value="3">⭐⭐⭐</option>
-                <option value="2">⭐⭐</option>
-                <option value="1">⭐</option>
-              </select>
-              <select 
-                value={quickRegionFilter} 
-                onChange={(e) => setQuickRegionFilter(e.target.value)}
-                className="h-8 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="all">Todas Regiões</option>
-                <option value="Norte">Norte</option>
-                <option value="Nordeste">Nordeste</option>
-                <option value="Centro-Oeste">Centro-Oeste</option>
-                <option value="Sudeste">Sudeste</option>
-                <option value="Sul">Sul</option>
-              </select>
-              <select 
-                value={quickSegmentFilter} 
-                onChange={(e) => setQuickSegmentFilter(e.target.value)}
-                className="h-8 px-3 text-sm border rounded-md bg-background"
-              >
-                <option value="all">Todos Segmentos</option>
-                {Array.from(new Set(clients?.map(c => c.segment).filter(Boolean))).map((segment) => (
-                  <option key={segment} value={segment!}>{segment}</option>
-                ))}
-              </select>
+              <Select value={quickRatingFilter?.toString() || "all"} onValueChange={(v) => setQuickRatingFilter(v === "all" ? null : parseInt(v))}>
+                <SelectTrigger className="h-9 w-full" aria-label="Filtrar por avaliação">
+                  <SelectValue placeholder="Todos Ratings" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Ratings</SelectItem>
+                  <SelectItem value="5">⭐⭐⭐⭐⭐</SelectItem>
+                  <SelectItem value="4">⭐⭐⭐⭐</SelectItem>
+                  <SelectItem value="3">⭐⭐⭐</SelectItem>
+                  <SelectItem value="2">⭐⭐</SelectItem>
+                  <SelectItem value="1">⭐</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={quickRegionFilter} onValueChange={setQuickRegionFilter}>
+                <SelectTrigger className="h-9 w-full" aria-label="Filtrar por região">
+                  <SelectValue placeholder="Todas Regiões" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Regiões</SelectItem>
+                  <SelectItem value="Norte">Norte</SelectItem>
+                  <SelectItem value="Nordeste">Nordeste</SelectItem>
+                  <SelectItem value="Centro-Oeste">Centro-Oeste</SelectItem>
+                  <SelectItem value="Sudeste">Sudeste</SelectItem>
+                  <SelectItem value="Sul">Sul</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={quickSegmentFilter} onValueChange={setQuickSegmentFilter}>
+                <SelectTrigger className="h-9 w-full" aria-label="Filtrar por segmento">
+                  <SelectValue placeholder="Todos Segmentos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Segmentos</SelectItem>
+                  {Array.from(new Set(clients?.map(c => c.segment).filter(Boolean))).map((segment) => (
+                    <SelectItem key={segment} value={segment!}>{segment}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
           
@@ -1846,6 +1855,9 @@ const Prospects = () => {
             <Card 
               className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary cursor-pointer"
               onClick={() => navigate(`/prospects/${client.id}`)}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`/prospects/${client.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-6">
@@ -2025,6 +2037,9 @@ const Prospects = () => {
             <Card 
               className="hover:shadow-md transition-all duration-300 cursor-pointer"
               onClick={() => navigate(`/prospects/${client.id}`)}
+              tabIndex={0}
+              role="button"
+              onKeyDown={(e) => e.key === 'Enter' && navigate(`/prospects/${client.id}`)}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
@@ -2317,21 +2332,20 @@ const Prospects = () => {
             
             <div className="space-y-2">
               <Label htmlFor="newSeller">Transferir para</Label>
-              <select
-                id="newSeller"
-                value={selectedNewSeller}
-                onChange={(e) => setSelectedNewSeller(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <option value="">Selecione um vendedor</option>
-                {sellers
-                  .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
-                  .map((seller) => (
-                    <option key={seller.id} value={seller.id}>
-                      {seller.full_name}
-                    </option>
-                  ))}
-              </select>
+              <Select value={selectedNewSeller} onValueChange={setSelectedNewSeller}>
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue placeholder="Selecione um vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sellers
+                    .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
+                    .map((seller) => (
+                      <SelectItem key={seller.id} value={seller.id}>
+                        {seller.full_name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="bg-muted/50 p-3 rounded-md">

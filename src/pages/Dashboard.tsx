@@ -546,7 +546,7 @@ const Dashboard = () => {
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Tarefas Pendentes</p>
-              <p className="text-2xl font-bold text-blue-600">{todayTasks.length}</p>
+              <p className="text-2xl font-bold text-[hsl(var(--badge-blue-text))]">{todayTasks.length}</p>
             </div>
             <CheckSquare className="h-8 w-8 text-blue-500/30 shrink-0" />
           </CardContent>
@@ -556,7 +556,7 @@ const Dashboard = () => {
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">No Forecast</p>
-              <p className="text-2xl font-bold text-purple-600">{forecastAccounts.length}</p>
+              <p className="text-2xl font-bold text-[hsl(var(--badge-purple-text))]">{forecastAccounts.length}</p>
             </div>
             <Target className="h-8 w-8 text-purple-500/30 shrink-0" />
           </CardContent>
@@ -566,7 +566,7 @@ const Dashboard = () => {
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Meta Atingida</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-2xl font-bold text-[hsl(var(--badge-green-text))]">
                 {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
               </p>
             </div>
@@ -594,7 +594,7 @@ const Dashboard = () => {
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Ciclo Médio</p>
-              <p className="text-2xl font-bold text-orange-600">
+              <p className="text-2xl font-bold text-[hsl(var(--badge-orange-text))]">
                 {avgCloseCycle}
                 <span className="text-sm font-medium ml-1">{avgCloseCycle === 1 ? 'dia' : 'dias'}</span>
               </p>
@@ -698,7 +698,7 @@ const Dashboard = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Realizado</p>
-                    <p className="text-lg font-bold text-green-600">
+                    <p className="text-lg font-bold text-[hsl(var(--badge-green-text))]">
                       {new Intl.NumberFormat("pt-BR", {
                         style: "currency",
                         currency: "BRL",
@@ -717,12 +717,12 @@ const Dashboard = () => {
                     <div
                       className={`h-full transition-all ${
                         goalData.percentage >= 100
-                          ? "bg-green-600"
+                          ? "bg-[hsl(var(--badge-green-bg))]"
                           : goalData.percentage >= 75
                           ? "bg-primary"
                           : goalData.percentage >= 50
-                          ? "bg-yellow-500"
-                          : "bg-orange-500"
+                          ? "bg-[hsl(var(--badge-yellow-bg))]"
+                          : "bg-[hsl(var(--badge-orange-bg))]"
                       }`}
                       style={{ width: `${Math.min(goalData.percentage, 100)}%` }}
                     />

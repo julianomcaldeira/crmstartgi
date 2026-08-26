@@ -63,6 +63,7 @@ import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 import TaskHoverPreview from "@/components/TaskHoverPreview";
 import { ProspectCampaignsTab } from "@/components/ProspectCampaignsTab";
 import { useCanEdit } from "@/hooks/useCanEdit";
+import { Breadcrumb } from "@/components/Breadcrumb";
 
 const ClienteDetalhes = () => {
   const { id } = useParams();
@@ -660,6 +661,8 @@ const ClienteDetalhes = () => {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[{ label: "Prospects", path: "/prospects" }, { label: "Detalhes" }]} />
+
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => navigate(backPath)}>

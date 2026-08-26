@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, Plus, Search, FileText, Video, Link as LinkIcon, Trash2, Edit, History, Download, Star, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { KnowledgeBaseComments } from "@/components/KnowledgeBaseComments";
 
@@ -545,16 +546,16 @@ const BaseConhecimento = () => {
 
                 <div className="space-y-2">
                   <Label>Tipo</Label>
-                  <select
-                    className="w-full border rounded-md p-2 text-sm"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                    required
-                  >
-                    <option value="article">Artigo</option>
-                    <option value="video">Vídeo</option>
-                    <option value="link">Link Externo</option>
-                  </select>
+                  <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as any })}>
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="article">Artigo</SelectItem>
+                      <SelectItem value="video">Vídeo</SelectItem>
+                      <SelectItem value="link">Link Externo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {(formData.type === "video" || formData.type === "link") && (
@@ -689,15 +690,16 @@ const BaseConhecimento = () => {
           
           <div className="flex items-center gap-2">
             <Label className="text-sm text-muted-foreground">Ordenar por:</Label>
-            <select
-              className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-            >
-              <option value="updated_at">Última atualização</option>
-              <option value="created_at">Data de criação</option>
-              <option value="title">Título (A-Z)</option>
-            </select>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+              <SelectTrigger className="h-9 w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="updated_at">Última atualização</SelectItem>
+                <SelectItem value="created_at">Data de criação</SelectItem>
+                <SelectItem value="title">Título (A-Z)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         
@@ -919,16 +921,16 @@ const BaseConhecimento = () => {
 
             <div className="space-y-2">
               <Label>Tipo</Label>
-              <select
-                className="w-full border rounded-md p-2 text-sm"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                required
-              >
-                <option value="article">Artigo</option>
-                <option value="video">Vídeo</option>
-                <option value="link">Link Externo</option>
-              </select>
+              <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v as any })}>
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="article">Artigo</SelectItem>
+                  <SelectItem value="video">Vídeo</SelectItem>
+                  <SelectItem value="link">Link Externo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {(formData.type === "video" || formData.type === "link") && (

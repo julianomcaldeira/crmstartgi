@@ -67,6 +67,20 @@ All colors MUST be HSL.
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(0 0% 97%) 100%);
     --gradient-accent: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 55%) 100%);
     
+    /* Semantic badge colors - light mode */
+    --badge-blue-bg: 217 91% 60%;
+    --badge-blue-text: 217 91% 30%;
+    --badge-purple-bg: 270 65% 60%;
+    --badge-purple-text: 270 65% 30%;
+    --badge-green-bg: 142 71% 45%;
+    --badge-green-text: 142 71% 25%;
+    --badge-yellow-bg: 38 92% 50%;
+    --badge-yellow-text: 38 92% 25%;
+    --badge-orange-bg: 25 95% 53%;
+    --badge-orange-text: 25 95% 30%;
+    --badge-red-bg: 0 84% 60%;
+    --badge-red-text: 0 84% 30%;
+    
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
@@ -125,6 +139,20 @@ All colors MUST be HSL.
     
     --shadow-primary: 0 10px 30px -10px hsl(142 71% 45% / 0.5);
     --shadow-glow: 0 0 40px hsl(142 71% 45% / 0.3);
+
+    /* Semantic badge colors - dark mode */
+    --badge-blue-bg: 217 91% 40%;
+    --badge-blue-text: 217 91% 80%;
+    --badge-purple-bg: 270 65% 45%;
+    --badge-purple-text: 270 65% 80%;
+    --badge-green-bg: 142 71% 35%;
+    --badge-green-text: 142 71% 80%;
+    --badge-yellow-bg: 38 92% 40%;
+    --badge-yellow-text: 38 92% 80%;
+    --badge-orange-bg: 25 95% 40%;
+    --badge-orange-text: 25 95% 80%;
+    --badge-red-bg: 0 84% 40%;
+    --badge-red-text: 0 84% 80%;
   }
 }
 
@@ -147,5 +175,37 @@ All colors MUST be HSL.
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Semantic badge color utilities */
+  .badge-blue {
+    background-color: hsl(var(--badge-blue-bg) / 0.12);
+    color: hsl(var(--badge-blue-text));
+    border: 1px solid hsl(var(--badge-blue-bg) / 0.25);
+  }
+  .badge-purple {
+    background-color: hsl(var(--badge-purple-bg) / 0.12);
+    color: hsl(var(--badge-purple-text));
+    border: 1px solid hsl(var(--badge-purple-bg) / 0.25);
+  }
+  .badge-green {
+    background-color: hsl(var(--badge-green-bg) / 0.12);
+    color: hsl(var(--badge-green-text));
+    border: 1px solid hsl(var(--badge-green-bg) / 0.25);
+  }
+  .badge-yellow {
+    background-color: hsl(var(--badge-yellow-bg) / 0.12);
+    color: hsl(var(--badge-yellow-text));
+    border: 1px solid hsl(var(--badge-yellow-bg) / 0.25);
+  }
+  .badge-orange {
+    background-color: hsl(var(--badge-orange-bg) / 0.12);
+    color: hsl(var(--badge-orange-text));
+    border: 1px solid hsl(var(--badge-orange-bg) / 0.25);
+  }
+  .badge-red {
+    background-color: hsl(var(--badge-red-bg) / 0.12);
+    color: hsl(var(--badge-red-text));
+    border: 1px solid hsl(var(--badge-red-bg) / 0.25);
   }
 }
