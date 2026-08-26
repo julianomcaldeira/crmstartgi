@@ -1444,7 +1444,7 @@ const Oportunidades = () => {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-          <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth">
+          <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth max-h-[calc(100vh-280px)]">
             {stages.map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageAnnualizedValue = stageOpps.reduce(
@@ -1579,7 +1579,7 @@ const Oportunidades = () => {
                   </Card>
 
                   <DroppableColumn id={stage.key}>
-                    <div className="space-y-2 min-h-[200px]">
+                    <div className="space-y-2 min-h-[200px] max-h-[calc(100vh-350px)] overflow-y-auto pr-1">
                       {stageOpps.map((opp) => {
                         const nextStage = getNextStage(opp.status);
                         const previousStage = getPreviousStage(opp.status);
