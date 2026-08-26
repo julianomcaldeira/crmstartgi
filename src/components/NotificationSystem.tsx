@@ -28,7 +28,7 @@ const getNotifiedItems = (): NotifiedItems => {
       return parsed;
     }
   } catch (e) {
-    console.error("Error reading notification storage:", e);
+    if (import.meta.env.DEV) console.error("Error reading notification storage:", e);
   }
   return { tasks: [], opportunities: [], goals: [], lastCleared: new Date().toISOString() };
 };
@@ -37,7 +37,7 @@ const saveNotifiedItems = (items: NotifiedItems) => {
   try {
     localStorage.setItem(NOTIFICATION_STORAGE_KEY, JSON.stringify(items));
   } catch (e) {
-    console.error("Error saving notification storage:", e);
+    if (import.meta.env.DEV) console.error("Error saving notification storage:", e);
   }
 };
 
@@ -137,7 +137,7 @@ export const NotificationSystem = () => {
         saveNotifiedItems(notifiedItems);
       }
     } catch (error) {
-      console.error("Error checking notifications:", error);
+      if (import.meta.env.DEV) console.error("Error checking notifications:", error);
     }
   }, []);
 

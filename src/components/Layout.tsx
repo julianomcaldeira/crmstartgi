@@ -1,7 +1,5 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
 import {
   LayoutDashboard,
   Users,
@@ -30,6 +28,7 @@ import logo from "@/assets/logo-evolua-crm.png";
 import { NotificationSystem } from "./NotificationSystem";
 import { AlertsPanel } from "./AlertsPanel";
 import { useSessionTracker } from "@/hooks/useSessionTracker";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -38,62 +37,16 @@ interface LayoutProps {
 const Layout = ({ children }: LayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const { user, userProfile, isAdmin, isPreVendas, signOut } = useAuth();
 
   useSessionTracker(user?.id ?? null);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (!session) {
-          navigate("/auth");
-        } else {
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session) {
-        navigate("/auth");
-      } else {
-        fetchUserProfile(session.user.id);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const fetchUserProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*, user_roles(role)")
-      .eq("id", userId)
-      .single();
-    
-    setUserProfile(data);
-  };
-
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success("Logout realizado com sucesso!");
     navigate("/auth");
   };
-
-  const isAdmin = userProfile?.user_roles?.[0]?.role === 'admin';
-  const isGestor = userProfile?.user_roles?.[0]?.role === 'gestor';
-  const isPreVendas = userProfile?.user_roles?.[0]?.role === 'pre_vendas';
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -247,7 +200,7 @@ const Layout = ({ children }: LayoutProps) => {
                 {userProfile?.avatar_url ? (
                   <img
                     src={userProfile.avatar_url}
-                    alt={userProfile?.full_name}
+                    alt={userProfile?.full_name ?? ""}
                     className="h-full w-full rounded-full object-cover"
                   />
                 ) : (

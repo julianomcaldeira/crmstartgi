@@ -188,7 +188,7 @@ const Prospects = () => {
       if (rolesError) throw rolesError;
       setUserRoles(rolesData?.map(r => r.role) || []);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      if (import.meta.env.DEV) console.error("Error fetching user:", error);
     }
   };
 
@@ -202,7 +202,7 @@ const Prospects = () => {
       if (error) throw error;
       setFeiras(data || []);
     } catch (error) {
-      console.error("Error fetching feiras:", error);
+      if (import.meta.env.DEV) console.error("Error fetching feiras:", error);
     }
   };
 
@@ -217,7 +217,7 @@ const Prospects = () => {
       if (error) throw error;
       setProducts(data || []);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      if (import.meta.env.DEV) console.error("Error fetching products:", error);
     }
   };
 
@@ -229,14 +229,12 @@ const Prospects = () => {
       if (error) throw error;
       setSellers(data || []);
     } catch (error) {
-      console.error("Error fetching sellers:", error);
+      if (import.meta.env.DEV) console.error("Error fetching sellers:", error);
     }
   };
 
   const fetchClients = async () => {
     try {
-      console.log("Fetching clients with pagination...");
-
       // Buscar clientes SEM contatos embutidos (evita limite implícito do PostgREST nas relações)
       const allClients = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
@@ -279,10 +277,8 @@ const Prospects = () => {
         contacts: contactsByClient[cli.id] || [],
       }));
 
-      console.log("Clients data fetched:", merged.length, "records,", allContacts.length, "contacts");
       setClients(merged);
     } catch (error) {
-      console.error("Error fetching clients:", error);
       toast.error("Erro ao carregar prospects");
     } finally {
       setLoading(false);
@@ -312,17 +308,12 @@ const Prospects = () => {
   const handleCnpjBlur = async (cnpjToSearch?: string) => {
     const cleanedCnpj = cnpjToSearch || cnpj.replace(/\D/g, '');
     
-    console.log("=== INICIANDO BUSCA DE CNPJ ===");
-    console.log("CNPJ limpo:", cleanedCnpj);
-    
     if (cleanedCnpj.length !== 14) {
-      console.log("CNPJ incompleto, abortando busca");
       return;
     }
     
     // Valida CNPJ antes de buscar
     if (!validateCNPJ(cleanedCnpj)) {
-      console.error("CNPJ inválido (falhou na validação do algoritmo)");
       toast.error("CNPJ inválido. Verifique os dígitos.");
       setCnpjValidationStatus('invalid');
       return;
@@ -332,21 +323,15 @@ const Prospects = () => {
     setLoadingCnpj(true);
     
     try {
-      console.log("Chamando edge function buscar-cnpj...");
-      
       const { data, error } = await supabase.functions.invoke("buscar-cnpj", {
         body: { cnpj: cleanedCnpj }
       });
 
-      console.log("Resposta da edge function:", { data, error });
-
       if (error) {
-        console.error("Erro da edge function:", error);
         throw new Error(error.message || "Erro ao buscar CNPJ");
       }
 
       if (data && !data.error) {
-        console.log("✅ Dados recebidos com sucesso:", data);
         
         setCompanyName(data.company_name || "");
         setTradeName(data.trade_name || "");
@@ -388,21 +373,17 @@ const Prospects = () => {
         const source = data.source === 'cache' ? ' (do cache)' : ' (da Receita Federal)';
         toast.success(`Dados da empresa carregados${source}!`);
       } else if (data?.error) {
-        console.error("Erro retornado pela API:", data.error);
         toast.error(data.error);
       } else {
-        console.error("Resposta inesperada da API:", data);
         toast.error("Resposta inesperada ao buscar CNPJ");
       }
     } catch (error: any) {
-      console.error("❌ ERRO ao buscar CNPJ:", error);
       toast.error(
         error.message || 
         "Erro ao buscar dados do CNPJ. A API pode estar temporariamente indisponível. Tente novamente."
       );
     } finally {
       setLoadingCnpj(false);
-      console.log("=== FIM DA BUSCA DE CNPJ ===");
     }
   };
 
@@ -532,7 +513,6 @@ const Prospects = () => {
       resetForm();
       fetchClients();
     } catch (error: any) {
-      console.error("Error creating client:", error);
       toast.error(error.message || "Erro ao cadastrar prospect");
     }
   };
@@ -715,7 +695,6 @@ const Prospects = () => {
       setProspectToDelete(null);
       fetchClients();
     } catch (error: any) {
-      console.error("Error deleting prospect:", error);
       toast.error("Erro ao excluir prospect");
     }
   };
@@ -751,7 +730,7 @@ const Prospects = () => {
       setMyPendingRequests(new Set((outgoing.data || []).map((r: any) => r.client_id)));
       setIncomingPendingCount(incoming.count || 0);
     } catch (e) {
-      console.error("Erro ao carregar solicitações de transferência:", e);
+      if (import.meta.env.DEV) console.error("Erro ao carregar solicitações de transferência:", e);
     }
   };
 
@@ -786,7 +765,6 @@ const Prospects = () => {
       setSelectedNewSeller("");
       fetchClients();
     } catch (error: any) {
-      console.error("Erro ao transferir empresa:", error);
       toast.error("Erro ao transferir empresa", {
         description: error?.message || "Verifique se o usuário de destino está ativo e tente novamente.",
       });
@@ -829,7 +807,6 @@ const Prospects = () => {
       setBulkDeleteConfirmation("");
       fetchClients();
     } catch (error) {
-      console.error("Erro ao excluir prospects:", error);
       toast.error("Erro ao excluir prospects");
     }
   };

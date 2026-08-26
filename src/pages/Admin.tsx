@@ -146,7 +146,7 @@ const Admin = () => {
         setIsAdmin(false);
       }
     } catch (error) {
-      console.error("Erro ao verificar acesso:", error);
+      if (import.meta.env.DEV) console.error("Erro ao verificar acesso:", error);
     } finally {
       setLoading(false);
     }
@@ -208,7 +208,7 @@ const Admin = () => {
         closedOpportunities: closedCount || 0,
       });
     } catch (error) {
-      console.error("Erro ao carregar estatísticas:", error);
+      if (import.meta.env.DEV) console.error("Erro ao carregar estatísticas:", error);
     }
   };
 
@@ -282,7 +282,7 @@ const Admin = () => {
         .eq("user_id", userToDelete.id);
 
       if (roleError) {
-        console.error("Erro ao deletar role:", roleError);
+        if (import.meta.env.DEV) console.error("Erro ao deletar role:", roleError);
       }
 
       // Soft delete: mark profile as deleted instead of actually deleting
@@ -292,7 +292,6 @@ const Admin = () => {
         .eq("id", userToDelete.id);
 
       if (profileError) {
-        console.error("Erro ao marcar profile como deletado:", profileError);
         toast.error("Não foi possível excluir o usuário completamente. O acesso foi cancelado.");
         setDeleteDialogOpen(false);
         setUserToDelete(null);
@@ -632,7 +631,6 @@ const Admin = () => {
 
       toast.success("Base de prospects limpa com sucesso!");
     } catch (error: any) {
-      console.error("Erro ao limpar base:", error);
       toast.error("Erro ao limpar base de prospects");
     } finally {
       setCleaningDatabase(false);
@@ -718,7 +716,6 @@ const Admin = () => {
 
       toast.success("Base de dados exportada com sucesso!");
     } catch (error: any) {
-      console.error("Erro ao exportar base de dados:", error);
       toast.error("Erro ao exportar base de dados: " + error.message);
     } finally {
       setExportingData(false);

@@ -9,6 +9,7 @@ import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import { Extension } from "@tiptap/core";
+import DOMPurify from "dompurify";
 
 // Image with width + advanced styling attributes (align, radius, rotate, shadow, filter)
 const FILTER_CSS: Record<string, string> = {
@@ -680,7 +681,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                         ref={htmlOverlayRef}
                         aria-hidden
                         className={`rte-code-overlay absolute inset-0 pointer-events-none font-mono text-[12px] leading-5 py-3 px-3 ${htmlWrap ? "" : "no-wrap"}`}
-                        dangerouslySetInnerHTML={{ __html: highlightCode(htmlDraft) }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightCode(htmlDraft), { USE_PROFILES: { html: true } }) }}
                       />
                       <textarea
                         ref={htmlTextareaRef}
@@ -718,7 +719,7 @@ export function RichTextEditor({ value, onChange, placeholder = "Comece a escrev
                   <div className="flex-1 overflow-auto">
                     <div
                       className="rte-content prose prose-sm max-w-none p-4"
-                      dangerouslySetInnerHTML={{ __html: highlightVariablesInPreview(htmlDraft) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(highlightVariablesInPreview(htmlDraft), { USE_PROFILES: { html: true } }) }}
                     />
                   </div>
                 </div>

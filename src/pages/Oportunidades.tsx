@@ -217,7 +217,7 @@ const Oportunidades = () => {
       
       await fetchData();
     } catch (error) {
-      console.error("Error checking user role:", error);
+      // Silently handle role check errors
     }
   };
 
@@ -248,7 +248,6 @@ const Oportunidades = () => {
       setUsers(usersResponse.data || []);
       setProducts(productsResponse.data || []);
     } catch (error) {
-      console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
     } finally {
       setLoading(false);
@@ -292,7 +291,6 @@ const Oportunidades = () => {
       resetForm();
       fetchData();
     } catch (error: any) {
-      console.error("Error creating opportunity:", error);
       toast.error(error.message || "Erro ao criar oportunidade");
     }
   };
@@ -512,7 +510,6 @@ const Oportunidades = () => {
       }
       fetchData();
     } catch (error) {
-      console.error("Error updating opportunity:", error);
       if (showToast) {
         toast.error("Erro ao atualizar fase");
       }
@@ -601,7 +598,6 @@ const Oportunidades = () => {
       }
     } catch (error: any) {
       toast.dismiss();
-      console.error("Error generating proposal:", error);
       toast.error(error.message || "Erro ao gerar proposta");
     }
   };
@@ -617,7 +613,7 @@ const Oportunidades = () => {
       if (error) throw error;
       setAttachments(data || []);
     } catch (error) {
-      console.error("Error fetching attachments:", error);
+      if (import.meta.env.DEV) console.error("Error fetching attachments:", error);
     }
   };
 
@@ -674,7 +670,6 @@ const Oportunidades = () => {
       toast.success("Arquivos enviados com sucesso!");
       fetchAttachments(editingOpportunity.id);
     } catch (error: any) {
-      console.error("Error uploading files:", error);
       toast.error(error.message || "Erro ao enviar arquivos");
     } finally {
       setUploadingFiles(false);
@@ -712,7 +707,6 @@ const Oportunidades = () => {
       toast.success("Arquivo removido!");
       fetchAttachments(editingOpportunity.id);
     } catch (error: any) {
-      console.error("Error deleting attachment:", error);
       toast.error("Erro ao remover arquivo");
     }
   };
@@ -734,7 +728,6 @@ const Oportunidades = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error("Error downloading file:", error);
       toast.error("Erro ao baixar arquivo");
     }
   };
@@ -859,7 +852,6 @@ const Oportunidades = () => {
       setSelectedLossReason("");
       fetchData();
     } catch (error: any) {
-      console.error("Error updating opportunity:", error);
       const msg = error?.message === "Failed to fetch"
         ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
         : (error?.message || "Erro ao atualizar oportunidade");
@@ -875,36 +867,30 @@ const Oportunidades = () => {
     // Check if this is from drag-and-drop
     if (pendingOpportunityId) {
       try {
-        console.log("[LOST] iniciando update para", pendingOpportunityId, "reason:", reasonId);
         const { data: { user } } = await supabase.auth.getUser();
-        console.log("[LOST] auth.getUser ok:", user?.id);
         if (!user) throw new Error("Usuário não autenticado");
 
         // Get current status
-        const { data: currentOpp, error: selErr } = await supabase
+        const { data: currentOpp } = await supabase
           .from("opportunities")
           .select("status")
           .eq("id", pendingOpportunityId)
           .single();
-        console.log("[LOST] select current:", { currentOpp, selErr });
 
-        console.log("[LOST] enviando UPDATE...");
-        const { error, data: updData } = await supabase
+        const { error } = await supabase
           .from("opportunities")
           .update({ 
             status: "lost" as any,
             loss_reason_id: reasonId 
           })
-          .eq("id", pendingOpportunityId)
-          .select();
-        console.log("[LOST] resposta UPDATE:", { updData, error });
+          .eq("id", pendingOpportunityId);
 
         if (error) throw error;
 
         // Log activity (best-effort — não deve derrubar o fluxo)
         if (currentOpp) {
           try {
-            const { error: actErr } = await supabase.from("opportunity_activities").insert({
+            await supabase.from("opportunity_activities").insert({
               opportunity_id: pendingOpportunityId,
               activity_type: "status_change",
               description: "Estágio da oportunidade alterado",
@@ -912,21 +898,14 @@ const Oportunidades = () => {
               new_value: "Perdido",
               created_by: user.id,
             });
-            console.log("[LOST] insert activity:", { actErr });
           } catch (logErr) {
-            console.warn("[LOST] Falha ao registrar atividade (não crítico):", logErr);
+            // Non-critical: activity logging failure
           }
         }
 
         toast.success("Fase atualizada com sucesso!");
-        try {
-          await fetchData();
-          console.log("[LOST] fetchData ok");
-        } catch (fdErr) {
-          console.error("[LOST] fetchData falhou:", fdErr);
-        }
+        await fetchData();
       } catch (error: any) {
-        console.error("[LOST] ERRO capturado:", error, "stack:", error?.stack);
         const msg = error?.message === "Failed to fetch"
           ? "Sem conexão com o servidor. Verifique sua internet e tente novamente."
           : (error?.message || "Erro ao atualizar fase");
@@ -961,7 +940,6 @@ const Oportunidades = () => {
       setOpportunityToDelete(null);
       fetchData();
     } catch (error: any) {
-      console.error("Error deleting opportunity:", error);
       toast.error(error.message || "Erro ao excluir oportunidade");
     }
   };

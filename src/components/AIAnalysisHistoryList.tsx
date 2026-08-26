@@ -212,7 +212,7 @@ export function AIAnalysisHistoryList({ clientId }: AIAnalysisHistoryListProps) 
                 <ScrollArea className="flex-1">
                   <div
                     className="p-4 text-sm leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: formatAnalysisText(item.analysis) }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(item.analysis), { USE_PROFILES: { html: true } }) }}
                   />
                 </ScrollArea>
               </div>
@@ -349,7 +349,7 @@ export function AIAnalysisHistoryList({ clientId }: AIAnalysisHistoryListProps) 
             <ScrollArea className="flex-1 mt-4">
               <div
                 className="p-4 text-sm leading-relaxed text-foreground"
-                dangerouslySetInnerHTML={{ __html: formatAnalysisText(viewingAnalysis.analysis) }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(viewingAnalysis.analysis), { USE_PROFILES: { html: true } }) }}
               />
             </ScrollArea>
           </DialogContent>

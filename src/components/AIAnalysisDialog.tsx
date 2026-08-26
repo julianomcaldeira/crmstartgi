@@ -343,7 +343,7 @@ const AIAnalysisDialog = ({
               <ScrollArea className="flex-1">
                 <div 
                   className="p-4 text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(first.analysis) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(first.analysis), { USE_PROFILES: { html: true } }) }}
                 />
               </ScrollArea>
             </div>
@@ -364,7 +364,7 @@ const AIAnalysisDialog = ({
               <ScrollArea className="flex-1">
                 <div 
                   className="p-4 text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(second.analysis) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(second.analysis), { USE_PROFILES: { html: true } }) }}
                 />
               </ScrollArea>
             </div>
@@ -445,7 +445,7 @@ const AIAnalysisDialog = ({
               <ScrollArea className="flex-1">
                 <div 
                   className="p-4 text-sm leading-relaxed text-foreground"
-                  dangerouslySetInnerHTML={{ __html: formatAnalysisText(viewingAnalysis.analysis) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(viewingAnalysis.analysis), { USE_PROFILES: { html: true } }) }}
                 />
               </ScrollArea>
             </div>
@@ -516,7 +516,7 @@ const AIAnalysisDialog = ({
                       >
                         {msg.role === "assistant" ? (
                           <div 
-                            dangerouslySetInnerHTML={{ __html: formatAnalysisText(msg.content) }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatAnalysisText(msg.content), { USE_PROFILES: { html: true } }) }}
                             className="text-sm [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_h4]:text-xs"
                           />
                         ) : (

@@ -160,7 +160,7 @@ const Tarefas = () => {
         }
       });
     } catch (error) {
-      console.error("Error checking upcoming tasks:", error);
+      if (import.meta.env.DEV) console.error("Error checking upcoming tasks:", error);
     }
   };
 
@@ -177,7 +177,6 @@ const Tarefas = () => {
         .eq("user_id", user.id)
 
       if (roleError) {
-        console.warn("Erro ao buscar roles do usuário:", roleError);
       }
 
       const resolvedRole = (() => {
@@ -276,7 +275,6 @@ const Tarefas = () => {
       // Mantém userRole do estado alinhada com a role real (evita admin/gestor serem tratados como vendedor)
       setUserRole(resolvedRole);
     } catch (error) {
-      console.error("Error fetching data:", error);
       toast.error("Erro ao carregar tarefas");
     } finally {
       setLoading(false);
@@ -299,7 +297,6 @@ const Tarefas = () => {
       if (error) throw error;
       setContacts(data || []);
     } catch (error) {
-      console.error("Error fetching contacts:", error);
       setContacts([]);
     }
   };
@@ -357,7 +354,6 @@ const Tarefas = () => {
         try {
           await uploadTaskAttachments(data.id, pendingAttachments);
         } catch (attachError) {
-          console.error("Error uploading attachments:", attachError);
           toast.warning("Tarefa criada, mas houve erro ao anexar arquivos");
         }
       }
@@ -367,7 +363,6 @@ const Tarefas = () => {
       resetForm();
       fetchData();
     } catch (error: any) {
-      console.error("Error creating task:", error);
       toast.error(error.message || "Erro ao criar tarefa");
     } finally {
       setSaving(false);
@@ -403,7 +398,6 @@ const Tarefas = () => {
       toast.success(newStatus === "completed" ? "Tarefa concluída!" : "Tarefa reaberta");
       fetchData();
     } catch (error) {
-      console.error("Error updating task:", error);
       toast.error("Erro ao atualizar tarefa");
     }
   };
@@ -421,7 +415,6 @@ const Tarefas = () => {
         .eq("user_id", user.id)
 
       if (roleError) {
-        console.warn("Erro ao buscar roles do usuário:", roleError);
       }
 
       const roles = (roleRows || []).map((r: any) => r.role);
@@ -435,7 +428,7 @@ const Tarefas = () => {
 
       setUserRole(resolvedRole);
     } catch (error) {
-      console.error("Error checking user role:", error);
+      if (import.meta.env.DEV) console.error("Error checking user role:", error);
     }
   };
 
@@ -462,7 +455,6 @@ const Tarefas = () => {
       setEditDialogOpen(false);
       fetchData();
     } catch (error: any) {
-      console.error("Error deleting task:", error);
       toast.error("Erro ao excluir tarefa: " + error.message);
     }
   };
@@ -513,7 +505,6 @@ const Tarefas = () => {
         toast.success(`${data.matching_ids.length} tarefa(s) encontrada(s)`);
       }
     } catch (error: any) {
-      console.error("AI search error:", error);
       toast.error("Erro na busca inteligente: " + (error.message || "Tente novamente"));
     } finally {
       setAiSearching(false);
@@ -560,7 +551,6 @@ const Tarefas = () => {
       toast.success("Tarefa movida com sucesso!");
       fetchData();
     } catch (error) {
-      console.error("Error moving task:", error);
       toast.error("Erro ao mover tarefa");
     }
   };

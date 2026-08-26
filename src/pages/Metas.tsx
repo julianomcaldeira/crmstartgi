@@ -154,7 +154,7 @@ const Metas = () => {
       setIsAdmin(data?.role === "admin");
       setIsGestor(data?.role === "gestor");
     } catch (error) {
-      console.error("Error checking admin status:", error);
+      if (import.meta.env.DEV) console.error("Error checking admin status:", error);
     }
   };
 
@@ -169,7 +169,7 @@ const Metas = () => {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      if (import.meta.env.DEV) console.error("Error fetching users:", error);
     }
   };
 
@@ -206,7 +206,6 @@ const Metas = () => {
       if (error) throw error;
       setGoals(data || []);
     } catch (error) {
-      console.error("Error fetching goals:", error);
       toast.error("Erro ao carregar metas");
     } finally {
       setLoading(false);
@@ -426,7 +425,7 @@ const Metas = () => {
 
       setGoalsProgress(progressData);
     } catch (error) {
-      console.error("Error fetching goals progress:", error);
+      if (import.meta.env.DEV) console.error("Error fetching goals progress:", error);
     }
   };
 
@@ -557,7 +556,7 @@ const Metas = () => {
         setHistoricalData(historyWithProgress);
       }
     } catch (error) {
-      console.error("Error fetching historical data:", error);
+      if (import.meta.env.DEV) console.error("Error fetching historical data:", error);
     }
   };
 
@@ -602,7 +601,6 @@ const Metas = () => {
       // Force recalculation of progress immediately after update
       await Promise.all([fetchGoalsProgress(), fetchHistoricalData()]);
     } catch (error) {
-      console.error("Error saving goal:", error);
       toast.error("Erro ao salvar meta");
     }
   };
@@ -620,7 +618,6 @@ const Metas = () => {
       toast.success("Meta excluída com sucesso!");
       fetchGoals();
     } catch (error) {
-      console.error("Error deleting goal:", error);
       toast.error("Erro ao excluir meta");
     }
   };

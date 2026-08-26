@@ -1598,7 +1598,7 @@ const InteligenciaMercado = () => {
                             <AccordionContent className="pt-2 pb-4">
                               <div
                                 className="prose prose-sm dark:prose-invert max-w-none"
-                                dangerouslySetInnerHTML={{ __html: renderMarkdown(section.content) }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderMarkdown(section.content), { USE_PROFILES: { html: true } }) }}
                               />
                             </AccordionContent>
                           </AccordionItem>

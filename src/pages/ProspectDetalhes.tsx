@@ -179,7 +179,7 @@ const ClienteDetalhes = () => {
       setUserRole(role);
       setIsAdmin(role === "admin");
     } catch (error) {
-      console.error("Error checking admin role:", error);
+      if (import.meta.env.DEV) console.error("Error checking admin role:", error);
     }
   };
 
@@ -232,7 +232,6 @@ const ClienteDetalhes = () => {
         .order("created_at", { ascending: false });
       
       if (tasksError) {
-        console.error("Error fetching tasks:", tasksError);
       }
 
       const normalizedTasks = (tasksData || []).map((t: any) => ({
@@ -270,7 +269,6 @@ const ClienteDetalhes = () => {
 
     } catch (error: any) {
       toast.error("Erro ao carregar detalhes do cliente");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -329,7 +327,6 @@ const ClienteDetalhes = () => {
       resetTaskForm();
       fetchClientDetails();
     } catch (error) {
-      console.error("Error creating task:", error);
       toast.error("Erro ao criar tarefa");
     }
   };
@@ -366,7 +363,6 @@ const ClienteDetalhes = () => {
       resetOppForm();
       fetchClientDetails();
     } catch (error) {
-      console.error("Error creating opportunity:", error);
       toast.error("Erro ao criar oportunidade");
     }
   };
@@ -424,7 +420,6 @@ const ClienteDetalhes = () => {
       toast.success("Tarefa concluída!");
       fetchClientDetails();
     } catch (error) {
-      console.error("Error completing task:", error);
       toast.error("Erro ao concluir tarefa");
     }
   };
@@ -442,7 +437,6 @@ const ClienteDetalhes = () => {
       setTaskViewDialogOpen(false);
       fetchClientDetails();
     } catch (error) {
-      console.error("Error deleting task:", error);
       toast.error("Erro ao excluir tarefa");
     }
   };
@@ -499,7 +493,6 @@ const ClienteDetalhes = () => {
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error: any) {
-      console.error("Error creating contact:", error);
       toast.error(error.message || "Erro ao criar contato");
     }
   };
@@ -563,7 +556,6 @@ const ClienteDetalhes = () => {
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error: any) {
-      console.error("Error updating contact:", error);
       toast.error(error.message || "Erro ao atualizar contato");
     }
   };
@@ -588,7 +580,6 @@ const ClienteDetalhes = () => {
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error) {
-      console.error("Error deleting contact:", error);
       toast.error("Erro ao excluir contato");
     }
   };
@@ -618,7 +609,6 @@ const ClienteDetalhes = () => {
       toast.success("Cliente e todo seu histórico foram excluídos com sucesso!");
       navigate(backPath);
     } catch (error: any) {
-      console.error("Error deleting client:", error);
       toast.error("Erro ao excluir cliente: " + (error.message || "Erro desconhecido"));
     }
   };

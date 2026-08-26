@@ -52,7 +52,7 @@ const Dashboard = () => {
 
       setUserRole(roleData?.role || "vendedor");
     } catch (error) {
-      console.error("Error initializing dashboard:", error);
+      if (import.meta.env.DEV) console.error("Error initializing dashboard:", error);
     }
   };
 
@@ -68,7 +68,7 @@ const Dashboard = () => {
         fetchUpcomingFeiras(),
       ]);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      if (import.meta.env.DEV) console.error("Error fetching dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -118,7 +118,7 @@ const Dashboard = () => {
     }
 
     const { data: goals, error: goalsError } = await goalsQuery;
-    if (goalsError) console.error("Error fetching goals:", goalsError);
+    if (goalsError && import.meta.env.DEV) console.error("Error fetching goals:", goalsError);
 
     // Pro-rate each goal across the months it covers, then take the slice for the selected month
     const totalGoal = (goals || []).reduce((sum: number, g: any) => {
@@ -288,7 +288,7 @@ const Dashboard = () => {
         setAvgCloseCycle(0);
       }
     } catch (error) {
-      console.error("Error fetching average close cycle:", error);
+      if (import.meta.env.DEV) console.error("Error fetching average close cycle:", error);
     }
   };
 
@@ -308,7 +308,7 @@ const Dashboard = () => {
       if (error) throw error;
       setUpcomingFeiras(data || []);
     } catch (error) {
-      console.error("Error fetching upcoming feiras:", error);
+      if (import.meta.env.DEV) console.error("Error fetching upcoming feiras:", error);
     }
   };
 
@@ -483,7 +483,7 @@ const Dashboard = () => {
       if (error) throw error;
       setAllOpportunities(data || []);
     } catch (error) {
-      console.error("Error fetching all opportunities:", error);
+      if (import.meta.env.DEV) console.error("Error fetching all opportunities:", error);
     }
   };
 
