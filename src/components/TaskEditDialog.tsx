@@ -54,6 +54,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [deleting, setDeleting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"tarefa" | "contatos">("tarefa");
+  const [innerTab, setInnerTab] = useState<"descricao" | "notas" | "anexos">("descricao");
   const [allContacts, setAllContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
@@ -115,6 +116,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   useEffect(() => {
     if (open) {
       setActiveTab("tarefa");
+      setInnerTab("descricao");
       setContactSearch("");
     }
   }, [open, task?.id]);
@@ -558,121 +560,136 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
             </div>
           </div>
 
-          <Separator />
+          <Tabs value={innerTab} onValueChange={(v) => setInnerTab(v as any)} className="w-full">
+            <TabsList className="w-full bg-slate-800 dark:bg-slate-900 p-1.5 rounded-xl flex gap-1 h-auto">
+              <TabsTrigger
+                value="descricao"
+                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Descrição da Tarefa
+              </TabsTrigger>
+              <TabsTrigger
+                value="notas"
+                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+              >
+                <History className="h-3.5 w-3.5" />
+                Notas da Tarefa
+                {notes.length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center h-5 min-w-5 px-1.5 bg-slate-600 text-white text-[10px] rounded-full">
+                    {notes.length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger
+                value="anexos"
+                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Anexos
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Description Section */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Descrição da Tarefa</Label>
-              <AudioRecorder 
-                onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
-              />
-            </div>
-            {campaignTaskDetails.instructions && (
-              <div className="rounded-md border border-border bg-muted/40 p-3">
-                <p className="text-xs font-medium text-foreground">
-                  Orientação da Campanha{campaignTaskDetails.campaignName ? ` — ${campaignTaskDetails.campaignName}` : ""}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
-                  {campaignTaskDetails.instructions}
-                </p>
-              </div>
-            )}
-            <TaskQuickMessages 
-              taskType={taskType} 
-              onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)} 
-            />
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
-              rows={4}
-              className="resize-y min-h-[100px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
-            />
-          </div>
-
-          <Separator />
-
-          {/* Notes Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Notas da Tarefa</h3>
-            
-            {/* Add Note */}
-            <div className="space-y-2">
-              <Label>Adicionar Nova Nota</Label>
-              <div className="flex gap-2">
-                <Textarea
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Digite sua nota ou grave um áudio..."
-                  rows={3}
-                  className="flex-1 resize-y min-h-[80px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
+            <TabsContent value="descricao" className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Descrição da Tarefa</Label>
+                <AudioRecorder
+                  onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
                 />
-                <div className="flex flex-col gap-2 self-end">
-                  <AudioRecorder
-                    onTranscription={(text) => setNewNote(prev => prev ? `${prev}\n${text}` : text)}
+              </div>
+              {campaignTaskDetails.instructions && (
+                <div className="rounded-md border border-border bg-muted/40 p-3">
+                  <p className="text-xs font-medium text-foreground">
+                    Orientação da Campanha{campaignTaskDetails.campaignName ? ` — ${campaignTaskDetails.campaignName}` : ""}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap [overflow-wrap:anywhere]">
+                    {campaignTaskDetails.instructions}
+                  </p>
+                </div>
+              )}
+              <TaskQuickMessages
+                taskType={taskType}
+                onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)}
+              />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
+                rows={4}
+                className="resize-y min-h-[100px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
+              />
+            </TabsContent>
+
+            <TabsContent value="notas" className="mt-4 space-y-4">
+              {/* Add Note */}
+              <div className="space-y-2">
+                <Label>Adicionar Nova Nota</Label>
+                <div className="flex gap-2">
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Digite sua nota ou grave um áudio..."
+                    rows={3}
+                    className="flex-1 resize-y min-h-[80px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
                   />
-                  <Button
-                    type="button"
-                    onClick={handleAddNote}
-                    size="icon"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <div className="flex flex-col gap-2 self-end">
+                    <AudioRecorder
+                      onTranscription={(text) => setNewNote(prev => prev ? `${prev}\n${text}` : text)}
+                    />
+                    <Button type="button" onClick={handleAddNote} size="icon">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Notes List */}
-            <div className="space-y-3 max-h-[300px] overflow-y-auto overflow-x-hidden no-scrollbar">
-              {notes.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma nota adicionada ainda
-                </p>
-              ) : (
-                notes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="p-3 bg-muted/50 rounded-lg border border-border space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm flex-1 whitespace-pre-wrap">{note.note}</p>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteNote(note.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span>{note.profiles?.full_name || "Usuário"}</span>
+              {/* Notes List */}
+              <div className="space-y-3 max-h-[260px] overflow-y-auto overflow-x-hidden no-scrollbar pr-1">
+                {notes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhuma nota adicionada ainda
+                  </p>
+                ) : (
+                  notes.map((note) => (
+                    <div
+                      key={note.id}
+                      className="p-3 bg-muted/50 rounded-lg border border-border space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm flex-1 whitespace-pre-wrap">{note.note}</p>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteNote(note.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>
-                          {format(new Date(note.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                            locale: ptBR,
-                          })}
-                        </span>
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          <span>{note.profiles?.full_name || "Usuário"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>
+                            {format(new Date(note.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+                  ))
+                )}
+              </div>
+            </TabsContent>
 
-          <Separator />
-
-          {/* Attachments Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Anexos</h3>
-            <TaskAttachments taskId={task?.id} />
-          </div>
+            <TabsContent value="anexos" className="mt-4 space-y-4">
+              <TaskAttachments taskId={task?.id} />
+            </TabsContent>
+          </Tabs>
 
           {/* Task History */}
           {history.length > 0 && (
