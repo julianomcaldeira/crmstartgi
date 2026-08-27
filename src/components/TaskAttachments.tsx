@@ -404,7 +404,7 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
       )}
 
       {taskId && attachments.length === 0 && pendingFiles.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">
+        <p className="text-sm text-muted-foreground text-center py-3">
           Nenhum arquivo anexado
         </p>
       )}

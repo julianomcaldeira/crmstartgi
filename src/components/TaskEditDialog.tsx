@@ -22,10 +22,9 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Plus, Trash2, User, Clock, History, Building2, Users, Mail, Phone, FileText, Search } from "lucide-react";
+import { Plus, Trash2, User, Clock, History, Building2, Users, Mail, Phone, FileText, Search, Paperclip } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import TaskQuickMessages from "@/components/TaskQuickMessages";
 import AudioRecorder from "@/components/AudioRecorder";
 import TaskAttachments from "@/components/TaskAttachments";
 import { formatPhone } from "@/components/ui/masked-input";
@@ -54,7 +53,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
   const [deleting, setDeleting] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"tarefa" | "contatos">("tarefa");
-  const [innerTab, setInnerTab] = useState<"descricao" | "notas" | "anexos">("descricao");
+  const [innerTab, setInnerTab] = useState<"descricao" | "notas" | "anexos" | "historico">("descricao");
   const [allContacts, setAllContacts] = useState<any[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
@@ -561,42 +560,44 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           </div>
 
           <Tabs value={innerTab} onValueChange={(v) => setInnerTab(v as any)} className="w-full">
-            <TabsList className="w-full bg-white dark:bg-card border border-border p-1.5 rounded-xl flex gap-1 h-auto shadow-sm">
+            <TabsList className="w-full bg-white dark:bg-card border border-border p-1 rounded-xl grid grid-cols-4 gap-1 h-auto shadow-sm">
               <TabsTrigger
                 value="descricao"
-                className="flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
+                className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-[11px] sm:text-xs font-medium transition-colors"
               >
-                <FileText className="h-3.5 w-3.5" />
-                Descrição da Tarefa
+                <FileText className="h-3.5 w-3.5 hidden sm:block" />
+                Descrição
               </TabsTrigger>
               <TabsTrigger
                 value="notas"
-                className="group flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
+                className="group gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-[11px] sm:text-xs font-medium transition-colors"
               >
-                <History className="h-3.5 w-3.5" />
-                Notas da Tarefa
+                <History className="h-3.5 w-3.5 hidden sm:block" />
+                Notas
                 {notes.length > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center h-5 min-w-5 px-1.5 bg-primary/10 text-primary border border-primary/20 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] rounded-full font-bold transition-colors">
+                  <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 bg-primary/10 text-primary border border-primary/20 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] rounded-full font-bold transition-colors">
                     {notes.length}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="anexos"
-                className="flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
+                className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-[11px] sm:text-xs font-medium transition-colors"
               >
-                <FileText className="h-3.5 w-3.5" />
+                <Paperclip className="h-3.5 w-3.5 hidden sm:block" />
                 Anexos
+              </TabsTrigger>
+              <TabsTrigger
+                value="historico"
+                className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-[11px] sm:text-xs font-medium transition-colors"
+              >
+                <Clock className="h-3.5 w-3.5 hidden sm:block" />
+                Histórico
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="descricao" className="mt-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Descrição da Tarefa</Label>
-                <AudioRecorder
-                  onTranscription={(text) => setDescription(prev => prev ? `${prev}\n${text}` : text)}
-                />
-              </div>
+              <Label>Descrição da Tarefa</Label>
               {campaignTaskDetails.instructions && (
                 <div className="rounded-md border border-border bg-muted/40 p-3">
                   <p className="text-xs font-medium text-foreground">
@@ -607,20 +608,16 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                   </p>
                 </div>
               )}
-              <TaskQuickMessages
-                taskType={taskType}
-                onSelect={(msg) => setDescription(prev => prev ? `${prev}\n${msg}` : msg)}
-              />
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Descreva os detalhes da tarefa ou grave um áudio..."
+                placeholder="Descreva os detalhes da tarefa..."
                 rows={4}
                 className="resize-y min-h-[100px] overflow-x-hidden overflow-y-auto no-scrollbar [overflow-wrap:anywhere]"
               />
             </TabsContent>
 
-            <TabsContent value="notas" className="mt-4 space-y-4">
+            <TabsContent value="notas" className="mt-4 space-y-3">
               {/* Add Note */}
               <div className="space-y-2">
                 <Label>Adicionar Nova Nota</Label>
@@ -644,9 +641,9 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </div>
 
               {/* Notes List */}
-              <div className="space-y-3 max-h-[260px] overflow-y-auto overflow-x-hidden no-scrollbar pr-1">
+              <div className="space-y-2 min-h-[80px] max-h-[200px] overflow-y-auto overflow-x-hidden no-scrollbar pr-1 border border-dashed rounded-lg p-2 bg-muted/20">
                 {notes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-sm text-muted-foreground text-center py-3">
                     Nenhuma nota adicionada ainda
                   </p>
                 ) : (
@@ -686,35 +683,35 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </div>
             </TabsContent>
 
-            <TabsContent value="anexos" className="mt-4 space-y-4">
-              <TaskAttachments taskId={task?.id} />
+            <TabsContent value="anexos" className="mt-4">
+              <div className="min-h-[120px]">
+                <TaskAttachments taskId={task?.id} />
+              </div>
             </TabsContent>
-          </Tabs>
 
-          {/* Task History */}
-          {history.length > 0 && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <History className="h-4 w-4" />
-                  Histórico de Alterações
+            <TabsContent value="historico" className="mt-4 space-y-3">
+              {history.length === 0 ? (
+                <div className="min-h-[120px] flex items-center justify-center border border-dashed rounded-lg bg-muted/20 p-2">
+                  <p className="text-sm text-muted-foreground text-center py-3">
+                    Nenhum histórico de alterações
+                  </p>
                 </div>
-                <div className="h-[300px] rounded-lg border border-border p-4 overflow-y-auto overflow-x-hidden no-scrollbar">
-                  <div className="space-y-4">
+              ) : (
+                <div className="min-h-[120px] max-h-[200px] rounded-lg border border-border p-3 overflow-y-auto overflow-x-hidden no-scrollbar">
+                  <div className="space-y-3">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
                       const newData = record.new_data || {};
                       const changedFields = Object.keys(newData).filter(
-                        key => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
+                        (key) => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])
                       );
 
                       return (
                         <div
                           key={record.id}
-                          className="pb-4 border-b border-border last:border-0 last:pb-0"
+                          className="pb-3 border-b border-border last:border-0 last:pb-0"
                         >
-                          <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-2 text-sm">
                               <User className="h-3 w-3 text-muted-foreground" />
                               <span className="font-medium text-foreground">
@@ -727,11 +724,9 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                               })}
                             </span>
                           </div>
-                          <div className="space-y-3 pl-5">
+                          <div className="space-y-2 pl-5">
                             {changedFields.map((field) => (
-                              <div key={field}>
-                                {renderFieldChange(field, oldData[field], newData[field])}
-                              </div>
+                              <div key={field}>{renderFieldChange(field, oldData[field], newData[field])}</div>
                             ))}
                           </div>
                         </div>
@@ -739,9 +734,9 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
                     })}
                   </div>
                 </div>
-              </div>
-            </>
-          )}
+              )}
+            </TabsContent>
+          </Tabs>
 
           {/* Actions */}
           <div className="flex justify-between gap-2 pt-4 border-t">
