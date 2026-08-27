@@ -131,7 +131,7 @@ export function DiagnosticQuestionsManager() {
         .order("display_order");
 
       if (rolesError) throw rolesError;
-      setRoles(rolesData || []);
+      setRoles((rolesData as any) || []);
 
       // Fetch questions with options
       const { data: questionsData, error: questionsError } = await supabase
