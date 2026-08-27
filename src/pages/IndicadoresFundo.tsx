@@ -104,7 +104,7 @@ export default function IndicadoresFundo() {
 
         // Filtrar oportunidades criadas neste mês
         const oppsDoMes = (opportunities || []).filter(opp => {
-          const createdAt = new Date(opp.created_at);
+          const createdAt = new Date(opp.created_at ?? 0);
           return createdAt >= monthStart && createdAt <= monthEnd;
         });
 

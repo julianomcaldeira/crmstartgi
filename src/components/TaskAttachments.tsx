@@ -81,7 +81,7 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
         const { error: dbError } = await supabase
           .from("task_attachments")
           .insert({
-            task_id: taskId,
+            task_id: taskId as string,
             file_name: file.name,
             file_path: fileName,
             file_size: file.size,
