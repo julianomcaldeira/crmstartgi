@@ -561,29 +561,29 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           </div>
 
           <Tabs value={innerTab} onValueChange={(v) => setInnerTab(v as any)} className="w-full">
-            <TabsList className="w-full bg-slate-800 dark:bg-slate-900 p-1.5 rounded-xl flex gap-1 h-auto">
+            <TabsList className="w-full bg-white dark:bg-card border border-border p-1.5 rounded-xl flex gap-1 h-auto shadow-sm">
               <TabsTrigger
                 value="descricao"
-                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+                className="flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
               >
                 <FileText className="h-3.5 w-3.5" />
                 Descrição da Tarefa
               </TabsTrigger>
               <TabsTrigger
                 value="notas"
-                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+                className="group flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
               >
                 <History className="h-3.5 w-3.5" />
                 Notas da Tarefa
                 {notes.length > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center h-5 min-w-5 px-1.5 bg-slate-600 text-white text-[10px] rounded-full">
+                  <span className="ml-1 inline-flex items-center justify-center h-5 min-w-5 px-1.5 bg-primary/10 text-primary border border-primary/20 group-data-[state=active]:bg-white group-data-[state=active]:text-primary text-[10px] rounded-full font-bold transition-colors">
                     {notes.length}
                   </span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="anexos"
-                className="flex-1 gap-1.5 data-[state=active]:bg-white data-[state=active]:text-slate-900 text-slate-300 rounded-lg py-2 text-xs sm:text-sm font-medium"
+                className="flex-1 gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"
               >
                 <FileText className="h-3.5 w-3.5" />
                 Anexos
