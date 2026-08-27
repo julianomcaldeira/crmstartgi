@@ -1445,7 +1445,7 @@ const Oportunidades = () => {
             onDragEnd={handleDragEnd}
           >
           <div className="flex gap-3 overflow-x-auto pb-4 px-1 snap-x snap-mandatory scroll-smooth max-h-[calc(100vh-280px)]">
-            {stages.map((stage) => {
+            {stages.filter((stage) => stage.key !== "lost").map((stage) => {
               const stageOpps = getOpportunitiesByStage(stage.key);
               const stageAnnualizedValue = stageOpps.reduce(
                 (sum, opp) => sum + calculateAnnualizedValue(opp.monthly_value, opp.implementation_value, opp.billing_type),
