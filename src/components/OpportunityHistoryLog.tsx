@@ -127,7 +127,7 @@ export const OpportunityHistoryLog = ({ opportunityId }: OpportunityHistoryLogPr
         .order("changed_at", { ascending: false });
 
       if (error) throw error;
-      setHistory(data || []);
+      setHistory((data as any) || []);
     } catch (error) {
       console.error("Error fetching history:", error);
     } finally {

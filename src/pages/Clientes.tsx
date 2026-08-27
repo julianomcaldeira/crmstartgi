@@ -92,8 +92,8 @@ const Clientes = () => {
 
           const sortedOpps = clientOpportunities.sort(
             (a, b) =>
-              new Date(a.opportunities[0]?.created_at).getTime() -
-              new Date(b.opportunities[0]?.created_at).getTime()
+              new Date(a.opportunities[0]?.created_at ?? 0).getTime() -
+              new Date(b.opportunities[0]?.created_at ?? 0).getTime()
           );
 
           acc.push({

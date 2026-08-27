@@ -111,7 +111,7 @@ async function loadWonAchievementBucketsForYear(
 
     (data || []).forEach((activity) => {
       if (!firstWonAtByOpportunity.has(activity.opportunity_id)) {
-        firstWonAtByOpportunity.set(activity.opportunity_id, activity.created_at);
+        firstWonAtByOpportunity.set(activity.opportunity_id, activity.created_at ?? "");
       }
     });
   }

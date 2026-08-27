@@ -68,7 +68,7 @@ const TaskMessageTemplates = () => {
         .order("message");
 
       if (activeTab === "personal") {
-        query = query.eq("is_personal", true).eq("created_by", currentUserId);
+        query = query.eq("is_personal", true).eq("created_by", currentUserId ?? "");
       } else {
         query = query.eq("is_personal", false);
       }

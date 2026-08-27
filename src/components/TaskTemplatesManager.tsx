@@ -107,7 +107,7 @@ const TaskTemplatesManager = () => {
         .order("name");
 
       if (activeTab === "personal") {
-        query = query.eq("is_global", false).eq("created_by", currentUserId);
+        query = query.eq("is_global", false).eq("created_by", currentUserId ?? "");
       } else {
         query = query.eq("is_global", true);
       }

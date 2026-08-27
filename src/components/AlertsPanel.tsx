@@ -67,7 +67,7 @@ export const AlertsPanel = () => {
 
       if (error) throw error;
 
-      setAlerts(data || []);
+      setAlerts((data as any) || []);
       setUnreadCount(data?.filter(a => !a.is_read).length || 0);
     } catch (error) {
       console.error("Error fetching alerts:", error);

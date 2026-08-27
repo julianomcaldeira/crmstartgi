@@ -346,7 +346,7 @@ export function useDiagnosticRoles() {
           .order("display_order");
 
         if (error) throw error;
-        setRoles(data || []);
+        setRoles((data as any) || []);
       } catch (error) {
         console.error("Error fetching diagnostic roles:", error);
       } finally {

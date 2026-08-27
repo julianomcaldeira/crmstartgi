@@ -189,7 +189,7 @@ export const CampaignsManager = () => {
         .select("*")
         .eq("campaign_id", campaign.id)
         .order("display_order");
-      setTaskTemplates(templates || []);
+      setTaskTemplates((templates as any) || []);
     } else {
       setEditingCampaign(null);
       setFormData({ name: "", description: "", start_date: "", end_date: "", status: "draft" });

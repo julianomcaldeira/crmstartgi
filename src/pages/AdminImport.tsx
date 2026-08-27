@@ -490,7 +490,7 @@ const AdminImport = () => {
         const chunk = rows.slice(offset, offset + CHUNK_SIZE);
         const isLastChunk = offset + CHUNK_SIZE >= rows.length;
 
-        const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        const { data: functionData, error: functionError }: { data: any; error: any } = await supabase.functions.invoke(
           "universal-import",
           {
             body: {
