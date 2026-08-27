@@ -542,27 +542,27 @@ const Dashboard = () => {
 
       {/* KPIs — grid único, todos os cards com a mesma altura e alinhamento */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 auto-rows-fr">
-        <Card className="border-l-4 border-l-blue-500 h-full">
+        <Card className="border-l-4 border-l-[hsl(var(--badge-blue-bg))] h-full">
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Tarefas Pendentes</p>
               <p className="text-2xl font-bold text-[hsl(var(--badge-blue-text))]">{todayTasks.length}</p>
             </div>
-            <CheckSquare className="h-8 w-8 text-blue-500/30 shrink-0" />
+            <CheckSquare className="h-8 w-8 text-[hsl(var(--badge-blue-bg)/0.3)] shrink-0" />
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 h-full">
+        <Card className="border-l-4 border-l-[hsl(var(--badge-purple-bg))] h-full">
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">No Forecast</p>
               <p className="text-2xl font-bold text-[hsl(var(--badge-purple-text))]">{forecastAccounts.length}</p>
             </div>
-            <Target className="h-8 w-8 text-purple-500/30 shrink-0" />
+            <Target className="h-8 w-8 text-[hsl(var(--badge-purple-bg)/0.3)] shrink-0" />
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 h-full">
+        <Card className="border-l-4 border-l-[hsl(var(--badge-green-bg))] h-full">
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Meta Atingida</p>
@@ -570,7 +570,7 @@ const Dashboard = () => {
                 {goalData ? `${goalData.percentage.toFixed(0)}%` : "0%"}
               </p>
             </div>
-            <TrendingUp className="h-8 w-8 text-green-500/30 shrink-0" />
+            <TrendingUp className="h-8 w-8 text-[hsl(var(--badge-green-bg)/0.3)] shrink-0" />
           </CardContent>
         </Card>
 
@@ -590,7 +590,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-orange-500 h-full">
+        <Card className="border-l-4 border-l-[hsl(var(--badge-orange-bg))] h-full">
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Ciclo Médio</p>
@@ -599,15 +599,15 @@ const Dashboard = () => {
                 <span className="text-sm font-medium ml-1">{avgCloseCycle === 1 ? 'dia' : 'dias'}</span>
               </p>
             </div>
-            <Clock className="h-8 w-8 text-orange-500/30 shrink-0" />
+            <Clock className="h-8 w-8 text-[hsl(var(--badge-orange-bg)/0.3)] shrink-0" />
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-cyan-500 h-full">
+        <Card className="border-l-4 border-l-[hsl(var(--badge-cyan-bg))] h-full">
           <CardContent className="p-4 h-full flex items-center justify-between">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Feiras no Mês</p>
-              <p className="text-2xl font-bold text-cyan-600">{upcomingFeiras.length}</p>
+              <p className="text-2xl font-bold text-[hsl(var(--badge-cyan-text))]">{upcomingFeiras.length}</p>
               {upcomingFeiras.length > 0 && (
                 <p className="text-[10px] text-muted-foreground truncate">
                   {formatDateBR(upcomingFeiras[0].start_date, "dd/MM")}
@@ -615,7 +615,7 @@ const Dashboard = () => {
                 </p>
               )}
             </div>
-            <Calendar className="h-8 w-8 text-cyan-500/30 shrink-0" />
+            <Calendar className="h-8 w-8 text-[hsl(var(--badge-cyan-bg)/0.3)] shrink-0" />
           </CardContent>
         </Card>
       </div>
@@ -626,7 +626,7 @@ const Dashboard = () => {
         <Card>
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <Clock className="h-4 w-4 text-orange-500" />
+              <Clock className="h-4 w-4 text-[hsl(var(--badge-orange-text))]" />
               Tarefas Hoje
               <Badge variant="secondary" className="text-xs">{todayTasks.length}</Badge>
             </CardTitle>
@@ -776,7 +776,7 @@ const Dashboard = () => {
       <Card>
         <CardHeader className="p-4 pb-2">
           <CardTitle className="text-sm flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-purple-500" />
+              <TrendingUp className="h-4 w-4 text-[hsl(var(--badge-purple-text))]" />
             Forecast do Mês
             <Badge variant="secondary" className="text-xs">{forecastAccounts.length}</Badge>
           </CardTitle>

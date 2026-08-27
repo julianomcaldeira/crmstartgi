@@ -174,7 +174,7 @@ const Layout = ({ children }: LayoutProps) => {
                             setSidebarOpen(false);
                           }}
                           aria-current={isActive ? "page" : undefined}
-                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 ${
+                          className={`w-full flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar ${
                             isActive
                               ? "bg-primary text-white shadow-md shadow-primary/30"
                               : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -260,7 +260,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </div>
                 )}
               </div>
-              <div className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-background"></div>
+              <div className="absolute bottom-0 right-0 h-3 w-3 bg-success rounded-full border-2 border-background"></div>
             </div>
           </div>
         </header>

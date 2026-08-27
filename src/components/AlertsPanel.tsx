@@ -183,13 +183,13 @@ export const AlertsPanel = () => {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical':
-        return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-500';
+        return 'bg-[hsl(var(--severity-critical-bg)/0.12)] text-[hsl(var(--severity-critical-text))] border-[hsl(var(--severity-critical-bg))]';
       case 'high':
-        return 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300 border-orange-500';
+        return 'bg-[hsl(var(--severity-high-bg)/0.12)] text-[hsl(var(--severity-high-text))] border-[hsl(var(--severity-high-bg))]';
       case 'medium':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border-amber-500';
+        return 'bg-[hsl(var(--severity-medium-bg)/0.12)] text-[hsl(var(--severity-medium-text))] border-[hsl(var(--severity-medium-bg))]';
       case 'low':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-500';
+        return 'bg-[hsl(var(--severity-low-bg)/0.12)] text-[hsl(var(--severity-low-text))] border-[hsl(var(--severity-low-bg))]';
       default:
         return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-gray-500';
     }
