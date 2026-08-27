@@ -596,7 +596,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="descricao" className="mt-4 space-y-2">
+            <TabsContent value="descricao" className="mt-3 space-y-2">
               <Label>Descrição da Tarefa</Label>
               {campaignTaskDetails.instructions && (
                 <div className="rounded-md border border-border bg-muted/40 p-3">
@@ -617,7 +617,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               />
             </TabsContent>
 
-            <TabsContent value="notas" className="mt-4 space-y-3">
+            <TabsContent value="notas" className="mt-3 space-y-2">
               {/* Add Note */}
               <div className="space-y-2">
                 <Label>Adicionar Nova Nota</Label>
@@ -641,9 +641,9 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </div>
 
               {/* Notes List */}
-              <div className="space-y-2 min-h-[80px] max-h-[200px] overflow-y-auto overflow-x-hidden no-scrollbar pr-1 border border-dashed rounded-lg p-2 bg-muted/20">
+              <div className="space-y-2 min-h-[48px] max-h-[160px] overflow-y-auto overflow-x-hidden no-scrollbar pr-1 border border-dashed rounded-lg p-1.5 bg-muted/20">
                 {notes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-3">
+                  <p className="text-xs text-muted-foreground text-center py-1.5">
                     Nenhuma nota adicionada ainda
                   </p>
                 ) : (
@@ -683,21 +683,21 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
               </div>
             </TabsContent>
 
-            <TabsContent value="anexos" className="mt-4">
-              <div className="min-h-[120px]">
+            <TabsContent value="anexos" className="mt-3">
+              <div className="min-h-0">
                 <TaskAttachments taskId={task?.id} />
               </div>
             </TabsContent>
 
-            <TabsContent value="historico" className="mt-4 space-y-3">
+            <TabsContent value="historico" className="mt-3">
               {history.length === 0 ? (
-                <div className="min-h-[120px] flex items-center justify-center border border-dashed rounded-lg bg-muted/20 p-2">
-                  <p className="text-sm text-muted-foreground text-center py-3">
+                <div className="min-h-[48px] flex items-center justify-center border border-dashed rounded-lg bg-muted/20 p-1.5">
+                  <p className="text-xs text-muted-foreground text-center py-1.5">
                     Nenhum histórico de alterações
                   </p>
                 </div>
               ) : (
-                <div className="min-h-[120px] max-h-[200px] rounded-lg border border-border p-3 overflow-y-auto overflow-x-hidden no-scrollbar">
+                <div className="min-h-[48px] max-h-[160px] rounded-lg border border-border p-2.5 overflow-y-auto overflow-x-hidden no-scrollbar">
                   <div className="space-y-3">
                     {history.map((record) => {
                       const oldData = record.old_data || {};
@@ -739,7 +739,7 @@ export const TaskEditDialog = ({ task, open, onOpenChange, onSuccess, onDelete }
           </Tabs>
 
           {/* Actions */}
-          <div className="flex justify-between gap-2 pt-4 border-t">
+          <div className="flex justify-between gap-2 pt-3 border-t mt-2">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button

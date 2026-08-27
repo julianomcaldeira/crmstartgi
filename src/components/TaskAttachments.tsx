@@ -298,14 +298,14 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-4 transition-all text-center ${
+        className={`border-2 border-dashed rounded-lg p-3 transition-all text-center ${
           isDragOver 
             ? 'border-primary bg-primary/10 scale-[1.02]' 
             : 'border-muted-foreground/25 hover:border-primary/50'
         }`}
       >
-        <Upload className={`h-8 w-8 mx-auto mb-2 transition-colors ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
-        <p className="text-sm text-muted-foreground">
+        <Upload className={`h-6 w-6 mx-auto mb-1.5 transition-colors ${isDragOver ? 'text-primary' : 'text-muted-foreground'}`} />
+        <p className="text-xs text-muted-foreground">
           {isDragOver ? (
             <span className="text-primary font-medium">Solte os arquivos aqui</span>
           ) : (
@@ -404,7 +404,7 @@ const TaskAttachments = ({ taskId, onPendingFilesChange, pendingFiles = [] }: Ta
       )}
 
       {taskId && attachments.length === 0 && pendingFiles.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-3">
+        <p className="text-xs text-muted-foreground text-center py-1.5">
           Nenhum arquivo anexado
         </p>
       )}
