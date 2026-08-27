@@ -38,7 +38,7 @@ interface LayoutProps {
 }
 
 interface MenuItem {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   label: string;
   path: string;
 }
