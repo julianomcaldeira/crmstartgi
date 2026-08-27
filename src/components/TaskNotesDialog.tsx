@@ -57,7 +57,7 @@ const TaskNotesDialog = ({ taskId, taskTitle, open, onOpenChange }: TaskNotesDia
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setNotes(data || []);
+      setNotes((data as any) || []);
     } catch (error) {
       console.error("Error fetching task notes:", error);
     } finally {

@@ -93,7 +93,7 @@ const AIAnalysisDialog = ({
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setAnalysisHistory(data || []);
+      setAnalysisHistory((data as any) || []);
     } catch (error) {
       console.error("Error fetching analysis history:", error);
     } finally {

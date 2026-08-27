@@ -85,7 +85,7 @@ export function OpportunityActivityLog({ opportunityId }: OpportunityActivityLog
           created_by_profile: profileMap.get(activity.created_by),
         }));
 
-        setActivities(activitiesWithProfiles);
+        setActivities(activitiesWithProfiles as any);
       } else {
         setActivities([]);
       }
