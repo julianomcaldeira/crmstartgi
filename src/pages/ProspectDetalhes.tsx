@@ -731,15 +731,15 @@ const ClienteDetalhes = () => {
       </div>
 
       <Tabs defaultValue="detalhes" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-          <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
-          <TabsTrigger value="tasks">Tarefas</TabsTrigger>
-          <TabsTrigger value="contacts">Contatos</TabsTrigger>
-          <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
-          <TabsTrigger value="emails" className="gap-1"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
-          <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
-          <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-8 bg-white dark:bg-card border border-border p-1 rounded-xl shadow-sm h-auto">
+          <TabsTrigger value="detalhes" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Detalhes</TabsTrigger>
+          <TabsTrigger value="opportunities" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Oportunidades</TabsTrigger>
+          <TabsTrigger value="tasks" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Tarefas</TabsTrigger>
+          <TabsTrigger value="contacts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Contatos</TabsTrigger>
+          <TabsTrigger value="campaigns" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
+          <TabsTrigger value="emails" className="gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
+          <TabsTrigger value="ai-analyses" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Análises IA</TabsTrigger>
+          <TabsTrigger value="diagnostics" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm text-muted-foreground hover:text-foreground rounded-lg py-2 text-xs sm:text-sm font-medium transition-colors">Diagnósticos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="detalhes" className="space-y-6 pt-4">
