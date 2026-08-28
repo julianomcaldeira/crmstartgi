@@ -207,6 +207,9 @@ export default function RadarLeads() {
 
       // 3. Criar prospect com dados completos da Receita
       const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        throw new Error("Sessão expirada. Entre novamente para converter o lead.");
+      }
       
       const { data: newClient, error: insertError } = await supabase
         .from("clients")
