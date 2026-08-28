@@ -66,7 +66,7 @@ import { useCanEdit } from "@/hooks/useCanEdit";
 import { Breadcrumb } from "@/components/Breadcrumb";
 
 const ClienteDetalhes = () => {
-  const { id } = useParams();
+  const { id } = useParams() as { id: string };
   const clientId = id ?? "";
   const navigate = useNavigate();
   const location = useLocation();
