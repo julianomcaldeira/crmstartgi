@@ -810,6 +810,9 @@ const Oportunidades = () => {
 
       // Log activity for changes
       const activities = [];
+      if (!currentOpp) {
+        throw new Error("Não foi possível carregar os dados atuais da oportunidade.");
+      }
       
       if (currentOpp.status !== status) {
         activities.push({

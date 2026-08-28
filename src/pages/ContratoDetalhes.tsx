@@ -57,6 +57,7 @@ export default function ContratoDetalhes() {
   useEffect(() => { if (id) load(); }, [id]);
 
   const load = async () => {
+    if (!id) return;
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     setUserId(user?.id || null);
@@ -112,6 +113,7 @@ export default function ContratoDetalhes() {
   };
 
   const updateStatus = async (status: string) => {
+    if (!id) return;
     const { error } = await supabase.from("contracts").update({ status, ...(status === "sent" ? { sent_at: new Date().toISOString() } : {}) }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Status atualizado");

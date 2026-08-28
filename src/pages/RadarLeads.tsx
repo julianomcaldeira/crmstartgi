@@ -227,7 +227,7 @@ export default function RadarLeads() {
           foundation_date: cnpjData.foundation_date,
           cnae_principal: cnpjData.cnae_principal,
           cnae_description: cnpjData.cnae_description,
-          created_by: userData?.user?.id,
+          created_by: userData.user.id,
         })
         .select()
         .single();

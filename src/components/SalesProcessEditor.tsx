@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 
-interface SalesStep {
+export interface SalesStep {
   id: number;
   title: string;
   description: string;
