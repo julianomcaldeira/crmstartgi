@@ -730,8 +730,21 @@ const ClienteDetalhes = () => {
         )}
       </div>
 
-      {/* Client Info Card */}
-      <Card className="p-6">
+      <Tabs defaultValue="detalhes" className="w-full">
+        <TabsList className="grid w-full grid-cols-8">
+          <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+          <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
+          <TabsTrigger value="tasks">Tarefas</TabsTrigger>
+          <TabsTrigger value="contacts">Contatos</TabsTrigger>
+          <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
+          <TabsTrigger value="emails" className="gap-1"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
+          <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="detalhes" className="space-y-6 pt-4">
+          {/* Client Info Card */}
+          <Card className="p-6">
         <h2 className="text-lg font-semibold mb-4 text-foreground">Informações do Cliente</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           <div className="flex items-start gap-3">
@@ -1032,17 +1045,7 @@ const ClienteDetalhes = () => {
         </Card>
       )}
 
-      {/* Tabs for Opportunities, Tasks and Contacts */}
-      <Tabs defaultValue="opportunities" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="opportunities">Oportunidades</TabsTrigger>
-          <TabsTrigger value="tasks">Tarefas</TabsTrigger>
-          <TabsTrigger value="contacts">Contatos</TabsTrigger>
-          <TabsTrigger value="campaigns" className="gap-1"><Megaphone className="h-3.5 w-3.5" />Campanhas</TabsTrigger>
-          <TabsTrigger value="emails" className="gap-1"><Mail className="h-3.5 w-3.5" />E-mails</TabsTrigger>
-          <TabsTrigger value="ai-analyses">Análises IA</TabsTrigger>
-          <TabsTrigger value="diagnostics">Diagnósticos</TabsTrigger>
-        </TabsList>
+        </TabsContent>
 
         <TabsContent value="opportunities" className="space-y-4">
           <Card className="p-6">
