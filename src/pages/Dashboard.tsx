@@ -228,6 +228,7 @@ const Dashboard = () => {
 
     const statusCounts = data?.reduce((acc: any, opp) => {
       const label = statusLabels[opp.status ?? ""] || opp.status;
+      if (!label) return acc;
       acc[label] = (acc[label] || 0) + 1;
       return acc;
     }, {});

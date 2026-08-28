@@ -66,7 +66,8 @@ import { useCanEdit } from "@/hooks/useCanEdit";
 import { Breadcrumb } from "@/components/Breadcrumb";
 
 const ClienteDetalhes = () => {
-  const { id } = useParams();
+  const { id } = useParams() as { id: string };
+  const clientId = id ?? "";
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.pathname.startsWith("/prospect") ? "/prospects" : "/clientes";
@@ -192,7 +193,7 @@ const ClienteDetalhes = () => {
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .select("*")
-        .eq("id", id)
+        .eq("id", clientId)
         .single();
 
       if (clientError) throw clientError;
@@ -202,7 +203,7 @@ const ClienteDetalhes = () => {
       const { data: contactsData } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("name");
       setContacts(contactsData || []);
 
@@ -215,7 +216,7 @@ const ClienteDetalhes = () => {
           assigned:profiles!opportunities_assigned_to_fkey(full_name),
           product:products(name, description, logo_url)
         `)
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("created_at", { ascending: false });
       setOpportunities(opportunitiesData || []);
 
@@ -229,7 +230,7 @@ const ClienteDetalhes = () => {
           contacts(id, name, email, phone, mobile, role),
           profiles:assigned_to(full_name)
         `)
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("created_at", { ascending: false });
       
       if (tasksError) {
@@ -311,7 +312,7 @@ const ClienteDetalhes = () => {
         {
           title,
           description: taskFormData.description,
-          client_id: id,
+          client_id: clientId,
           task_type: taskFormData.task_type as any,
           due_date: dueDateISO,
           priority: taskFormData.priority as "low" | "medium" | "high",
@@ -340,7 +341,7 @@ const ClienteDetalhes = () => {
       const { error } = await supabase.from("opportunities").insert([
         {
           title: `Oportunidade - ${client?.company_name || client?.trade_name}`,
-          client_id: id,
+          client_id: clientId,
           product_id: oppFormData.product_id || null,
           implementation_value: oppFormData.implementation_value ? parseFloat(oppFormData.implementation_value) : null,
           monthly_value: oppFormData.monthly_value ? parseFloat(oppFormData.monthly_value) : null,
@@ -463,7 +464,7 @@ const ClienteDetalhes = () => {
 
       const { data, error } = await supabase.from("contacts").insert([
         {
-          client_id: id,
+          client_id: clientId,
           name: contactFormData.name,
           role: contactFormData.role || null,
           email: contactFormData.email || null,
@@ -490,7 +491,7 @@ const ClienteDetalhes = () => {
       const { data: updatedContacts } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error: any) {
@@ -553,7 +554,7 @@ const ClienteDetalhes = () => {
       const { data: updatedContacts } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error: any) {
@@ -577,7 +578,7 @@ const ClienteDetalhes = () => {
       const { data: updatedContacts } = await supabase
         .from("contacts")
         .select("*")
-        .eq("client_id", id)
+        .eq("client_id", clientId)
         .order("name");
       setContacts(updatedContacts || []);
     } catch (error) {
@@ -603,7 +604,7 @@ const ClienteDetalhes = () => {
       const { error } = await supabase
         .from("clients")
         .delete()
-        .eq("id", id);
+        .eq("id", clientId);
 
       if (error) throw error;
 

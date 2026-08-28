@@ -3,7 +3,7 @@
 // via the SECURITY DEFINER function record_proposal_event using the
 // service-role key.
 
-import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import { createClient } from "npm:@supabase/supabase-js@2.110.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

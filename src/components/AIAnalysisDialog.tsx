@@ -14,9 +14,9 @@ import DOMPurify from "dompurify";
 interface AIAnalysis {
   id: string;
   analysis: string;
-  opportunities_count: number;
-  tasks_count: number;
-  contacts_count: number;
+  opportunities_count: number | null;
+  tasks_count: number | null;
+  contacts_count: number | null;
   created_at: string;
   created_by: string;
   profiles?: { full_name: string };

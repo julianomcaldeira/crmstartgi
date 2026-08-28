@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SalesProcessEditor } from "@/components/SalesProcessEditor";
+import type { SalesStep } from "@/components/SalesProcessEditor";
 import { 
   UserSearch, 
   CheckCircle, 
@@ -168,8 +169,11 @@ const ProcessoVendas = () => {
     }
   ]);
 
-  const handleSaveSteps = (newSteps: typeof salesSteps) => {
-    setSalesSteps(newSteps);
+  const handleSaveSteps = (newSteps: SalesStep[]) => {
+    setSalesSteps((currentSteps) => newSteps.map((step) => {
+      const current = currentSteps.find((item) => item.id === step.id);
+      return current ? { ...current, ...step } : { ...salesSteps[0], ...step };
+    }));
     // Aqui você poderia salvar no banco de dados se necessário
   };
 
