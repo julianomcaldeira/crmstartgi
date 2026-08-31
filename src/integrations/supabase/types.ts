@@ -3660,6 +3660,7 @@ export type Database = {
         Returns: boolean
       }
       is_active_profile: { Args: { _user_id: string }; Returns: boolean }
+      is_crm_member: { Args: { _user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string
