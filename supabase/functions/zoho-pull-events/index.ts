@@ -31,20 +31,18 @@ Deno.serve(async (req) => {
 
     if (!isCron) {
       // Tentativa via usuário autenticado (botão "Sincronizar agora" do frontend)
-      const authHeader = req.headers.get("authorization");
+      const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized — forneça x-cron-secret ou Authorization Bearer" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const anonClient = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_ANON_KEY")!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-      const { data: { user }, error: authErr } = await anonClient.auth.getUser();
+      const token = authHeader.replace(/^Bearer\s+/i, "");
+      // Usa admin (service_role) para validar o JWT — não depende de SUPABASE_ANON_KEY
+      const { data: { user }, error: authErr } = await admin.auth.getUser(token);
       if (authErr || !user) {
-        return new Response(JSON.stringify({ error: "Unauthorized — JWT inválido" }), {
+        console.error("JWT invalid", authErr);
+        return new Response(JSON.stringify({ error: "Unauthorized — JWT inválido", details: authErr?.message }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
