@@ -87,6 +87,7 @@ const Prospects = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
+  const [poolUserId, setPoolUserId] = useState<string | null>(null);
   // Solicitação de transferência (vendedor não-dono)
   const [requestTransferOpen, setRequestTransferOpen] = useState(false);
   const [prospectToRequest, setProspectToRequest] = useState<any>(null);
@@ -152,7 +153,8 @@ const Prospects = () => {
         fetchCurrentUser(),
         fetchSellers(),
         fetchFeiras(),
-        fetchProducts()
+        fetchProducts(),
+        fetchPoolUser()
       ]);
       
       // Buscar clientes por último (é a query mais pesada)
@@ -231,6 +233,30 @@ const Prospects = () => {
       setSellers(data || []);
     } catch (error) {
       if (import.meta.env.DEV) console.error("Error fetching sellers:", error);
+    }
+  };
+
+  const fetchPoolUser = async () => {
+    try {
+      // Tenta buscar usuário dedicado da carteira (se existir)
+      const { data: pool } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", "carteira@pool.evolua")
+        .maybeSingle();
+      if (pool?.id) {
+        setPoolUserId(pool.id);
+        return;
+      }
+      // Fallback: usa primeiro admin ativo como carteira temporária
+      const { data: admin } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", "juliano@startgi.com.br")
+        .maybeSingle();
+      if (admin?.id) setPoolUserId(admin.id);
+    } catch (e) {
+      if (import.meta.env.DEV) console.error("Erro ao buscar pool user", e);
     }
   };
 
@@ -583,7 +609,7 @@ const Prospects = () => {
       } else if (selectedSeller === "my_portfolio") {
         matchesSeller = client.created_by === currentUserId;
       } else if (selectedSeller === "no_seller") {
-        matchesSeller = !client.created_by;
+        matchesSeller = !client.created_by || client.created_by === poolUserId;
       } else {
         matchesSeller = client.created_by === selectedSeller;
       }
@@ -644,7 +670,7 @@ const Prospects = () => {
 
     return sorted;
   }, [clients, searchTerm, selectedSeller, selectedFeiraFilter, selectedCompanySize, 
-      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy, dateFilterStart, dateFilterEnd]);
+      quickRatingFilter, quickRegionFilter, quickSegmentFilter, currentUserId, sortBy, dateFilterStart, dateFilterEnd, poolUserId]);
 
   // Pagination with memoization
   const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
@@ -748,7 +774,7 @@ const Prospects = () => {
 
     // Transferir para carteira disponível (liberar)
     if (selectedNewSeller === "__POOL__") {
-      if (!prospectToTransfer.created_by) {
+      if (!prospectToTransfer.created_by || prospectToTransfer.created_by === poolUserId) {
         toast.error("Esta empresa já está na carteira disponível");
         return;
       }
@@ -767,8 +793,59 @@ const Prospects = () => {
         setSelectedNewSeller("");
         fetchClients();
       } catch (error: any) {
+        const msg = error?.message || "";
+        // Fallback: função antiga ainda não permite NULL (erro "não está ativo")
+        if (msg.includes("não está ativo")) {
+          // Tenta via usuário pool dedicado (compatível com DB antigo sem migration)
+          if (poolUserId) {
+            try {
+              const { data: poolData, error: poolError } = await supabase.rpc("transfer_client_owner", {
+                _client_id: prospectToTransfer.id,
+                _new_owner_id: poolUserId,
+              } as any);
+              if (!poolError && poolData) {
+                toast.success("Empresa liberada para carteira disponível!");
+                setTransferDialogOpen(false);
+                setProspectToTransfer(null);
+                setSelectedNewSeller("");
+                fetchClients();
+                return;
+              }
+            } catch (poolErr) {
+              // continua para tentativa direta
+            }
+          }
+          // Fallback direto via update (bypass)
+          try {
+            const { error: directError } = await (supabase as any)
+              .from("clients")
+              .update({ created_by: null })
+              .eq("id", prospectToTransfer.id);
+            if (!directError) {
+              toast.success("Empresa liberada para carteira disponível!");
+              setTransferDialogOpen(false);
+              setProspectToTransfer(null);
+              setSelectedNewSeller("");
+              fetchClients();
+              return;
+            }
+            if (directError.message?.includes("not-null") || directError.message?.includes("violates not-null")) {
+              toast.error("Banco ainda não permite carteira vazia", {
+                description: "Execute no Supabase SQL Editor: ALTER TABLE clients ALTER COLUMN created_by DROP NOT NULL; e aplique a migration 20260831100200.",
+                duration: 8000,
+              });
+              return;
+            }
+            throw directError;
+          } catch (fallbackErr: any) {
+            toast.error("Erro ao liberar empresa", {
+              description: fallbackErr?.message || msg,
+            });
+            return;
+          }
+        }
         toast.error("Erro ao liberar empresa", {
-          description: error?.message || "Tente novamente.",
+          description: msg || "Tente novamente.",
         });
       }
       return;
@@ -806,7 +883,7 @@ const Prospects = () => {
       toast.error("Usuário não autenticado");
       return;
     }
-    if (client.created_by) {
+    if (client.created_by && client.created_by !== poolUserId) {
       toast.error("Esta conta já possui responsável");
       return;
     }
@@ -1995,7 +2072,7 @@ const Prospects = () => {
 
                   {/* Seller Info and Edit Button */}
                   <div className="flex items-start gap-3 flex-shrink-0">
-                    {client.created_by_profile && (
+                    {client.created_by && client.created_by !== poolUserId && client.created_by_profile && (
                       <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
                         <div className="flex items-center gap-2 mb-1">
                           <User className="text-primary" size={16} />
@@ -2013,7 +2090,7 @@ const Prospects = () => {
                         )}
                       </div>
                     )}
-                    {!client.created_by && (
+                    {(!client.created_by || client.created_by === poolUserId) && (
                       <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg min-w-[200px] flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-1">
                           <Building2 className="text-amber-600" size={16} />
@@ -2050,7 +2127,7 @@ const Prospects = () => {
                           <UserCog size={18} />
                         </Button>
                       )}
-                      {!client.created_by && (
+                      {(!client.created_by || client.created_by === poolUserId) && (
                         <Button
                           variant="default"
                           size="icon"
@@ -2062,7 +2139,7 @@ const Prospects = () => {
                         </Button>
                       )}
 
-                      {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                      {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && client.created_by !== poolUserId && (
                         myPendingRequests.has(client.id) ? (
                           <Badge variant="secondary" className="h-10 px-3 flex items-center gap-1">
                             <Handshake size={14} /> Pendente
@@ -2190,7 +2267,7 @@ const Prospects = () => {
                         <UserCog size={16} />
                       </Button>
                     )}
-                    {!client.created_by && (
+                    {(!client.created_by || client.created_by === poolUserId) && (
                       <Button
                         variant="default"
                         size="icon"
@@ -2201,7 +2278,7 @@ const Prospects = () => {
                         <UserPlus size={16} />
                       </Button>
                     )}
-                    {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
+                    {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && client.created_by !== poolUserId && (
                       myPendingRequests.has(client.id) ? (
                         <Badge variant="secondary" className="h-8 px-2 flex items-center gap-1 text-xs">
                           <Handshake size={12} /> Pendente
