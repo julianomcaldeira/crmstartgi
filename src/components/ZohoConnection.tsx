@@ -78,10 +78,7 @@ export default function ZohoConnection() {
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke("zoho-pull-events");
-      if (error) {
-        const detail = (error as any)?.context?.json?.error || (error as any)?.context?.text || (data as any)?.error || error.message;
-        throw new Error(detail);
-      }
+      if (error) throw new Error((data as any)?.error || error.message);
       if ((data as any)?.error) throw new Error((data as any).error);
       toast.success("Sincronização concluída");
       load();
