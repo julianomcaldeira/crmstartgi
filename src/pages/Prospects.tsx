@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar, Handshake } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar, Handshake, UserPlus } from "lucide-react";
 import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { TransferRequestsPanel } from "@/components/TransferRequestsPanel";
 import { Badge } from "@/components/ui/badge";
@@ -737,12 +737,40 @@ const Prospects = () => {
 
   const handleTransferProspect = async () => {
     if (!prospectToTransfer || !selectedNewSeller) {
-      toast.error("Selecione um vendedor");
+      toast.error("Selecione um destino");
       return;
     }
 
-    if (!canTransferClient(prospectToTransfer)) {
+    if (!canTransferClient(prospectToTransfer) && selectedNewSeller !== "__POOL__") {
       toast.error("Você não tem permissão para transferir este prospect");
+      return;
+    }
+
+    // Transferir para carteira disponível (liberar)
+    if (selectedNewSeller === "__POOL__") {
+      if (!prospectToTransfer.created_by) {
+        toast.error("Esta empresa já está na carteira disponível");
+        return;
+      }
+      try {
+        const { data, error } = await supabase.rpc("transfer_client_owner", {
+          _client_id: prospectToTransfer.id,
+          _new_owner_id: null,
+        } as any);
+
+        if (error) throw error;
+        if (!data) throw new Error("Nenhuma empresa foi atualizada");
+
+        toast.success("Empresa liberada para carteira disponível!");
+        setTransferDialogOpen(false);
+        setProspectToTransfer(null);
+        setSelectedNewSeller("");
+        fetchClients();
+      } catch (error: any) {
+        toast.error("Erro ao liberar empresa", {
+          description: error?.message || "Tente novamente.",
+        });
+      }
       return;
     }
 
@@ -768,6 +796,32 @@ const Prospects = () => {
     } catch (error: any) {
       toast.error("Erro ao transferir empresa", {
         description: error?.message || "Verifique se o usuário de destino está ativo e tente novamente.",
+      });
+    }
+  };
+
+  const handleAssumeProspect = async (e: React.MouseEvent, client: any) => {
+    e.stopPropagation();
+    if (!currentUserId) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
+    if (client.created_by) {
+      toast.error("Esta conta já possui responsável");
+      return;
+    }
+    try {
+      const { data, error } = await supabase.rpc("transfer_client_owner", {
+        _client_id: client.id,
+        _new_owner_id: currentUserId,
+      });
+      if (error) throw error;
+      if (!data) throw new Error("Nenhuma empresa foi atualizada");
+      toast.success("Conta assumida com sucesso! Ela agora está na sua carteira.");
+      fetchClients();
+    } catch (error: any) {
+      toast.error("Erro ao assumir conta", {
+        description: error?.message || "Tente novamente.",
       });
     }
   };
@@ -1574,7 +1628,7 @@ const Prospects = () => {
                 <SelectContent>
                   <SelectItem value="all">Todos os vendedores</SelectItem>
                   <SelectItem value="my_portfolio">Minha Carteira</SelectItem>
-                  <SelectItem value="no_seller">Sem Vendedor</SelectItem>
+                  <SelectItem value="no_seller">Carteira Disponível</SelectItem>
                   {sellers.map((seller) => (
                     <SelectItem key={seller.id} value={seller.id}>
                       {seller.full_name}
@@ -1698,7 +1752,7 @@ const Prospects = () => {
               <Badge variant="secondary" className="gap-1 badge-purple">
                 <User size={12} />
                 {selectedSeller === "my_portfolio" ? "Minha Carteira" : 
-                 selectedSeller === "no_seller" ? "Sem Vendedor" :
+                 selectedSeller === "no_seller" ? "Carteira Disponível" :
                  sellers.find(s => s.id === selectedSeller)?.full_name || "Vendedor"}
                 <button onClick={() => setSelectedSeller("all")} className="ml-1 hover:text-purple-900">
                   <XCircle size={12} />
@@ -1959,6 +2013,17 @@ const Prospects = () => {
                         )}
                       </div>
                     )}
+                    {!client.created_by && (
+                      <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg min-w-[200px] flex flex-col justify-center">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Building2 className="text-amber-600" size={16} />
+                          <span className="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wide">
+                            Carteira Disponível
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Clique em Assumir para pegar</p>
+                      </div>
+                    )}
                     
                     <div className="flex items-center gap-2">
                       {canEditClient(client) && (
@@ -1983,6 +2048,17 @@ const Prospects = () => {
                           title="Transferir prospect"
                         >
                           <UserCog size={18} />
+                        </Button>
+                      )}
+                      {!client.created_by && (
+                        <Button
+                          variant="default"
+                          size="icon"
+                          onClick={(e) => handleAssumeProspect(e, client)}
+                          className="h-10 w-10 bg-primary hover:bg-primary/90"
+                          title="Assumir conta da carteira disponível"
+                        >
+                          <UserPlus size={18} />
                         </Button>
                       )}
 
@@ -2112,6 +2188,17 @@ const Prospects = () => {
                         title="Transferir prospect"
                       >
                         <UserCog size={16} />
+                      </Button>
+                    )}
+                    {!client.created_by && (
+                      <Button
+                        variant="default"
+                        size="icon"
+                        onClick={(e) => handleAssumeProspect(e, client)}
+                        className="h-8 w-8 bg-primary hover:bg-primary/90"
+                        title="Assumir conta da carteira disponível"
+                      >
+                        <UserPlus size={16} />
                       </Button>
                     )}
                     {!canEditClient(client) && userRoles.includes('vendedor') && client.created_by && client.created_by !== currentUserId && (
@@ -2334,9 +2421,12 @@ const Prospects = () => {
               <Label htmlFor="newSeller">Transferir para</Label>
               <Select value={selectedNewSeller} onValueChange={setSelectedNewSeller}>
                 <SelectTrigger className="h-10 w-full">
-                  <SelectValue placeholder="Selecione um vendedor" />
+                  <SelectValue placeholder="Selecione o destino" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__POOL__" className="font-medium text-primary">
+                    📦 Carteira de Contas Disponíveis
+                  </SelectItem>
                   {sellers
                     .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
                     .map((seller) => (
@@ -2350,7 +2440,11 @@ const Prospects = () => {
 
             <div className="bg-muted/50 p-3 rounded-md">
               <p className="text-sm text-muted-foreground">
-                <strong>Atenção:</strong> O vendedor selecionado passará a ser o responsável por todas as informações e pelo histórico desta empresa.
+                {selectedNewSeller === "__POOL__" ? (
+                  <><strong>Carteira Disponível:</strong> A empresa ficará sem responsável, mantendo todo o histórico, e aparecerá em “Carteira Disponível” para qualquer vendedor assumir.</>
+                ) : (
+                  <><strong>Atenção:</strong> O vendedor selecionado passará a ser o responsável por todas as informações e pelo histórico desta empresa.</>
+                )}
               </p>
             </div>
           </div>
@@ -2365,8 +2459,10 @@ const Prospects = () => {
             <Button
               onClick={handleTransferProspect}
               disabled={!selectedNewSeller}
+              variant={selectedNewSeller === "__POOL__" ? "default" : "default"}
+              className={selectedNewSeller === "__POOL__" ? "bg-amber-600 hover:bg-amber-700" : ""}
             >
-              Transferir Empresa
+              {selectedNewSeller === "__POOL__" ? "Liberar para Carteira" : "Transferir Empresa"}
             </Button>
           </div>
         </DialogContent>
