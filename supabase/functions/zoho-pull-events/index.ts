@@ -5,7 +5,7 @@ import { getValidTokens, calendarBase, toZohoDateTime } from "../_shared/zoho.ts
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
 };
 
 function fromZohoDateTime(s: string): string {
@@ -20,17 +20,47 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    if (!cronSecret || req.headers.get("x-cron-secret") !== cronSecret) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Autorização: permite CRON (x-cron-secret) OU usuário autenticado (JWT)
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const cronHeader = req.headers.get("x-cron-secret");
+    const isCron = !!cronSecret && cronHeader === cronSecret;
 
-    // Lista todos os usuários conectados
-    const { data: tokens } = await admin.from("zoho_user_tokens").select("user_id");
+    let targetUserIds: string[] | null = null; // null = todos (cron)
+
+    if (!isCron) {
+      // Tentativa via usuário autenticado (botão "Sincronizar agora" do frontend)
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: "Unauthorized — forneça x-cron-secret ou Authorization Bearer" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const anonClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user }, error: authErr } = await anonClient.auth.getUser();
+      if (authErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized — JWT inválido" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      targetUserIds = [user.id];
+    }
+
+
+    // Lista usuários conectados: todos (cron) ou apenas o autenticado (sync manual)
+    let tokens: { user_id: string }[] | null = null;
+    if (targetUserIds) {
+      const { data } = await admin.from("zoho_user_tokens").select("user_id").in("user_id", targetUserIds);
+      tokens = data;
+    } else {
+      const { data } = await admin.from("zoho_user_tokens").select("user_id");
+      tokens = data;
+    }
     const results: any[] = [];
 
     for (const t of tokens || []) {
