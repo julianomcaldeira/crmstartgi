@@ -794,11 +794,18 @@ const Prospects = () => {
         // Fallback: função antiga ainda não permite NULL (erro "não está ativo")
         if (msg.includes("não está ativo")) {
           // Tenta via usuário pool dedicado (compatível com DB antigo sem migration)
-          if (poolUserId) {
+          let targetPoolId = poolUserId;
+          if (!targetPoolId) {
+            try {
+              const { data: pool } = await supabase.from("profiles").select("id").eq("email", "juliano@startgi.com.br").maybeSingle();
+              if (pool?.id) targetPoolId = pool.id;
+            } catch {}
+          }
+          if (targetPoolId) {
             try {
               const { data: poolData, error: poolError } = await supabase.rpc("transfer_client_owner", {
                 _client_id: prospectToTransfer.id,
-                _new_owner_id: poolUserId,
+                _new_owner_id: targetPoolId,
               } as any);
               if (!poolError && poolData) {
                 toast.success("Empresa liberada para carteira disponível!");
@@ -808,38 +815,28 @@ const Prospects = () => {
                 fetchClients();
                 return;
               }
-            } catch (poolErr) {
-              // continua para tentativa direta
-            }
-          }
-          // Fallback direto via update (bypass)
-          try {
-            const { error: directError } = await (supabase as any)
-              .from("clients")
-              .update({ created_by: null })
-              .eq("id", prospectToTransfer.id);
-            if (!directError) {
-              toast.success("Empresa liberada para carteira disponível!");
-              setTransferDialogOpen(false);
-              setProspectToTransfer(null);
-              setSelectedNewSeller("");
-              fetchClients();
-              return;
-            }
-            if (directError.message?.includes("not-null") || directError.message?.includes("violates not-null")) {
-              toast.error("Banco ainda não permite carteira vazia", {
-                description: "Execute no Supabase SQL Editor: ALTER TABLE clients ALTER COLUMN created_by DROP NOT NULL; e aplique a migration 20260831100200.",
-                duration: 8000,
+              // Se pool também falhar, mostra erro do pool
+              if (poolError) throw poolError;
+            } catch (poolErr: any) {
+              toast.error("Erro ao liberar para carteira", {
+                description: poolErr?.message || msg,
               });
               return;
             }
-            throw directError;
-          } catch (fallbackErr: any) {
-            toast.error("Erro ao liberar empresa", {
-              description: fallbackErr?.message || msg,
-            });
-            return;
           }
+          toast.error("Banco ainda não permite carteira vazia", {
+            description: "Execute no Supabase SQL Editor: ALTER TABLE clients ALTER COLUMN created_by DROP NOT NULL; e aplique a migration 20260831100200_allow_pool_transfer.sql",
+            duration: 8000,
+          });
+          return;
+        }
+        // Erro de RLS ao tentar liberar (ex: new row violates row-level security policy)
+        if (msg.includes("row-level security") || msg.includes("violates row-level security")) {
+          toast.error("Sem permissão para liberar", {
+            description: "Apenas o dono da conta ou gestores/pre_vendas podem liberar. Se você é o dono, contate um admin para aplicar a migration 20260831100200 no Supabase.",
+            duration: 8000,
+          });
+          return;
         }
         toast.error("Erro ao liberar empresa", {
           description: msg || "Tente novamente.",
