@@ -168,10 +168,10 @@ const Prospects = () => {
     if (currentUserId) fetchMyTransferRequests();
   }, [currentUserId]);
 
-  // Aplicar filtro automático para vendedor
+  // Aplicar filtro automático para vendedor - mostra apenas sua carteira (via seu ID)
   useEffect(() => {
     if (currentUserId && userRoles.includes('vendedor') && !userRoles.includes('admin') && !userRoles.includes('gestor') && !initialFilterApplied) {
-      setSelectedSeller("my_portfolio");
+      setSelectedSeller(currentUserId);
       setInitialFilterApplied(true);
     }
   }, [currentUserId, userRoles, initialFilterApplied]);
@@ -602,12 +602,9 @@ const Prospects = () => {
         (isSearchingByCnpj ? client.cnpj?.includes(cleanedSearchTerm) : client.cnpj?.includes(searchTerm)) ||
         (client.trade_name && client.trade_name.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      // Enhanced seller filter with "my_portfolio" and "no_seller" options
       let matchesSeller = true;
       if (selectedSeller === "all") {
         matchesSeller = true;
-      } else if (selectedSeller === "my_portfolio") {
-        matchesSeller = client.created_by === currentUserId;
       } else if (selectedSeller === "no_seller") {
         matchesSeller = !client.created_by || client.created_by === poolUserId;
       } else {
@@ -1704,7 +1701,6 @@ const Prospects = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os vendedores</SelectItem>
-                  <SelectItem value="my_portfolio">Minha Carteira</SelectItem>
                   <SelectItem value="no_seller">Carteira Disponível</SelectItem>
                   {sellers.map((seller) => (
                     <SelectItem key={seller.id} value={seller.id}>
@@ -1828,8 +1824,7 @@ const Prospects = () => {
             {selectedSeller !== "all" && (
               <Badge variant="secondary" className="gap-1 badge-purple">
                 <User size={12} />
-                {selectedSeller === "my_portfolio" ? "Minha Carteira" : 
-                 selectedSeller === "no_seller" ? "Carteira Disponível" :
+                {selectedSeller === "no_seller" ? "Carteira Disponível" :
                  sellers.find(s => s.id === selectedSeller)?.full_name || "Vendedor"}
                 <button onClick={() => setSelectedSeller("all")} className="ml-1 hover:text-purple-900">
                   <XCircle size={12} />
