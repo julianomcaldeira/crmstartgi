@@ -32,7 +32,7 @@ export function useCanEdit() {
   const isAdmin = role === "admin";
   const isGestor = role === "gestor";
   const isPreVendas = role === "pre_vendas";
-  const isPrivileged = isAdmin || isGestor;
+  const isPrivileged = isAdmin || isGestor || isPreVendas;
 
   /** Retorna true se o usuário pode editar o registro. */
   const canEdit = (
