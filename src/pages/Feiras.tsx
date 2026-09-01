@@ -156,6 +156,20 @@ const Feiras = () => {
         return;
       }
 
+      // Previne duplicatas (case-insensitive, trim) — espelha índice único do banco
+      const normalized = formData.name.trim().toLowerCase();
+      const { data: dupCheck } = await supabase
+        .from("feiras")
+        .select("id, name")
+        .ilike("name", formData.name.trim());
+      const isDup = (dupCheck || []).some(
+        (f: any) => f.name.trim().toLowerCase() === normalized && f.id !== editingFeira?.id
+      );
+      if (isDup) {
+        toast.error(`Já existe uma feira com o nome "${formData.name.trim()}"`);
+        return;
+      }
+
       if (editingFeira) {
         const { error } = await supabase
           .from("feiras")
