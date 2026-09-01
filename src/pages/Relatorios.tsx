@@ -72,6 +72,7 @@ const Relatorios = () => {
   const [pendingTasks, setPendingTasks] = useState(0);
   const [overdueTasks, setOverdueTasks] = useState(0);
   const [tasksByType, setTasksByType] = useState<any[]>([]);
+  const [prevTasksByType, setPrevTasksByType] = useState<Map<string, number>>(new Map());
   const [topProducts, setTopProducts] = useState<any[]>([]);
   const [sellersPerformance, setSellersPerformance] = useState<any[]>([]);
   const [feirasReport, setFeirasReport] = useState<any[]>([]);
@@ -261,6 +262,39 @@ const Relatorios = () => {
       }
 
       const { data: tasksData } = await query;
+
+      // Calcular período anterior para comparação (mesma duração)
+      const startDt = new Date(startDate);
+      const endDt = new Date(endDate);
+      const diffTime = Math.abs(endDt.getTime() - startDt.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      
+      const prevStartDt = new Date(startDt);
+      prevStartDt.setDate(prevStartDt.getDate() - diffDays);
+      const prevEndDt = new Date(startDt);
+      prevEndDt.setDate(prevEndDt.getDate() - 1);
+      
+      const prevStartStr = prevStartDt.toISOString().split("T")[0];
+      const prevEndStr = prevEndDt.toISOString().split("T")[0];
+
+      let prevQuery = supabase
+        .from("tasks")
+        .select("task_type")
+        .gte("created_at", prevStartStr)
+        .lte("created_at", prevEndStr);
+
+      if (selectedSeller !== 'all') {
+        prevQuery = prevQuery.eq("assigned_to", selectedSeller);
+      }
+
+      const { data: prevTasksData } = await prevQuery;
+      const prevMap = new Map<string, number>();
+      prevTasksData?.forEach(t => {
+        if (t.task_type) {
+          prevMap.set(t.task_type, (prevMap.get(t.task_type) || 0) + 1);
+        }
+      });
+      setPrevTasksByType(prevMap);
 
       let completedQuery = supabase
         .from("tasks")
@@ -1036,23 +1070,43 @@ const Relatorios = () => {
                 {tasksByType.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Tarefas por Tipo</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Tarefas por Tipo</span>
+                        <span className="text-xs font-normal text-muted-foreground">Comparativo com o período anterior</span>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="space-y-3">
-                        {tasksByType.map((item) => (
-                          <div key={item.type} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                            <div className="flex items-center gap-3">
-                              <Badge variant="outline">{item.label}</Badge>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {tasksByType.map((item) => {
+                          const prevCount = prevTasksByType.get(item.type) || 0;
+                          const diff = item.count - prevCount;
+                          const pct = prevCount > 0 ? ((diff / prevCount) * 100).toFixed(1) : (item.count > 0 ? "+100" : "0");
+                          const isPositive = diff > 0;
+                          const isNeutral = diff === 0;
+
+                          return (
+                            <div key={item.type} className="p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all flex flex-col justify-between gap-3">
+                              <div className="flex items-center justify-between">
+                                <Badge variant="secondary" className="font-semibold">{item.label}</Badge>
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {totalTasks > 0 ? `${((item.count / totalTasks) * 100).toFixed(1)}%` : "0%"}
+                                </span>
+                              </div>
+                              <div className="flex items-baseline justify-between pt-2 border-t">
+                                <div>
+                                  <span className="text-xs text-muted-foreground block">Total</span>
+                                  <span className="text-2xl font-extrabold text-foreground">{item.count}</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-xs text-muted-foreground block">vs. período ant.</span>
+                                  <span className={`text-sm font-bold flex items-center justify-end gap-1 ${isNeutral ? 'text-muted-foreground' : isPositive ? 'text-success' : 'text-destructive'}`}>
+                                    {isNeutral ? '— 0' : isPositive ? `+${diff} (+${pct}%)` : `${diff} (${pct}%)`}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold">{item.count}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {((item.count / totalTasks) * 100).toFixed(1)}%
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
