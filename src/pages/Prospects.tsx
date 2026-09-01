@@ -2116,7 +2116,7 @@ const Prospects = () => {
                           </Button>
                         </>
                       )}
-                      {canTransferClient(client) && (
+                      {(canTransferClient(client) || !!client.created_by) && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -2256,7 +2256,7 @@ const Prospects = () => {
                         </Button>
                       </>
                     )}
-                    {canTransferClient(client) && (
+                    {(canTransferClient(client) || !!client.created_by) && (
                       <Button
                         variant="outline"
                         size="icon"
