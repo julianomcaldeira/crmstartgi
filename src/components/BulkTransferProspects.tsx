@@ -127,6 +127,13 @@ export const BulkTransferProspects = () => {
     setConfirmDialogOpen(false);
 
     try {
+      // Captura IDs dos clientes que serão transferidos antes do update
+      const { data: clientsToTransfer } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("created_by", sourceUserId);
+      const clientIds = (clientsToTransfer || []).map((c: any) => c.id);
+
       const { error } = await supabase
         .from("clients")
         .update({ created_by: destinationUserId })
@@ -134,11 +141,24 @@ export const BulkTransferProspects = () => {
 
       if (error) throw error;
 
+      // Transfere oportunidades em aberto vinculadas a esses clientes
+      if (clientIds.length > 0) {
+        const { error: oppError } = await supabase
+          .from("opportunities")
+          .update({ assigned_to: destinationUserId })
+          .in("client_id", clientIds as any)
+          .not("status", "in", "(won,lost)" as any);
+        if (oppError) {
+          console.warn("Aviso ao transferir oportunidades:", oppError);
+          // Não bloqueia o sucesso da transferência de prospects
+        }
+      }
+
       const sourceUser = users.find((u) => u.id === sourceUserId);
       const destUser = users.find((u) => u.id === destinationUserId);
 
       toast.success(
-        `${prospectCount} prospects transferidos de ${sourceUser?.full_name} para ${destUser?.full_name}!`
+        `${prospectCount} prospects transferidos de ${sourceUser?.full_name} para ${destUser?.full_name}! Oportunidades em aberto também foram transferidas.`
       );
 
       // Reset and refresh

@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CNPJInput, PhoneInput, CEPInput, CurrencyInput, formatCNPJ, formatPhone, autoAddMobileNine } from "@/components/ui/masked-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar, Handshake, UserPlus } from "lucide-react";
+import { Plus, Search, Building2, MapPin, Phone, Mail, Loader2, User, ChevronLeft, ChevronRight, Edit, CheckCircle2, XCircle, Trash2, UserCog, LayoutGrid, List, Upload, ArrowUpDown, Calendar, Handshake, UserPlus, ArrowLeftRight } from "lucide-react";
 import { RequestTransferDialog } from "@/components/RequestTransferDialog";
 import { TransferRequestsPanel } from "@/components/TransferRequestsPanel";
+import { BulkTransferProspects } from "@/components/BulkTransferProspects";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -88,6 +89,7 @@ const Prospects = () => {
   const [prospectToTransfer, setProspectToTransfer] = useState<any>(null);
   const [selectedNewSeller, setSelectedNewSeller] = useState<string>("");
   const [poolUserId, setPoolUserId] = useState<string | null>(null);
+  const [bulkTransferOpen, setBulkTransferOpen] = useState(false);
   // Solicitação de transferência (vendedor não-dono)
   const [requestTransferOpen, setRequestTransferOpen] = useState(false);
   const [prospectToRequest, setProspectToRequest] = useState<any>(null);
@@ -967,6 +969,17 @@ const Prospects = () => {
               <Badge className="ml-1 bg-amber-500 hover:bg-amber-500">{incomingPendingCount}</Badge>
             )}
           </Button>
+
+          {canManageTransfers && (
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => setBulkTransferOpen(true)}
+            >
+              <ArrowLeftRight size={18} />
+              Transferir Carteira
+            </Button>
+          )}
 
           {userRoles.includes('admin') && selectedProspects.length > 0 && (
             <Button 
@@ -2556,6 +2569,15 @@ const Prospects = () => {
           fetchClients();
         }}
       />
+
+      <Dialog open={bulkTransferOpen} onOpenChange={setBulkTransferOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Transferir Carteira Completa</DialogTitle>
+          </DialogHeader>
+          <BulkTransferProspects />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
