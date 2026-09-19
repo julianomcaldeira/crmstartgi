@@ -8,8 +8,56 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+type AIProvider = {
+  label: string;
+  apiKey: string;
+  chatUrl: string;
+  model: string;
+};
+
+// Resolve o provedor de IA. Prioriza a OpenCode Zen (OPENCODE_API_KEY) e,
+// na ausência dela, usa o gateway da Lovable (LOVABLE_API_KEY). Também aceita
+// um provedor OpenAI-compatível genérico via AI_API_KEY / AI_BASE_URL.
+function resolveProvider(): AIProvider | null {
+  const opencodeKey = Deno.env.get("OPENCODE_API_KEY");
+  if (opencodeKey) {
+    return {
+      label: "OpenCode Zen",
+      apiKey: opencodeKey,
+      chatUrl:
+        (Deno.env.get("BRAIN_BASE_URL") ?? "https://opencode.ai/zen/v1").replace(/\/$/, "") +
+        "/chat/completions",
+      model: Deno.env.get("BRAIN_MODEL") ?? "big-pickle",
+    };
+  }
+
+  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+  if (lovableKey) {
+    return {
+      label: "Lovable AI",
+      apiKey: lovableKey,
+      chatUrl:
+        (Deno.env.get("BRAIN_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1").replace(/\/$/, "") +
+        "/chat/completions",
+      model: Deno.env.get("BRAIN_MODEL") ?? "google/gemini-2.5-flash",
+    };
+  }
+
+  const genericKey = Deno.env.get("AI_API_KEY");
+  if (genericKey) {
+    const baseUrl = Deno.env.get("AI_BASE_URL");
+    if (baseUrl) {
+      return {
+        label: "Custom",
+        apiKey: genericKey,
+        chatUrl: baseUrl.replace(/\/$/, "") + "/chat/completions",
+        model: Deno.env.get("BRAIN_MODEL") ?? "gpt-4o-mini",
+      };
+    }
+  }
+
+  return null;
+}
 
 const SCHEMA_CATALOG = `
 BANCO DE DADOS (PostgreSQL / Supabase) — sempre use nomes qualificados como public.tabela.
@@ -92,13 +140,13 @@ type ChatMessage = {
 };
 
 async function callGateway(
-  apiKey: string,
+  provider: AIProvider,
   body: Record<string, unknown>,
 ): Promise<Response> {
-  return await fetch(GATEWAY_URL, {
+  return await fetch(provider.chatUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${provider.apiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -159,9 +207,12 @@ serve(async (req) => {
         content: String(m.content).slice(0, 4000),
       }));
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return jsonError(500, "LOVABLE_API_KEY não configurada");
+    const provider = resolveProvider();
+    if (!provider) {
+      return jsonError(
+        500,
+        "Nenhuma chave de IA configurada. Defina o segredo OPENCODE_API_KEY (OpenCode Zen) ou LOVABLE_API_KEY.",
+      );
     }
 
     const systemPrompt = buildSystemPrompt();
@@ -174,8 +225,8 @@ serve(async (req) => {
     const MAX_ROUNDS = 4;
 
     for (let round = 0; round < MAX_ROUNDS; round++) {
-      const resp = await callGateway(LOVABLE_API_KEY, {
-        model: MODEL,
+      const resp = await callGateway(provider, {
+        model: provider.model,
         messages: working,
         tools: [BRAIN_TOOL],
         tool_choice: "auto",
@@ -263,8 +314,8 @@ serve(async (req) => {
       ...history,
     ];
 
-    const finalResp = await callGateway(LOVABLE_API_KEY, {
-      model: MODEL,
+    const finalResp = await callGateway(provider, {
+      model: provider.model,
       stream: true,
       messages: finalMessages,
     });

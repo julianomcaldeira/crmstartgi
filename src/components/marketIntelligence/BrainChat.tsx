@@ -146,9 +146,12 @@ export default function BrainChat() {
         try {
           const j = await resp.json();
           if (j?.error) msg = j.error;
+          else if (j?.message) msg = j.message;
         } catch {
           // resposta sem corpo JSON: mantém mensagem padrão
         }
+        if (resp.status === 404)
+          msg = "Função Brain não publicada no servidor. Faça o deploy pelo Lovable.";
         if (resp.status === 429)
           msg = "Muitas requisições. Aguarde alguns segundos.";
         if (resp.status === 402)
