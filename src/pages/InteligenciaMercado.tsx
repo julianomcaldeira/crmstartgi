@@ -38,6 +38,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import GovSalesChat from "@/components/marketIntelligence/GovSalesChat";
+import BrainChat from "@/components/marketIntelligence/BrainChat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -839,8 +840,12 @@ const InteligenciaMercado = () => {
       </div>
     </div>
 
-      <Tabs defaultValue="chat" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+      <Tabs defaultValue="brain" className="w-full">
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
+          <TabsTrigger value="brain" className="gap-2">
+            <Brain className="h-4 w-4" />
+            Brain
+          </TabsTrigger>
           <TabsTrigger value="chat" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Chat IA — Vendas Gov
@@ -850,6 +855,10 @@ const InteligenciaMercado = () => {
             Pesquisa de Mercado
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="brain" className="mt-4">
+          <BrainChat />
+        </TabsContent>
 
         <TabsContent value="search" className="mt-4 space-y-6">
 
