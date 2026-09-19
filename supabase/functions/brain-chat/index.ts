@@ -6,6 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Expose-Headers": "x-brain-provider, x-brain-model",
 };
 
 type AIProvider = {
@@ -15,9 +16,13 @@ type AIProvider = {
   model: string;
 };
 
-// Resolve o provedor de IA. Prioriza a OpenCode Zen (OPENCODE_API_KEY) e,
-// na ausência dela, usa o gateway da Lovable (LOVABLE_API_KEY). Também aceita
-// um provedor OpenAI-compatível genérico via AI_API_KEY / AI_BASE_URL.
+// Resolve o provedor de IA do Brain.
+//
+// IMPORTANTE: o Brain usa EXCLUSIVAMENTE a OpenCode Zen (OPENCODE_API_KEY).
+// A IA da Lovable (LOVABLE_API_KEY) NÃO é usada como fallback, justamente para
+// garantir que todas as respostas venham do provedor configurado pelo usuário.
+// Um provedor OpenAI-compatível alternativo só é usado se configurado
+// explicitamente via AI_API_KEY + AI_BASE_URL.
 function resolveProvider(): AIProvider | null {
   const opencodeKey = Deno.env.get("OPENCODE_API_KEY");
   if (opencodeKey) {
@@ -31,29 +36,15 @@ function resolveProvider(): AIProvider | null {
     };
   }
 
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (lovableKey) {
-    return {
-      label: "Lovable AI",
-      apiKey: lovableKey,
-      chatUrl:
-        (Deno.env.get("BRAIN_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1").replace(/\/$/, "") +
-        "/chat/completions",
-      model: Deno.env.get("BRAIN_MODEL") ?? "google/gemini-2.5-flash",
-    };
-  }
-
   const genericKey = Deno.env.get("AI_API_KEY");
-  if (genericKey) {
-    const baseUrl = Deno.env.get("AI_BASE_URL");
-    if (baseUrl) {
-      return {
-        label: "Custom",
-        apiKey: genericKey,
-        chatUrl: baseUrl.replace(/\/$/, "") + "/chat/completions",
-        model: Deno.env.get("BRAIN_MODEL") ?? "gpt-4o-mini",
-      };
-    }
+  const baseUrl = Deno.env.get("AI_BASE_URL");
+  if (genericKey && baseUrl) {
+    return {
+      label: "Custom",
+      apiKey: genericKey,
+      chatUrl: baseUrl.replace(/\/$/, "") + "/chat/completions",
+      model: Deno.env.get("BRAIN_MODEL") ?? "gpt-4o-mini",
+    };
   }
 
   return null;
@@ -211,9 +202,10 @@ serve(async (req) => {
     if (!provider) {
       return jsonError(
         500,
-        "Nenhuma chave de IA configurada. Defina o segredo OPENCODE_API_KEY (OpenCode Zen) ou LOVABLE_API_KEY.",
+        "OPENCODE_API_KEY não configurada. O Brain foi configurado para usar exclusivamente a OpenCode Zen.",
       );
     }
+    console.log(`Brain provider: ${provider.label} / ${provider.model}`);
 
     const systemPrompt = buildSystemPrompt();
     const working: ChatMessage[] = [
@@ -333,7 +325,12 @@ serve(async (req) => {
     }
 
     return new Response(finalResp.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "x-brain-provider": provider.label,
+        "x-brain-model": provider.model,
+      },
     });
   } catch (e) {
     console.error("brain-chat error:", e);

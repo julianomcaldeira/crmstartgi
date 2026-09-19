@@ -85,6 +85,7 @@ export default function BrainChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [providerInfo, setProviderInfo] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -160,6 +161,14 @@ export default function BrainChat() {
         setMessages((prev) => prev.slice(0, -1));
         setLoading(false);
         return;
+      }
+
+      const providerName = resp.headers.get("x-brain-provider");
+      const providerModel = resp.headers.get("x-brain-model");
+      if (providerName) {
+        setProviderInfo(
+          providerModel ? `${providerName} · ${providerModel}` : providerName,
+        );
       }
 
       const reader = resp.body.getReader();
@@ -247,6 +256,16 @@ export default function BrainChat() {
                 <Database className="h-3 w-3" />
                 Base de dados conectada
               </Badge>
+              {providerInfo && (
+                <Badge
+                  variant="outline"
+                  className="hidden gap-1 text-[10px] md:inline-flex"
+                  title="Provedor de IA em uso"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  {providerInfo}
+                </Badge>
+              )}
             </p>
             <p className="truncate text-[11px] text-muted-foreground">
               Pergunte qualquer coisa sobre seus clientes, vendas e tarefas
