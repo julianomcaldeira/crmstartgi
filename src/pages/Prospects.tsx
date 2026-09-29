@@ -787,50 +787,29 @@ const Prospects = () => {
         fetchClients();
       } catch (error: any) {
         const msg = error?.message || "";
-        // Fallback: função antiga ainda não permite NULL (erro "não está ativo")
-        if (msg.includes("não está ativo")) {
-          // Tenta via usuário pool dedicado (compatível com DB antigo sem migration)
-          let targetPoolId = poolUserId;
-          if (!targetPoolId) {
-            try {
-              const { data: pool } = await supabase.from("profiles").select("id").eq("email", "juliano@startgi.com.br").maybeSingle();
-              if (pool?.id) targetPoolId = pool.id;
-            } catch {}
-          }
-          if (targetPoolId) {
-            try {
-              const { data: poolData, error: poolError } = await supabase.rpc("transfer_client_owner", {
-                _client_id: prospectToTransfer.id,
-                _new_owner_id: targetPoolId,
-              } as any);
-              if (!poolError && poolData) {
-                toast.success("Empresa liberada para carteira disponível!");
-                setTransferDialogOpen(false);
-                setProspectToTransfer(null);
-                setSelectedNewSeller("");
-                fetchClients();
-                return;
-              }
-              // Se pool também falhar, mostra erro do pool
-              if (poolError) throw poolError;
-            } catch (poolErr: any) {
-              toast.error("Erro ao liberar para carteira", {
-                description: poolErr?.message || msg,
-              });
-              return;
-            }
-          }
-          toast.error("Banco ainda não permite carteira vazia", {
-            description: "Execute no Supabase SQL Editor: ALTER TABLE clients ALTER COLUMN created_by DROP NOT NULL; e aplique a migration 20260831100200_allow_pool_transfer.sql",
-            duration: 8000,
+        // A carteira disponível é representada por created_by IS NULL. Se o
+        // banco ainda rejeitar NULL, a migration 20260831100200 (ou a
+        // 20260929140000) não foi aplicada — orientamos sem usar usuário real
+        // como pool, que nunca deve acontecer.
+        if (msg.includes("não está ativo") || msg.includes("null value")) {
+          toast.error("Carteira disponível ainda não liberada no banco", {
+            description:
+              "Aplique a migration 20260929140000_allow_vendor_release_to_pool.sql no Supabase (ou peça ao admin para publicá-la no Lovable).",
+            duration: 10000,
           });
           return;
         }
-        // Erro de RLS ao tentar liberar (ex: new row violates row-level security policy)
+        if (msg.includes("Sem permissão para liberar")) {
+          toast.error("Sem permissão para liberar", {
+            description: "Apenas o dono da conta ou gestores/pre_vendas podem liberar.",
+          });
+          return;
+        }
         if (msg.includes("row-level security") || msg.includes("violates row-level security")) {
           toast.error("Sem permissão para liberar", {
-            description: "Apenas o dono da conta ou gestores/pre_vendas podem liberar. Se você é o dono, contate um admin para aplicar a migration 20260831100200 no Supabase.",
-            duration: 8000,
+            description:
+              "O banco bloqueou a operação. Aplique a migration 20260929140000_allow_vendor_release_to_pool.sql.",
+            duration: 10000,
           });
           return;
         }

@@ -14,7 +14,6 @@ import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 
 const Clientes = () => {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -23,6 +22,8 @@ const Clientes = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [filterSeller, setFilterSeller] = useState<string>("all");
   const [initialFilterApplied, setInitialFilterApplied] = useState(false);
+  const [todosClientes, setTodosClientes] = useState<any[]>([]);
+  const [somenteGanhos, setSomenteGanhos] = useState(false);
   
   // Quick filters for compact view
   const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
@@ -64,50 +65,39 @@ const Clientes = () => {
 
   const fetchClientes = async () => {
     try {
-      // Buscar clientes que têm pelo menos uma oportunidade ganha
+      // Buscar TODAS as contas. Usamos LEFT JOIN (sem "!inner") para que
+      // empresas sem oportunidade ganha também apareçam — antes o "!inner"
+      // com status='won' ocultava contas sem negócio ganho.
       const { data, error } = await supabase
         .from("clients")
         .select(`
           *,
-          opportunities!inner(id, status, value, created_at),
+          opportunities(id, status, value, created_at),
           profiles:created_by(id, full_name, email)
         `)
-        .eq("opportunities.status", "won")
         .order("company_name");
 
       if (error) throw error;
 
-      // Agrupar por cliente único e calcular resumo
-      const clientesUnicos = data?.reduce((acc: any[], client) => {
-        const existingClient = acc.find((c) => c.id === client.id);
-        
-        if (!existingClient) {
-          // Filtrar todas as oportunidades ganhas deste cliente
-          const clientOpportunities = data.filter((c) => c.id === client.id);
-          
-          const totalValue = clientOpportunities.reduce(
-            (sum, c) => sum + (Number(c.opportunities[0]?.value) || 0),
-            0
-          );
+      // Normalizar: separa ganhas (won) de todas e calcula o resumo
+      const clientesNormalizados = (data || []).map((client: any) => {
+        const opps = (client.opportunities || []) as any[];
+        const wonOpps = opps.filter((o) => o.status === "won");
+        const totalValue = wonOpps.reduce((sum, o) => sum + (Number(o.value) || 0), 0);
+        const firstWonDate = wonOpps
+          .map((o) => o.created_at)
+          .filter(Boolean)
+          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
 
-          const sortedOpps = clientOpportunities.sort(
-            (a, b) =>
-              new Date(a.opportunities[0]?.created_at ?? 0).getTime() -
-              new Date(b.opportunities[0]?.created_at ?? 0).getTime()
-          );
+        return {
+          ...client,
+          wonOpportunitiesCount: wonOpps.length,
+          totalValue,
+          firstWonDate: firstWonDate || null,
+        };
+      });
 
-          acc.push({
-            ...client,
-            wonOpportunitiesCount: clientOpportunities.length,
-            totalValue,
-            firstWonDate: sortedOpps[0]?.opportunities[0]?.created_at,
-          });
-        }
-        
-        return acc;
-      }, []);
-
-      setClientes(clientesUnicos || []);
+      setTodosClientes(clientesNormalizados);
     } catch (error) {
       console.error("Error fetching clientes:", error);
     } finally {
@@ -115,11 +105,12 @@ const Clientes = () => {
     }
   };
   
-  const filteredClientes = clientes.filter((cliente) => {
+  const filteredClientes = todosClientes.filter((cliente) => {
     const matchesQuickRating = quickRatingFilter === null || cliente.rating === quickRatingFilter;
     const matchesQuickRegion = quickRegionFilter === "all" || cliente.region === quickRegionFilter;
     const matchesSeller = filterSeller === "all" || cliente.profiles?.id === filterSeller;
-    return matchesQuickRating && matchesQuickRegion && matchesSeller;
+    const matchesWon = !somenteGanhos || (cliente.wonOpportunitiesCount ?? 0) > 0;
+    return matchesQuickRating && matchesQuickRegion && matchesSeller && matchesWon;
   });
 
   return (
@@ -128,9 +119,20 @@ const Clientes = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
           <p className="text-muted-foreground">
-            Empresas com oportunidades ganhas - Total de {filteredClientes.length} cliente
-            {filteredClientes.length !== 1 ? "s" : ""}
+            {somenteGanhos
+              ? "Empresas com oportunidades ganhas"
+              : "Todas as empresas cadastradas"}{" "}
+            — {filteredClientes.length} cliente{filteredClientes.length !== 1 ? "s" : ""}
           </p>
+          <div className="mt-2">
+            <Button
+              variant={somenteGanhos ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSomenteGanhos((v) => !v)}
+            >
+              {somenteGanhos ? "Ver todas" : "Somente com negócio ganho"}
+            </Button>
+          </div>
           {filterSeller !== "all" && userRole === "vendedor" && (
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="secondary" className="text-xs">
@@ -148,7 +150,7 @@ const Clientes = () => {
           )}
         </div>
         
-        {clientes.length > 0 && (
+        {todosClientes.length > 0 && (
           <div className="flex flex-wrap items-center gap-3">
             {viewMode === 'compact' && (
               <div className="flex items-center gap-2 animate-fade-in">
@@ -207,13 +209,13 @@ const Clientes = () => {
 
       {loading ? (
         <p className="text-center text-muted-foreground">Carregando...</p>
-      ) : clientes.length === 0 ? (
+      ) : todosClientes.length === 0 ? (
         <Card>
           <CardContent className="p-12 text-center">
             <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
             <p className="text-muted-foreground">
-              Nenhum cliente cadastrado ainda. Clientes aparecem aqui quando uma oportunidade
-              é marcada como Ganha.
+              Nenhum cliente cadastrado ainda. Clientes aparecem aqui quando são
+              cadastrados no sistema.
             </p>
           </CardContent>
         </Card>
