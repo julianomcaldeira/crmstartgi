@@ -38,17 +38,25 @@ export const AlertsPanel = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    initializeAlerts();
-  }, []);
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
 
-  const initializeAlerts = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setCurrentUserId(user.id);
-      await fetchAlerts(user.id);
-      subscribeToAlerts(user.id);
-    }
-  };
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && !cancelled) {
+        setCurrentUserId(user.id);
+        await fetchAlerts(user.id);
+        if (!cancelled) cleanup = subscribeToAlerts(user.id);
+      }
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, []);
 
   const fetchAlerts = async (userId: string) => {
     try {
@@ -77,8 +85,11 @@ export const AlertsPanel = () => {
   };
 
   const subscribeToAlerts = (userId: string) => {
+    // Nome único por usuário: o supabase-js reaproveita o canal pelo nome e
+    // lança "cannot add postgres_changes callbacks ... after subscribe()" se
+    // tentarmos adicionar .on() a um canal já assinado (ex.: duplo mount).
     const channel = supabase
-      .channel('opportunity-alerts-changes')
+      .channel(`opportunity-alerts-changes:${userId}`)
       .on(
         'postgres_changes',
         {

@@ -81,19 +81,43 @@ export const useSessionTracker = (userId: string | null) => {
     startSession();
     const interval = setInterval(heartbeat, HEARTBEAT_MS);
 
-    const onUnload = () => {
-      if (sessionIdRef.current) {
-        const duration = Math.floor((Date.now() - startedAtRef.current) / 1000);
-        const payload = JSON.stringify({
-          last_seen_at: new Date().toISOString(),
-          ended_at: new Date().toISOString(),
-          duration_seconds: duration,
-        });
-        // Best-effort: fire-and-forget
-        navigator.sendBeacon?.(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${sessionIdRef.current}`,
-          new Blob([payload], { type: "application/json" })
-        );
+    const onUnload = async () => {
+      if (!sessionIdRef.current) return;
+      const duration = Math.max(
+        Math.floor((Date.now() - startedAtRef.current) / 1000),
+        0,
+      );
+      const nowIso = new Date().toISOString();
+      const payload = JSON.stringify({
+        last_seen_at: nowIso,
+        ended_at: nowIso,
+        duration_seconds: duration,
+      });
+      // Best-effort ao sair da página. Usamos fetch com keepalive em vez de
+      // navigator.sendBeacon porque o sendBeacon força credentials:'include' e
+      // o PostgREST responde Access-Control-Allow-Origin:'*' — combinação
+      // bloqueada pelo navegador (CORS). Também precisamos de PATCH + apikey,
+      // que o sendBeacon não permite.
+      try {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (token) {
+          await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/user_sessions?id=eq.${sessionIdRef.current}`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${token}`,
+              },
+              body: payload,
+              keepalive: true,
+            },
+          );
+        }
+      } catch {
+        // fire-and-forget: falha ao fechar a aba não deve gerar erro visível
       }
     };
     window.addEventListener("beforeunload", onUnload);
@@ -102,7 +126,7 @@ export const useSessionTracker = (userId: string | null) => {
       clearInterval(interval);
       events.forEach((e) => window.removeEventListener(e, markActivity));
       window.removeEventListener("beforeunload", onUnload);
-      onUnload();
+      void onUnload();
     };
   }, [userId]);
 };
