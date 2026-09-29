@@ -30,7 +30,6 @@ import { toast } from "sonner";
 import logo from "@/assets/logo-evolua-crm.png";
 import { NotificationSystem } from "./NotificationSystem";
 import { AlertsPanel } from "./AlertsPanel";
-import { ClientDiagnosticButton } from "./ClientDiagnosticButton";
 import { ThemeToggle } from "./ThemeToggle";
 import { useSessionTracker } from "@/hooks/useSessionTracker";
 import { useAuth } from "@/contexts/AuthContext";
@@ -235,7 +234,6 @@ const Layout = ({ children }: LayoutProps) => {
           <div className="ml-auto flex items-center gap-3 group">
             <ThemeToggle />
             <AlertsPanel />
-            <ClientDiagnosticButton />
             
             <div className="hidden sm:block text-right">
               <p className="text-sm font-medium text-foreground">
