@@ -240,23 +240,17 @@ const Prospects = () => {
 
   const fetchPoolUser = async () => {
     try {
-      // Tenta buscar usuário dedicado da carteira (se existir)
+      // Carteira de contas disponíveis é exclusivamente representada por
+      // created_by IS NULL. Usamos o usuário virtual da carteira apenas para
+      // manter compatibilidade com contas liberadas por ele no legado.
+      // NÃO fazer fallback para e-mail de usuário real: isso faz contas reais
+      // serem tratadas como "sem dono" e sumirem da carteira do vendedor.
       const { data: pool } = await supabase
         .from("profiles")
         .select("id")
         .eq("email", "carteira@pool.evolua")
         .maybeSingle();
-      if (pool?.id) {
-        setPoolUserId(pool.id);
-        return;
-      }
-      // Fallback: usa primeiro admin ativo como carteira temporária
-      const { data: admin } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", "juliano@startgi.com.br")
-        .maybeSingle();
-      if (admin?.id) setPoolUserId(admin.id);
+      setPoolUserId(pool?.id ?? null);
     } catch (e) {
       if (import.meta.env.DEV) console.error("Erro ao buscar pool user", e);
     }
