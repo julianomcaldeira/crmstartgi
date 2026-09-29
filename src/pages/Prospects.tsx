@@ -943,16 +943,14 @@ const Prospects = () => {
             )}
           </Button>
 
-          {canManageTransfers && (
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setBulkTransferOpen(true)}
-            >
-              <ArrowLeftRight size={18} />
-              Transferir Carteira
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={() => setBulkTransferOpen(true)}
+          >
+            <ArrowLeftRight size={18} />
+            Transferir Carteira
+          </Button>
 
           {userRoles.includes('admin') && selectedProspects.length > 0 && (
             <Button 
