@@ -118,68 +118,110 @@ serve(async (req) => {
       console.log("Nenhum dado em cache, buscando na API...");
     }
 
-    // Call publica.cnpj.ws API with timeout
-    console.log("Chamando publica.cnpj.ws para CNPJ:", cleanCnpj);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    let response;
-    try {
-      response = await fetch(`https://publica.cnpj.ws/cnpj/${cleanCnpj}`, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Accept": "application/json",
-        },
-      });
-      clearTimeout(timeoutId);
-    } catch (fetchError: any) {
-      clearTimeout(timeoutId);
-      if (fetchError.name === "AbortError") {
-        console.error("Timeout ao consultar publica.cnpj.ws");
-        throw new Error("Timeout ao buscar dados do CNPJ. Tente novamente em instantes.");
+    // Call CNPJ APIs with fallback: 1) publica.cnpj.ws 2) BrasilAPI
+    // BrasilAPI: free, no auth, fields differ — normalized to same structure
+    const fetchWithTimeout = async (apiUrl: string, timeoutMs = 10000) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(apiUrl, {
+          signal: controller.signal,
+          headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+        });
+        clearTimeout(timeoutId);
+        return res;
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
-      throw fetchError;
-    }
-
-    const data = await response.json();
-    console.log("Resposta da publica.cnpj.ws:", { status: response.status, message: data?.message });
-
-    if (!response.ok) {
-      console.error("publica.cnpj.ws retornou status não OK:", response.status, data);
-      throw new Error(data?.message || `Erro ao buscar dados do CNPJ (Status: ${response.status})`);
-    }
-
-    console.log("✅ Dados obtidos da publica.cnpj.ws com sucesso");
-
-    const establishment = data?.estabelecimento || {};
-    const foundationDateISO = establishment?.data_inicio_atividade || null;
-    const primaryActivity = establishment?.atividade_principal || {};
-    const phone = establishment?.ddd1 && establishment?.telefone1
-      ? `${establishment.ddd1}${establishment.telefone1}`
-      : "";
-
-    // Transform the response to match our database structure
-    const transformedData = {
-      source: "api",
-      cnpj: establishment?.cnpj || cleanCnpj,
-      company_name: data?.razao_social || "",
-      trade_name: establishment?.nome_fantasia || data?.razao_social || "",
-      email: establishment?.email || "",
-      phone,
-      address: `${establishment?.logradouro || ""}, ${establishment?.numero || ""} ${establishment?.complemento || ""}`.trim(),
-      city: establishment?.cidade?.nome || "",
-      state: establishment?.estado?.sigla || "",
-      zip_code: establishment?.cep || "",
-      segment: primaryActivity?.descricao || "",
-      share_capital: parseFloat(data?.capital_social || "0"),
-      legal_nature: data?.natureza_juridica?.descricao || "",
-      registration_status: establishment?.situacao_cadastral || "",
-      foundation_date: foundationDateISO,
-      cnae_principal: primaryActivity?.id || "",
-      cnae_description: primaryActivity?.descricao || "",
     };
 
+    let transformedData: any = null;
+    let sourceLabel = "api";
+
+    // 1) Tenta publica.cnpj.ws
+    console.log("Chamando publica.cnpj.ws para CNPJ:", cleanCnpj);
+    try {
+      const response = await fetchWithTimeout(`https://publica.cnpj.ws/cnpj/${cleanCnpj}`, 10000);
+      const data = await response.json();
+      console.log("Resposta da publica.cnpj.ws:", { status: response.status, message: data?.message });
+
+      if (response.ok && data?.razao_social) {
+        console.log("✅ Dados obtidos da publica.cnpj.ws com sucesso");
+        const establishment = data?.estabelecimento || {};
+        const foundationDateISO = establishment?.data_inicio_atividade || null;
+        const primaryActivity = establishment?.atividade_principal || {};
+        const phone = establishment?.ddd1 && establishment?.telefone1
+          ? `${establishment.ddd1}${establishment.telefone1}`
+          : "";
+        transformedData = {
+          source: "api",
+          cnpj: establishment?.cnpj || cleanCnpj,
+          company_name: data?.razao_social || "",
+          trade_name: establishment?.nome_fantasia || data?.razao_social || "",
+          email: establishment?.email || "",
+          phone,
+          address: `${establishment?.logradouro || ""}, ${establishment?.numero || ""} ${establishment?.complemento || ""}`.trim(),
+          city: establishment?.cidade?.nome || "",
+          state: establishment?.estado?.sigla || "",
+          zip_code: establishment?.cep || "",
+          segment: primaryActivity?.descricao || "",
+          share_capital: parseFloat(data?.capital_social || "0"),
+          legal_nature: data?.natureza_juridica?.descricao || "",
+          registration_status: establishment?.situacao_cadastral || "",
+          foundation_date: foundationDateISO,
+          cnae_principal: primaryActivity?.id || "",
+          cnae_description: primaryActivity?.descricao || "",
+        };
+      } else {
+        console.warn("publica.cnpj.ws falhou, tentando BrasilAPI...", response.status, data?.message);
+      }
+    } catch (e: any) {
+      console.warn("publica.cnpj.ws erro/timeout, tentando BrasilAPI...", e?.name || e?.message);
+    }
+
+    // 2) Fallback BrasilAPI (gratuita, sem auth)
+    if (!transformedData) {
+      console.log("Chamando BrasilAPI para CNPJ:", cleanCnpj);
+      try {
+        const brResponse = await fetchWithTimeout(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`, 12000);
+        if (!brResponse.ok) {
+          const errBody = await brResponse.text();
+          console.error("BrasilAPI retornou status não OK:", brResponse.status, errBody.slice(0, 300));
+          throw new Error(`CNPJ não encontrado ou inválido (BrasilAPI status ${brResponse.status})`);
+        }
+        const br = await brResponse.json();
+        console.log("✅ Dados obtidos da BrasilAPI com sucesso");
+        const situacaoMap: Record<number, string> = { 1: "NULA", 2: "ATIVA", 3: "SUSPENSA", 4: "INAPTA", 8: "BAIXADA" };
+        transformedData = {
+          source: "brasilapi",
+          cnpj: br?.cnpj || cleanCnpj,
+          company_name: br?.razao_social || "",
+          trade_name: br?.nome_fantasia || br?.razao_social || "",
+          email: br?.email || "",
+          phone: br?.ddd_telefone_1 || "",
+          address: `${br?.logradouro || ""}, ${br?.numero || ""} ${br?.complemento || ""}`.trim().replace(/^,\s*/, ""),
+          city: br?.municipio || "",
+          state: br?.uf || "",
+          zip_code: br?.cep || "",
+          segment: br?.cnae_fiscal_descricao || "",
+          share_capital: Number(br?.capital_social) || 0,
+          legal_nature: br?.natureza_juridica || "",
+          registration_status: situacaoMap[br?.situacao_cadastral] || br?.descricao_situacao_cadastral || "",
+          foundation_date: br?.data_inicio_atividade || null,
+          cnae_principal: String(br?.cnae_fiscal || ""),
+          cnae_description: br?.cnae_fiscal_descricao || "",
+        };
+        sourceLabel = "brasilapi";
+      } catch (e: any) {
+        if (e?.name === "AbortError") {
+          throw new Error("Timeout ao buscar dados do CNPJ. Tente novamente em instantes.");
+        }
+        throw e;
+      }
+    }
+
+    transformedData.source = sourceLabel;
     console.log("Salvando no cache...");
     // Save to cache (upsert to handle updates)
     const { error: upsertError } = await supabase
