@@ -70,16 +70,22 @@ const Clientes = () => {
         .from("clients")
         .select(`
           *,
-          opportunities(id, status, value, created_at, updated_at),
+          opportunities(id, status, value, created_at),
           profiles:created_by(id, full_name, email)
         `)
         .order("company_name");
 
       if (error) throw error;
 
-      // Data real de fechamento: quando a oportunidade mudou para "Ganho".
-      // created_at é a data de CRIAÇÃO da oportunidade, não do fechamento —
-      // usá-la colocava o cliente no mês errado.
+      // Data real de fechamento: quando a oportunidade mudou para "Ganho",
+      // registrada em opportunity_activities.
+      //
+      // NÃO usar updated_at como fallback: existe o trigger
+      // update_opportunities_updated_at (BEFORE UPDATE) que reescreve
+      // updated_at = NOW() em qualquer update, e há Various migrations que
+      // fazem UPDATE em opportunities. Isso fazia todos os fechamentos caírem
+      // nos meses em que as migrations rodaram, colapsando a linha do tempo.
+      // created_at é estável (nunca é reescrito) e serve de último recurso.
       const wonOpportunityIds = (data || [])
         .flatMap((c: any) => ((c.opportunities || []) as any[]))
         .filter((o) => o.status === "won")
@@ -112,7 +118,7 @@ const Clientes = () => {
 
         const resolved = wonOpps.map((o) => ({
           ...o,
-          wonAt: wonAtByOpp.get(o.id) || o.updated_at || o.created_at,
+          wonAt: wonAtByOpp.get(o.id) || o.created_at,
         }));
 
         const totalValue = resolved.reduce((sum, o) => sum + (Number(o.value) || 0), 0);
@@ -171,28 +177,52 @@ const Clientes = () => {
       byMonth.set(key, list);
     });
 
-    return Array.from(byMonth.entries())
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([key, clientes]) => {
-        const [year, month] = key.split("-").map(Number);
-        const label = new Date(year, month - 1, 1).toLocaleDateString("pt-BR", {
-          month: "long",
-          year: "numeric",
-        });
-        return {
-          key,
-          label: label.charAt(0).toUpperCase() + label.slice(1),
-          shortMonth: new Date(year, month - 1, 1)
-            .toLocaleDateString("pt-BR", { month: "short" })
-            .replace(".", ""),
-          monthIndex: month - 1,
-          year,
-          clients: clientes.sort(
-            (a, b) => new Date(b.lastWonAt).getTime() - new Date(a.lastWonAt).getTime(),
-          ),
-          totalValue: clientes.reduce((sum, c) => sum + (Number(c.totalValue) || 0), 0),
-        };
+    if (byMonth.size === 0) return [];
+
+    const buildGroup = (key: string, clientes: any[]) => {
+      const [year, month] = key.split("-").map(Number);
+      const label = new Date(year, month - 1, 1).toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric",
       });
+      return {
+        key,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        shortMonth: new Date(year, month - 1, 1)
+          .toLocaleDateString("pt-BR", { month: "short" })
+          .replace(".", ""),
+        monthIndex: month - 1,
+        year,
+        clients: (clientes || []).sort(
+          (a, b) => new Date(b.lastWonAt).getTime() - new Date(a.lastWonAt).getTime(),
+        ),
+        totalValue: (clientes || []).reduce(
+          (sum, c) => sum + (Number(c.totalValue) || 0),
+          0,
+        ),
+      };
+    };
+
+    // Sequência cronológica crescente: janeiro -> dezembro, do ano mais antigo
+    // para o mais recente. Todos os meses do intervalo aparecem, mesmo os que
+    // não tiveram fechamento, para a linha do tempo não ter buracos.
+    const keys = Array.from(byMonth.keys()).sort((a, b) => a.localeCompare(b));
+    const [startYear, startMonth] = keys[0].split("-").map(Number);
+    const [endYear, endMonth] = keys[keys.length - 1].split("-").map(Number);
+
+    const timeline: string[] = [];
+    let y = startYear;
+    let m = startMonth;
+    while (y < endYear || (y === endYear && m <= endMonth)) {
+      timeline.push(`${y}-${String(m).padStart(2, "0")}`);
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+    }
+
+    return timeline.map((key) => buildGroup(key, byMonth.get(key) || []));
   }, [filteredClientes]);
 
   const maxMonthValue = Math.max(...monthGroups.map((g) => g.totalValue), 0);
@@ -204,16 +234,19 @@ const Clientes = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   })();
 
-  // Mês vigente sempre em destaque: se houver fechamentos nele, começa nele.
+  // Mês vigente sempre em destaque. A linha do tempo é crescente (jan->dez),
+  // então o fallback é o último mês COM fechamento, não o primeiro da lista.
+  const lastMonthWithClients = [...monthGroups]
+    .reverse()
+    .find((g) => g.clients.length > 0);
+
   const activeKey =
     selectedMonthKey ||
     (monthGroups.some((g) => g.key === currentMonthKey)
       ? currentMonthKey
-      : monthGroups[0]?.key || null);
+      : lastMonthWithClients?.key || null);
 
   const activeGroup = monthGroups.find((g) => g.key === activeKey) || null;
-
-  // Sem agrupamento: lista plana (comportamento original)
 
   // Cartão reutilizável de um cliente
   const renderClienteCard = (cliente: any) => (
@@ -364,7 +397,10 @@ const Clientes = () => {
             Empresas que fecharam contrato com a StartGI —{" "}
             {filteredClientes.length} cliente{filteredClientes.length !== 1 ? "s" : ""}
             {monthGroups.length > 0 && (
-              <> em {monthGroups.length} mês{monthGroups.length !== 1 ? "es" : ""} de fechamento</>
+              <>
+                {" "}
+                em {monthGroups.length} meses de linha do tempo
+              </>
             )}
           </p>
           {filterSeller !== "all" && userRole === "vendedor" && (
@@ -501,14 +537,15 @@ const Clientes = () => {
         </Card>
       ) : (
         <>
-          {/* LINHA DO TEMPO: um item por mês de fechamento */}
+          {/* LINHA DO TEMPO: um item por mês, em ordem cronológica */}
           {monthGroups.length > 0 && (
             <div className="relative">
-              <div className="absolute left-0 right-0 top-[38px] h-0.5 bg-border" />
+              <div className="absolute left-0 right-0 top-[30px] h-0.5 bg-border" />
               <div className="relative flex gap-2 overflow-x-auto pb-3">
                 {monthGroups.map((group) => {
                   const isActive = group.key === activeKey;
                   const isCurrent = group.key === currentMonthKey;
+                  const isEmpty = group.clients.length === 0;
                   const share =
                     maxMonthValue > 0 ? (group.totalValue / maxMonthValue) * 100 : 0;
                   return (
@@ -519,7 +556,9 @@ const Clientes = () => {
                       className={`relative shrink-0 w-[104px] rounded-xl border p-2.5 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                         isActive
                           ? "border-primary bg-primary text-primary-foreground shadow-md -translate-y-0.5"
-                          : "border-border bg-card hover:border-primary/50 hover:bg-muted/50"
+                          : isEmpty
+                            ? "border-dashed border-border bg-muted/30 hover:border-primary/40"
+                            : "border-border bg-card hover:border-primary/50 hover:bg-muted/50"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1">
@@ -554,10 +593,13 @@ const Clientes = () => {
                           isActive ? "opacity-90" : "text-muted-foreground"
                         }`}
                       >
-                        {group.clients.length} cliente
-                        {group.clients.length !== 1 ? "s" : ""}
+                        {isEmpty
+                          ? "sem fechamento"
+                          : `${group.clients.length} cliente${
+                              group.clients.length !== 1 ? "s" : ""
+                            }`}
                       </p>
-                      {group.totalValue > 0 && (
+                      {!isEmpty && group.totalValue > 0 && (
                         <p
                           className={`text-[11px] font-semibold tabular-nums truncate ${
                             isActive ? "" : "text-primary"
@@ -575,7 +617,7 @@ const Clientes = () => {
                           className={`h-full rounded-full transition-all duration-500 ${
                             isActive ? "bg-primary-foreground" : "bg-primary"
                           }`}
-                          style={{ width: `${Math.max(share, 6)}%` }}
+                          style={{ width: isEmpty ? "0%" : `${Math.max(share, 6)}%` }}
                         />
                       </div>
                     </button>
@@ -603,12 +645,15 @@ const Clientes = () => {
                       {activeGroup.label}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {activeGroup.clients.length} empresa
-                      {activeGroup.clients.length !== 1 ? "s" : ""} fechou
-                      {activeGroup.clients.length !== 1 ? "am" : ""} contrato com a StartGI
-                      {activeGroup.clients.length > 1 && activeGroup.totalValue > 0
-                        ? " · soma dos fechamentos do mês"
-                        : ""}
+                      {activeGroup.clients.length === 0
+                        ? "Nenhuma empresa fechou contrato neste mês"
+                        : `${activeGroup.clients.length} empresa${
+                            activeGroup.clients.length !== 1 ? "s" : ""
+                          } fechou${activeGroup.clients.length !== 1 ? "am" : ""} contrato com a StartGI${
+                            activeGroup.clients.length > 1 && activeGroup.totalValue > 0
+                              ? " · soma dos fechamentos do mês"
+                              : ""
+                          }`}
                     </p>
                   </div>
                 </div>
@@ -625,9 +670,19 @@ const Clientes = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {activeGroup.clients.map((cliente: any) => renderClienteCard(cliente))}
-              </div>
+              {activeGroup.clients.length > 0 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {activeGroup.clients.map((cliente: any) => renderClienteCard(cliente))}
+                </div>
+              ) : (
+                <Card className="border-dashed">
+                  <CardContent className="p-10 text-center">
+                    <p className="text-muted-foreground">
+                      Sem fechamentos em {activeGroup.label.toLowerCase()}.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </section>
           ) : (
             <Card>
