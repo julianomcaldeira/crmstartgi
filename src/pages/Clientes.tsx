@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaged } from "@/lib/fetchAllPaged";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,16 +67,28 @@ const Clientes = () => {
       // Buscar TODAS as contas. Usamos LEFT JOIN (sem "!inner") para que
       // empresas sem oportunidade ganha também apareçam — antes o "!inner"
       // com status='won' ocultava contas sem negócio ganho.
-      const { data, error } = await supabase
-        .from("clients")
-        .select(`
+      // Paginação é obrigatória aqui: o PostgREST corta em 1000 linhas por
+      // padrão, e o select aninhado de opportunities conta como linha. Sem
+      // isso, clientes e fechamentos mais antigos que o corte simplesmente não
+      // chegavam ao navegador — por isso a linha do tempo trazia poucos meses.
+      const todos = await fetchAllPaged<any>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("clients")
+          .select(
+            `
           *,
           opportunities(id, status, value, created_at),
           profiles:created_by(id, full_name, email)
-        `)
-        .order("company_name");
+        `,
+          )
+          .order("company_name")
+          .order("id")
+          .range(from, to);
+        if (error) throw error;
+        return data || [];
+      });
 
-      if (error) throw error;
+      const data = todos;
 
       // Data real de fechamento: quando a oportunidade mudou para "Ganho",
       // registrada em opportunity_activities.
@@ -139,6 +152,27 @@ const Clientes = () => {
       });
 
       setTodosClientes(clientesNormalizados);
+
+      // Diagnóstico: confirma nos logs se a paginação trouxe todos os clients
+      // e quantos fechamentos caem em cada mês.
+      const fechamentosPorMes = clientesNormalizados
+        .filter((c: any) => c.lastWonAt)
+        .reduce((acc: Record<string, number>, c: any) => {
+          const d = new Date(c.lastWonAt);
+          const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+          acc[k] = (acc[k] || 0) + 1;
+          return acc;
+        }, {});
+      console.log("[Clientes] diagnostico", {
+        clientesRecebidos: clientesNormalizados.length,
+        fechamentosPorMes,
+        comAtividade: [...wonAtByOpp.keys()].length,
+        semAtividadeUsandoCreatedAt: clientesNormalizados.filter(
+          (c: any) =>
+            c.lastWonAt &&
+            !(c.wonOpportunities || []).some((o: any) => wonAtByOpp.get(o.id) === o.wonAt),
+        ).length,
+      });
     } catch (error) {
       console.error("Error fetching clientes:", error);
     } finally {
@@ -170,8 +204,12 @@ const Clientes = () => {
     const byMonth = new Map<string, any[]>();
     filteredClientes.forEach((cliente) => {
       if (!cliente.lastWonAt) return;
+      // Usar getUTC*: a data do activity log e timestamptz em UTC. Usar
+      // getMonth()/getFullYear() (fuso local, Brasil = UTC-3) deslocava o
+      // fechamento em algumas horas para o mes anterior — uma compra fechada
+      // em 01/03 00:00 UTC aparecia em fevereiro.
       const d = new Date(cliente.lastWonAt);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
       const list = byMonth.get(key) || [];
       list.push(cliente);
       byMonth.set(key, list);
@@ -245,7 +283,6 @@ const Clientes = () => {
     (monthGroups.some((g) => g.key === currentMonthKey)
       ? currentMonthKey
       : lastMonthWithClients?.key || null);
-
   const activeGroup = monthGroups.find((g) => g.key === activeKey) || null;
 
   // Cartão reutilizável de um cliente
