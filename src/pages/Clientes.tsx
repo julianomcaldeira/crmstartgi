@@ -290,6 +290,14 @@ const Clientes = () => {
   const maxMonthValue = Math.max(...monthGroups.map((g) => g.totalValue), 0);
   const totalGeral = filteredClientes.reduce((s, c) => s + (Number(c.totalValue) || 0), 0);
   const ticketMedio = filteredClientes.length > 0 ? totalGeral / filteredClientes.length : 0;
+  const totalRecorrente = filteredClientes.reduce(
+    (s, c) => s + (Number(c.recurringTotal) || 0),
+    0,
+  );
+  const totalImplantacaoAno = filteredClientes.reduce(
+    (s, c) => s + (Number(c.implementationThisYear) || 0),
+    0,
+  );
 
   const currentMonthKey = (() => {
     const now = new Date();
@@ -560,7 +568,7 @@ const Clientes = () => {
 
       {/* Resumo geral */}
       {todosClientes.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
@@ -576,6 +584,49 @@ const Clientes = () => {
                   </p>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-primary/15">
+                  <RefreshCw className="h-5 w-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Receita recorrente
+                  </p>
+                  <p className="text-2xl font-bold text-foreground tabular-nums truncate">
+                    {currency(totalRecorrente)}
+                    <span className="text-sm font-normal text-muted-foreground">/mês</span>
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 tabular-nums">
+                {currency(totalRecorrente * 12)}/ano
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-warning/15">
+                  <Rocket className="h-5 w-5 text-warning" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Implantação {currentYear}
+                  </p>
+                  <p className="text-2xl font-bold text-foreground tabular-nums truncate">
+                    {currency(totalImplantacaoAno)}
+                  </p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 tabular-nums">
+                em contratos fechados
+              </p>
             </CardContent>
           </Card>
 
