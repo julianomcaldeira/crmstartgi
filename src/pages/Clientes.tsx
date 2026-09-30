@@ -4,7 +4,7 @@ import { fetchAllPaged } from "@/lib/fetchAllPaged";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, Send, TrendingUp, Wallet, Target, Layers } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, Send, TrendingUp, Wallet, Target, Layers, RefreshCw, Rocket } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { SwipeableCard } from "@/components/SwipeableCard";
@@ -74,7 +74,7 @@ const Clientes = () => {
           .from("opportunities")
           .select(
             `
-            id, value, created_at, client_id,
+            id, value, created_at, client_id, monthly_value, implementation_value, billing_type,
             clients(
               *,
               profiles:created_by(id, full_name, email)
@@ -115,6 +115,10 @@ const Clientes = () => {
       });
 
       // Uma linha por cliente, agregando suas oportunidades ganhas.
+      // Mesmo fuso (UTC) do agrupamento da timeline: se usasse o ano local, um
+      // fechamento de 01/01 00:00 UTC contaria no ano anterior ao card, mas
+      // apareceria no ano seguinte na timeline.
+      const currentYear = new Date().getUTCFullYear();
       const byClient = new Map<string, any>();
       wonOpps.forEach((opp: any) => {
         const client = opp.clients;
@@ -128,6 +132,9 @@ const Clientes = () => {
             opportunities: [],
             wonOpportunitiesCount: 0,
             totalValue: 0,
+            recurringThisYear: 0,
+            recurringTotal: 0,
+            implementationThisYear: 0,
             lastWonAt: null,
           });
         }
@@ -135,6 +142,19 @@ const Clientes = () => {
         entry.opportunities.push({ ...opp, wonAt });
         entry.wonOpportunitiesCount += 1;
         entry.totalValue += Number(opp.value) || 0;
+
+        // Incremento de receita recorrente: soma dos monthly_value.
+        // O card mostra o incremento do ANO CORRENTE e, entre parênteses, o
+        // total acumulado desde o primeiro fechamento — assim dá para ver
+        // quanto o cliente já genera por mês no total.
+        const monthly = Number(opp.monthly_value) || 0;
+        entry.recurringTotal += monthly;
+        const d = new Date(wonAt);
+        if (d.getUTCFullYear() === currentYear) {
+          entry.recurringThisYear += monthly;
+          entry.implementationThisYear += Number(opp.implementation_value) || 0;
+        }
+
         if (!entry.lastWonAt || new Date(wonAt) > new Date(entry.lastWonAt)) {
           entry.lastWonAt = wonAt;
         }
@@ -155,6 +175,16 @@ const Clientes = () => {
         atividadesGanho: atividades.length,
         semAtividade: wonOpps.filter((o: any) => !wonAtByOpp.has(o.id)).length,
         fechamentosPorMes,
+        anoBase: currentYear,
+        // conferir se os cards somam o que deveria
+        somaRecorrenteMes: clientesNormalizados.reduce(
+          (s: number, c: any) => s + (c.recurringTotal || 0),
+          0,
+        ),
+        somaImplantacaoAno: clientesNormalizados.reduce(
+          (s: number, c: any) => s + (c.implementationThisYear || 0),
+          0,
+        ),
       });
     } catch (error) {
       console.error("Error fetching clientes:", error);
@@ -279,6 +309,8 @@ const Clientes = () => {
       : lastMonthWithClients?.key || null);
   const activeGroup = monthGroups.find((g) => g.key === activeKey) || null;
 
+  const currentYear = new Date().getUTCFullYear();
+
   // Cartão reutilizável de um cliente
   const renderClienteCard = (cliente: any) => (
     <SwipeableCard key={cliente.id}>
@@ -318,6 +350,47 @@ const Clientes = () => {
                 </Badge>
               )}
             </div>
+
+            {/* Receita recorrente (run-rate mensal) e implantação somada no ano */}
+            {(cliente.recurringTotal > 0 || cliente.implementationThisYear > 0) && (
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <RefreshCw className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
+                      Recorrente
+                    </p>
+                  </div>
+                  <p className="text-base font-bold text-foreground tabular-nums leading-tight">
+                    {currency(cliente.recurringTotal)}
+                    <span className="text-[11px] font-normal text-muted-foreground">/mês</span>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {currency(cliente.recurringTotal * 12)}/ano
+                    {cliente.recurringThisYear > 0 && (
+                      <> · {currency(cliente.recurringThisYear)} em {currentYear}</>
+                    )}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-2.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Rocket className="h-3.5 w-3.5 text-warning shrink-0" />
+                    <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
+                      Implantação {currentYear}
+                    </p>
+                  </div>
+                  <p className="text-base font-bold text-foreground tabular-nums leading-tight">
+                    {currency(cliente.implementationThisYear)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {cliente.wonOpportunitiesCount > 0
+                      ? "fechamento" + (cliente.wonOpportunitiesCount > 1 ? "s" : "")
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
