@@ -3,11 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, ChevronLeft, ChevronRight, LayoutGrid, List, Send, TrendingUp, Wallet, Target, Layers } from "lucide-react";
+import { Building2, MapPin, Phone, Mail, ExternalLink, Calendar, Send, TrendingUp, Wallet, Target, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
 import { SwipeableCard } from "@/components/SwipeableCard";
-import { useViewMode } from "@/hooks/useViewMode";
 import { formatPhone } from "@/components/ui/masked-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ZohoEmailComposer from "@/components/ZohoEmailComposer";
@@ -15,17 +14,15 @@ import ZohoEmailComposer from "@/components/ZohoEmailComposer";
 const Clientes = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  const [viewMode, setViewMode] = useViewMode("clientes-view-mode", "cards");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [filterSeller, setFilterSeller] = useState<string>("all");
   const [initialFilterApplied, setInitialFilterApplied] = useState(false);
   const [todosClientes, setTodosClientes] = useState<any[]>([]);
-  const [somenteGanhos, setSomenteGanhos] = useState(false);
-  
-  // Quick filters for compact view
+  // Mês selecionado na linha do tempo. null = mês vigente.
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(null);
+
+  // Quick filters
   const [quickRatingFilter, setQuickRatingFilter] = useState<number | null>(null);
   const [quickRegionFilter, setQuickRegionFilter] = useState("all");
   const [emailComposer, setEmailComposer] = useState<{ open: boolean; to: string; name: string }>({ open: false, to: "", name: "" });
@@ -42,10 +39,6 @@ const Clientes = () => {
     }
   }, [currentUserId, initialFilterApplied]);
 
-  // Volta para a primeira página quando os filtros mudam
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [somenteGanhos, quickRatingFilter, quickRegionFilter, filterSeller]);
 
   const checkUserRoleAndFetch = async () => {
     try {
@@ -147,12 +140,15 @@ const Clientes = () => {
     }
   };
   
-  const filteredClientes = todosClientes.filter((cliente) => {
+  // Clientes = empresas que FECHARAM contrato (têm ao menos uma oportunidade
+  // ganha). Empresas ainda em negociação não são clientes e não aparecem aqui.
+  const clientesFechados = todosClientes.filter((c) => (c.wonOpportunitiesCount ?? 0) > 0);
+
+  const filteredClientes = clientesFechados.filter((cliente) => {
     const matchesQuickRating = quickRatingFilter === null || cliente.rating === quickRatingFilter;
     const matchesQuickRegion = quickRegionFilter === "all" || cliente.region === quickRegionFilter;
     const matchesSeller = filterSeller === "all" || cliente.profiles?.id === filterSeller;
-    const matchesWon = !somenteGanhos || (cliente.wonOpportunitiesCount ?? 0) > 0;
-    return matchesQuickRating && matchesQuickRegion && matchesSeller && matchesWon;
+    return matchesQuickRating && matchesQuickRegion && matchesSeller;
   });
 
   const currency = (value: number) =>
@@ -162,14 +158,12 @@ const Clientes = () => {
       maximumFractionDigits: 0,
     }).format(value || 0);
 
-  // Agrupamento por mês de fechamento. Clientes sem negócio ganho (sem
-  // lastWonAt) vão para um grupo separado no fim.
+  // Linha do tempo: um grupo por mês em que houve fechamento de contrato.
+  // Como a lista já é só de clientes fechados, todo grupo tem lastWonAt.
   const monthGroups = useMemo(() => {
-    const withDate = filteredClientes.filter((c) => c.lastWonAt);
-    const withoutDate = filteredClientes.filter((c) => !c.lastWonAt);
-
     const byMonth = new Map<string, any[]>();
-    withDate.forEach((cliente) => {
+    filteredClientes.forEach((cliente) => {
+      if (!cliente.lastWonAt) return;
       const d = new Date(cliente.lastWonAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       const list = byMonth.get(key) || [];
@@ -177,7 +171,7 @@ const Clientes = () => {
       byMonth.set(key, list);
     });
 
-    const groups = Array.from(byMonth.entries())
+    return Array.from(byMonth.entries())
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([key, clientes]) => {
         const [year, month] = key.split("-").map(Number);
@@ -188,6 +182,9 @@ const Clientes = () => {
         return {
           key,
           label: label.charAt(0).toUpperCase() + label.slice(1),
+          shortMonth: new Date(year, month - 1, 1)
+            .toLocaleDateString("pt-BR", { month: "short" })
+            .replace(".", ""),
           monthIndex: month - 1,
           year,
           clients: clientes.sort(
@@ -196,39 +193,27 @@ const Clientes = () => {
           totalValue: clientes.reduce((sum, c) => sum + (Number(c.totalValue) || 0), 0),
         };
       });
-
-    if (withoutDate.length > 0) {
-      groups.push({
-        key: "sem-fechamento",
-        label: "Sem negócio ganho",
-        monthIndex: -1,
-        year: 0,
-        clients: withoutDate,
-        totalValue: 0,
-      });
-    }
-
-    return groups;
   }, [filteredClientes]);
 
   const maxMonthValue = Math.max(...monthGroups.map((g) => g.totalValue), 0);
   const totalGeral = filteredClientes.reduce((s, c) => s + (Number(c.totalValue) || 0), 0);
-  const ticketMedio =
-    filteredClientes.filter((c) => (c.wonOpportunitiesCount ?? 0) > 0).length > 0
-      ? totalGeral /
-        filteredClientes.filter((c) => (c.wonOpportunitiesCount ?? 0) > 0).length
-      : 0;
+  const ticketMedio = filteredClientes.length > 0 ? totalGeral / filteredClientes.length : 0;
 
-  const paginatedGroups = monthGroups.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const currentMonthKey = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  })();
+
+  // Mês vigente sempre em destaque: se houver fechamentos nele, começa nele.
+  const activeKey =
+    selectedMonthKey ||
+    (monthGroups.some((g) => g.key === currentMonthKey)
+      ? currentMonthKey
+      : monthGroups[0]?.key || null);
+
+  const activeGroup = monthGroups.find((g) => g.key === activeKey) || null;
 
   // Sem agrupamento: lista plana (comportamento original)
-  const flatPage = filteredClientes.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
 
   // Cartão reutilizável de um cliente
   const renderClienteCard = (cliente: any) => (
@@ -257,18 +242,12 @@ const Clientes = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {(cliente.wonOpportunitiesCount ?? 0) > 0 ? (
-                <Badge className="bg-primary text-primary-foreground hover:bg-primary-dark">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  {cliente.wonOpportunitiesCount} negócio
-                  {cliente.wonOpportunitiesCount !== 1 ? "s" : ""} ganho
-                  {cliente.wonOpportunitiesCount !== 1 ? "s" : ""}
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-muted-foreground">
-                  Em negociação
-                </Badge>
-              )}
+              <Badge className="bg-primary text-primary-foreground hover:bg-primary-dark">
+                <TrendingUp className="h-3 w-3 mr-1" />
+                {cliente.wonOpportunitiesCount} negócio
+                {cliente.wonOpportunitiesCount !== 1 ? "s" : ""} ganho
+                {cliente.wonOpportunitiesCount !== 1 ? "s" : ""}
+              </Badge>
               {cliente.totalValue > 0 && (
                 <Badge variant="secondary" className="font-semibold tabular-nums">
                   {currency(cliente.totalValue)}
@@ -382,23 +361,12 @@ const Clientes = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground mb-2">Clientes</h1>
           <p className="text-muted-foreground">
-            {somenteGanhos
-              ? "Empresas com oportunidades ganhas"
-              : "Todas as empresas cadastradas"}{" "}
-            — {filteredClientes.length} cliente{filteredClientes.length !== 1 ? "s" : ""}
+            Empresas que fecharam contrato com a StartGI —{" "}
+            {filteredClientes.length} cliente{filteredClientes.length !== 1 ? "s" : ""}
             {monthGroups.length > 0 && (
               <> em {monthGroups.length} mês{monthGroups.length !== 1 ? "es" : ""} de fechamento</>
             )}
           </p>
-          <div className="mt-2">
-            <Button
-              variant={somenteGanhos ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSomenteGanhos((v) => !v)}
-            >
-              {somenteGanhos ? "Ver todas" : "Somente com negócio ganho"}
-            </Button>
-          </div>
           {filterSeller !== "all" && userRole === "vendedor" && (
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="secondary" className="text-xs">
@@ -416,10 +384,9 @@ const Clientes = () => {
           )}
         </div>
         
-        {todosClientes.length > 0 && (
+        {clientesFechados.length > 0 && (
           <div className="flex flex-wrap items-center gap-3">
-            {viewMode === 'compact' && (
-              <div className="flex items-center gap-2 animate-fade-in">
+            <div className="flex items-center gap-2">
                 <Select value={quickRatingFilter?.toString() || "all"} onValueChange={(v) => setQuickRatingFilter(v === "all" ? null : parseInt(v))}>
                   <SelectTrigger className="h-9 w-full">
                     <SelectValue placeholder="Todos Ratings" />
@@ -447,28 +414,6 @@ const Clientes = () => {
                   </SelectContent>
                 </Select>
               </div>
-            )}
-
-            <div className="flex items-center gap-1 bg-muted p-1 rounded-md">
-              <Button
-                size="sm"
-                variant={viewMode === "cards" ? "secondary" : "ghost"}
-                onClick={() => setViewMode("cards")}
-                className="h-8 px-3"
-              >
-                <LayoutGrid className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Por mês</span>
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "compact" ? "secondary" : "ghost"}
-                onClick={() => setViewMode("compact")}
-                className="h-8 px-3"
-              >
-                <List className="h-4 w-4" />
-                <span className="ml-2 hidden sm:inline">Lista</span>
-              </Button>
-            </div>
           </div>
         )}
       </div>
@@ -539,130 +484,162 @@ const Clientes = () => {
           <CardContent className="p-12 text-center">
             <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
             <p className="text-muted-foreground">
-              Nenhum cliente cadastrado ainda. Clientes aparecem aqui quando são
-              cadastrados no sistema.
+              Nenhuma empresa cadastrada no sistema ainda.
+            </p>
+          </CardContent>
+        </Card>
+      ) : clientesFechados.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
+            <p className="text-muted-foreground">
+              Nenhuma empresa fechou contrato ainda. Aqui aparecem apenas as
+              empresas com negócio ganho — as que estão em negociação ficam no
+              módulo de Prospects.
             </p>
           </CardContent>
         </Card>
       ) : (
         <>
-          {viewMode === "cards" ? (
-            /* agrupado por mês */
-            <div key="mes" className="space-y-8 animate-fade-in">
-              {paginatedGroups.map((group) => {
-                const share = maxMonthValue > 0 ? (group.totalValue / maxMonthValue) * 100 : 0;
-                return (
-                  <section key={group.key} className="space-y-4">
-                    <div className="sticky top-0 z-10 -mx-1 px-1 py-3 bg-background/85 backdrop-blur-sm">
-                      <div className="flex items-center justify-between gap-4 flex-wrap">
-                        <div className="flex items-center gap-3">
-                          <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0">
-                            <span className="text-[10px] uppercase leading-none opacity-90">
-                              {group.monthIndex >= 0
-                                ? new Date(group.year, group.monthIndex, 1)
-                                    .toLocaleDateString("pt-BR", { month: "short" })
-                                    .replace(".", "")
-                                    .toUpperCase()
-                                : "—"}
-                            </span>
-                            <span className="text-lg font-bold leading-tight">
-                              {group.monthIndex >= 0 ? group.year : "•"}
-                            </span>
-                          </div>
-                          <div>
-                            <h2 className="text-xl font-bold text-foreground leading-tight">
-                              {group.label}
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              {group.clients.length} cliente
-                              {group.clients.length !== 1 ? "s" : ""}
-                              {group.clients.length > 1 && group.totalValue > 0
-                                ? " · soma dos fechamentos do mês"
-                                : ""}
-                            </p>
-                          </div>
-                        </div>
-
-                        {group.totalValue > 0 && (
-                          <div className="text-right">
-                            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                              Receita do mês
-                            </p>
-                            <p className="text-2xl font-bold text-primary tabular-nums">
-                              {currency(group.totalValue)}
-                            </p>
-                          </div>
+          {/* LINHA DO TEMPO: um item por mês de fechamento */}
+          {monthGroups.length > 0 && (
+            <div className="relative">
+              <div className="absolute left-0 right-0 top-[38px] h-0.5 bg-border" />
+              <div className="relative flex gap-2 overflow-x-auto pb-3">
+                {monthGroups.map((group) => {
+                  const isActive = group.key === activeKey;
+                  const isCurrent = group.key === currentMonthKey;
+                  const share =
+                    maxMonthValue > 0 ? (group.totalValue / maxMonthValue) * 100 : 0;
+                  return (
+                    <button
+                      key={group.key}
+                      type="button"
+                      onClick={() => setSelectedMonthKey(group.key)}
+                      className={`relative shrink-0 w-[104px] rounded-xl border p-2.5 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        isActive
+                          ? "border-primary bg-primary text-primary-foreground shadow-md -translate-y-0.5"
+                          : "border-border bg-card hover:border-primary/50 hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <span
+                          className={`text-[11px] font-semibold uppercase tracking-wide ${
+                            isActive ? "opacity-90" : "text-muted-foreground"
+                          }`}
+                        >
+                          {group.shortMonth}
+                        </span>
+                        {isCurrent && (
+                          <span
+                            className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
+                              isActive
+                                ? "bg-primary-foreground/20 text-primary-foreground"
+                                : "bg-primary/15 text-primary"
+                            }`}
+                          >
+                            hoje
+                          </span>
                         )}
                       </div>
-
-                      {maxMonthValue > 0 && group.totalValue > 0 && (
-                        <div className="mt-3 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-primary to-primary-light transition-all duration-500"
-                            style={{ width: `${Math.max(share, 4)}%` }}
-                          />
-                        </div>
+                      <p
+                        className={`text-lg font-bold leading-tight ${
+                          isActive ? "" : "text-foreground"
+                        }`}
+                      >
+                        {group.year}
+                      </p>
+                      <p
+                        className={`text-[11px] ${
+                          isActive ? "opacity-90" : "text-muted-foreground"
+                        }`}
+                      >
+                        {group.clients.length} cliente
+                        {group.clients.length !== 1 ? "s" : ""}
+                      </p>
+                      {group.totalValue > 0 && (
+                        <p
+                          className={`text-[11px] font-semibold tabular-nums truncate ${
+                            isActive ? "" : "text-primary"
+                          }`}
+                        >
+                          {currency(group.totalValue)}
+                        </p>
                       )}
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {group.clients.map((cliente: any) => renderClienteCard(cliente))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          ) : (
-            /* lista plana */
-            <div key="lista" className="space-y-3 animate-fade-in">
-              {flatPage.map((cliente) => renderClienteCard(cliente))}
+                      <div
+                        className={`mt-1.5 h-1 w-full rounded-full overflow-hidden ${
+                          isActive ? "bg-primary-foreground/25" : "bg-muted"
+                        }`}
+                      >
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isActive ? "bg-primary-foreground" : "bg-primary"
+                          }`}
+                          style={{ width: `${Math.max(share, 6)}%` }}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
 
-          {/* Paginação */}
-          {(() => {
-            const totalPages = Math.ceil(
-              (viewMode === "cards" ? monthGroups.length : filteredClientes.length) /
-                itemsPerPage,
-            );
-            if (totalPages <= 1) return null;
-            const first = (currentPage - 1) * itemsPerPage + 1;
-            const last = Math.min(currentPage * itemsPerPage,
-              viewMode === "cards" ? monthGroups.length : filteredClientes.length);
-            const unit = viewMode === "cards" ? "mês" : "cliente";
-            return (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {first} a {last} de{" "}
-                {viewMode === "cards" ? monthGroups.length : filteredClientes.length}{" "}
-                {unit}
-                {totalPages > 1 && `s`}
+          {/* Empresa(s) que fecharam no mês selecionado */}
+          {activeGroup ? (
+            <section key={activeGroup.key} className="space-y-4 animate-fade-in">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-primary text-primary-foreground shadow-sm shrink-0">
+                    <span className="text-[10px] uppercase leading-none opacity-90">
+                      {activeGroup.shortMonth}
+                    </span>
+                    <span className="text-lg font-bold leading-tight">
+                      {activeGroup.year}
+                    </span>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-foreground leading-tight">
+                      {activeGroup.label}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {activeGroup.clients.length} empresa
+                      {activeGroup.clients.length !== 1 ? "s" : ""} fechou
+                      {activeGroup.clients.length !== 1 ? "am" : ""} contrato com a StartGI
+                      {activeGroup.clients.length > 1 && activeGroup.totalValue > 0
+                        ? " · soma dos fechamentos do mês"
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+
+                {activeGroup.totalValue > 0 && (
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Receita do mês
+                    </p>
+                    <p className="text-2xl font-bold text-primary tabular-nums">
+                      {currency(activeGroup.totalValue)}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                  }
-                  disabled={currentPage === totalPages}
-                >
-                  Próxima
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {activeGroup.clients.map((cliente: any) => renderClienteCard(cliente))}
               </div>
-            </div>
-            );
-          })()}
+            </section>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Building2 className="mx-auto mb-4 text-muted-foreground" size={48} />
+                <p className="text-muted-foreground">
+                  Nenhuma empresa com contrato fechado no período selecionado.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
         </>
       )}
 

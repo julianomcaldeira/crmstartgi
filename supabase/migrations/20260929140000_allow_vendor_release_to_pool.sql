@@ -1,27 +1,31 @@
--- Corrige a liberação de contas para a Carteira de Contas Disponíveis (pool).
+-- Alinhamento defensivo da liberação de contas para a Carteira de Contas
+-- Disponíveis (pool = created_by IS NULL).
 --
--- Problema: um vendedor (dono da conta) não conseguia liberar a própria conta
--- para a carteira disponível. A causa era a policy RLS de UPDATE em clients:
+-- IMPORTANTE — o que esta migration NÃO é:
+-- Esta migration não é a correção do bloqueio que impedia o vendedor de
+-- liberar a própria conta. Aquele bloqueio era de FRONTEND (botão restrito a
+-- admin/gestor/pre_vendas e update em lote direto na tabela) e já foi
+-- corrigido no código. Além disso, a RPC transfer_client_owner já autorizava
+-- o dono desde a migration 20260929130000.
 --
---   "Owners can update own clients ..." WITH CHECK (
---     has_role(vendedor) AND is_active_profile(created_by)
---   )
+-- Por que este arquivo existe então:
+--   1) created_by já é nullable desde 20260831100200 — o ALTER abaixo é
+--      idempotente e não muda nada, mas documenta a invariante do pool;
+--   2) as policies de UPDATE abaixo passam a aceitar created_by IS NULL.
+--      Isso NÃO era o que travava a RPC (SECURITY DEFINER ignora RLS), mas
+--      mantinha o update direto em clients restrito a donors ativos. Com a
+--      coluna nullable, esse update direto passaria a falhar em WITH CHECK
+--      para qualquer writes que não fosse pela RPC;
+--   3) a RPC é recriada sem mudança de comportamento em relação à 130000
+--      (mesma autorização, mesma propagação de oportunidades em aberto).
 --
--- Ao liberar para o pool, created_by vira NULL e is_active_profile(NULL) é
--- false, então o WITH CHECK reprovava a linha — tanto no caminho direto
--- (.update) quanto como verificação secundária. Além disso a coluna
--- created_by precisava estar sem NOT NULL.
---
--- Esta migration:
---   1) garante created_by nullable (pool = created_by IS NULL);
---   2) ajusta as policies de UPDATE para aceitar created_by IS NULL;
---   3) mantém a RPC transfer_client_owner authorize o dono a liberar a si
---      mesmo (sem depender de roles além de vendedor/pre_vendas/gestor/admin).
+-- Em resumo: aplicação é segura e idempotente, mas o problema reportado já
+-- estava resolvido pelo frontend + pela 20260929130000.
 
--- 1) Permite created_by NULL (carteira disponível)
+-- 1) Invariante do pool: created_by pode ser NULL (idempotente)
 ALTER TABLE public.clients ALTER COLUMN created_by DROP NOT NULL;
 
--- 2) Policies de UPDATE que aceitam liberar para o pool (created_by -> NULL)
+-- 2) Policies de UPDATE coerentes com created_by nullable.
 DROP POLICY IF EXISTS "Owners can update own clients and transfer to active users" ON public.clients;
 CREATE POLICY "Owners can update own clients and transfer to active users"
 ON public.clients
@@ -52,7 +56,7 @@ WITH CHECK (
   created_by IS NULL OR public.is_active_profile(created_by)
 );
 
--- 3) Recria a RPC para que o vendedor (dono) possa liberar para o pool.
+-- 3) Recria a RPC sem alterar o comportamento já válido da 130000.
 --    O usuário "pool" continua sendo SOMENTE o virtual (carteira@pool.evolua);
 --    nunca um usuário real. O dono (vendedor) é autorizado a liberar a si mesmo.
 CREATE OR REPLACE FUNCTION public.transfer_client_owner(_client_id uuid, _new_owner_id uuid)
