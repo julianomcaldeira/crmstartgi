@@ -64,114 +64,97 @@ const Clientes = () => {
 
   const fetchClientes = async () => {
     try {
-      // Buscar TODAS as contas. Usamos LEFT JOIN (sem "!inner") para que
-      // empresas sem oportunidade ganha também apareçam — antes o "!inner"
-      // com status='won' ocultava contas sem negócio ganho.
-      // Paginação é obrigatória aqui: o PostgREST corta em 1000 linhas por
-      // padrão, e o select aninhado de opportunities conta como linha. Sem
-      // isso, clientes e fechamentos mais antigos que o corte simplesmente não
-      // chegavam ao navegador — por isso a linha do tempo trazia poucos meses.
-      const todos = await fetchAllPaged<any>(async (from, to) => {
+      // Começamos pelas OPORTUNIDADES GANHAS, não pelos clientes.
+      // A versão anterior buscava todos os clientes com o select aninhado de
+      // opportunities e só depois filtrava por status='won' — ou seja, paginava
+      // dezenas de milhares de linhas (a maioria irrelevante) e ainda fazia um
+      // round-trip de atividades por bloco. Era a lentidão.
+      const wonOpps = await fetchAllPaged<any>(async (from, to) => {
         const { data, error } = await supabase
-          .from("clients")
+          .from("opportunities")
           .select(
             `
-          *,
-          opportunities(id, status, value, created_at),
-          profiles:created_by(id, full_name, email)
-        `,
+            id, value, created_at, client_id,
+            clients(
+              *,
+              profiles:created_by(id, full_name, email)
+            )
+          `,
           )
-          .order("company_name")
+          .eq("status", "won")
           .order("id")
           .range(from, to);
         if (error) throw error;
         return data || [];
+      }, 500);
+
+      // Data real de fechamento: registro de status_change para "Ganho".
+      //
+      // NÃO usar updated_at: o trigger update_opportunities_updated_at
+      // (BEFORE UPDATE) reescreve updated_at = NOW() em qualquer update, e há 9
+      // migrations que fazem UPDATE em opportunities — os fechamentos caíam
+      // nos meses das migrations. created_at é estável e é o último recurso.
+      const atividades = await fetchAllPaged<any>(async (from, to) => {
+        const { data, error } = await supabase
+          .from("opportunity_activities")
+          .select("opportunity_id, created_at")
+          .eq("new_value", "Ganho")
+          .order("created_at", { ascending: true })
+          .order("id")
+          .range(from, to);
+        if (error) throw error;
+        return data || [];
+      }, 1000);
+
+      // Primeiro "Ganho" de cada oportunidade = data em que foi fechada.
+      const wonAtByOpp = new Map<string, string>();
+      atividades.forEach((a: any) => {
+        if (!wonAtByOpp.has(a.opportunity_id)) {
+          wonAtByOpp.set(a.opportunity_id, a.created_at);
+        }
       });
 
-      const data = todos;
+      // Uma linha por cliente, agregando suas oportunidades ganhas.
+      const byClient = new Map<string, any>();
+      wonOpps.forEach((opp: any) => {
+        const client = opp.clients;
+        if (!client) return;
 
-      // Data real de fechamento: quando a oportunidade mudou para "Ganho",
-      // registrada em opportunity_activities.
-      //
-      // NÃO usar updated_at como fallback: existe o trigger
-      // update_opportunities_updated_at (BEFORE UPDATE) que reescreve
-      // updated_at = NOW() em qualquer update, e há Various migrations que
-      // fazem UPDATE em opportunities. Isso fazia todos os fechamentos caírem
-      // nos meses em que as migrations rodaram, colapsando a linha do tempo.
-      // created_at é estável (nunca é reescrito) e serve de último recurso.
-      const wonOpportunityIds = (data || [])
-        .flatMap((c: any) => ((c.opportunities || []) as any[]))
-        .filter((o) => o.status === "won")
-        .map((o) => o.id);
+        const wonAt = wonAtByOpp.get(opp.id) || opp.created_at;
 
-      const wonAtByOpp = new Map<string, string>();
-      if (wonOpportunityIds.length > 0) {
-        const CHUNK = 200;
-        for (let i = 0; i < wonOpportunityIds.length; i += CHUNK) {
-          const chunk = wonOpportunityIds.slice(i, i + CHUNK);
-          const { data: acts } = await supabase
-            .from("opportunity_activities")
-            .select("opportunity_id, created_at")
-            .in("opportunity_id", chunk)
-            .eq("new_value", "Ganho")
-            .order("created_at", { ascending: true });
-
-          (acts || []).forEach((a: any) => {
-            if (!wonAtByOpp.has(a.opportunity_id)) {
-              wonAtByOpp.set(a.opportunity_id, a.created_at);
-            }
+        if (!byClient.has(client.id)) {
+          byClient.set(client.id, {
+            ...client,
+            opportunities: [],
+            wonOpportunitiesCount: 0,
+            totalValue: 0,
+            lastWonAt: null,
           });
         }
-      }
-
-      // Normalizar: separa ganhas (won) de todas e calcula o resumo
-      const clientesNormalizados = (data || []).map((client: any) => {
-        const opps = (client.opportunities || []) as any[];
-        const wonOpps = opps.filter((o) => o.status === "won");
-
-        const resolved = wonOpps.map((o) => ({
-          ...o,
-          wonAt: wonAtByOpp.get(o.id) || o.created_at,
-        }));
-
-        const totalValue = resolved.reduce((sum, o) => sum + (Number(o.value) || 0), 0);
-
-        // Cliente aparece no mês do fechamento mais recente
-        const lastWonAt = resolved
-          .map((o) => o.wonAt)
-          .filter(Boolean)
-          .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
-
-        return {
-          ...client,
-          wonOpportunitiesCount: resolved.length,
-          totalValue,
-          lastWonAt: lastWonAt || null,
-          wonOpportunities: resolved,
-        };
+        const entry = byClient.get(client.id);
+        entry.opportunities.push({ ...opp, wonAt });
+        entry.wonOpportunitiesCount += 1;
+        entry.totalValue += Number(opp.value) || 0;
+        if (!entry.lastWonAt || new Date(wonAt) > new Date(entry.lastWonAt)) {
+          entry.lastWonAt = wonAt;
+        }
       });
 
+      const clientesNormalizados = Array.from(byClient.values());
       setTodosClientes(clientesNormalizados);
 
-      // Diagnóstico: confirma nos logs se a paginação trouxe todos os clients
-      // e quantos fechamentos caem em cada mês.
-      const fechamentosPorMes = clientesNormalizados
-        .filter((c: any) => c.lastWonAt)
-        .reduce((acc: Record<string, number>, c: any) => {
-          const d = new Date(c.lastWonAt);
-          const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-          acc[k] = (acc[k] || 0) + 1;
-          return acc;
-        }, {});
+      const fechamentosPorMes: Record<string, number> = {};
+      wonOpps.forEach((o: any) => {
+        const d = new Date(wonAtByOpp.get(o.id) || o.created_at);
+        const k = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+        fechamentosPorMes[k] = (fechamentosPorMes[k] || 0) + 1;
+      });
       console.log("[Clientes] diagnostico", {
-        clientesRecebidos: clientesNormalizados.length,
+        wonOpps: wonOpps.length,
+        clientes: clientesNormalizados.length,
+        atividadesGanho: atividades.length,
+        semAtividade: wonOpps.filter((o: any) => !wonAtByOpp.has(o.id)).length,
         fechamentosPorMes,
-        comAtividade: [...wonAtByOpp.keys()].length,
-        semAtividadeUsandoCreatedAt: clientesNormalizados.filter(
-          (c: any) =>
-            c.lastWonAt &&
-            !(c.wonOpportunities || []).some((o: any) => wonAtByOpp.get(o.id) === o.wonAt),
-        ).length,
       });
     } catch (error) {
       console.error("Error fetching clientes:", error);
@@ -246,7 +229,18 @@ const Clientes = () => {
     // não tiveram fechamento, para a linha do tempo não ter buracos.
     const keys = Array.from(byMonth.keys()).sort((a, b) => a.localeCompare(b));
     const [startYear, startMonth] = keys[0].split("-").map(Number);
-    const [endYear, endMonth] = keys[keys.length - 1].split("-").map(Number);
+    let [endYear, endMonth] = keys[keys.length - 1].split("-").map(Number);
+
+    // A linha do tempo sempre vai até o MÊS VIGENTE. Antes terminava no último
+    // mês que teve fechamento, então se o último foi julho, agosto e setembro
+    // nunca apareciam — parecendo que a tela estava truncada.
+    const now = new Date();
+    const nowYear = now.getUTCFullYear();
+    const nowMonth = now.getUTCMonth() + 1;
+    if (nowYear > endYear || (nowYear === endYear && nowMonth > endMonth)) {
+      endYear = nowYear;
+      endMonth = nowMonth;
+    }
 
     const timeline: string[] = [];
     let y = startYear;
