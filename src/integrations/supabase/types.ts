@@ -3589,6 +3589,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_rename_profile: {
+        Args: { _new_name: string; _user_id: string }
+        Returns: boolean
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
