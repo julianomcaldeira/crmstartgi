@@ -110,6 +110,9 @@ const Admin = () => {
   // User management state
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [userToDeactivate, setUserToDeactivate] = useState<any>(null);
+  const [userToRename, setUserToRename] = useState<any>(null);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newDisplayName, setNewDisplayName] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [processingUser, setProcessingUser] = useState(false);
@@ -347,6 +350,29 @@ const Admin = () => {
       fetchUsers();
     } catch (error: any) {
       toast.error("Erro ao reativar acesso: " + error.message);
+    }
+  };
+
+  const handleRenameUser = async () => {
+    if (!userToRename || !newDisplayName.trim()) {
+      toast.error("Digite o novo nome de exibição");
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: newDisplayName.trim() })
+        .eq("id", userToRename.id);
+
+      if (error) throw error;
+
+      toast.success(`Carteira renomeada para ${newDisplayName.trim()}!`);
+      setRenameDialogOpen(false);
+      setUserToRename(null);
+      setNewDisplayName("");
+      fetchUsers();
+    } catch (error: any) {
+      toast.error("Erro ao renomear: " + error.message);
     }
   };
 
@@ -1007,6 +1033,18 @@ const Admin = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Renomear carteira (nome de exibição)"
+                        onClick={() => {
+                          setUserToRename(user);
+                          setNewDisplayName(user.full_name || "");
+                          setRenameDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       {user.user_roles?.[0]?.role ? (
                         <Select
                           value={user.user_roles[0].role}
@@ -1122,6 +1160,42 @@ const Admin = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Rename User Dialog */}
+          <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+            <DialogContent className="sm:max-w-[440px]">
+              <DialogHeader>
+                <DialogTitle>Renomear carteira</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  Alterando o nome de exibição de <strong className="text-foreground">{userToRename?.full_name}</strong> ({userToRename?.email}).
+                  O histórico e os prospects são mantidos.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="newDisplayName">Novo nome</Label>
+                  <Input
+                    id="newDisplayName"
+                    placeholder="Ex: Laís Miranda"
+                    value={newDisplayName}
+                    onChange={(e) => setNewDisplayName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleRenameUser}
+                  disabled={!newDisplayName.trim()}
+                  className="bg-primary hover:bg-primary-dark text-primary-foreground"
+                >
+                  Salvar nome
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="transfer" className="space-y-4">
