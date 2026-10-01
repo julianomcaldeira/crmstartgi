@@ -358,21 +358,48 @@ const Admin = () => {
       toast.error("Digite o novo nome de exibição");
       return;
     }
+    const cleanName = newDisplayName.trim();
+    // 1) Tenta UPDATE direto (PATCH)
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: newDisplayName.trim() })
+        .update({ full_name: cleanName })
         .eq("id", userToRename.id);
 
       if (error) throw error;
 
-      toast.success(`Carteira renomeada para ${newDisplayName.trim()}!`);
+      toast.success(`Carteira renomeada para ${cleanName}!`);
       setRenameDialogOpen(false);
       setUserToRename(null);
       setNewDisplayName("");
       fetchUsers();
-    } catch (error: any) {
-      toast.error("Erro ao renomear: " + error.message);
+      return;
+    } catch (firstError: any) {
+      const firstMsg = firstError?.message || String(firstError);
+      // 2) Fallback via RPC (POST) — contorna bloqueio de PATCH na rede
+      try {
+        const { data, error: rpcError } = await (supabase as any).rpc("admin_rename_profile", {
+          _user_id: userToRename.id,
+          _new_name: cleanName,
+        });
+
+        if (rpcError) throw rpcError;
+        if (!data) throw new Error("Nenhum usuário foi atualizado");
+
+        toast.success(`Carteira renomeada para ${cleanName}!`);
+        setRenameDialogOpen(false);
+        setUserToRename(null);
+        setNewDisplayName("");
+        fetchUsers();
+        return;
+      } catch (secondError: any) {
+        const secondMsg = secondError?.message || String(secondError);
+        if (import.meta.env.DEV) console.error("Rename failed (PATCH + RPC):", firstMsg, secondMsg);
+        toast.error("Não foi possível renomear", {
+          description: `Detalhe: ${secondMsg} (direto: ${firstMsg}). Verifique a conexão, desative bloqueadores de anúncio ou tente outra rede/navegador.`,
+          duration: 9000,
+        });
+      }
     }
   };
 
