@@ -687,10 +687,15 @@ const Prospects = () => {
 
   const canManageTransfers = userRoles.includes('admin') || userRoles.includes('gestor') || userRoles.includes('pre_vendas');
 
+  const isPoolClient = (client: any) => !client?.created_by || client.created_by === poolUserId;
+
+  // Dono libera/transfere a própria conta; admin/gestor/pré-vendas gerenciam
+  // qualquer conta, inclusive atribuir contas da carteira disponível.
   const canTransferClient = (client: any) => {
-    if (!currentUserId || !client?.created_by) return false;
-    const isOwner = client.created_by === currentUserId;
-    return isOwner || canManageTransfers;
+    if (!currentUserId || !client) return false;
+    if (canManageTransfers) return true;
+    if (isPoolClient(client)) return false;
+    return client.created_by === currentUserId;
   };
 
   const handleDeleteClick = (e: React.MouseEvent, client: any) => {
@@ -760,14 +765,14 @@ const Prospects = () => {
       return;
     }
 
-    if (!canTransferClient(prospectToTransfer) && selectedNewSeller !== "__POOL__") {
-      toast.error("Você não tem permissão para transferir este prospect");
+    if (!canTransferClient(prospectToTransfer)) {
+      toast.error("Você não tem permissão para transferir esta empresa");
       return;
     }
 
     // Transferir para carteira disponível (liberar)
     if (selectedNewSeller === "__POOL__") {
-      if (!prospectToTransfer.created_by || prospectToTransfer.created_by === poolUserId) {
+      if (isPoolClient(prospectToTransfer)) {
         toast.error("Esta empresa já está na carteira disponível");
         return;
       }
@@ -780,41 +785,14 @@ const Prospects = () => {
         if (error) throw error;
         if (!data) throw new Error("Nenhuma empresa foi atualizada");
 
-        toast.success("Empresa liberada para carteira disponível!");
+        toast.success("Empresa liberada para a carteira disponível!");
         setTransferDialogOpen(false);
         setProspectToTransfer(null);
         setSelectedNewSeller("");
         fetchClients();
       } catch (error: any) {
-        const msg = error?.message || "";
-        // A carteira disponível é representada por created_by IS NULL. Se o
-        // banco ainda rejeitar NULL, a migration 20260831100200 (ou a
-        // 20260929140000) não foi aplicada — orientamos sem usar usuário real
-        // como pool, que nunca deve acontecer.
-        if (msg.includes("não está ativo") || msg.includes("null value")) {
-          toast.error("Carteira disponível ainda não liberada no banco", {
-            description:
-              "Aplique a migration 20260929140000_allow_vendor_release_to_pool.sql no Supabase (ou peça ao admin para publicá-la no Lovable).",
-            duration: 10000,
-          });
-          return;
-        }
-        if (msg.includes("Sem permissão para liberar")) {
-          toast.error("Sem permissão para liberar", {
-            description: "Apenas o dono da conta ou gestores/pre_vendas podem liberar.",
-          });
-          return;
-        }
-        if (msg.includes("row-level security") || msg.includes("violates row-level security")) {
-          toast.error("Sem permissão para liberar", {
-            description:
-              "O banco bloqueou a operação. Aplique a migration 20260929140000_allow_vendor_release_to_pool.sql.",
-            duration: 10000,
-          });
-          return;
-        }
         toast.error("Erro ao liberar empresa", {
-          description: msg || "Tente novamente.",
+          description: error?.message || "Tente novamente.",
         });
       }
       return;
