@@ -2052,7 +2052,7 @@ const Prospects = () => {
                             Carteira Disponível
                           </span>
                         </div>
-                        <p className="text-xs text-muted-foreground">Clique em Assumir para pegar</p>
+                        <p className="text-xs text-muted-foreground">Sem responsável — clique em Assumir</p>
                       </div>
                     )}
                     
@@ -2070,7 +2070,7 @@ const Prospects = () => {
                           </Button>
                         </>
                       )}
-                      {(canTransferClient(client) || !!client.created_by) && (
+                      {canTransferClient(client) && (
                         <Button
                           variant="outline"
                           size="icon"
@@ -2210,7 +2210,7 @@ const Prospects = () => {
                         </Button>
                       </>
                     )}
-                    {(canTransferClient(client) || !!client.created_by) && (
+                    {canTransferClient(client) && (
                       <Button
                         variant="outline"
                         size="icon"
@@ -2438,7 +2438,7 @@ const Prospects = () => {
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Transferir Empresa</DialogTitle>
+            <DialogTitle>{isPoolClient(prospectToTransfer) ? "Atribuir Empresa" : "Transferir Empresa"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -2455,11 +2455,17 @@ const Prospects = () => {
                   <SelectValue placeholder="Selecione o destino" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__POOL__" className="font-medium text-primary">
-                    📦 Carteira de Contas Disponíveis
-                  </SelectItem>
+                  {!isPoolClient(prospectToTransfer) && (
+                    <SelectItem value="__POOL__" className="font-medium text-primary">
+                      📦 Carteira de Contas Disponíveis
+                    </SelectItem>
+                  )}
                   {sellers
-                    .filter(seller => seller.id !== currentUserId && seller.id !== prospectToTransfer?.created_by)
+                    .filter(seller =>
+                      seller.id !== poolUserId &&
+                      seller.id !== prospectToTransfer?.created_by &&
+                      (seller.id !== currentUserId || isPoolClient(prospectToTransfer))
+                    )
                     .map((seller) => (
                       <SelectItem key={seller.id} value={seller.id}>
                         {seller.full_name}
@@ -2493,7 +2499,7 @@ const Prospects = () => {
               variant={selectedNewSeller === "__POOL__" ? "default" : "default"}
               className={selectedNewSeller === "__POOL__" ? "bg-amber-600 hover:bg-amber-700" : ""}
             >
-              {selectedNewSeller === "__POOL__" ? "Liberar para Carteira" : "Transferir Empresa"}
+              {selectedNewSeller === "__POOL__" ? "Liberar para Carteira" : isPoolClient(prospectToTransfer) ? "Atribuir Empresa" : "Transferir Empresa"}
             </Button>
           </div>
         </DialogContent>
