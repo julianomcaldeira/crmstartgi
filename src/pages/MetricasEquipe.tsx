@@ -1,14 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Trophy,
   Target,
@@ -16,12 +8,11 @@ import {
   TrendingUp,
   ListTodo,
   Activity,
-  CheckCircle2,
   Calendar,
   HelpCircle,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -36,7 +27,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { fetchAllPaged } from "@/lib/fetchAllPaged";
 
@@ -222,6 +212,33 @@ const MONTH_LABELS = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
+
+const MONETARY_TYPES = new Set(["revenue", "annualized_sales"]);
+const isMonetary = (t: string) => MONETARY_TYPES.has(t);
+
+type Status = "done" | "ahead" | "on" | "late" | "none";
+
+const STATUS_META: Record<
+  Status,
+  { label: string; bar: string; chip: string; text: string; edge: string }
+> = {
+  done:  { label: "Meta batida", bar: "bg-success",            chip: "bg-success/15 text-success border-success/30",            text: "text-success",            edge: "border-l-success" },
+  ahead: { label: "À frente",   bar: "bg-success/70",        chip: "bg-success/10 text-success border-success/25",            text: "text-success",            edge: "border-l-success/70" },
+  on:    { label: "No ritmo",    bar: "bg-primary",          chip: "bg-primary/10 text-primary border-primary/25",            text: "text-primary",            edge: "border-l-primary" },
+  late:  { label: "Atrasado",    bar: "bg-destructive",      chip: "bg-destructive/10 text-destructive border-destructive/30", text: "text-destructive",        edge: "border-l-destructive" },
+  none:  { label: "Sem meta",    bar: "bg-muted-foreground/30", chip: "bg-muted/50 text-muted-foreground border-border",         text: "text-muted-foreground",   edge: "border-l-border" },
+};
+
+const heatClass = (pct: number, target: number, achieved: number, isFuture: boolean) => {
+  if (target === 0) return achieved > 0 ? "bg-primary/25" : "bg-muted/40";
+  if (isFuture) return "bg-muted/15 border border-dashed border-border";
+  if (pct >= 100) return "bg-success text-white";
+  if (pct >= 80) return "bg-success/45";
+  if (pct >= 60) return "bg-primary/55";
+  if (pct >= 40) return "bg-primary/30";
+  if (pct > 0) return "bg-destructive/45";
+  return "bg-destructive";
+};
 
 const MetricasEquipe = () => {
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -493,614 +510,445 @@ const MetricasEquipe = () => {
     }
   };
 
-  const getCellClass = (pct: number, target: number, isFuture: boolean) => {
-    if (target === 0) return "bg-muted/30 text-muted-foreground";
-    if (isFuture) return "bg-muted/20 text-muted-foreground";
-    if (pct >= 100) return "bg-success/15 text-success font-semibold";
-    if (pct >= 70) return "bg-warning/15 text-warning font-medium";
-    if (pct > 0) return "bg-destructive/10 text-destructive";
-    return "bg-muted/30 text-muted-foreground";
-  };
-
   const currentMonthIdx =
     new Date().getFullYear() === year ? new Date().getMonth() : -1;
+
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [view, setView] = useState<"ranking" | "grade">("ranking");
+
+  // ── Ritmo ────────────────────────────────────────────────────────────────
+  // O "% atingido" isolado não diz nada: 84% em março está atrasado, 84% em
+  // novembro está excelente. Todo status da tela vem do DESVIO para o ritmo
+  // linear do ano, não do percentual bruto.
+  const paceFraction = useMemo(() => {
+    const nowYear = new Date().getFullYear();
+    if (year < nowYear) return 1;
+    if (year > nowYear) return 0;
+    return (new Date().getMonth() + 1) / 12;
+  }, [year]);
+  const pacePct = paceFraction * 100;
+
+  const statusOf = (pct: number, hasTarget: boolean): Status => {
+    if (!hasTarget) return "none";
+    if (pct >= 100) return "done";
+    const gap = pct - pacePct;
+    if (gap >= 5) return "ahead";
+    if (gap > -5) return "on";
+    return "late";
+  };
+
+  const compact = (v: number) => {
+    if (Math.abs(v) >= 1000000)
+      return `R$ ${(v / 1000000).toFixed(1).replace(".", ",")}M`;
+    if (Math.abs(v) >= 1000) return `R$ ${Math.round(v / 1000)}k`;
+    return formatCurrency(v);
+  };
+
+  // Fechamentos sem vendedor vinculado não pertencem a nenhum cartão individual,
+  // mas precisam aparecer no total da empresa.
+  const nonSellerGoals = useMemo(() => {
+    const build = (type: string, buckets: number[]): GoalWithMonths => {
+      const months: MonthCell[] = buckets.map((achieved) => ({
+        target: 0,
+        achieved,
+        percentage: 0,
+      }));
+      return {
+        id: `nao-vendedor-${type}`,
+        title: type === "revenue" ? "Receita sem vendedor" : "Venda anualizada sem vendedor",
+        goal_type: type,
+        period: "mensal",
+        target_value: 0,
+        start_date: "",
+        end_date: "",
+        assigned_to: "",
+        task_type_filter: null,
+        activity_type_filter: null,
+        months,
+        totalTarget: 0,
+        totalAchieved: buckets.reduce((a, b) => a + b, 0),
+        totalPercentage: 0,
+      };
+    };
+    return [
+      build("revenue", nonSellerAchieved.revenue),
+      build("annualized_sales", nonSellerAchieved.annualized_sales),
+    ].filter((g) => g.totalAchieved > 0);
+  }, [nonSellerAchieved]);
+
+  // Só metas monetárias entram no ranking: somar R$ com "nº de tarefas" produz
+  // um número que não significa nada. Contadores ficam em um cartão separado.
+  const team = useMemo(() => {
+    return sellers
+      .map((seller) => {
+        // Metas da empresa (goal sem assigned_to) contam para todo vendedor.
+        const goals = [
+          ...(goalsBySeller[seller.id] || []),
+          ...(companyGoalsBySeller[seller.id] || []),
+        ];
+        const money = goals.filter((g) => isMonetary(g.goal_type));
+        const counters = goals.filter((g) => !isMonetary(g.goal_type));
+        const moneyTarget = money.reduce((a, g) => a + g.totalTarget, 0);
+        const moneyAchieved = money.reduce((a, g) => a + g.totalAchieved, 0);
+        return {
+          seller,
+          goals,
+          moneyTarget,
+          moneyAchieved,
+          pct: moneyTarget > 0 ? (moneyAchieved / moneyTarget) * 100 : 0,
+          hasMoney: moneyTarget > 0,
+          counterAchieved: counters.reduce((a, g) => a + g.totalAchieved, 0),
+          counterTarget: counters.reduce((a, g) => a + g.totalTarget, 0),
+        };
+      })
+      .sort((a, b) => {
+        if (a.hasMoney !== b.hasMoney) return a.hasMoney ? -1 : 1;
+        return b.pct - a.pct;
+      });
+  }, [sellers, goalsBySeller, companyGoalsBySeller]);
+
+  const company = useMemo(() => {
+    const target = team.reduce((a, m) => a + m.moneyTarget, 0);
+    const achieved =
+      team.reduce((a, m) => a + m.moneyAchieved, 0) +
+      nonSellerGoals.reduce((a, g) => a + g.totalAchieved, 0);
+    return {
+      target,
+      achieved,
+      pct: target > 0 ? (achieved / target) * 100 : 0,
+      hasTarget: target > 0,
+    };
+  }, [team, nonSellerGoals]);
+
+  const companyStatus = statusOf(company.pct, company.hasTarget);
+  const counts = {
+    done: team.filter((m) => statusOf(m.pct, m.hasMoney) === "done").length,
+    ahead: team.filter((m) => statusOf(m.pct, m.hasMoney) === "ahead").length,
+    on: team.filter((m) => statusOf(m.pct, m.hasMoney) === "on").length,
+    late: team.filter((m) => statusOf(m.pct, m.hasMoney) === "late").length,
+  };
+
+  const isPastYear = year < new Date().getFullYear();
+
+  const renderHeat = (goal: GoalWithMonths) => (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-muted-foreground shrink-0">{getGoalTypeIcon(goal.goal_type)}</span>
+        <span className="text-sm font-medium truncate" title={goal.title}>{goal.title}</span>
+        <span className="text-[10px] uppercase text-muted-foreground shrink-0">
+          {getGoalTypeLabel(goal.goal_type)}
+        </span>
+      </div>
+      <div className="grid grid-cols-12 gap-1">
+        {goal.months.map((cell, idx) => {
+          const isFuture = currentMonthIdx >= 0 && idx > currentMonthIdx;
+          return (
+            <Tooltip key={idx}>
+              <TooltipTrigger asChild>
+                <div
+                  className={cn(
+                    "h-7 rounded cursor-help transition-colors",
+                    heatClass(cell.percentage, cell.target, cell.achieved, isFuture),
+                    idx === currentMonthIdx && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs font-semibold">{MONTH_LABELS[idx]}/{year}</p>
+                {cell.target > 0 ? (
+                  <>
+                    <p className="text-xs">Meta: {formatGoalValue(goal.goal_type, cell.target)}</p>
+                    <p className="text-xs">Realizado: {formatGoalValue(goal.goal_type, cell.achieved)}</p>
+                    <p className="text-xs font-semibold">{cell.percentage.toFixed(0)}% da meta</p>
+                  </>
+                ) : (
+                  <p className="text-xs">
+                    {cell.achieved > 0
+                      ? `${formatGoalValue(goal.goal_type, cell.achieved)} (sem meta definida)`
+                      : "Sem registro"}
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-xs text-muted-foreground">
+          {goal.totalTarget > 0
+            ? `${formatGoalValue(goal.goal_type, goal.totalAchieved)} de ${formatGoalValue(goal.goal_type, goal.totalTarget)}`
+            : formatGoalValue(goal.goal_type, goal.totalAchieved)}
+        </p>
+        {goal.totalTarget > 0 && (
+          <p className={cn("text-xs font-semibold tabular-nums", STATUS_META[statusOf(goal.totalPercentage, true)].text)}>
+            {goal.totalPercentage.toFixed(0)}%
+          </p>
+        )}
+      </div>
+    </div>
+  );
+
+  const monthHeader = (
+    <div className="grid grid-cols-12 gap-1 mb-1">
+      {MONTH_LABELS.map((m, idx) => (
+        <p
+          key={m}
+          className={cn(
+            "text-center text-[10px] font-medium",
+            idx === currentMonthIdx ? "text-primary" : "text-muted-foreground"
+          )}
+        >
+          {m}
+        </p>
+      ))}
+    </div>
+  );
 
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-light bg-clip-text text-transparent mb-2">
               Métricas de Equipe
             </h1>
             <p className="text-muted-foreground">
-              Acompanhamento mês a mês das metas de cada vendedor
+              Quem está no ritmo, quem está à frente e quem precisa de ajuda
             </p>
           </div>
-
-          <Select
-            value={String(year)}
-            onValueChange={(v) => setYear(parseInt(v))}
-          >
-            <SelectTrigger className="w-[160px]">
-              <Calendar className="mr-2 h-4 w-4" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {yearOptions.map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border p-0.5">
+              {(["ranking", "grade"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                    view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {v === "ranking" ? "Ranking" : "Grade"}
+                </button>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+            <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+              <SelectTrigger className="w-[120px]">
+                <Calendar className="mr-2 h-4 w-4" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loading ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Carregando métricas...
-            </CardContent>
-          </Card>
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Carregando métricas...</CardContent></Card>
         ) : sellers.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Nenhum vendedor encontrado.
-            </CardContent>
-          </Card>
+          <Card><CardContent className="py-12 text-center text-muted-foreground">Nenhum vendedor encontrado.</CardContent></Card>
         ) : (
           <>
-            {/* Company-wide aggregated summary */}
-            {(() => {
-              // Group goals across all sellers by a stable key:
-              // goal_type + task/activity filter so we don't mix Ligações with Propostas.
-              const aggregated = new Map<
-                string,
-                {
-                  key: string;
-                  goal_type: string;
-                  title: string;
-                  months: MonthCell[];
-                  totalTarget: number;
-                  totalAchieved: number;
-                  totalPercentage: number;
-                }
-              >();
-
-              Object.values(companyGoalsBySeller).flat().forEach((g) => {
-                const subKey =
-                  g.goal_type === "tasks"
-                    ? g.task_type_filter || "all"
-                    : g.goal_type === "activities"
-                    ? g.activity_type_filter || "all"
-                    : "all";
-                const key = `${g.goal_type}::${subKey}`;
-                let label = getGoalTypeLabel(g.goal_type);
-                if (g.goal_type === "tasks" && g.task_type_filter) {
-                  label = `Tarefas — ${g.task_type_filter}`;
-                } else if (g.goal_type === "activities" && g.activity_type_filter) {
-                  label = `Atividades — ${g.activity_type_filter}`;
-                }
-
-                const existing = aggregated.get(key);
-                if (!existing) {
-                  aggregated.set(key, {
-                    key,
-                    goal_type: g.goal_type,
-                    title: label,
-                    months: g.months.map((c) => ({ ...c })),
-                    totalTarget: g.totalTarget,
-                    totalAchieved: g.totalAchieved,
-                    totalPercentage: 0,
-                  });
-                } else {
-                  existing.months = existing.months.map((c, i) => ({
-                    target: c.target + g.months[i].target,
-                    achieved: c.achieved + g.months[i].achieved,
-                    percentage: 0,
-                  }));
-                  existing.totalTarget += g.totalTarget;
-                  existing.totalAchieved += g.totalAchieved;
-                }
-              });
-
-              // Inject achieved-only contributions from admins/gestores
-              // for revenue and annualized_sales. They add to "Realizado"
-              // but NEVER add to "Meta".
-              const injectNonSeller = (
-                goalType: "revenue" | "annualized_sales",
-                monthly: number[]
-              ) => {
-                const totalAchieved = monthly.reduce((s, v) => s + v, 0);
-                if (totalAchieved === 0) return;
-                const key = `${goalType}::all`;
-                const label = getGoalTypeLabel(goalType);
-                const existing = aggregated.get(key);
-
-                // YTD slice for total
-                const todayYear = new Date().getFullYear();
-                const todayMonth = new Date().getMonth();
-                const ytdLastIdx =
-                  year < todayYear ? 11 : year > todayYear ? -1 : todayMonth;
-                const ytdAchieved =
-                  ytdLastIdx >= 0
-                    ? monthly.slice(0, ytdLastIdx + 1).reduce((s, v) => s + v, 0)
-                    : 0;
-
-                if (!existing) {
-                  aggregated.set(key, {
-                    key,
-                    goal_type: goalType,
-                    title: label,
-                    months: monthly.map((v) => ({
-                      target: 0,
-                      achieved: v,
-                      percentage: 0,
-                    })),
-                    totalTarget: 0,
-                    totalAchieved: ytdAchieved,
-                    totalPercentage: 0,
-                  });
-                } else {
-                  existing.months = existing.months.map((c, i) => ({
-                    target: c.target,
-                    achieved: c.achieved + monthly[i],
-                    percentage: 0,
-                  }));
-                  existing.totalAchieved += ytdAchieved;
-                }
-              };
-
-              injectNonSeller("revenue", nonSellerAchieved.revenue);
-              injectNonSeller("annualized_sales", nonSellerAchieved.annualized_sales);
-
-              // Recompute percentages
-              const companyGoals = Array.from(aggregated.values()).map((g) => ({
-                ...g,
-                months: g.months.map((c) => ({
-                  ...c,
-                  percentage:
-                    c.target > 0 ? Math.min((c.achieved / c.target) * 100, 999) : 0,
-                })),
-                totalPercentage:
-                  g.totalTarget > 0 ? (g.totalAchieved / g.totalTarget) * 100 : 0,
-              }));
-
-              companyGoals.sort((a, b) => a.title.localeCompare(b.title));
-
-              if (companyGoals.length === 0) return null;
-
-              return (
-                <Card className="shadow-xl border-l-4 border-l-success bg-gradient-to-br from-success/5 to-transparent">
-                  <CardHeader>
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
-                          <Trophy className="h-5 w-5 text-success" />
-                          Total da Empresa
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Soma das metas de todos os vendedores
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="self-start sm:self-auto border-success/40 text-success">
-                        {companyGoals.length} meta{companyGoals.length !== 1 ? "s" : ""} agregada{companyGoals.length !== 1 ? "s" : ""}
-                      </Badge>
+            {/* Faixa da empresa: o número que o gerente procura primeiro */}
+            <Card className={cn("border-l-4", STATUS_META[companyStatus].edge)}>
+              <CardContent className="p-5">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="p-3 rounded-xl bg-primary/15 shrink-0">
+                      <Trophy className="h-6 w-6 text-primary" />
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
-                              Meta
-                            </TableHead>
-                            {MONTH_LABELS.map((m, idx) => (
-                              <TableHead
-                                key={m}
-                                className={cn(
-                                  "text-center min-w-[110px]",
-                                  idx === currentMonthIdx &&
-                                    "bg-primary/10 text-primary font-bold"
-                                )}
-                              >
-                                {m}
-                              </TableHead>
-                            ))}
-                            <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total YTD
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {companyGoals.map((goal) => (
-                            <Fragment key={goal.key}>
-                              <TableRow className="border-t-2">
-                                <TableCell
-                                  rowSpan={3}
-                                  className="align-top sticky left-0 bg-background z-10 border-r"
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-muted-foreground mt-0.5">
-                                      {getGoalTypeIcon(goal.goal_type)}
-                                    </span>
-                                    <div>
-                                      <p className="font-semibold text-foreground leading-tight">
-                                        {goal.title}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        Empresa
-                                      </p>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                {goal.months.map((cell, idx) => (
-                                  <TableCell
-                                    key={`ct-${idx}`}
-                                    className={cn(
-                                      "text-center text-xs text-muted-foreground",
-                                      idx === currentMonthIdx && "bg-primary/5"
-                                    )}
-                                  >
-                                    {cell.target > 0 ? (
-                                      <>
-                                        Meta:{" "}
-                                        <span className="font-medium text-foreground">
-                                          {formatGoalValue(goal.goal_type, cell.target)}
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="opacity-40">—</span>
-                                    )}
-                                  </TableCell>
-                                ))}
-                                <TableCell className="text-center text-xs bg-muted/30">
-                                  Meta:{" "}
-                                  <span className="font-bold text-foreground">
-                                    {formatGoalValue(goal.goal_type, goal.totalTarget)}
-                                  </span>
-                                </TableCell>
-                              </TableRow>
-                              <TableRow>
-                                {goal.months.map((cell, idx) => {
-                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
-                                  return (
-                                    <TableCell
-                                      key={`ca-${idx}`}
-                                      className={cn(
-                                        "text-center text-sm",
-                                        idx === currentMonthIdx && "bg-primary/5"
-                                      )}
-                                    >
-                                      {cell.target > 0 ? (
-                                        <span
-                                          className={cn(
-                                            isFuture
-                                              ? "text-muted-foreground"
-                                              : "text-foreground font-medium"
-                                          )}
-                                        >
-                                          {formatGoalValue(goal.goal_type, cell.achieved)}
-                                        </span>
-                                      ) : (
-                                        <span className="opacity-40">—</span>
-                                      )}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell className="text-center text-sm bg-muted/30 font-semibold">
-                                  {formatGoalValue(goal.goal_type, goal.totalAchieved)}
-                                </TableCell>
-                              </TableRow>
-                              <TableRow className="border-b-2">
-                                {goal.months.map((cell, idx) => {
-                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
-                                  return (
-                                    <TableCell
-                                      key={`cp-${idx}`}
-                                      className={cn(
-                                        "text-center text-xs px-1",
-                                        idx === currentMonthIdx && "ring-2 ring-primary/30"
-                                      )}
-                                    >
-                                      {cell.target > 0 ? (
-                                        <div
-                                          className={cn(
-                                            "rounded px-2 py-1 inline-flex items-center gap-1",
-                                            getCellClass(cell.percentage, cell.target, isFuture)
-                                          )}
-                                        >
-                                          {cell.percentage >= 100 && (
-                                            <CheckCircle2 className="h-3 w-3" />
-                                          )}
-                                          {cell.percentage.toFixed(0)}%
-                                        </div>
-                                      ) : (
-                                        <span className="opacity-40">—</span>
-                                      )}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell className="text-center bg-muted/40">
-                                  <div
-                                    className={cn(
-                                      "rounded px-2 py-1 inline-flex items-center gap-1 font-bold",
-                                      getCellClass(goal.totalPercentage, goal.totalTarget, false)
-                                    )}
-                                  >
-                                    {goal.totalPercentage >= 100 && (
-                                      <CheckCircle2 className="h-3 w-3" />
-                                    )}
-                                    {goal.totalPercentage.toFixed(0)}%
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            </Fragment>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
-
-            {sellers.map((seller) => {
-            const goals = goalsBySeller[seller.id] || [];
-            return (
-              <Card key={seller.id} className="shadow-lg border-l-4 border-l-primary">
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-primary" />
-                        {seller.full_name}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {seller.email}
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Empresa {year}</p>
+                      <p className="text-3xl font-bold tabular-nums leading-tight">
+                        {compact(company.achieved)}
+                        <span className="text-base font-normal text-muted-foreground">
+                          {" "}de {compact(company.target)}
+                        </span>
                       </p>
                     </div>
-                    <Badge variant="outline" className="self-start sm:self-auto">
-                      {goals.length} meta{goals.length !== 1 ? "s" : ""} em {year}
-                    </Badge>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {goals.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic py-4">
-                      Nenhuma meta cadastrada para este vendedor em {year}.
-                    </p>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[200px] sticky left-0 bg-background z-10">
-                              Meta
-                            </TableHead>
-                            {MONTH_LABELS.map((m, idx) => (
-                              <TableHead
-                                key={m}
-                                className={cn(
-                                  "text-center min-w-[110px]",
-                                  idx === currentMonthIdx &&
-                                    "bg-primary/10 text-primary font-bold"
-                                )}
-                              >
-                                {m}
-                              </TableHead>
-                            ))}
-                            <TableHead className="text-center min-w-[140px] bg-muted/50 font-bold">
-                              Total YTD
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {goals.map((goal) => (
-                            <Fragment key={goal.id}>
 
-                              {/* Target row */}
-                              <TableRow key={`${goal.id}-target`} className="border-t-2">
-                                <TableCell
-                                  rowSpan={3}
-                                  className="align-top sticky left-0 bg-background z-10 border-r"
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-muted-foreground mt-0.5">
-                                      {getGoalTypeIcon(goal.goal_type)}
-                                    </span>
-                                    <div>
-                                      <p className="font-semibold text-foreground leading-tight">
-                                        {goal.title}
-                                      </p>
-                                      <p className="text-xs text-muted-foreground mt-1">
-                                        {getGoalTypeLabel(goal.goal_type)}
-                                      </p>
-                                      <Badge
-                                        variant="secondary"
-                                        className="mt-2 text-[10px]"
-                                      >
-                                        {goal.period === "mensal"
-                                          ? "Mensal"
-                                          : goal.period === "anual"
-                                          ? "Anual"
-                                          : "Semestral"}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                {goal.months.map((cell, idx) => (
-                                  <TableCell
-                                    key={`t-${idx}`}
-                                    className={cn(
-                                      "text-center text-xs text-muted-foreground",
-                                      idx === currentMonthIdx && "bg-primary/5"
-                                    )}
-                                  >
-                                    {cell.target > 0 ? (
-                                      <Tooltip>
-                                        <TooltipTrigger className="cursor-help">
-                                          Meta:{" "}
-                                          <span className="font-medium text-foreground">
-                                            {formatGoalValue(
-                                              goal.goal_type,
-                                              cell.target
-                                            )}
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="text-xs">
-                                            Meta para {MONTH_LABELS[idx]}/{year}
-                                          </p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <span className="opacity-40">—</span>
-                                    )}
-                                  </TableCell>
-                                ))}
-                                <TableCell className="text-center text-xs bg-muted/30">
-                                  Meta:{" "}
-                                  <span className="font-bold text-foreground">
-                                    {formatGoalValue(
-                                      goal.goal_type,
-                                      goal.totalTarget
-                                    )}
-                                  </span>
-                                </TableCell>
-                              </TableRow>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className={cn("font-semibold", STATUS_META[companyStatus].text)}>
+                        {company.pct.toFixed(0)}% da meta YTD
+                      </span>
+                      <span className="text-muted-foreground tabular-nums">
+                        ritmo ideal {pacePct.toFixed(0)}% ·{" "}
+                        <span className={cn("font-medium", STATUS_META[companyStatus].text)}>
+                          {company.pct - pacePct >= 0 ? "+" : ""}
+                          {(company.pct - pacePct).toFixed(0)} p.p.
+                        </span>
+                      </span>
+                    </div>
+                    <div className="relative h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={cn("h-full rounded-full", STATUS_META[companyStatus].bar)}
+                        style={{ width: `${Math.min(company.pct, 100)}%` }}
+                      />
+                      <div
+                        className="absolute inset-y-0 w-0.5 bg-foreground/70"
+                        style={{ left: `${pacePct}%` }}
+                      />
+                    </div>
+                  </div>
 
-                              {/* Achieved row */}
-                              <TableRow key={`${goal.id}-achieved`}>
-                                {goal.months.map((cell, idx) => {
-                                  const isFuture = idx > currentMonthIdx && currentMonthIdx >= 0;
-                                  return (
-                                    <TableCell
-                                      key={`a-${idx}`}
-                                      className={cn(
-                                        "text-center text-sm",
-                                        idx === currentMonthIdx && "bg-primary/5"
-                                      )}
-                                    >
-                                      {cell.target > 0 ? (
-                                        <span
-                                          className={cn(
-                                            isFuture
-                                              ? "text-muted-foreground"
-                                              : "text-foreground font-medium"
-                                          )}
-                                        >
-                                          {formatGoalValue(
-                                            goal.goal_type,
-                                            cell.achieved
-                                          )}
-                                        </span>
-                                      ) : (
-                                        <span className="opacity-40">—</span>
-                                      )}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell className="text-center text-sm bg-muted/30 font-semibold">
-                                  {formatGoalValue(
-                                    goal.goal_type,
-                                    goal.totalAchieved
+                  <div className="flex gap-2 shrink-0">
+                    {([["done", counts.done], ["ahead", counts.ahead], ["on", counts.on], ["late", counts.late]] as const).map(
+                      ([key, n]) => (
+                        <div key={key} className={cn("rounded-lg border px-3 py-2 text-center", STATUS_META[key].chip)}>
+                          <p className="text-lg font-bold tabular-nums leading-none">{n}</p>
+                          <p className="text-[10px] uppercase mt-1 leading-tight">{STATUS_META[key].label}</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Legenda de ritmo */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <HelpCircle className="h-3.5 w-3.5" /> Ritmo
+              </span>
+              {(["done", "ahead", "on", "late"] as const).map((k) => (
+                <span key={k} className="flex items-center gap-1.5">
+                  <span className={cn("w-3 h-3 rounded", STATUS_META[k].bar)} />
+                  {STATUS_META[k].label}
+                </span>
+              ))}
+              <span className="flex items-center gap-1.5">
+                <span className="w-0.5 h-3.5 bg-foreground/70" />
+                ritmo ideal {pacePct.toFixed(0)}%
+              </span>
+              {isPastYear && <span className="italic">ano encerrado —ritmo=100%</span>}
+            </div>
+
+            {view === "ranking" ? (
+              <div className="space-y-2">
+                {team.map((m, idx) => {
+                  const st = statusOf(m.pct, m.hasMoney);
+                  const open = expanded === m.seller.id;
+                  return (
+                    <Card key={m.seller.id} className={cn("transition-shadow", open && "shadow-md border-primary/30")}>
+                      <button
+                        onClick={() => setExpanded(open ? null : m.seller.id)}
+                        className="w-full text-left p-4 hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-4">
+                          <p className="w-6 text-sm font-bold text-muted-foreground tabular-nums shrink-0">{idx + 1}º</p>
+                          <div className="min-w-0 w-40 shrink-0">
+                            <p className="font-semibold truncate">{m.seller.full_name}</p>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="relative h-3 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={cn("h-full rounded-full transition-all", STATUS_META[st].bar)}
+                                style={{ width: `${Math.min(m.pct, 100)}%` }}
+                              />
+                              <div className="absolute inset-y-0 w-0.5 bg-foreground/70" style={{ left: `${pacePct}%` }} />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-1 tabular-nums">
+                              {m.hasMoney ? (
+                                <>
+                                  {compact(m.moneyAchieved)} de {compact(m.moneyTarget)}
+                                  {m.counterTarget > 0 && (
+                                    <> · {Math.round(m.counterAchieved)}/{Math.round(m.counterTarget)} em tarefas/atividades</>
                                   )}
-                                </TableCell>
-                              </TableRow>
+                                </>
+                              ) : (
+                                <>sem meta monetária em {year}</>
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0 w-28">
+                            <p className={cn("text-lg font-bold tabular-nums leading-tight", STATUS_META[st].text)}>
+                              {m.hasMoney ? `${m.pct.toFixed(0)}%` : "—"}
+                            </p>
+                            <span className={cn("inline-block text-[10px] uppercase border rounded px-1.5 py-0.5", STATUS_META[st].chip)}>
+                              {STATUS_META[st].label}
+                            </span>
+                          </div>
+                          <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", open && "rotate-180")} />
+                        </div>
+                      </button>
 
-                              {/* Percentage row */}
-                              <TableRow
-                                key={`${goal.id}-pct`}
-                                className="border-b-2"
-                              >
-                                {goal.months.map((cell, idx) => {
-                                  const isFuture =
-                                    idx > currentMonthIdx && currentMonthIdx >= 0;
-                                  return (
-                                    <TableCell
-                                      key={`p-${idx}`}
-                                      className={cn(
-                                        "text-center text-xs px-1",
-                                        idx === currentMonthIdx && "ring-2 ring-primary/30"
-                                      )}
-                                    >
-                                      {cell.target > 0 ? (
-                                        <div
-                                          className={cn(
-                                            "rounded px-2 py-1 inline-flex items-center gap-1",
-                                            getCellClass(
-                                              cell.percentage,
-                                              cell.target,
-                                              isFuture
-                                            )
-                                          )}
-                                        >
-                                          {cell.percentage >= 100 && (
-                                            <CheckCircle2 className="h-3 w-3" />
-                                          )}
-                                          {cell.percentage.toFixed(0)}%
-                                        </div>
-                                      ) : (
-                                        <span className="opacity-40">—</span>
-                                      )}
-                                    </TableCell>
-                                  );
-                                })}
-                                <TableCell className="text-center bg-muted/40">
-                                  <div
-                                    className={cn(
-                                      "rounded px-2 py-1 inline-flex items-center gap-1 font-bold",
-                                      getCellClass(
-                                        goal.totalPercentage,
-                                        goal.totalTarget,
-                                        false
-                                      )
-                                    )}
-                                  >
-                                    {goal.totalPercentage >= 100 && (
-                                      <CheckCircle2 className="h-3 w-3" />
-                                    )}
-                                    {goal.totalPercentage.toFixed(0)}%
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            </Fragment>
-                          ))}
-                        </TableBody>
-                      </Table>
-
-                      {/* Legend */}
-                      <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <HelpCircle className="h-3 w-3" />
-                          <span>Legenda:</span>
+                      {open && (
+                        <CardContent className="pt-0 space-y-5">
+                          {m.goals.length === 0 ? (
+                            <p className="text-sm text-muted-foreground italic">Nenhuma meta em {year}.</p>
+                          ) : (
+                            <div className="space-y-4">
+                              {monthHeader}
+                              {m.goals.map((g) => (
+                                <div key={g.id} className="p-3 rounded-lg border bg-muted/20">
+                                  {renderHeat(g)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="space-y-6">
+                  {monthHeader}
+                  {team.map((m) => {
+                    if (m.goals.length === 0) return null;
+                    return (
+                      <div key={m.seller.id} className="space-y-3 pb-4 border-b last:border-0 last:pb-0">
+                        <div className="flex items-center justify-between">
+                          <p className="font-semibold">{m.seller.full_name}</p>
+                          <p className={cn("text-sm font-semibold tabular-nums", STATUS_META[statusOf(m.pct, m.hasMoney)].text)}>
+                            {m.hasMoney ? `${m.pct.toFixed(0)}%` : "—"}
+                          </p>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <span className="inline-block w-3 h-3 rounded bg-success/15 border border-success/30" />
-                          ≥ 100% atingido
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="inline-block w-3 h-3 rounded bg-warning/15 border border-warning/30" />
-                          70–99%
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="inline-block w-3 h-3 rounded bg-destructive/10 border border-destructive/30" />
-                          1–69%
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="inline-block w-3 h-3 rounded bg-muted/30 border border-border" />
-                          Sem registro / fora do período
-                        </div>
+                        {m.goals.map((g) => (
+                          <div key={g.id} className="p-3 rounded-lg border bg-muted/20">
+                            {renderHeat(g)}
+                          </div>
+                        ))}
                       </div>
+                    );
+                  })}
+
+                  {nonSellerGoals.length > 0 && (
+                    <div className="space-y-3 pt-4 border-t">
+                      <p className="font-semibold text-muted-foreground">Fechamentos sem vendedor vinculado</p>
+                      {monthHeader}
+                      {nonSellerGoals.map((g) => (
+                        <div key={g.id} className="p-3 rounded-lg border bg-muted/20">
+                          {renderHeat(g)}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </CardContent>
               </Card>
-              );
-            })}
+            )}
+
+            {nonSellerGoals.length > 0 && view === "ranking" && (
+              <Card className="border-dashed">
+                <CardContent className="p-4">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                      {compact(nonSellerGoals.reduce((a, g) => a + g.totalAchieved, 0))}
+                    </span>{" "}
+                    em fechamentos sem vendedor vinculado entram no total da empresa mas não no ranking.
+                    <button onClick={() => setView("grade")} className="ml-1 underline text-primary">
+                      ver na grade
+                    </button>
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
