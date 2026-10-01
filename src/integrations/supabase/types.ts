@@ -297,7 +297,7 @@ export type Database = {
           company_size: string | null
           competitors: string | null
           created_at: string | null
-          created_by: string
+          created_by: string | null
           distributor: string | null
           email: string | null
           foundation_date: string | null
@@ -326,7 +326,7 @@ export type Database = {
           company_size?: string | null
           competitors?: string | null
           created_at?: string | null
-          created_by: string
+          created_by?: string | null
           distributor?: string | null
           email?: string | null
           foundation_date?: string | null
@@ -355,7 +355,7 @@ export type Database = {
           company_size?: string | null
           competitors?: string | null
           created_at?: string | null
-          created_by?: string
+          created_by?: string | null
           distributor?: string | null
           email?: string | null
           foundation_date?: string | null
@@ -1809,7 +1809,7 @@ export type Database = {
       }
       opportunities: {
         Row: {
-          assigned_to: string
+          assigned_to: string | null
           billing_type: string | null
           business_type: Database["public"]["Enums"]["business_type"] | null
           charge_commission: boolean | null
@@ -1835,7 +1835,7 @@ export type Database = {
           value: number | null
         }
         Insert: {
-          assigned_to: string
+          assigned_to?: string | null
           billing_type?: string | null
           business_type?: Database["public"]["Enums"]["business_type"] | null
           charge_commission?: boolean | null
@@ -1861,7 +1861,7 @@ export type Database = {
           value?: number | null
         }
         Update: {
-          assigned_to?: string
+          assigned_to?: string | null
           billing_type?: string | null
           business_type?: Database["public"]["Enums"]["business_type"] | null
           charge_commission?: boolean | null
