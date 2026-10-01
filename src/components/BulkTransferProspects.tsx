@@ -89,6 +89,7 @@ export const BulkTransferProspects = () => {
       // Count prospects per user
       const countMap = new Map<string, number>();
       counts?.forEach((client) => {
+        if (!client.created_by) return;
         const count = countMap.get(client.created_by) || 0;
         countMap.set(client.created_by, count + 1);
       });
