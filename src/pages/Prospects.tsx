@@ -777,13 +777,15 @@ const Prospects = () => {
         return;
       }
       try {
-        const { data, error } = await supabase.rpc("transfer_client_owner", {
+        const { error } = await supabase.rpc("transfer_client_owner", {
           _client_id: prospectToTransfer.id,
           _new_owner_id: null,
         } as any);
 
         if (error) throw error;
-        if (!data) throw new Error("Nenhuma empresa foi atualizada");
+        // Sem checagem de `data`: a função retorna FOUND do último UPDATE
+        // (oportunidades). Empresa sem oportunidades em aberto retorna false
+        // mesmo com a conta transferida. Erro real sempre vem como exception.
 
         toast.success("Empresa liberada para a carteira disponível!");
         setTransferDialogOpen(false);
@@ -804,13 +806,13 @@ const Prospects = () => {
     }
 
     try {
-      const { data, error } = await supabase.rpc("transfer_client_owner", {
+      const { error } = await supabase.rpc("transfer_client_owner", {
         _client_id: prospectToTransfer.id,
         _new_owner_id: selectedNewSeller,
       });
 
       if (error) throw error;
-      if (!data) throw new Error("Nenhuma empresa foi atualizada");
+      // Idem acima: ausência de exception = sucesso.
 
       toast.success("Empresa transferida com sucesso!");
       setTransferDialogOpen(false);
@@ -835,12 +837,12 @@ const Prospects = () => {
       return;
     }
     try {
-      const { data, error } = await supabase.rpc("transfer_client_owner", {
+      const { error } = await supabase.rpc("transfer_client_owner", {
         _client_id: client.id,
         _new_owner_id: currentUserId,
       });
       if (error) throw error;
-      if (!data) throw new Error("Nenhuma empresa foi atualizada");
+      // Idem acima: ausência de exception = sucesso.
       toast.success("Conta assumida com sucesso! Ela agora está na sua carteira.");
       fetchClients();
     } catch (error: any) {
