@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiTranscribe } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,9 +26,6 @@ serve(async (req) => {
     const { audio, mimeType } = await req.json();
     if (!audio) throw new Error("No audio data provided");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
     // Decode base64 to bytes
     const binary = Uint8Array.from(atob(audio), (c) => c.charCodeAt(0));
 
@@ -47,15 +45,11 @@ serve(async (req) => {
     };
     const ext = extMap[mt] || "webm";
 
-    const form = new FormData();
-    form.append("file", new Blob([binary], { type: mt }), `recording.${ext}`);
-    form.append("model", "openai/gpt-4o-mini-transcribe");
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}` },
-      body: form,
-    });
+    const response = await aiTranscribe(
+      new Blob([binary], { type: mt }),
+      `recording.${ext}`,
+      "gpt-4o-mini-transcribe",
+    );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");

@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,40 +162,19 @@ serve(async (req) => {
         content: String(m.content).slice(0, 4000),
       }));
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "LOVABLE_API_KEY não configurada" }),
+    const response = await aiChat({
+      model: "google/gemini-2.5-flash",
+      stream: true,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
         {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          role: "system",
+          content: `Lembrete: SEMPRE assuma que a pergunta é sobre vendas ao governo brasileiro, mesmo quando o usuário não mencionar "governo". Só use o texto abaixo se a pergunta for claramente ilegal, antiética, política partidária, pessoal/íntima ou totalmente desconectada de negócios:\n\n${OFF_TOPIC_FALLBACK}`,
         },
-      );
-    }
-
-    const response = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          stream: true,
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            {
-              role: "system",
-              content: `Lembrete: SEMPRE assuma que a pergunta é sobre vendas ao governo brasileiro, mesmo quando o usuário não mencionar "governo". Só use o texto abaixo se a pergunta for claramente ilegal, antiética, política partidária, pessoal/íntima ou totalmente desconectada de negócios:\n\n${OFF_TOPIC_FALLBACK}`,
-            },
-            ...buildSearchContextMessages(searchContext),
-            ...sanitized,
-          ],
-        }),
-      },
-    );
+        ...buildSearchContextMessages(searchContext),
+        ...sanitized,
+      ],
+    });
 
     if (!response.ok) {
       if (response.status === 429) {
@@ -212,7 +192,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             error:
-              "Créditos de IA esgotados. Adicione créditos em Lovable Cloud.",
+              "Créditos de IA esgotados. Adicione créditos no provedor de IA configurado.",
           }),
           {
             status: 402,

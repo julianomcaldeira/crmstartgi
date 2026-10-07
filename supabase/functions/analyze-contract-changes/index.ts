@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { canAccessRevision, forbidden } from "../_shared/contract-access.ts";
+import { aiChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,8 +20,6 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
     const authHeader = req.headers.get("Authorization") ?? "";
     const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -71,46 +70,39 @@ Seja exaustivo. Não invente mudanças que o prospect não solicitou.`;
 
     const userPrompt = `=== CONTRATO ORIGINAL (estrutura JSON dos blocos) ===\n${contractText}\n\n=== CONSIDERAÇÕES DO PROSPECT ===\n${prospectInput}`;
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "register_changes",
-            description: "Registra a lista de mudanças solicitadas",
-            parameters: {
-              type: "object",
-              properties: {
-                changes: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      clause_reference: { type: "string" },
-                      original_text: { type: "string" },
-                      proposed_change: { type: "string" },
-                      rationale: { type: "string" },
-                    },
-                    required: ["clause_reference", "proposed_change"],
+    const aiResp = await aiChat({
+      model: "google/gemini-2.5-pro",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "register_changes",
+          description: "Registra a lista de mudanças solicitadas",
+          parameters: {
+            type: "object",
+            properties: {
+              changes: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    clause_reference: { type: "string" },
+                    original_text: { type: "string" },
+                    proposed_change: { type: "string" },
+                    rationale: { type: "string" },
                   },
+                  required: ["clause_reference", "proposed_change"],
                 },
               },
-              required: ["changes"],
             },
+            required: ["changes"],
           },
-        }],
-        tool_choice: { type: "function", function: { name: "register_changes" } },
-      }),
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "register_changes" } },
     });
 
     if (!aiResp.ok) {
@@ -122,7 +114,7 @@ Seja exaustivo. Não invente mudanças que o prospect não solicitou.`;
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace Lovable." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no provedor configurado." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

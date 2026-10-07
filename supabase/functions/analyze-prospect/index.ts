@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,11 +27,6 @@ serve(async (req) => {
 
     const body = await req.json();
     
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
     let prompt: string;
     let systemPrompt: string;
 
@@ -155,26 +151,19 @@ Responda em português brasileiro, de forma clara e estruturada usando markdown.
       console.log("Using prospect analysis mode");
     }
 
-    console.log("Calling Lovable AI Gateway...");
+    console.log("Consultando provedor de IA...");
     
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: prompt }
-        ],
-      }),
+    const response = await aiChat({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
+      console.error("IA error:", response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -189,7 +178,7 @@ Responda em português brasileiro, de forma clara e estruturada usando markdown.
         );
       }
       
-      throw new Error(`AI Gateway error: ${response.status}`);
+      throw new Error(`IA error: ${response.status}`);
     }
 
     const data = await response.json();

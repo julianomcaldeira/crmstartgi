@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiChat } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,11 +33,6 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
     // Build a compact summary of tasks for AI analysis
     const taskSummaries = tasks.map((t: any, i: number) => {
       const parts = [
@@ -61,45 +57,38 @@ Considere:
 
 Retorne APENAS os índices das tarefas relevantes.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Tarefas disponíveis:\n${taskSummaries}\n\nBusca: "${query}"` },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "return_matching_tasks",
-              description: "Return the indices of tasks that match the search query",
-              parameters: {
-                type: "object",
-                properties: {
-                  matching_indices: {
-                    type: "array",
-                    items: { type: "integer" },
-                    description: "Array of task indices (0-based) that match the search query"
-                  },
-                  explanation: {
-                    type: "string",
-                    description: "Brief explanation of why these tasks match (in Portuguese)"
-                  }
+    const response = await aiChat({
+      model: "google/gemini-2.5-flash-lite",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Tarefas disponíveis:\n${taskSummaries}\n\nBusca: "${query}"` },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "return_matching_tasks",
+            description: "Return the indices of tasks that match the search query",
+            parameters: {
+              type: "object",
+              properties: {
+                matching_indices: {
+                  type: "array",
+                  items: { type: "integer" },
+                  description: "Array of task indices (0-based) that match the search query"
                 },
-                required: ["matching_indices", "explanation"],
-                additionalProperties: false,
-              }
+                explanation: {
+                  type: "string",
+                  description: "Brief explanation of why these tasks match (in Portuguese)"
+                }
+              },
+              required: ["matching_indices", "explanation"],
+              additionalProperties: false,
             }
           }
-        ],
-        tool_choice: { type: "function", function: { name: "return_matching_tasks" } },
-      }),
+        }
+      ],
+      tool_choice: { type: "function", function: { name: "return_matching_tasks" } },
     });
 
     if (!response.ok) {
@@ -116,8 +105,8 @@ Retorne APENAS os índices das tarefas relevantes.`;
         );
       }
       const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
-      throw new Error("AI gateway error");
+      console.error("IA error:", response.status, text);
+      throw new Error("IA error");
     }
 
     const data = await response.json();

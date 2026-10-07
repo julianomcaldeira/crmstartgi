@@ -1,18 +1,18 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { canAccessContract, canAccessContractStoragePath, forbidden } from "../_shared/contract-access.ts";
+import { aiChat, aiKeyConfigured } from "../_shared/llm.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Extrai texto de PDF/DOCX usando Lovable AI (Gemini multimodal para PDF/imagem; mammoth para DOCX)
+// Extrai texto de PDF/DOCX usando IA multimodal (Gemini via provedor configurado); mammoth para DOCX
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     const auth = req.headers.get("Authorization") ?? "";
     const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -56,22 +56,18 @@ Deno.serve(async (req) => {
         console.error("mammoth falhou", e);
         throw new Error("Não foi possível extrair texto do DOCX");
       }
-    } else if ((isPdf || isImage) && LOVABLE_API_KEY) {
+    } else if ((isPdf || isImage) && aiKeyConfigured()) {
       const b64 = btoa(String.fromCharCode(...buf));
       const dataUrl = `data:${mime_type || (isPdf ? "application/pdf" : "image/png")};base64,${b64}`;
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: "Extraia TODO o texto deste documento em português, preservando estrutura de cláusulas e parágrafos. Retorne SOMENTE o texto, sem comentários." },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          }],
-        }),
+      const aiResp = await aiChat({
+        model: "google/gemini-2.5-flash",
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: "Extraia TODO o texto deste documento em português, preservando estrutura de cláusulas e parágrafos. Retorne SOMENTE o texto, sem comentários." },
+            { type: "image_url", image_url: { url: dataUrl } },
+          ],
+        }],
       });
       if (!aiResp.ok) {
         const t = await aiResp.text();
