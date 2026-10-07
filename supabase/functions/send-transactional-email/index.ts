@@ -8,12 +8,11 @@ import { TEMPLATES } from '../_shared/transactional-email-templates/registry.ts'
 // To update, re-run the email domain setup flow.
 const SITE_NAME = "crmstartgi"
 // SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
-// Using notify.appiganhei.com (already verified at workspace level) because
-// Registro.br não permite delegação NS de subdomínio para notify.evoluacrm.com.br.
-const SENDER_DOMAIN = "notify.appiganhei.com"
+// Override via EMAIL_SENDER_DOMAIN / EMAIL_FROM_DOMAIN secrets (e.g. when
+// migrating to a new provider) — defaults kept for backward compatibility.
+const SENDER_DOMAIN = Deno.env.get('EMAIL_SENDER_DOMAIN') ?? "notify.appiganhei.com"
 // FROM_DOMAIN é o domínio mostrado no header From.
-const FROM_DOMAIN = "notify.appiganhei.com"
-// It MUST match the subdomain delegated to Lovable's nameservers — never the root domain.
+const FROM_DOMAIN = Deno.env.get('EMAIL_FROM_DOMAIN') ?? SENDER_DOMAIN
 
 // Generate a cryptographically random 32-byte hex token
 function generateToken(): string {

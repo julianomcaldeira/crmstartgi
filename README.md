@@ -60,4 +60,9 @@ Em Kubernetes/MKS, publique a imagem em um registry (ex.: MCR/Container Registry
 
 ## Observação: dependências de backend
 
-Algumas Edge Functions ainda usam o **Lovable AI Gateway** (`LOVABLE_API_KEY`) e o **e-mail transacional do Lovable**. Ao migrar o backend para uma instância própria (Supabase self-hosted ou serviço equivalente), essas funções precisam apontar para provedores diretos (ex.: OpenAI/Google para IA e Resend/SES/Zoho para e-mail). Isso é tratado na fase de migração do backend.
+O backend usa provedores diretos, sem depender do Lovable:
+
+- **IA**: edge functions usam um endpoint OpenAI-compatível (`_shared/llm.ts`), padronizado para o **OpenRouter** via secret `AI_API_KEY` (formato `sk-or-v1-...`). `AI_BASE_URL` e `AI_TRANSCRIBE_BASE_URL` permitem trocar de provedor; o Brain usa a OpenCode Zen (`OPENCODE_API_KEY`).
+- **E-mail transacional**: envio via **Resend** (`_shared/email.ts`, secret `RESEND_API_KEY`), com webhooks de bounce/complaint assinados (Svix) validados em `handle-email-suppression` (`RESEND_WEBHOOK_SECRET`). Remetente `notify.appiganhei.com` — ao trocar de provedor, verifique o domínio e sobrescreva com `EMAIL_SENDER_DOMAIN`/`EMAIL_FROM_DOMAIN`.
+
+Essas secrets devem ser configuradas no Supabase (self-hosted ou hospedado). Isso é tratado na fase de migração do backend.

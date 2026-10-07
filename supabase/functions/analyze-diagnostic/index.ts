@@ -146,7 +146,7 @@ Para cada problema identificado, apresente a solução específica:
 
 Conclusão em 2-3 frases com a recomendação principal e próximo passo sugerido, adaptada ao cargo do interlocutor.`;
 
-    console.log("Calling Lovable AI Gateway for diagnostic analysis...");
+    console.log("Chamando provedor de IA para análise diagnóstica...");
     
     const response = await aiChat({
       model: "google/gemini-2.5-flash",

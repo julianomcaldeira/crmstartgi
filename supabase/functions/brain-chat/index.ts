@@ -19,7 +19,7 @@ type AIProvider = {
 // Resolve o provedor de IA do Brain.
 //
 // IMPORTANTE: o Brain usa EXCLUSIVAMENTE a OpenCode Zen (OPENCODE_API_KEY).
-// A IA da Lovable (LOVABLE_API_KEY) NÃO é usada como fallback, justamente para
+// A IA da Lovable não é mais usada como fallback, justamente para
 // garantir que todas as respostas venham do provedor configurado pelo usuário.
 // Um provedor OpenAI-compatível alternativo só é usado se configurado
 // explicitamente via AI_API_KEY + AI_BASE_URL.
