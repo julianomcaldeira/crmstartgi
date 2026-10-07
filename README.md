@@ -1,26 +1,63 @@
-# Evolua-CRM
+# Evolua CRM (StartGI)
 
-Eu quero agora criar um crm para a StartGi. Este CRM terá que sempre a visão de facilitar a vida do time comercial. Precisa ser uma ferramenta totalmente intuitiva e com um design incrível. Quero que crie o perfil admin que vai gerenciar todas as senhas dos usuários vendedores. Quero um gestor de tarefas espetacular. Quero também uma parte de cadastro de clientes todos por CNPJ onde o usuário vendedor possa digitar o CNPJ do cliente e buscar automaticamente os dados da empresa na receita federal. Quero criar uma tela de oportunidades com todas as fases de vendas. Quero um modulo de relatórios. Quero ter a oportunidade de definir metas de tarefas e atividades. Quero definir meta de receita caixa e quero definir meta de venda anualizada. Como gestor quero o controle total de todas as etapas do funil. Quero uma agenda fantastica de tarefas por vendedor que esteja integrada com o Zoho Mail de cada colaborador do meu time. Com esta integração o usuário pode enviar um email pela plataforma e ficar registrado esta tarefa no sistema.
+CRM de vendas da StartGI: clientes por CNPJ, funil de oportunidades, agenda integrada ao Zoho Mail, propostas comerciais, contratos, relatórios e inteligência de mercado.
 
-This project was built with [Lovable](https://lovable.dev).
+Frontend em **React + Vite + TypeScript + Tailwind**, com backend **Supabase** (Auth, Postgres/RLS, Storage, Realtime e Edge Functions em Deno).
 
-**Live app**: https://crmstartgi.lovable.app
+## Desenvolvimento
 
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b6cacb9d-dabb-4552-a90e-50c6f96693d7).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Requer Node.js 20+.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
 npm run dev
 ```
+
+## Variáveis de ambiente
+
+Copie `.env.example` para `.env` e preencha:
+
+```sh
+VITE_SUPABASE_URL="https://<projeto>.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="<publishable/anon key>"
+VITE_SUPABASE_PROJECT_ID="<project id>"
+```
+
+As variáveis `VITE_*` são **embutidas no bundle em tempo de build** (comportamento do Vite). A publishable/anon key é pública e protegida por RLS.
+
+## Build
+
+```sh
+npm run build   # gera dist/
+npm run preview # serve o dist/ localmente
+```
+
+## Deploy (Magalu Cloud)
+
+A saída é uma SPA estática em `dist/`. Duas opções na Magalu Cloud:
+
+### Opção A — Object Storage + CDN (mais barato)
+
+1. `npm run build` com as `VITE_*` definidas.
+2. Sincronize `dist/` para um bucket S3-compatible (Magalu Object Storage) com um cliente compatível (ex.: `aws s3 sync dist/ s3://<bucket> --delete --endpoint-url <endpoint-magalu>`).
+3. Configure o CDN apontando para o bucket e habilite **fallback de SPA**: erros 403/404 devem devolver `index.html` com status 200.
+
+### Opção B — Docker + Nginx (VM ou Kubernetes/MKS)
+
+A imagem builda o frontend e serve via Nginx com fallback SPA e cache de assets.
+
+```sh
+docker build \
+  --build-arg VITE_SUPABASE_URL="https://<projeto>.supabase.co" \
+  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="<publishable key>" \
+  --build-arg VITE_SUPABASE_PROJECT_ID="<project id>" \
+  -t evoluacrm-web .
+
+docker run --rm -p 8080:80 evoluacrm-web
+```
+
+Em Kubernetes/MKS, publique a imagem em um registry (ex.: MCR/Container Registry) e exponha o serviço na porta 80.
+
+## Observação: dependências de backend
+
+Algumas Edge Functions ainda usam o **Lovable AI Gateway** (`LOVABLE_API_KEY`) e o **e-mail transacional do Lovable**. Ao migrar o backend para uma instância própria (Supabase self-hosted ou serviço equivalente), essas funções precisam apontar para provedores diretos (ex.: OpenAI/Google para IA e Resend/SES/Zoho para e-mail). Isso é tratado na fase de migração do backend.

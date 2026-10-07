@@ -2,7 +2,7 @@
 
 ## Fluxo de trabalho obrigatório
 
-Este projeto é o **CRM StartGI** e está conectado ao repositório GitHub:
+Este projeto é o **Evolua CRM (StartGI)** e está conectado ao repositório GitHub:
 
 - Repo: `https://github.com/julianomcaldeira/crmstartgi.git`
 - Branch: `main` (tracking `origin/main`)
@@ -15,7 +15,7 @@ Após **qualquer** alteração no código, o fluxo obrigatório é:
 4. `git commit -m "<mensagem descritiva da alteração>"`
 5. `git push origin main`
 
-O push para o GitHub é o que faz o **Lovable** refletir as mudanças no deploy. Nunca finalizar uma tarefa sem commit + push.
+O deploy é feito a partir do próprio repositório (build independente — ver `Dockerfile` e `README.md`). Nunca finalizar uma tarefa sem commit + push.
 
 ## Comandos
 
@@ -23,3 +23,4 @@ O push para o GitHub é o que faz o **Lovable** refletir as mudanças no deploy.
 - Rodar dev: `npm run dev`
 - Build: `npm run build`
 - Lint: `npm run lint`
+- Build da imagem: `docker build -t evoluacrm-web .`

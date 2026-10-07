@@ -152,7 +152,7 @@ export default function BrainChat() {
           // resposta sem corpo JSON: mantém mensagem padrão
         }
         if (resp.status === 404)
-          msg = "Função Brain não publicada no servidor. Faça o deploy pelo Lovable.";
+          msg = "Função Brain não publicada no servidor. Contate o administrador.";
         if (resp.status === 429)
           msg = "Muitas requisições. Aguarde alguns segundos.";
         if (resp.status === 402)
