@@ -721,7 +721,7 @@ const InteligenciaMercado = () => {
 
         // Clean markdown and format for PDF
         const cleanText = aiAnalysis
-          .replace(/##\s*[📊💰🏆🎯⚠️✅]\s*/g, "\n")
+          .replace(/##\s*(?:📊|💰|🏆|🎯|⚠️|✅)\s*/gu, "\n")
           .replace(/\*\*/g, "")
           .replace(/\*/g, "")
           .replace(/#{1,3}\s*/g, "");

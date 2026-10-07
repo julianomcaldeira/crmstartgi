@@ -115,7 +115,7 @@ const INLINE_TAGS = new Set(["a","span","strong","em","b","i","u","s","small","s
 function formatHtml(input: string): string {
   if (!input) return "";
   // Normalize whitespace between tags
-  let html = input.replace(/>\s+</g, "><").trim();
+  const html = input.replace(/>\s+</g, "><").trim();
   const tokens = html.split(/(<[^>]+>)/g).filter(t => t !== "");
   let out = "";
   let depth = 0;
@@ -162,7 +162,7 @@ interface Props {
   minHeight?: number;
 }
 
-const VAR_RE = /\{\{\s*[\w.\-]+\s*\}\}/g;
+const VAR_RE = /\{\{\s*[\w.-]+\s*\}\}/g;
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -176,7 +176,7 @@ function highlightCode(src: string): string {
   const escaped = escapeHtml(src);
   // Variables {{...}}
   let out = escaped.replace(
-    /\{\{\s*[\w.\-]+\s*\}\}/g,
+    /\{\{\s*[\w.-]+\s*\}\}/g,
     (m) => `<span class="rte-var-token">${m}</span>`
   );
   // Tag names + attributes (apply on already-escaped text, so tags are &lt;tag...&gt;)

@@ -133,7 +133,9 @@ export default function GovSalesChat({
         try {
           const j = await resp.json();
           if (j?.error) msg = j.error;
-        } catch {}
+        } catch {
+          // resposta sem corpo JSON
+        }
         if (resp.status === 429)
           msg = "Muitas requisições. Aguarde alguns segundos.";
         if (resp.status === 402)

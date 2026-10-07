@@ -403,11 +403,12 @@ const Oportunidades = () => {
         case "probability":
           compareValue = (Number(a.probability) || 0) - (Number(b.probability) || 0);
           break;
-        case "expected_close_date":
+        case "expected_close_date": {
           const dateA = a.expected_close_date ? new Date(a.expected_close_date).getTime() : 0;
           const dateB = b.expected_close_date ? new Date(b.expected_close_date).getTime() : 0;
           compareValue = dateA - dateB;
           break;
+        }
       }
       
       return sortDirection === "asc" ? compareValue : -compareValue;

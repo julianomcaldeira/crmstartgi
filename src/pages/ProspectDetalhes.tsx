@@ -234,6 +234,7 @@ const ClienteDetalhes = () => {
         .order("created_at", { ascending: false });
       
       if (tasksError) {
+        // erro de leitura ignorado: segue com a lista normalizada
       }
 
       const normalizedTasks = (tasksData || []).map((t: any) => ({

@@ -22,7 +22,7 @@ export const useTasks = (userId: string | null, userRole: string | null) => {
   return useQuery({
     queryKey: ["tasks", userId, userRole],
     queryFn: async () => {
-      let query = supabase
+      const query = supabase
         .from("tasks")
         .select(`
           *,
@@ -75,7 +75,7 @@ export const useOpportunities = (userId: string | null, userRole: string | null)
   return useQuery({
     queryKey: ["opportunities", userId, userRole],
     queryFn: async () => {
-      let query = supabase
+      const query = supabase
         .from("opportunities")
         .select(`
           *,

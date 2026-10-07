@@ -177,6 +177,7 @@ const Tarefas = () => {
         .eq("user_id", user.id)
 
       if (roleError) {
+        // erro de leitura ignorado: assume papel do usuário
       }
 
       const resolvedRole = (() => {
@@ -415,6 +416,7 @@ const Tarefas = () => {
         .eq("user_id", user.id)
 
       if (roleError) {
+        // erro de leitura ignorado: assume papel do usuário
       }
 
       const roles = (roleRows || []).map((r: any) => r.role);

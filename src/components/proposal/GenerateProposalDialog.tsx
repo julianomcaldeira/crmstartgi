@@ -217,7 +217,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
   };
 
   const copyShareLink = async () => {
-    let prop = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("draft");
+    const prop = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("draft");
     if (!prop) return;
     const url = proposalPublicUrl(prop.share_token || shareToken);
     await navigator.clipboard.writeText(url);
@@ -259,7 +259,7 @@ export function GenerateProposalDialog({ open, onOpenChange, opportunity }: Prop
     }
     setSendingEmail(true);
     try {
-      let prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
+      const prop: any = proposalId ? { id: proposalId, share_token: shareToken } : await saveProposal("sent");
       if (!prop) return;
       setTab("preview");
       await new Promise((r) => setTimeout(r, 300));

@@ -25,7 +25,7 @@ export function useCommercialTracking(opts: {
     s.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
     document.head.appendChild(s);
     window.dataLayer = window.dataLayer || [];
-    window.gtag = function () { window.dataLayer!.push(arguments); };
+    window.gtag = (...args: any[]) => { window.dataLayer!.push(args); };
     window.gtag("js", new Date());
     window.gtag("config", ga4Id, { send_page_view: true });
   }, [ga4Id]);
@@ -70,8 +70,12 @@ export function useCommercialTracking(opts: {
   }, [rootRef.current]);
 
   function emit(name: string, params?: Record<string, any>) {
-    try { window.gtag?.("event", name, params || {}); } catch {}
-    try { window.clarity?.("event", name); } catch {}
+    try { window.gtag?.("event", name, params || {}); } catch {
+      // analítica opcional
+    }
+    try { window.clarity?.("event", name); } catch {
+      // analítica opcional
+    }
     onEvent?.(name, params);
   }
 
