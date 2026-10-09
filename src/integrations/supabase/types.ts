@@ -3626,29 +3626,10 @@ export type Database = {
         Args: { _new_name: string; _user_id: string }
         Returns: boolean
       }
+      api_schema: { Args: never; Returns: Json }
       create_api_key: {
         Args: { p_key_hash: string; p_key_prefix: string; p_name: string }
-        Returns: {
-          created_at: string
-          id: string
-          key_prefix: string
-          name: string
-        }
-      }
-      list_api_keys: {
-        Args: never
-        Returns: {
-          created_at: string
-          id: string
-          key_prefix: string
-          last_used_at: string | null
-          name: string
-          revoked_at: string | null
-        }[]
-      }
-      revoke_api_key: {
-        Args: { p_id: string }
-        Returns: boolean
+        Returns: Json
       }
       delete_email: {
         Args: { message_id: number; queue_name: string }
@@ -3722,6 +3703,7 @@ export type Database = {
       }
       is_active_profile: { Args: { _user_id: string }; Returns: boolean }
       is_crm_member: { Args: { _user_id: string }; Returns: boolean }
+      list_api_keys: { Args: never; Returns: Json }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -3762,6 +3744,7 @@ export type Database = {
         Returns: Json
       }
       register_proposal_view: { Args: { _token: string }; Returns: undefined }
+      revoke_api_key: { Args: { p_id: string }; Returns: boolean }
       transfer_client_owner: {
         Args: { _client_id: string; _new_owner_id: string }
         Returns: boolean
