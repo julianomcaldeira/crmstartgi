@@ -1,0 +1,1038 @@
+openapi: 3.0.3
+info:
+  title: Evolua CRM API
+  version: 1.0.0
+  description: |
+    API REST do Evolua CRM (StartGI) para agentes externos (ex.: Claude Code).
+
+    **Autenticação** — crie uma chave em **Admin → aba API** e envie em um dos
+    headers:
+    - `Authorization: Bearer <chave>`
+    - `x-api-key: <chave>`
+
+    **Filtros (sintaxe PostgREST)** — em qualquer rota de listagem, use query
+    string com operadores:
+    `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `like`, `ilike`, `in`, `is`,
+    com prefixo `not.` para negar. Exemplos:
+    `?status=eq.pending&due_date=lte.2026-10-10&assigned_to=in.(uuid1,uuid2)`
+    e `?status=not.eq.done`.
+
+    **Paginação/ordenação:** `?limit=100&offset=0&order=due_date.asc&select=id,title`.
+    `count=exact` devolve o total em `count`.
+
+    Além das rotas nomeadas abaixo, qualquer tabela pública do CRM pode ser
+    acessada de forma genérica em `/{table}` (com exceção de `api_keys`,
+    `zoho_oauth_tokens` e `zoho_user_tokens`). Use `GET /_schema` para descobrir
+    tabelas, colunas e relacionamentos.
+  contact:
+    name: StartGI
+  license:
+    name: Proprietary
+servers:
+  - url: https://{projectRef}.supabase.co/functions/v1/api
+    description: Supabase Edge Function
+    variables:
+      projectRef:
+        default: eifsbqqrimniclsssoru
+        description: ID do projeto Supabase
+security:
+  - bearerAuth: []
+  - apiKeyHeader: []
+
+tags:
+  - name: Descoberta
+    description: Metadados da API e do banco
+  - name: Agendamento
+    description: Tarefas e eventos de agenda
+  - name: Oportunidades
+    description: Oportunidades e atividades vinculadas
+  - name: Clientes
+    description: Clientes, contatos e responsáveis
+  - name: Genérico
+    description: Acesso CRUD a qualquer tabela
+
+paths:
+  /:
+    get:
+      tags: [Descoberta]
+      summary: Descrição da API e rotas disponíveis
+      operationId: apiInfo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string }
+                  version: { type: string }
+                  discovery: { type: string }
+                  endpoints: { type: object, additionalProperties: { type: string } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /_schema:
+    get:
+      tags: [Descoberta]
+      summary: Tabelas, colunas, chaves primárias e relacionamentos
+      operationId: apiSchema
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                   data:
+                     type: array
+                     items: { $ref: "#/components/schemas/SchemaTable" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ----------------------------- AGENDAMENTO -----------------------------
+  /tasks:
+    get:
+      tags: [Agendamento]
+      summary: Lista tarefas (agendamentos)
+      operationId: listTasks
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+        - name: status
+          in: query
+          description: "Filtro por status: `eq.pending`, `eq.in_progress`, `eq.completed`, `eq.cancelled`"
+          schema: { type: string, example: "eq.pending" }
+        - name: assigned_to
+          in: query
+          description: Responsável (uuid)
+          schema: { type: string, example: "eq.00000000-0000-0000-0000-000000000000" }
+        - name: client_id
+          in: query
+          description: Cliente (uuid)
+          schema: { type: string }
+        - name: opportunity_id
+          in: query
+          description: Oportunidade (uuid)
+          schema: { type: string }
+        - name: due_date
+          in: query
+          description: "Vencimento, ex.: `lte.2026-10-10` ou `gte.2026-10-01`"
+          schema: { type: string, example: "lte.2026-10-10" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Agendamento]
+      summary: Cria uma tarefa (agendamento)
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskCreate" }
+            example:
+              title: "Ligar para o cliente"
+              assigned_to: "00000000-0000-0000-0000-000000000000"
+              created_by: "00000000-0000-0000-0000-000000000000"
+              client_id: "11111111-1111-1111-1111-111111111111"
+              opportunity_id: "22222222-2222-2222-2222-222222222222"
+              task_type: "ligacao"
+              priority: "high"
+              status: "pending"
+              due_date: "2026-10-15T13:00:00Z"
+              description: "Confirmar reunião da proposta"
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /tasks/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Agendamento]
+      summary: Obtém uma tarefa por id
+      operationId: getTask
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Task" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Agendamento]
+      summary: "Atualiza uma tarefa (ex.: concluir/reagendar)"
+      operationId: updateTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TaskUpdate" }
+            example:
+              status: "completed"
+              completed_at: "2026-10-15T14:00:00Z"
+      responses:
+        "200":
+          description: Atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Agendamento]
+      summary: Remove uma tarefa
+      operationId: deleteTask
+      responses:
+        "200":
+          description: Removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Task" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /pre_vendas_agenda:
+    get:
+      tags: [Agendamento]
+      summary: Lista eventos de agenda do pré-vendas
+      operationId: listAgendaEvents
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+        - name: pre_vendas_user_id
+          in: query
+          description: Usuário do pré-vendas (uuid)
+          schema: { type: string }
+        - name: opportunity_id
+          in: query
+          description: Oportunidade vinculada (uuid)
+          schema: { type: string }
+        - name: start_datetime
+          in: query
+          description: "Início do evento, ex.: `gte.2026-10-01T00:00:00Z`"
+          schema: { type: string, example: "gte.2026-10-01T00:00:00Z" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgendaEvent" }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Agendamento]
+      summary: Cria um evento de agenda
+      operationId: createAgendaEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgendaEventCreate" }
+            example:
+              title: "Reunião com cliente"
+              pre_vendas_user_id: "00000000-0000-0000-0000-000000000000"
+              created_by: "00000000-0000-0000-0000-000000000000"
+              start_datetime: "2026-10-15T13:00:00Z"
+              end_datetime: "2026-10-15T14:00:00Z"
+              location: "Google Meet"
+              description: "Apresentar proposta"
+              opportunity_id: "22222222-2222-2222-2222-222222222222"
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgendaEvent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /pre_vendas_agenda/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Agendamento]
+      summary: Obtém um evento por id
+      operationId: getAgendaEvent
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AgendaEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Agendamento]
+      summary: Atualiza/reagenda um evento
+      operationId: updateAgendaEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgendaEventUpdate" }
+            example:
+              start_datetime: "2026-10-16T15:00:00Z"
+              end_datetime: "2026-10-16T16:00:00Z"
+      responses:
+        "200":
+          description: Atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgendaEvent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Agendamento]
+      summary: Remove um evento
+      operationId: deleteAgendaEvent
+      responses:
+        "200":
+          description: Removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgendaEvent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ---------------------------- OPORTUNIDADES ----------------------------
+  /opportunity_activities:
+    get:
+      tags: [Oportunidades]
+      summary: Lista atividades de oportunidades
+      operationId: listActivities
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+        - name: opportunity_id
+          in: query
+          description: Oportunidade (uuid)
+          schema: { type: string }
+        - name: activity_type
+          in: query
+          description: Tipo da atividade
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      tags: [Oportunidades]
+      summary: Registra uma atividade em uma oportunidade
+      operationId: createActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActivityCreate" }
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /opportunity_activities/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Oportunidades]
+      summary: Obtém uma atividade por id
+      operationId: getActivity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Oportunidades]
+      summary: Atualiza uma atividade
+      operationId: updateActivity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ActivityUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    delete:
+      tags: [Oportunidades]
+      summary: Remove uma atividade
+      operationId: deleteActivity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Activity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /opportunities:
+    get:
+      tags: [Oportunidades]
+      summary: Lista oportunidades
+      operationId: listOpportunities
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+        - name: client_id
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          description: "`eq.lead`, `eq.qualified`, `eq.contacted`, `eq.qualified`, `won`, `lost`..."
+          schema: { type: string, example: "eq.qualified" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Opportunity" }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /opportunities/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Oportunidades]
+      summary: Obtém uma oportunidade por id
+      operationId: getOpportunity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Opportunity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------- CLIENTES -------------------------------
+  /clients:
+    get:
+      tags: [Clientes]
+      summary: Lista clientes (para vincular agendamentos)
+      operationId: listClients
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+        - name: cnpj
+          in: query
+          description: Buscar por CNPJ (exato)
+          schema: { type: string }
+        - name: company_name
+          in: query
+          description: "Ex.: `ilike.%start%`"
+          schema: { type: string, example: "ilike.%start%" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Client" }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /clients/{id}:
+    parameters:
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Clientes]
+      summary: Obtém um cliente por id
+      operationId: getClient
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Client" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /contacts:
+    get:
+      tags: [Clientes]
+      summary: Lista contatos de clientes
+      operationId: listContacts
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: client_id
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Contact" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /profiles:
+    get:
+      tags: [Clientes]
+      summary: Lista usuários (para escolher responsável/atendente)
+      operationId: listProfiles
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - name: is_deleted
+          in: query
+          schema: { type: string, example: "eq.false" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Profile" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  # ------------------------------- GENÉRICO -------------------------------
+  /{table}:
+    parameters:
+      - $ref: "#/components/parameters/Table"
+    get:
+      tags: [Genérico]
+      summary: Lista qualquer tabela pública
+      description: Acesso genérico. Use `GET /_schema` para descobrir colunas.
+      operationId: listTable
+      parameters:
+        - $ref: "#/components/parameters/Select"
+        - $ref: "#/components/parameters/Order"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Count"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+                  count: { type: integer, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Genérico]
+      summary: Cria registro(s) em qualquer tabela
+      operationId: createGeneric
+      parameters:
+        - name: upsert
+          in: query
+          schema: { type: boolean, default: false }
+        - name: on_conflict
+          in: query
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  additionalProperties: true
+                - type: array
+                  items: { type: object, additionalProperties: true }
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /{table}/{id}:
+    parameters:
+      - name: table
+        in: path
+        required: true
+        schema: { type: string }
+      - $ref: "#/components/parameters/Id"
+    get:
+      tags: [Genérico]
+      summary: Obtém registro por id em qualquer tabela
+      operationId: getGeneric
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: object, nullable: true, additionalProperties: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    patch:
+      tags: [Genérico]
+      summary: Atualiza registro por id em qualquer tabela
+      operationId: updateGeneric
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [Genérico]
+      summary: Remove registro em qualquer tabela
+      operationId: deleteGeneric
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "Chave de API no header Authorization: Bearer <chave>"
+    apiKeyHeader:
+      type: apiKey
+      in: header
+      name: x-api-key
+      description: "Chave de API no header x-api-key"
+
+  parameters:
+    Table:
+      name: table
+      in: path
+      required: true
+      description: Nome da tabela pública do CRM
+      schema: { type: string }
+    Id:
+      name: id
+      in: path
+      required: true
+      description: Identificador (uuid) do registro
+      schema: { type: string, format: uuid }
+    Select:
+      name: select
+      in: query
+      description: Colunas a retornar (padrão `*`)
+      schema: { type: string, default: "*" }
+    Order:
+      name: order
+      in: query
+      description: "Ordenação, ex.: `due_date.asc,created_at.desc`"
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      description: Máximo de registros (1..1000)
+      schema: { type: integer, default: 100, minimum: 1, maximum: 1000 }
+    Offset:
+      name: offset
+      in: query
+      description: Deslocamento para paginação
+      schema: { type: integer, default: 0, minimum: 0 }
+    Count:
+      name: count
+      in: query
+      description: Use `exact` para receber a contagem total no campo `count`
+      schema: { type: string, enum: ["exact"] }
+
+  responses:
+    Unauthorized:
+      description: Chave de API ausente ou inválida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: "Recurso indisponível (ex.: tabela bloqueada)"
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: Requisição inválida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message: { type: string }
+            code: { type: string, nullable: true }
+            details: { type: string, nullable: true }
+            hint: { type: string, nullable: true }
+
+    SchemaTable:
+      type: object
+      properties:
+        table: { type: string }
+        primary_key:
+          type: array
+          items: { type: string }
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              type: { type: string }
+              nullable: { type: boolean }
+              default: { type: string, nullable: true }
+
+    Task:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        assigned_to: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        client_id: { type: string, format: uuid, nullable: true }
+        contact_id: { type: string, format: uuid, nullable: true }
+        opportunity_id: { type: string, format: uuid, nullable: true }
+        task_type:
+          type: string
+          nullable: true
+          enum: [ligacao, email, whatsapp, linkedin, visita_presencial, reuniao_online, visita_feira, visita_evento, pesquisa_inicial]
+        priority:
+          type: string
+          nullable: true
+          enum: [low, medium, high]
+        status:
+          type: string
+          nullable: true
+          enum: [pending, in_progress, completed, cancelled]
+        due_date: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        email_subject: { type: string, nullable: true }
+        email_body: { type: string, nullable: true }
+        email_sent: { type: boolean, nullable: true }
+        linkedin_connection_accepted: { type: boolean, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    TaskCreate:
+      type: object
+      required: [title, assigned_to, created_by]
+      properties:
+        title: { type: string }
+        assigned_to: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        description: { type: string }
+        client_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        opportunity_id: { type: string, format: uuid }
+        task_type:
+          type: string
+          enum: [ligacao, email, whatsapp, linkedin, visita_presencial, reuniao_online, visita_feira, visita_evento, pesquisa_inicial]
+        priority: { type: string, enum: [low, medium, high] }
+        status: { type: string, enum: [pending, in_progress, completed, cancelled] }
+        due_date: { type: string, format: date-time }
+        email_subject: { type: string }
+        email_body: { type: string }
+
+    TaskUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        assigned_to: { type: string, format: uuid }
+        client_id: { type: string, format: uuid, nullable: true }
+        contact_id: { type: string, format: uuid, nullable: true }
+        opportunity_id: { type: string, format: uuid, nullable: true }
+        task_type: { type: string }
+        priority: { type: string, enum: [low, medium, high] }
+        status: { type: string, enum: [pending, in_progress, completed, cancelled] }
+        due_date: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+
+    AgendaEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        start_datetime: { type: string, format: date-time }
+        end_datetime: { type: string, format: date-time }
+        pre_vendas_user_id: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        opportunity_id: { type: string, format: uuid, nullable: true }
+        related_request_id: { type: string, format: uuid, nullable: true }
+        attendees:
+          type: array
+          items: { type: string }
+        is_private: { type: boolean }
+        sync_status: { type: string, nullable: true }
+        zoho_event_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AgendaEventCreate:
+      type: object
+      required: [title, pre_vendas_user_id, created_by, start_datetime, end_datetime]
+      properties:
+        title: { type: string }
+        pre_vendas_user_id: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        start_datetime: { type: string, format: date-time }
+        end_datetime: { type: string, format: date-time }
+        description: { type: string }
+        location: { type: string }
+        color: { type: string }
+        opportunity_id: { type: string, format: uuid }
+        attendees:
+          type: array
+          items: { type: string }
+        is_private: { type: boolean }
+
+    AgendaEventUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        start_datetime: { type: string, format: date-time }
+        end_datetime: { type: string, format: date-time }
+        pre_vendas_user_id: { type: string, format: uuid }
+        opportunity_id: { type: string, format: uuid, nullable: true }
+        attendees:
+          type: array
+          items: { type: string }
+        is_private: { type: boolean }
+
+    Activity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        opportunity_id: { type: string, format: uuid }
+        activity_type: { type: string }
+        description: { type: string }
+        old_value: { type: string, nullable: true }
+        new_value: { type: string, nullable: true }
+        created_by: { type: string, format: uuid }
+        created_at: { type: string, format: date-time, nullable: true }
+
+    ActivityCreate:
+      type: object
+      required: [activity_type, description, created_by, opportunity_id]
+      properties:
+        activity_type: { type: string }
+        description: { type: string }
+        created_by: { type: string, format: uuid }
+        opportunity_id: { type: string, format: uuid }
+        old_value: { type: string }
+        new_value: { type: string }
+
+    ActivityUpdate:
+      type: object
+      properties:
+        activity_type: { type: string }
+        description: { type: string }
+        new_value: { type: string, nullable: true }
+
+    Client:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cnpj: { type: string }
+        company_name: { type: string }
+        trade_name: { type: string, nullable: true }
+        created_by: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Opportunity:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        created_by: { type: string, format: uuid }
+        title: { type: string }
+        status:
+          type: string
+          nullable: true
+          enum: [lead, contacted, qualified, "on hold", "negotiation", won, lost]
+        business_type: { type: string, nullable: true, enum: [cliente_novo, venda_na_base] }
+        value: { type: number, nullable: true }
+        created_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    Contact:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        name: { type: string }
+        role: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        mobile: { type: string, nullable: true }
+        linkedin: { type: string, nullable: true }
+
+    Profile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        email: { type: string }
+        phone: { type: string, nullable: true }
+        is_deleted: { type: boolean, nullable: true }

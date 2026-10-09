@@ -73,6 +73,11 @@ A Edge Function `api` expõe **todos os dados** do CRM via REST, para que agente
 externos leiam e escrevam dados (inclusive agendamento: `tasks`,
 `pre_vendas_agenda`, `opportunity_activities`, ...).
 
+A especificação **OpenAPI** (importável no Postman/Swagger) está em
+[`docs/api-openapi.yaml`](docs/api-openapi.yaml), com foco nas rotas de
+agendamento (criar/listar/editar) e nas rotas de apoio (clientes, contatos,
+oportunidades e usuários).
+
 ### Ativação
 
 1. Aplique as migrations:
