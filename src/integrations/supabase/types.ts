@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name: string
+          revoked_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+        }
+        Relationships: []
+      }
       campaign_task_templates: {
         Row: {
           campaign_id: string
@@ -3591,6 +3624,30 @@ export type Database = {
     Functions: {
       admin_rename_profile: {
         Args: { _new_name: string; _user_id: string }
+        Returns: boolean
+      }
+      create_api_key: {
+        Args: { p_key_hash: string; p_key_prefix: string; p_name: string }
+        Returns: {
+          created_at: string
+          id: string
+          key_prefix: string
+          name: string
+        }
+      }
+      list_api_keys: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+        }[]
+      }
+      revoke_api_key: {
+        Args: { p_id: string }
         Returns: boolean
       }
       delete_email: {

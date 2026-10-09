@@ -71,6 +71,7 @@ import SalesFunnelChart from "@/components/SalesFunnelChart";
 import { DiagnosticQuestionsManager } from "@/components/admin/DiagnosticQuestionsManager";
 import { UserUsageTab } from "@/components/admin/UserUsageTab";
 import { CampaignsManager } from "@/components/admin/CampaignsManager";
+import ApiKeysManager from "@/components/admin/ApiKeysManager";
 
 const Admin = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -932,7 +933,7 @@ const Admin = () => {
 
       {/* Main Content */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="users">Usuários</TabsTrigger>
           <TabsTrigger value="transfer">Transferir</TabsTrigger>
           <TabsTrigger value="products">Produtos</TabsTrigger>
@@ -940,6 +941,7 @@ const Admin = () => {
           <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
           <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
           <TabsTrigger value="usage">Tempo de Uso</TabsTrigger>
+          <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
@@ -1508,6 +1510,10 @@ const Admin = () => {
 
         <TabsContent value="usage" className="space-y-4">
           <UserUsageTab />
+        </TabsContent>
+
+        <TabsContent value="api" className="space-y-4">
+          <ApiKeysManager />
         </TabsContent>
 
       </Tabs>

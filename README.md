@@ -75,33 +75,38 @@ externos leiam e escrevam dados (inclusive agendamento: `tasks`,
 
 ### Ativação
 
-1. Aplique a migration `supabase/migrations/20261009160000_api_schema.sql` (cria o
-   endpoint de descoberta `api_schema()`).
-2. Gere e configure o token da API como secret no Supabase:
-
-   ```sh
-   openssl rand -hex 32                 # gere um token forte
-   supabase secrets set API_TOKEN=<token>
-   ```
-
-3. Faça o deploy da função:
+1. Aplique as migrations:
+   - `supabase/migrations/20261009160000_api_schema.sql` (descoberta `api_schema()`);
+   - `supabase/migrations/20261009170000_api_keys.sql` (tabela de chaves + RPCs).
+2. Faça o deploy da função:
 
    ```sh
    supabase functions deploy api
    ```
 
+3. Crie a chave de API **dentro do CRM**, em **Admin → aba API**: gere uma chave,
+   copie o valor exibido (aparece só uma vez) e use-a no agente. Nenhum secret
+   precisa ser configurado no Supabase.
+
+> Opcional: um secret `API_TOKEN` pode ser definido para CI/bootstrap e funciona
+> como chave fixa adicional. O fluxo normal é gerenciar tudo pela aba Admin.
+
 ### Autenticação
 
-Envie o token em **um** dos headers:
+Envie a chave em **um** dos headers:
 
 ```
-Authorization: Bearer <API_TOKEN>
-x-api-key: <API_TOKEN>
+Authorization: Bearer <chave>
+x-api-key: <chave>
 ```
+
+As chaves são armazenadas apenas como hash SHA-256; o valor em texto puro é
+exibido uma única vez na criação. Revogar uma chave passa a valer imediatamente.
 
 > A função usa `verify_jwt = false` (ver `supabase/config.toml`) e acessa o banco
-> com a service role no servidor. Nunca exponha a `service_role` key ao agente —
-> use apenas o `API_TOKEN`, que pode ser rotacionado.
+> com a service role no servidor. Nunca exponha a `service_role` key ao agente.
+> As tabelas `api_keys`, `zoho_oauth_tokens` e `zoho_user_tokens` são bloqueadas
+> nas rotas genéricas.
 
 ### Base URL
 

@@ -44,6 +44,16 @@ const RESERVED_KEYS = new Set([
   "upsert",
 ]);
 
+// Credential material that must never be exposed through the generic routes,
+// even to a valid API key.
+const BLOCKED_TABLES = new Set(["api_keys", "zoho_oauth_tokens", "zoho_user_tokens"]);
+
+async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -241,13 +251,31 @@ Deno.serve(async (req) => {
 
   const token = req.headers.get("x-api-key") ??
     (req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "");
-  if (!API_TOKEN || !token || !timingSafeEqual(token, API_TOKEN)) {
-    return jsonResponse({ error: { message: "Unauthorized" } }, 401);
-  }
+  if (!token) return jsonResponse({ error: { message: "Unauthorized" } }, 401);
 
   const client = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  let authorized = API_TOKEN.length > 0 && timingSafeEqual(token, API_TOKEN);
+  if (!authorized) {
+    const keyHash = await sha256Hex(token);
+    const { data: key } = await client
+      .from("api_keys")
+      .select("id")
+      .eq("key_hash", keyHash)
+      .is("revoked_at", null)
+      .maybeSingle();
+    if (key?.id) {
+      authorized = true;
+      void client
+        .from("api_keys")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("id", key.id)
+        .then(() => undefined, () => undefined);
+    }
+  }
+  if (!authorized) return jsonResponse({ error: { message: "Unauthorized" } }, 401);
 
   const url = new URL(req.url);
   const parts = url.pathname.split("/").filter(Boolean);
@@ -283,6 +311,9 @@ Deno.serve(async (req) => {
     const table = route[0];
     if (!/^[a-z_][a-z0-9_]*$/i.test(table)) {
       return jsonResponse({ error: { message: "Nome de tabela inválido" } }, 400);
+    }
+    if (BLOCKED_TABLES.has(table)) {
+      return jsonResponse({ error: { message: "Tabela indisponível via API" } }, 403);
     }
     const id = route[1];
 
