@@ -66,3 +66,91 @@ O backend usa provedores diretos, sem depender do Lovable:
 - **E-mail transacional**: envio via **Resend** (`_shared/email.ts`, secret `RESEND_API_KEY`), com webhooks de bounce/complaint assinados (Svix) validados em `handle-email-suppression` (`RESEND_WEBHOOK_SECRET`). Remetente `notify.appiganhei.com` — ao trocar de provedor, verifique o domínio e sobrescreva com `EMAIL_SENDER_DOMAIN`/`EMAIL_FROM_DOMAIN`.
 
 Essas secrets devem ser configuradas no Supabase (self-hosted ou hospedado). Isso é tratado na fase de migração do backend.
+
+## API de integração (agentes externos, ex.: Claude Code)
+
+A Edge Function `api` expõe **todos os dados** do CRM via REST, para que agentes
+externos leiam e escrevam dados (inclusive agendamento: `tasks`,
+`pre_vendas_agenda`, `opportunity_activities`, ...).
+
+### Ativação
+
+1. Aplique a migration `supabase/migrations/20261009160000_api_schema.sql` (cria o
+   endpoint de descoberta `api_schema()`).
+2. Gere e configure o token da API como secret no Supabase:
+
+   ```sh
+   openssl rand -hex 32                 # gere um token forte
+   supabase secrets set API_TOKEN=<token>
+   ```
+
+3. Faça o deploy da função:
+
+   ```sh
+   supabase functions deploy api
+   ```
+
+### Autenticação
+
+Envie o token em **um** dos headers:
+
+```
+Authorization: Bearer <API_TOKEN>
+x-api-key: <API_TOKEN>
+```
+
+> A função usa `verify_jwt = false` (ver `supabase/config.toml`) e acessa o banco
+> com a service role no servidor. Nunca exponha a `service_role` key ao agente —
+> use apenas o `API_TOKEN`, que pode ser rotacionado.
+
+### Base URL
+
+```
+https://<projeto>.supabase.co/functions/v1/api
+```
+
+### Endpoints
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/` | descobre as rotas disponíveis |
+| `GET` | `/_schema` | tabelas, colunas, PKs e relacionamentos |
+| `GET` | `/:table` | lista com `select`, filtros, `order`, `limit`, `offset`, `count` |
+| `GET` | `/:table/:id` | um registro por `id` |
+| `POST` | `/:table` | cria (objeto ou array); `?upsert=true&on_conflict=col` |
+| `PATCH` | `/:table/:id` | atualiza por `id` (ou `/:table?<filtros>`) |
+| `DELETE` | `/:table/:id` | remove por `id` (ou `/:table?<filtros>`) |
+
+Filtros seguem a sintaxe do PostgREST, por exemplo
+`?status=eq.pending&due_date=lt.2026-10-10&assigned_to=in.(uuid1,uuid2)`
+(operadores: `eq, neq, gt, gte, lt, lte, like, ilike, in, is`, com prefixo `not.`).
+
+### Exemplos
+
+```sh
+export API="https://<projeto>.supabase.co/functions/v1/api"
+export TOKEN="<API_TOKEN>"
+
+# descobrir schema
+curl -s "$API/_schema" -H "Authorization: Bearer $TOKEN" | jq
+
+# listar tarefas pendentes com vencimento hoje ou antes
+curl -s "$API/tasks?status=neq.done&due_date=lte.2026-10-09&order=due_date.asc&select=id,title,due_date,assigned_to" \
+  -H "Authorization: Bearer $TOKEN" | jq
+
+# criar agendamento
+curl -s -X POST "$API/pre_vendas_agenda" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"pre_vendas_user_id":"<uuid>","created_by":"<uuid>","title":"Call","start_datetime":"2026-10-10T13:00:00Z","end_datetime":"2026-10-10T14:00:00Z"}'
+
+# concluir tarefa
+curl -s -X PATCH "$API/tasks/<uuid>" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"status":"done","completed_at":"2026-10-09T12:00:00Z"}'
+```
+
+### Uso no Claude Code
+
+Aponte o agente para a base URL e o token (via variáveis de ambiente) e permita
+chamadas `curl` na configuração de permissões; comece lendo `/_schema` para
+descobrir tabelas e colunas antes de montar as consultas.

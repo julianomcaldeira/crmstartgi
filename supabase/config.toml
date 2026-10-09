@@ -75,3 +75,8 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+# Integration API for external agents (Claude Code). Uses its own API_TOKEN
+# bearer secret instead of a Supabase JWT.
+[functions.api]
+verify_jwt = false
