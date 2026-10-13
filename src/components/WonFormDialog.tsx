@@ -28,6 +28,13 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
   const [contractFiles, setContractFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [clientData, setClientData] = useState<any>(null);
+  // i-Pesquisei: pagamento único parcelado (sem implantação/mensalidade)
+  const [proposalValue, setProposalValue] = useState("");
+  const [installments, setInstallments] = useState("1");
+  const [firstInstallmentDate, setFirstInstallmentDate] = useState("");
+
+  const productName = opportunity?.product?.name || "N/A";
+  const isPesquisei = productName.toLowerCase().includes("pesquisei");
 
   useEffect(() => {
     if (open && opportunity) {
@@ -39,6 +46,12 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
       setPaymentConditions("");
       setFirstMonthlyDate("");
       setContractFiles([]);
+      const total =
+        Number(opportunity.value) ||
+        (Number(opportunity.implementation_value) || 0) + (Number(opportunity.monthly_value) || 0);
+      setProposalValue(total ? String(total) : "");
+      setInstallments("1");
+      setFirstInstallmentDate("");
     }
   }, [open, opportunity]);
 
@@ -78,8 +91,17 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
     setContractFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const proposalTotal = parseFloat(proposalValue) || 0;
+  const installmentsCount = Math.max(1, parseInt(installments) || 1);
+  const installmentValue = installmentsCount > 0 ? proposalTotal / installmentsCount : 0;
+
   const handleSubmit = async () => {
-    if (!implBillingDate || !paymentConditions || !selectedContactId || !firstMonthlyDate) {
+    if (isPesquisei) {
+      if (!proposalTotal || !firstInstallmentDate || !paymentConditions || !selectedContactId) {
+        toast.error("Preencha valor da proposta, data da 1ª parcela, condições de pagamento e contato do financeiro");
+        return;
+      }
+    } else if (!implBillingDate || !paymentConditions || !selectedContactId || !firstMonthlyDate) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -133,7 +155,6 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
         .single();
 
       const contact = contacts.find(c => c.id === selectedContactId);
-      const productName = opportunity.product?.name || "N/A";
 
       // Send notification email via edge function
       const { error: emailError } = await supabase.functions.invoke("send-won-notification", {
@@ -141,13 +162,19 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
           clientName: clientData?.company_name || clientData?.trade_name || "N/A",
           clientCnpj: formatCNPJ(clientData?.cnpj || ""),
           productName,
-          implementationValue: formatCurrency(opportunity.implementation_value || 0),
-          implBillingDate,
-          paymentConditions,
+          implementationValue: isPesquisei
+            ? `${formatCurrency(proposalTotal)} (proposta única em ${installmentsCount}x de ${formatCurrency(installmentValue)})`
+            : formatCurrency(opportunity.implementation_value || 0),
+          implBillingDate: isPesquisei ? firstInstallmentDate : implBillingDate,
+          paymentConditions: isPesquisei
+            ? `${paymentConditions} (Proposta de ${formatCurrency(proposalTotal)} em ${installmentsCount}x de ${formatCurrency(installmentValue)})`
+            : paymentConditions,
           financialContactName: contact?.name || "N/A",
           financialContactEmail: contactEmail,
-          monthlyValue: formatCurrency(opportunity.monthly_value || 0),
-          firstMonthlyDate,
+          monthlyValue: isPesquisei
+            ? "Não se aplica (i-Pesquisei: valor único parcelado)"
+            : formatCurrency(opportunity.monthly_value || 0),
+          firstMonthlyDate: isPesquisei ? "" : firstMonthlyDate,
           sellerName: sellerProfile?.full_name || "N/A",
           sellerEmail: sellerProfile?.email || "",
           attachments: uploadedFiles,
@@ -191,7 +218,6 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
 
   const clientName = clientData?.company_name || clientData?.trade_name || "";
   const clientCnpj = clientData?.cnpj ? formatCNPJ(clientData.cnpj) : "";
-  const productName = opportunity?.product?.name || "N/A";
   const implValue = opportunity?.implementation_value || 0;
   const monthlyVal = opportunity?.monthly_value || 0;
 
@@ -220,43 +246,95 @@ export function WonFormDialog({ open, onOpenChange, opportunity, onSubmitSuccess
               <Label className="text-xs text-muted-foreground">Produto</Label>
               <Input value={productName} disabled className="bg-muted" />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Valor de Implantação</Label>
-              <Input value={formatCurrency(implValue)} disabled className="bg-muted" />
-            </div>
+            {isPesquisei ? (
+              <div className="space-y-1">
+                <Label htmlFor="proposal-value">Valor da Proposta *</Label>
+                <CurrencyInput
+                  id="proposal-value"
+                  value={proposalValue}
+                  onValueChange={setProposalValue}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Valor de Implantação</Label>
+                <Input value={formatCurrency(implValue)} disabled className="bg-muted" />
+              </div>
+            )}
           </div>
 
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Valor da Mensalidade</Label>
-            <Input value={formatCurrency(monthlyVal)} disabled className="bg-muted" />
-          </div>
+          {isPesquisei ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="installments">Em quantas parcelas? *</Label>
+                <Input
+                  id="installments"
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={installments}
+                  onChange={(e) => setInstallments(e.target.value)}
+                  placeholder="Ex: 3"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Valor por parcela</Label>
+                <Input
+                  value={proposalTotal > 0 ? `${installmentsCount}x de ${formatCurrency(installmentValue)}` : "—"}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Valor da Mensalidade</Label>
+              <Input value={formatCurrency(monthlyVal)} disabled className="bg-muted" />
+            </div>
+          )}
 
           {/* Manual fields */}
           <div className="border-t pt-4 space-y-4">
             <h3 className="font-medium text-sm">Informações para o Financeiro</h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="impl-date">Data de Cobrança da Implantação *</Label>
-                <Input
-                  id="impl-date"
-                  type="date"
-                  value={implBillingDate}
-                  onChange={(e) => setImplBillingDate(e.target.value)}
-                  required
-                />
+            {isPesquisei ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="first-installment">Data da 1ª Parcela *</Label>
+                  <Input
+                    id="first-installment"
+                    type="date"
+                    value={firstInstallmentDate}
+                    onChange={(e) => setFirstInstallmentDate(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="first-monthly">Data da 1ª Mensalidade *</Label>
-                <Input
-                  id="first-monthly"
-                  type="date"
-                  value={firstMonthlyDate}
-                  onChange={(e) => setFirstMonthlyDate(e.target.value)}
-                  required
-                />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="impl-date">Data de Cobrança da Implantação *</Label>
+                  <Input
+                    id="impl-date"
+                    type="date"
+                    value={implBillingDate}
+                    onChange={(e) => setImplBillingDate(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="first-monthly">Data da 1ª Mensalidade *</Label>
+                  <Input
+                    id="first-monthly"
+                    type="date"
+                    value={firstMonthlyDate}
+                    onChange={(e) => setFirstMonthlyDate(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-1">
               <Label htmlFor="payment-conditions">Condições de Pagamento *</Label>
