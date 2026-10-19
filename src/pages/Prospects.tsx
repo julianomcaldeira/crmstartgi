@@ -2027,7 +2027,7 @@ const Prospects = () => {
                   </div>
 
                   {/* Seller Info and Edit Button */}
-                  <div className="flex items-start gap-3 flex-shrink-0">
+                  <div className="flex items-start gap-3 flex-shrink-0 min-w-0">
                     {client.created_by && client.created_by !== poolUserId && client.created_by_profile && (
                       <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[160px] sm:min-w-[200px] flex-shrink-0">
                         <div className="flex items-center gap-2 mb-1">

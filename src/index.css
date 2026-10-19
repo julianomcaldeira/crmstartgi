@@ -201,6 +201,14 @@ All colors MUST be HSL.
     display: none;
   }
 
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Semantic badge color utilities */
   .badge-blue {
     background-color: hsl(var(--badge-blue-bg) / 0.12);
