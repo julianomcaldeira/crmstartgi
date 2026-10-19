@@ -2029,7 +2029,7 @@ const Prospects = () => {
                   {/* Seller Info and Edit Button */}
                   <div className="flex items-start gap-3 flex-shrink-0">
                     {client.created_by && client.created_by !== poolUserId && client.created_by_profile && (
-                      <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[200px]">
+                      <div className="px-4 py-3 bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-lg min-w-[160px] sm:min-w-[200px] flex-shrink-0">
                         <div className="flex items-center gap-2 mb-1">
                           <User className="text-primary" size={16} />
                           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -2047,7 +2047,7 @@ const Prospects = () => {
                       </div>
                     )}
                     {(!client.created_by || client.created_by === poolUserId) && (
-                      <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg min-w-[200px] flex flex-col justify-center">
+                      <div className="px-4 py-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg min-w-[160px] sm:min-w-[200px] flex flex-col justify-center flex-shrink-0">
                         <div className="flex items-center gap-2 mb-1">
                           <Building2 className="text-amber-600" size={16} />
                           <span className="text-xs font-medium text-amber-700 dark:text-amber-300 uppercase tracking-wide">
