@@ -21,13 +21,15 @@ export function aiKeyConfigured(): boolean {
 }
 
 export function aiKey(): string {
-  const key = aiKeyConfigured();
+  const key = Deno.env.get("AI_API_KEY") ??
+    Deno.env.get("OPENROUTER_API_KEY") ??
+    Deno.env.get("OPENAI_API_KEY");
   if (!key) {
     throw new Error(
       "AI_API_KEY não configurada (OpenRouter/OpenAI). Defina AI_API_KEY nas secrets.",
     );
   }
-  return key as string;
+  return key;
 }
 
 function stripSlash(url: string): string {
